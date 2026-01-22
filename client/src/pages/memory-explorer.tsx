@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Zap, Loader2, ArrowRight } from "lucide-react";
+import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Zap, Loader2, ArrowRight, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { CommunicationTrace } from "@shared/schema";
@@ -55,6 +55,37 @@ function StatusIcon({ status }: { status: string }) {
     default:
       return <Clock className="h-4 w-4 text-muted-foreground" />;
   }
+}
+
+function CopyButton({ text, onCopy }: { text: string; onCopy: () => void }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      onCopy();
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      console.error("Failed to copy");
+    }
+  };
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleCopy}
+      data-testid="button-copy-trace-id"
+    >
+      {copied ? (
+        <Check className="h-4 w-4 text-green-600" />
+      ) : (
+        <Copy className="h-4 w-4" />
+      )}
+    </Button>
+  );
 }
 
 function TraceDetailModal({ 
@@ -236,6 +267,7 @@ export default function MemoryExplorer() {
             <table className="w-full text-sm" data-testid="table-traces">
               <thead>
                 <tr className="border-b bg-muted/50">
+                  <th className="text-left p-3 font-medium">Trace ID</th>
                   <th className="text-left p-3 font-medium">Timestamp</th>
                   <th className="text-left p-3 font-medium">Routing</th>
                   <th className="text-left p-3 font-medium">Workflow</th>
@@ -248,6 +280,7 @@ export default function MemoryExplorer() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="border-b">
+                      <td className="p-3"><Skeleton className="h-4 w-24" /></td>
                       <td className="p-3"><Skeleton className="h-4 w-32" /></td>
                       <td className="p-3"><Skeleton className="h-4 w-28" /></td>
                       <td className="p-3"><Skeleton className="h-4 w-24" /></td>
@@ -264,6 +297,22 @@ export default function MemoryExplorer() {
                       onClick={() => setSelectedTrace(trace)}
                       data-testid={`row-trace-${trace.id}`}
                     >
+                      <td className="p-3">
+                        <div className="flex items-center gap-1">
+                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono" data-testid={`text-trace-id-${trace.id}`}>
+                            {trace.traceId ? `${trace.traceId.slice(0, 12)}...` : "-"}
+                          </code>
+                          {trace.traceId && (
+                            <CopyButton 
+                              text={trace.traceId} 
+                              onCopy={() => toast({
+                                title: "Copied!",
+                                description: `Trace ID ${trace.traceId} copied to clipboard`,
+                              })}
+                            />
+                          )}
+                        </div>
+                      </td>
                       <td className="p-3">
                         <div className="flex items-center gap-2">
                           <Clock className="h-3 w-3 text-muted-foreground" />
@@ -307,7 +356,7 @@ export default function MemoryExplorer() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <Activity className="h-8 w-8 opacity-50" />
                         <p>No traces yet</p>
