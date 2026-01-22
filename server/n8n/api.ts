@@ -106,6 +106,7 @@ export async function createWorkflow(params: CreateWorkflowParams): Promise<N8nW
 
 export async function activateWorkflow(workflowId: string): Promise<void> {
   const headers = await getHeaders();
+  console.log(`[n8n] Calling POST ${getApiBaseUrl()}/workflows/${workflowId}/activate`);
   const response = await fetchWithTimeout(
     `${getApiBaseUrl()}/workflows/${workflowId}/activate`,
     { method: "POST", headers },
@@ -113,8 +114,11 @@ export async function activateWorkflow(workflowId: string): Promise<void> {
   );
   
   if (!response.ok) {
-    throw new Error(`Failed to activate workflow: ${response.status}`);
+    const error = await response.text();
+    console.log(`[n8n] Activation failed: ${response.status} - ${error}`);
+    throw new Error(`Failed to activate workflow: ${response.status} - ${error}`);
   }
+  console.log(`[n8n] Workflow ${workflowId} activated successfully`);
 }
 
 export async function getWorkflow(workflowId: string): Promise<N8nWorkflow> {
@@ -133,13 +137,27 @@ export async function getWorkflow(workflowId: string): Promise<N8nWorkflow> {
 }
 
 export async function createEchoTestWorkflow(): Promise<{ workflowId: string; webhookPath: string }> {
+  console.log("[n8n] createEchoTestWorkflow: Starting...");
   const workflows = await listWorkflows();
+  console.log(`[n8n] Found ${workflows.length} workflows`);
   const existing = workflows.find(w => w.name === "Bilko Echo Test");
   
   if (existing) {
+    console.log(`[n8n] Found existing workflow: ${existing.id}, active: ${existing.active}`);
     const fullWorkflow = await getWorkflow(existing.id);
     const webhookNode = fullWorkflow.nodes.find(n => n.type === "n8n-nodes-base.webhook");
     const webhookPath = webhookNode?.parameters?.path as string || "bilko-echo-test";
+    console.log(`[n8n] Webhook path: ${webhookPath}, fullWorkflow.active: ${fullWorkflow.active}`);
+    
+    console.log(`[n8n] Ensuring workflow ${existing.id} is active...`);
+    try {
+      await activateWorkflow(existing.id);
+      console.log(`[n8n] Activation call completed, waiting 3s for webhook to register...`);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    } catch (activationError: any) {
+      console.log(`[n8n] Activation error (may already be active): ${activationError.message}`);
+    }
+    
     return { workflowId: existing.id, webhookPath };
   }
 
