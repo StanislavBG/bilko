@@ -92,11 +92,13 @@ A separate Replit project can host n8n:
 - Copy `/rules/shared/` to the n8n project
 
 ## Current State
-- Phase 2: Application Hub with layout shell
+- Phase 2: Application Hub with Memory Explorer
 - Auth: Replit Auth configured with admin role
-- Database: PostgreSQL with users.isAdmin field
+- Database: PostgreSQL with users and communication_traces tables
 - UI: Application Hub layout (full-height nav, header over app area)
 - Dashboard: Admin sees overview, non-admin sees "coming soon"
+- Memory Explorer: Admin-only trace viewer for orchestrator communications
+- Orchestrator: `/api/orchestrate/:workflowId` endpoint with trace logging
 - Admin: Bilko (user ID 45353844)
 
 ## User Preferences
