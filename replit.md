@@ -92,10 +92,12 @@ A separate Replit project can host n8n:
 - Copy `/rules/shared/` to the n8n project
 
 ## Current State
-- Phase 1: Foundation with auth and rule framework
-- Auth: Replit Auth configured
-- Database: PostgreSQL provisioned
-- UI: Minimal authenticated landing page
+- Phase 2: Application Hub with layout shell
+- Auth: Replit Auth configured with admin role
+- Database: PostgreSQL with users.isAdmin field
+- UI: Application Hub layout (full-height nav, header over app area)
+- Dashboard: Admin sees overview, non-admin sees "coming soon"
+- Admin: Bilko (user ID 45353844)
 
 ## User Preferences
 - Move slowly and incrementally
