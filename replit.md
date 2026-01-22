@@ -64,15 +64,53 @@ See ARCH-003 for full details.
   schema.ts                # Main schema exports
 ```
 
-## Rule Consumption Workflow
+## Rule Routing System
 
-Before each development task, the agent should:
-1. Read `/rules/README.md` to understand the framework
-2. Read `/rules/shared/` first for system context
-3. Identify which rule partitions apply
-4. Read rules in priority order (shared → architecture → features → data → ui → integration)
-5. Apply rules during implementation
-6. Before modifying rules, re-read all existing rules in the affected partition (per ARCH-002)
+### Reading Order
+1. **Always first**: `/rules/shared/` (system context, contracts)
+2. **If structural decisions**: `/rules/architecture/`
+3. **Then task-specific partitions** based on routing table below
+
+### Routing Table
+
+| If task involves...                    | Read these rules              |
+|----------------------------------------|-------------------------------|
+| n8n, webhooks, external APIs, secrets  | `/rules/integration/`         |
+| Database, schema, storage, traces      | `/rules/data/`                |
+| UI, layout, components, styling        | `/rules/ui/`                  |
+| New features, apps, user-facing tools  | `/rules/features/`, `/rules/apps/` |
+| System design, boundaries, endpoints   | `/rules/architecture/`        |
+
+### Red Flags (Mandatory Reading Triggers)
+
+When these words/concepts appear, STOP and read the indicated partition:
+
+- **External service names** (n8n, Stripe, etc.) → `/rules/integration/`
+- **"database", "table", "schema", "migrate"** → `/rules/data/`
+- **"user sees", "layout", "page", "component"** → `/rules/ui/`
+- **"endpoint", "API route", "authentication"** → `/rules/architecture/`
+- **"new app", "new feature"** → `/rules/features/`, `/rules/apps/` + `/rules/architecture/`
+
+### Cross-Reference Protocol
+
+When a rule cites another rule (e.g., "see ARCH-003"), read that referenced rule before proceeding.
+
+### Modification Protocol (per ARCH-002)
+
+Before changing ANY rule:
+1. Re-read ALL rules in that partition
+2. Check for conflicts with proposed change
+3. Update version number
+
+### Accountability
+
+After reading rules, cite them in your response:
+```
+Rules consulted: ARCH-003, INT-001, INT-002
+Not needed: DATA-* (no database changes), UI-* (backend only)
+```
+
+This creates an explicit reasoning trail and surfaces gaps early.
 
 ## n8n Integration
 

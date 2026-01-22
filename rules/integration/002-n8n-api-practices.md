@@ -2,7 +2,7 @@
 
 Rule ID: INT-002
 Priority: HIGH
-Version: 1.0.0
+Version: 1.1.0
 
 ## Context
 These rules apply when integrating with n8n via API, whether using n8n cloud or self-hosted. The Replit coding agent should follow these practices for consistent, reliable integration.
@@ -99,6 +99,17 @@ n8n has payload size limits:
 - Check current limits in n8n docs
 - Validate payload size before sending
 - For large data, consider chunking or external storage
+
+### D8: Programmatic-Only Workflow Management
+All n8n workflow creation, modification, and deletion MUST be done via the n8n Management API. Manual operations in the n8n UI are prohibited.
+
+Rationale:
+- Ensures reproducibility across environments
+- Enables version control of workflow definitions
+- Creates auditability of all changes
+- Aligns with orchestrator-first architecture (ARCH-003)
+
+The N8N_API_KEY secret enables all management operations programmatically.
 
 ## n8n Workflow Design Guidelines
 
