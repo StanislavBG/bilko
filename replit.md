@@ -26,6 +26,7 @@ Bilko Bibitkov is a rule-driven web application that serves as the "face" for n8
 
 ```
 /rules/                    # Development rule framework
+  /shared/                 # Cross-project rules (copy to n8n project)
   /architecture/           # System-wide architectural rules
   /features/               # Feature-specific rules
   /data/                   # Data model and persistence rules
@@ -54,9 +55,19 @@ Bilko Bibitkov is a rule-driven web application that serves as the "face" for n8
 
 Before each development task, the agent should:
 1. Read `/rules/README.md` to understand the framework
-2. Identify which rule partitions apply
-3. Read rules in priority order (architecture → features → data → ui → integration)
-4. Apply rules during implementation
+2. Read `/rules/shared/` first for system context
+3. Identify which rule partitions apply
+4. Read rules in priority order (shared → architecture → features → data → ui → integration)
+5. Apply rules during implementation
+6. Before modifying rules, re-read all existing rules in the affected partition (per ARCH-002)
+
+## n8n Project Setup
+
+A separate Replit project hosts n8n for workflow automation:
+- Template: Node.js
+- Database: PostgreSQL
+- Deployment: Reserved VM (always-on)
+- Copy `/rules/shared/` to the n8n project so both agents understand the system
 
 ## Current State
 - Phase 1: Foundation with auth and rule framework
