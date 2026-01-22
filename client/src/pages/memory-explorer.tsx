@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { Card } from "@/components/ui/card";
@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle, Clock, RefreshCw, Activity } from "lucide-react";
+import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Zap } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import type { CommunicationTrace } from "@shared/schema";
 
 function formatDuration(ms: number | null): string {
@@ -107,9 +109,33 @@ function TraceDetailModal({
 export default function MemoryExplorer() {
   const { effectiveIsAdmin } = useViewMode();
   const [selectedTrace, setSelectedTrace] = useState<CommunicationTrace | null>(null);
+  const { toast } = useToast();
 
   const { data: traces, isLoading, refetch, isRefetching } = useQuery<CommunicationTrace[]>({
     queryKey: ["/api/traces"],
+  });
+
+  const testConnection = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/test-connection");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: data.success ? "Connection Successful" : "Connection Failed",
+        description: data.success 
+          ? `Trace ID: ${data.traceId}` 
+          : "Check n8n configuration",
+      });
+      refetch();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Test Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   if (!effectiveIsAdmin) {
@@ -137,16 +163,28 @@ export default function MemoryExplorer() {
               View orchestration layer communication traces
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => refetch()}
-            disabled={isRefetching}
-            data-testid="button-refresh"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => testConnection.mutate()}
+              disabled={testConnection.isPending}
+              data-testid="button-test-connection"
+            >
+              <Zap className={`h-4 w-4 mr-2 ${testConnection.isPending ? "animate-pulse" : ""}`} />
+              {testConnection.isPending ? "Testing..." : "Test Connection"}
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => refetch()}
+              disabled={isRefetching}
+              data-testid="button-refresh"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
 
         <Card>

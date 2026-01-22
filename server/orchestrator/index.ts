@@ -1,6 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { orchestratorStorage } from "./storage";
 import { randomUUID } from "crypto";
+import { createEchoTestWorkflow, getWebhookUrl, WEBHOOK_TIMEOUT } from "../n8n/api";
+import { authStorage } from "../replit_integrations/auth/storage";
 
 function generateTraceId(): string {
   return `trace_${randomUUID().replace(/-/g, "").substring(0, 16)}`;
@@ -121,15 +123,22 @@ export function registerOrchestratorRoutes(app: Express) {
     }
   );
 
-  const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-    const user = (req as any).user;
-    if (!user) {
+  const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
+    const sessionUser = (req as any).user;
+    if (!sessionUser || !sessionUser.claims?.sub) {
       return res.status(401).json({ error: "Authentication required" });
     }
-    if (!user.isAdmin) {
-      return res.status(403).json({ error: "Admin access required" });
+    
+    try {
+      const dbUser = await authStorage.getUser(sessionUser.claims.sub);
+      if (!dbUser || !dbUser.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      (req as any).dbUser = dbUser;
+      next();
+    } catch (err) {
+      return res.status(500).json({ error: "Failed to verify admin status" });
     }
-    next();
   };
 
   app.get("/api/traces", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
@@ -153,4 +162,88 @@ export function registerOrchestratorRoutes(app: Express) {
       next(err);
     }
   });
+
+  app.post("/api/test-connection", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    const traceId = generateTraceId();
+    const startTime = Date.now();
+    let trace: any = null;
+    
+    try {
+      const { workflowId, webhookPath } = await createEchoTestWorkflow();
+      const webhookUrl = getWebhookUrl(webhookPath);
+      
+      const userId = (req as any).dbUser?.id || (req as any).user?.claims?.sub || "anonymous";
+
+      const testPayload = {
+        action: "test",
+        message: "Hello from Bilko Bibitkov!",
+        timestamp: new Date().toISOString(),
+        traceId,
+      };
+
+      trace = await orchestratorStorage.createTrace({
+        traceId,
+        attemptNumber: 1,
+        service: "n8n",
+        workflowId: "echo-test",
+        action: "test",
+        userId,
+        requestedAt: new Date(),
+        requestPayload: testPayload,
+      });
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT);
+      
+      let response: Response;
+      try {
+        response = await fetch(webhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Bilko-Request-Id": traceId,
+          },
+          body: JSON.stringify(testPayload),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      const data = await response.json();
+      const success = response.ok;
+
+      await orchestratorStorage.updateTrace(trace.id, {
+        respondedAt: new Date(),
+        durationMs: Date.now() - startTime,
+        responsePayload: data,
+        success,
+        errorCode: success ? null : `HTTP_${response.status}`,
+        errorMessage: success ? null : (data?.error?.message || "Test failed"),
+        n8nExecutionId: data?.metadata?.executionId || null,
+      });
+
+      res.json({
+        success,
+        traceId,
+        workflowId,
+        data,
+      });
+    } catch (err: any) {
+      if (trace) {
+        const errorMessage = err.name === "AbortError" ? "Request timeout" : (err.message || "Unknown error");
+        await orchestratorStorage.updateTrace(trace.id, {
+          respondedAt: new Date(),
+          durationMs: Date.now() - startTime,
+          responsePayload: null,
+          success: false,
+          errorCode: err.name === "AbortError" ? "TIMEOUT" : "NETWORK_ERROR",
+          errorMessage,
+          n8nExecutionId: null,
+        });
+      }
+      next(err);
+    }
+  });
 }
+
