@@ -6,11 +6,22 @@ This directory contains the hierarchical rule system that guides the Replit buil
 
 The Replit agent MUST read and apply rules in the following order:
 
-1. **Architecture Rules** (`/rules/architecture/`) - Always applied first
+0. **Shared Rules** (`/rules/shared/`) - Cross-project rules; read first to understand system context
+1. **Architecture Rules** (`/rules/architecture/`) - Always applied first for project-specific work
 2. **Feature Rules** (`/rules/features/`) - Applied when building specific features
 3. **Data Rules** (`/rules/data/`) - Applied when working with data models
 4. **UI Rules** (`/rules/ui/`) - Applied when building user interfaces
 5. **Integration Rules** (`/rules/integration/`) - Applied when connecting external services
+
+## Shared Rules (Cross-Project)
+
+The `/rules/shared/` partition contains rules that apply to BOTH Bilko Bibitkov projects:
+- **Web Application** (this project)
+- **n8n Workflow Engine** (separate Replit project)
+
+**Important:** When setting up the n8n project, copy the entire `/rules/shared/` directory there. Both agents need identical copies of these rules.
+
+Changes to shared rules must be propagated to both projects manually.
 
 ## Rule Format
 

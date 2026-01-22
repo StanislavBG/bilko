@@ -1,0 +1,47 @@
+# Rule Maintenance
+
+Rule ID: ARCH-002
+Priority: CRITICAL
+Version: 1.0.0
+
+## Context
+This rule applies when the agent needs to create, modify, or extend the rule framework itself.
+
+## Directives
+
+### D1: Re-Read Before Modify
+Before making ANY changes to rules, the agent MUST re-read all existing rules in the affected partition(s) to understand the current state.
+
+**DO**: Read `/rules/README.md` and all rules in the partition before editing
+**DON'T**: Modify rules based on memory or assumptions about their current content
+
+### D2: Extend Logically
+New rules must extend the existing framework logically. They should:
+- Follow the established rule format (ID, Priority, Context, Directives, Rationale)
+- Use sequential numbering within their partition
+- Reference related rules when appropriate
+- Not contradict existing rules without explicit override notation
+
+**DO**: Add `003-new-feature.md` after `002-existing.md`
+**DON'T**: Create rules with arbitrary numbering or conflicting directives
+
+### D3: Preserve Intent
+When modifying existing rules, preserve the original intent unless explicitly instructed otherwise by Bilko.
+
+**DO**: Add new directives that complement existing ones
+**DON'T**: Remove or substantially alter existing directives without approval
+
+### D4: Document Changes
+When rules are added or modified, update `/rules/README.md` if the change affects:
+- The rule hierarchy
+- New partitions
+- Consumption protocol changes
+
+### D5: Shared Rule Propagation
+Changes to `/rules/shared/` require noting that the other project (n8n) needs the same update.
+
+**DO**: Add a comment noting "Propagate to n8n project" when modifying shared rules
+**DON'T**: Assume shared rule changes will automatically sync
+
+## Rationale
+The rule framework is the source of truth for agent behavior. Careless modifications can introduce contradictions or break established patterns.
