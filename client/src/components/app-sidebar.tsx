@@ -1,5 +1,6 @@
-import { Home, Settings } from "lucide-react";
+import { Home, Settings, Activity } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useViewMode } from "@/contexts/view-mode-context";
 import {
   Sidebar,
   SidebarContent,
@@ -19,10 +20,17 @@ const navItems = [
     title: "Home",
     url: "/",
     icon: Home,
+    adminOnly: false,
+  },
+  {
+    title: "Memory Explorer",
+    url: "/memory",
+    icon: Activity,
+    adminOnly: true,
   },
 ];
 
-const futureItems = [
+const globalItems = [
   {
     title: "Settings",
     url: "/settings",
@@ -33,6 +41,11 @@ const futureItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { effectiveIsAdmin } = useViewMode();
+  
+  const visibleNavItems = navItems.filter(
+    (item) => !item.adminOnly || effectiveIsAdmin
+  );
 
   return (
     <Sidebar collapsible="icon">
@@ -49,12 +62,12 @@ export function AppSidebar() {
           <SidebarGroupLabel>Applications</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
                     isActive={location === item.url}
-                    data-testid={`nav-${item.title.toLowerCase()}`}
+                    data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
                   >
                     <Link href={item.url}>
                       <item.icon className="h-4 w-4" />
@@ -67,15 +80,15 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Coming Soon</SidebarGroupLabel>
+          <SidebarGroupLabel>Global</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {futureItems.map((item) => (
+              {globalItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    disabled
-                    className="opacity-50 cursor-not-allowed"
-                    data-testid={`nav-${item.title.toLowerCase()}-disabled`}
+                    disabled={item.disabled}
+                    className={item.disabled ? "opacity-50 cursor-not-allowed" : ""}
+                    data-testid={`nav-${item.title.toLowerCase()}${item.disabled ? "-disabled" : ""}`}
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.title}</span>
