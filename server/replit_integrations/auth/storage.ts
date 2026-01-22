@@ -29,13 +29,19 @@ class AuthStorage implements IAuthStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    const isAdminUser = userData.id === process.env.ADMIN_USER_ID;
+    
     const [user] = await db
       .insert(users)
-      .values(userData)
+      .values({
+        ...userData,
+        isAdmin: isAdminUser ? true : false,
+      })
       .onConflictDoUpdate({
         target: users.id,
         set: {
           ...userData,
+          isAdmin: isAdminUser ? true : undefined,
           updatedAt: new Date(),
         },
       })
