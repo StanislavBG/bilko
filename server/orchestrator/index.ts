@@ -90,12 +90,14 @@ export function registerOrchestratorRoutes(app: Express) {
         const trace = await orchestratorStorage.createTrace({
           traceId,
           attemptNumber: 1,
-          service: "n8n",
+          sourceService: "bilko-hub",
+          destinationService: "n8n",
           workflowId,
           action: action || null,
           userId,
           requestedAt: new Date(),
           requestPayload: payload,
+          overallStatus: "in_progress",
         });
 
         const result = await callN8nWorkflow(workflowId, { ...payload, action, traceId });
@@ -104,9 +106,9 @@ export function registerOrchestratorRoutes(app: Express) {
           respondedAt: new Date(),
           durationMs: Date.now() - startTime,
           responsePayload: result.data || result.error,
-          success: result.success,
+          overallStatus: result.success ? "success" : "failed",
           errorCode: result.error?.code || null,
-          errorMessage: result.error?.message || null,
+          errorDetail: result.error ? JSON.stringify(result.error, null, 2) : null,
           n8nExecutionId: result.executionId || null,
         });
 
@@ -184,20 +186,22 @@ export function registerOrchestratorRoutes(app: Express) {
       trace = await orchestratorStorage.createTrace({
         traceId,
         attemptNumber: 1,
-        service: "n8n",
+        sourceService: "bilko-hub",
+        destinationService: "n8n",
         workflowId: "echo-test",
         action: "test",
         userId,
         requestedAt: new Date(),
         requestPayload: testPayload,
+        overallStatus: "in_progress",
       });
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT);
       
-      let response: Response;
+      let fetchResponse: globalThis.Response;
       try {
-        response = await fetch(webhookUrl, {
+        fetchResponse = await fetch(webhookUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -210,16 +214,16 @@ export function registerOrchestratorRoutes(app: Express) {
         clearTimeout(timeoutId);
       }
 
-      const data = await response.json();
-      const success = response.ok;
+      const data = await fetchResponse.json();
+      const success = fetchResponse.ok;
 
       await orchestratorStorage.updateTrace(trace.id, {
         respondedAt: new Date(),
         durationMs: Date.now() - startTime,
         responsePayload: data,
-        success,
-        errorCode: success ? null : `HTTP_${response.status}`,
-        errorMessage: success ? null : (data?.error?.message || "Test failed"),
+        overallStatus: success ? "success" : "failed",
+        errorCode: success ? null : `HTTP_${fetchResponse.status}`,
+        errorDetail: success ? null : JSON.stringify(data, null, 2),
         n8nExecutionId: data?.metadata?.executionId || null,
       });
 
@@ -231,14 +235,16 @@ export function registerOrchestratorRoutes(app: Express) {
       });
     } catch (err: any) {
       if (trace) {
-        const errorMessage = err.name === "AbortError" ? "Request timeout" : (err.message || "Unknown error");
+        const errorDetail = err.name === "AbortError" 
+          ? "Request timeout - n8n did not respond within 30 seconds" 
+          : (err.stack || err.message || "Unknown error");
         await orchestratorStorage.updateTrace(trace.id, {
           respondedAt: new Date(),
           durationMs: Date.now() - startTime,
           responsePayload: null,
-          success: false,
+          overallStatus: "failed",
           errorCode: err.name === "AbortError" ? "TIMEOUT" : "NETWORK_ERROR",
-          errorMessage,
+          errorDetail,
           n8nExecutionId: null,
         });
       }

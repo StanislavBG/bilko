@@ -1,6 +1,9 @@
-import { pgTable, text, timestamp, jsonb, integer, boolean, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, integer, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+export const overallStatusEnum = ["pending", "in_progress", "success", "failed"] as const;
+export type OverallStatus = typeof overallStatusEnum[number];
 
 export const communicationTraces = pgTable("communication_traces", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -9,8 +12,9 @@ export const communicationTraces = pgTable("communication_traces", {
   traceId: text("trace_id").notNull(),
   attemptNumber: integer("attempt_number").notNull().default(1),
   
-  // Request info
-  service: text("service").notNull(),
+  // Service routing
+  sourceService: text("source_service").notNull(),
+  destinationService: text("destination_service").notNull(),
   workflowId: text("workflow_id").notNull(),
   action: text("action"),
   
@@ -27,9 +31,9 @@ export const communicationTraces = pgTable("communication_traces", {
   responsePayload: jsonb("response_payload"),
   
   // Status
-  success: boolean("success"),
+  overallStatus: text("overall_status").notNull().default("pending"),
   errorCode: text("error_code"),
-  errorMessage: text("error_message"),
+  errorDetail: text("error_detail"),
   
   // Metadata
   n8nExecutionId: text("n8n_execution_id"),

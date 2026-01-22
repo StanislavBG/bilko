@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Zap } from "lucide-react";
+import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Zap, Loader2, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { CommunicationTrace } from "@shared/schema";
@@ -31,6 +31,32 @@ function JsonDisplay({ data }: { data: unknown }) {
   );
 }
 
+function StatusBadge({ status }: { status: string }) {
+  switch (status) {
+    case "success":
+      return <Badge variant="default" className="bg-green-600">Success</Badge>;
+    case "failed":
+      return <Badge variant="destructive">Failed</Badge>;
+    case "in_progress":
+      return <Badge variant="secondary">In Progress</Badge>;
+    default:
+      return <Badge variant="outline">Pending</Badge>;
+  }
+}
+
+function StatusIcon({ status }: { status: string }) {
+  switch (status) {
+    case "success":
+      return <CheckCircle className="h-4 w-4 text-green-600" />;
+    case "failed":
+      return <XCircle className="h-4 w-4 text-destructive" />;
+    case "in_progress":
+      return <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />;
+    default:
+      return <Clock className="h-4 w-4 text-muted-foreground" />;
+  }
+}
+
 function TraceDetailModal({ 
   trace, 
   open, 
@@ -48,11 +74,7 @@ function TraceDetailModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Trace Detail
-            {trace.success ? (
-              <Badge variant="default" className="bg-green-600">Success</Badge>
-            ) : (
-              <Badge variant="destructive">Failed</Badge>
-            )}
+            <StatusBadge status={trace.overallStatus} />
           </DialogTitle>
         </DialogHeader>
         
@@ -61,6 +83,14 @@ function TraceDetailModal({
             <div>
               <span className="text-muted-foreground">Trace ID</span>
               <p className="font-mono text-xs">{trace.traceId}</p>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Routing</span>
+              <div className="flex items-center gap-1">
+                <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{trace.sourceService}</code>
+                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{trace.destinationService}</code>
+              </div>
             </div>
             <div>
               <span className="text-muted-foreground">Workflow</span>
@@ -79,15 +109,29 @@ function TraceDetailModal({
               <p>{formatTimestamp(trace.requestedAt)}</p>
             </div>
             <div>
+              <span className="text-muted-foreground">Responded At</span>
+              <p>{trace.respondedAt ? formatTimestamp(trace.respondedAt) : "-"}</p>
+            </div>
+            <div>
               <span className="text-muted-foreground">Attempt</span>
               <p>{trace.attemptNumber}</p>
             </div>
+            {trace.n8nExecutionId && (
+              <div className="col-span-2">
+                <span className="text-muted-foreground">n8n Execution ID</span>
+                <p className="font-mono text-xs">{trace.n8nExecutionId}</p>
+              </div>
+            )}
           </div>
 
           {trace.errorCode && (
             <div className="p-3 bg-destructive/10 rounded-md">
               <p className="text-sm font-medium text-destructive">{trace.errorCode}</p>
-              <p className="text-sm text-muted-foreground">{trace.errorMessage}</p>
+              {trace.errorDetail && (
+                <pre className="text-xs mt-2 whitespace-pre-wrap max-h-64 overflow-auto">
+                  {trace.errorDetail}
+                </pre>
+              )}
             </div>
           )}
 
@@ -193,6 +237,7 @@ export default function MemoryExplorer() {
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="text-left p-3 font-medium">Timestamp</th>
+                  <th className="text-left p-3 font-medium">Routing</th>
                   <th className="text-left p-3 font-medium">Workflow</th>
                   <th className="text-left p-3 font-medium">Action</th>
                   <th className="text-left p-3 font-medium">Status</th>
@@ -204,6 +249,7 @@ export default function MemoryExplorer() {
                   Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="border-b">
                       <td className="p-3"><Skeleton className="h-4 w-32" /></td>
+                      <td className="p-3"><Skeleton className="h-4 w-28" /></td>
                       <td className="p-3"><Skeleton className="h-4 w-24" /></td>
                       <td className="p-3"><Skeleton className="h-4 w-20" /></td>
                       <td className="p-3"><Skeleton className="h-4 w-16" /></td>
@@ -225,6 +271,13 @@ export default function MemoryExplorer() {
                         </div>
                       </td>
                       <td className="p-3">
+                        <div className="flex items-center gap-1 text-xs">
+                          <code className="bg-muted px-1 py-0.5 rounded">{trace.sourceService}</code>
+                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                          <code className="bg-muted px-1 py-0.5 rounded">{trace.destinationService}</code>
+                        </div>
+                      </td>
+                      <td className="p-3">
                         <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
                           {trace.workflowId}
                         </code>
@@ -233,19 +286,19 @@ export default function MemoryExplorer() {
                         {trace.action || "-"}
                       </td>
                       <td className="p-3">
-                        {trace.success ? (
-                          <div className="flex items-center gap-1 text-green-600">
-                            <CheckCircle className="h-4 w-4" />
-                            <span>Success</span>
-                          </div>
-                        ) : trace.success === false ? (
-                          <div className="flex items-center gap-1 text-destructive">
-                            <XCircle className="h-4 w-4" />
-                            <span>Failed</span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">Pending</span>
-                        )}
+                        <div className="flex items-center gap-1">
+                          <StatusIcon status={trace.overallStatus} />
+                          <span className={
+                            trace.overallStatus === "success" ? "text-green-600" :
+                            trace.overallStatus === "failed" ? "text-destructive" :
+                            "text-muted-foreground"
+                          }>
+                            {trace.overallStatus === "success" ? "Success" :
+                             trace.overallStatus === "failed" ? "Failed" :
+                             trace.overallStatus === "in_progress" ? "In Progress" :
+                             "Pending"}
+                          </span>
+                        </div>
                       </td>
                       <td className="p-3 text-muted-foreground">
                         {formatDuration(trace.durationMs)}
@@ -254,7 +307,7 @@ export default function MemoryExplorer() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
                       <div className="flex flex-col items-center gap-2">
                         <Activity className="h-8 w-8 opacity-50" />
                         <p>No traces yet</p>
