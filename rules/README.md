@@ -8,10 +8,12 @@ The Replit agent MUST read and apply rules in the following order:
 
 0. **Shared Rules** (`/rules/shared/`) - Cross-project rules; read first to understand system context
 1. **Architecture Rules** (`/rules/architecture/`) - Always applied first for project-specific work
-2. **Feature Rules** (`/rules/features/`) - Applied when building specific features
-3. **Data Rules** (`/rules/data/`) - Applied when working with data models
-4. **UI Rules** (`/rules/ui/`) - Applied when building user interfaces
-5. **Integration Rules** (`/rules/integration/`) - Applied when connecting external services
+2. **Hub Rules** (`/rules/hub/`) - Application Hub shell, layout, and access control
+3. **App Rules** (`/rules/apps/`) - Per-application specific rules (subdirectory per app)
+4. **Feature Rules** (`/rules/features/`) - Applied when building specific features
+5. **Data Rules** (`/rules/data/`) - Applied when working with data models
+6. **UI Rules** (`/rules/ui/`) - Applied when building user interfaces
+7. **Integration Rules** (`/rules/integration/`) - Applied when connecting external services
 
 ## Shared Rules (Cross-Project)
 
@@ -22,6 +24,22 @@ The `/rules/shared/` partition contains rules that apply to BOTH Bilko Bibitkov 
 **Important:** When setting up the n8n project, copy the entire `/rules/shared/` directory there. Both agents need identical copies of these rules.
 
 Changes to shared rules must be propagated to both projects manually.
+
+## Hub Rules
+
+The `/rules/hub/` partition contains rules for the Application Hub shell:
+- **HUB-001**: Layout structure (full-height nav, header over app area)
+- **HUB-002**: Access control patterns (admin vs user roles)
+
+These rules define the container that hosts all applications.
+
+## App Rules
+
+The `/rules/apps/` partition contains per-application rules. Each application has its own subdirectory:
+- `/rules/apps/home-dashboard/` - Home Dashboard rules
+- `/rules/apps/<future-app>/` - Future app rules
+
+Each app defines its own behavior while following Hub layout and UI design rules.
 
 ## Rule Format
 
