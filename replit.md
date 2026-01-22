@@ -39,6 +39,9 @@ See ARCH-003 for full details.
 /rules/                    # Development rule framework
   /shared/                 # Cross-project rules (copy to n8n project)
   /architecture/           # System-wide architectural rules
+  /hub/                    # Application Hub shell and access control
+  /apps/                   # Per-application rules
+    /memory-explorer/      # Memory Explorer app rules
   /features/               # Feature-specific rules
   /data/                   # Data model and persistence rules
   /ui/                     # User interface rules
@@ -78,6 +81,7 @@ See ARCH-003 for full details.
 | n8n, webhooks, external APIs, secrets  | `/rules/integration/`         |
 | Database, schema, storage, traces      | `/rules/data/`                |
 | UI, layout, components, styling        | `/rules/ui/`                  |
+| Hub shell, layout structure, access    | `/rules/hub/`                 |
 | New features, apps, user-facing tools  | `/rules/features/`, `/rules/apps/` |
 | System design, boundaries, endpoints   | `/rules/architecture/`        |
 
@@ -88,6 +92,7 @@ When these words/concepts appear, STOP and read the indicated partition:
 - **External service names** (n8n, Stripe, etc.) → `/rules/integration/`
 - **"database", "table", "schema", "migrate"** → `/rules/data/`
 - **"user sees", "layout", "page", "component"** → `/rules/ui/`
+- **"hub", "sidebar", "navigation shell", "access control"** → `/rules/hub/`
 - **"endpoint", "API route", "authentication"** → `/rules/architecture/`
 - **"new app", "new feature"** → `/rules/features/`, `/rules/apps/` + `/rules/architecture/`
 

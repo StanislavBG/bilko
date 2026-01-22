@@ -2,7 +2,7 @@
 
 Rule ID: SHARED-004
 Priority: HIGH
-Version: 1.0.0
+Version: 1.0.1
 Applies To: n8n Replit project
 
 ## Context
@@ -133,7 +133,7 @@ After setup, verify:
 Once n8n is running:
 1. Create workflows with Webhook trigger nodes
 2. Note the webhook paths (e.g., `/webhook/chat`, `/webhook/support`)
-3. The web application will proxy requests via `/api/webhook/:workflowId` per SHARED-003
+3. The web application will proxy requests via `/api/orchestrate/:workflowId` per SHARED-003
 
 ## Troubleshooting
 
