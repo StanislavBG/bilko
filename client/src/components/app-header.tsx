@@ -2,7 +2,9 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { LogOut } from "lucide-react";
+import { LogOut, Eye, EyeOff } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useViewMode } from "@/contexts/view-mode-context";
 import type { User } from "@shared/models/auth";
 
 interface AppHeaderProps {
@@ -10,6 +12,8 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ user }: AppHeaderProps) {
+  const { isViewingAsUser, toggleViewMode, canToggleViewMode } = useViewMode();
+  
   const initials = [user.firstName, user.lastName]
     .filter(Boolean)
     .map((n) => n?.[0])
@@ -24,6 +28,30 @@ export function AppHeader({ user }: AppHeaderProps) {
         <SidebarTrigger data-testid="button-sidebar-toggle" />
       </div>
       <div className="flex items-center gap-3">
+        {canToggleViewMode && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={toggleViewMode}
+                data-testid="button-toggle-view-mode"
+              >
+                {isViewingAsUser ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+                <span className="sr-only">
+                  {isViewingAsUser ? "Exit user view" : "View as user"}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {isViewingAsUser ? "Exit user view" : "View as user"}
+            </TooltipContent>
+          </Tooltip>
+        )}
         <ThemeToggle />
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">

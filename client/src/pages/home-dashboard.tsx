@@ -1,3 +1,4 @@
+import { useViewMode } from "@/contexts/view-mode-context";
 import type { User } from "@shared/models/auth";
 
 interface HomeDashboardProps {
@@ -5,10 +6,10 @@ interface HomeDashboardProps {
 }
 
 export default function HomeDashboard({ user }: HomeDashboardProps) {
-  const isAdmin = user.isAdmin;
+  const { effectiveIsAdmin } = useViewMode();
   const firstName = user.firstName || "there";
 
-  if (isAdmin) {
+  if (effectiveIsAdmin) {
     return (
       <div className="p-6">
         <div className="flex flex-col gap-6 max-w-4xl">

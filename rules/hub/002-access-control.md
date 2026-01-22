@@ -45,6 +45,18 @@ The first admin (Bilko) is identified by their Replit user ID and marked as admi
 **DO**: Check Replit user ID and auto-promote to admin if matches
 **DON'T**: Require manual database edits to create the first admin
 
+### D5: View As User Mode
+Admins can temporarily view the application as a regular user for testing access control.
+
+**Implementation**:
+- Session-only toggle (not persisted to database)
+- `effectiveIsAdmin` computed from `isAdmin && !isViewingAsUser`
+- All UI components use `effectiveIsAdmin` for rendering decisions
+- Visual indicator when in "View As User" mode
+
+**DO**: Use `effectiveIsAdmin` from ViewModeContext for UI decisions
+**DON'T**: Modify the actual `isAdmin` database field for testing
+
 ## Access Patterns
 
 ### Home Dashboard
