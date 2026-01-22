@@ -10,10 +10,9 @@ The Replit agent MUST read and apply rules in the following order:
 1. **Architecture Rules** (`/rules/architecture/`) - Always applied first for project-specific work
 2. **Hub Rules** (`/rules/hub/`) - Application Hub shell, layout, and access control
 3. **App Rules** (`/rules/apps/`) - Per-application specific rules (subdirectory per app)
-4. **Feature Rules** (`/rules/features/`) - Applied when building specific features
-5. **Data Rules** (`/rules/data/`) - Applied when working with data models
-6. **UI Rules** (`/rules/ui/`) - Applied when building user interfaces
-7. **Integration Rules** (`/rules/integration/`) - Applied when connecting external services
+4. **Data Rules** (`/rules/data/`) - Applied when working with data models
+5. **UI Rules** (`/rules/ui/`) - Applied when building user interfaces
+6. **Integration Rules** (`/rules/integration/`) - Applied when connecting external services
 
 ## Shared Rules (Cross-Project)
 
@@ -37,7 +36,7 @@ These rules define the container that hosts all applications.
 
 The `/rules/apps/` partition contains per-application rules. Each application has its own subdirectory:
 - `/rules/apps/home-dashboard/` - Home Dashboard rules
-- `/rules/apps/<future-app>/` - Future app rules
+- `/rules/apps/memory-explorer/` - Memory Explorer rules
 
 Each app defines its own behavior while following Hub layout and UI design rules.
 

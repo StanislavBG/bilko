@@ -42,7 +42,6 @@ See ARCH-003 for full details.
   /hub/                    # Application Hub shell and access control
   /apps/                   # Per-application rules
     /memory-explorer/      # Memory Explorer app rules
-  /features/               # Feature-specific rules
   /data/                   # Data model and persistence rules
   /ui/                     # User interface rules
   /integration/            # External service integration rules
@@ -82,7 +81,7 @@ See ARCH-003 for full details.
 | Database, schema, storage, traces      | `/rules/data/`                |
 | UI, layout, components, styling        | `/rules/ui/`                  |
 | Hub shell, layout structure, access    | `/rules/hub/`                 |
-| New features, apps, user-facing tools  | `/rules/features/`, `/rules/apps/` |
+| New features, apps, user-facing tools  | `/rules/apps/`                    |
 | System design, boundaries, endpoints   | `/rules/architecture/`        |
 
 ### Red Flags (Mandatory Reading Triggers)
@@ -94,7 +93,7 @@ When these words/concepts appear, STOP and read the indicated partition:
 - **"user sees", "layout", "page", "component"** → `/rules/ui/`
 - **"hub", "sidebar", "navigation shell", "access control"** → `/rules/hub/`
 - **"endpoint", "API route", "authentication"** → `/rules/architecture/`
-- **"new app", "new feature"** → `/rules/features/`, `/rules/apps/` + `/rules/architecture/`
+- **"new app", "new feature"** → `/rules/apps/` + `/rules/architecture/`
 
 ### Cross-Reference Protocol
 

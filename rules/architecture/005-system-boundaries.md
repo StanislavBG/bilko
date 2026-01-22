@@ -1,6 +1,6 @@
 # System Boundaries
 
-Rule ID: ARCH-002
+Rule ID: ARCH-005
 Priority: HIGH
 Version: 1.0.0
 
