@@ -18,6 +18,11 @@ Use Drizzle ORM for all database operations. Never write raw SQL unless absolute
 ### D3: Schema in Shared Directory
 All data models must be defined in `shared/schema.ts` or `shared/models/` to ensure type sharing between frontend and backend.
 
+Conventions:
+- `shared/schema.ts` - Main export file, re-exports all models
+- `shared/models/auth.ts` - Authentication models (users, sessions)
+- `shared/models/traces.ts` - Communication trace models (see DATA-002)
+
 ### D4: Minimal Schema
 Keep data models minimal. Do not add fields "for future use." Add fields when they are needed.
 

@@ -2,7 +2,7 @@
 
 Rule ID: ARCH-001
 Priority: CRITICAL
-Version: 1.0.0
+Version: 2.0.0
 
 ## Context
 These rules apply to ALL development work on Bilko Bibitkov.
@@ -10,9 +10,9 @@ These rules apply to ALL development work on Bilko Bibitkov.
 ## Directives
 
 ### D1: Agent Separation
-The Replit build agent MUST NOT build AI agents. All AI agents live in n8n and are accessed via webhooks.
+The Replit build agent MUST NOT build AI agents. All AI agents live in n8n and are accessed via the Orchestration Layer.
 
-**DO**: Build web interfaces that call n8n webhooks
+**DO**: Build web interfaces that call n8n through the orchestrator
 **DON'T**: Build chatbots, AI logic, or agent orchestration in the Replit codebase
 
 ### D2: Incremental Development
@@ -33,11 +33,18 @@ The web application UI should be stateless where possible. State lives in the ba
 **DO**: Use server-side state, URL parameters, and query strings
 **DON'T**: Store complex application state in React state or localStorage for core features
 
-### D5: Generic Webhook Proxy
-API endpoints for n8n integration must be generic and support multiple workflows.
+### D5: Orchestrator-First Communication
+All external service calls MUST go through the Orchestration Layer. See ARCH-003 for full details.
 
-**DO**: Use patterns like `/api/webhook/:workflowId` 
-**DON'T**: Create endpoint per workflow like `/api/chat` or `/api/support`
+**DO**: Use `/api/orchestrate/:workflowId` for n8n calls
+**DON'T**: Create direct API calls to external services bypassing the orchestrator
+**DON'T**: Create per-workflow endpoints like `/api/chat` or `/api/support`
+
+### D6: Communication Tracing
+All orchestrator requests and responses MUST be logged to the communication traces table. See DATA-002 for schema.
+
+**DO**: Log before sending, update after receiving
+**DON'T**: Allow any external call to bypass logging
 
 ## Rationale
-These principles ensure the application remains maintainable as it scales to support multiple n8n workflows, admin portals, and customer-facing features.
+These principles ensure the application remains maintainable as it scales to support multiple n8n workflows, admin portals, and customer-facing features. The orchestration layer provides intelligent error handling and creates a trace history for agent learning.
