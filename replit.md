@@ -6,15 +6,26 @@ Bilko Bibitkov is a rule-driven web application that serves as the "face" for n8
 ## Architecture
 
 ### System Boundaries
-- **Replit Application**: Web UI, authentication, API proxy layer, database
-- **n8n**: AI agents, workflow automation, external API integrations
+- **Replit Application**: Web UI, authentication, orchestration layer, database
+- **n8n** (Cloud or Self-Hosted): AI agents, workflow automation, external API integrations
 
 ### Core Principles (from `/rules/`)
 1. **Agent Separation**: Replit does NOT build AI agents - they live in n8n
 2. **Incremental Development**: Move slowly, build in small increments
 3. **Auth-First**: All features gated behind authentication from day one
 4. **Stateless UI**: Server-side state preferred over client-side
-5. **Generic Webhook Proxy**: Single pattern for all n8n integrations
+5. **Orchestrator-First**: All external calls go through the orchestration layer
+6. **Communication Tracing**: All requests/responses are logged for agent learning
+
+### Orchestration Layer
+The orchestration layer is an intelligent proxy that:
+- Routes all requests to n8n via `/api/orchestrate/:workflowId`
+- Logs every request and response to the communication_traces table
+- Handles retries with exponential backoff on failures
+- Enables future agent-assisted troubleshooting
+- Creates an audit trail for AI agents to learn from
+
+See ARCH-003 for full details.
 
 ## Technology Stack
 - **Frontend**: React, Tailwind CSS, Shadcn UI
@@ -47,7 +58,9 @@ Bilko Bibitkov is a rule-driven web application that serves as the "face" for n8
   storage.ts               # Data access layer
 
 /shared/                   # Shared types and schemas
-  /models/                 # Drizzle models (auth.ts)
+  /models/                 # Drizzle models
+    auth.ts                # Users and sessions
+    traces.ts              # Communication traces (DATA-002)
   schema.ts                # Main schema exports
 ```
 
@@ -61,13 +74,22 @@ Before each development task, the agent should:
 5. Apply rules during implementation
 6. Before modifying rules, re-read all existing rules in the affected partition (per ARCH-002)
 
-## n8n Project Setup
+## n8n Integration
 
-A separate Replit project hosts n8n for workflow automation:
+Currently using n8n Cloud for workflow development. Self-hosting option documented in SHARED-004.
+
+### n8n Cloud Setup
+- Store `N8N_API_KEY` as secret for management operations
+- Store webhook URLs as `N8N_WEBHOOK_<WORKFLOW_NAME>` secrets
+- All calls go through orchestrator (`/api/orchestrate/:workflowId`)
+
+### Self-Hosting (Future)
+A separate Replit project can host n8n:
 - Template: Node.js
 - Database: PostgreSQL
 - Deployment: Reserved VM (always-on)
-- Copy `/rules/shared/` to the n8n project so both agents understand the system
+- See SHARED-004 for complete setup guide
+- Copy `/rules/shared/` to the n8n project
 
 ## Current State
 - Phase 1: Foundation with auth and rule framework
