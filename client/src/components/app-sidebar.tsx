@@ -1,4 +1,4 @@
-import { Home, Settings, Activity } from "lucide-react";
+import { Home, Settings, Activity, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useViewMode } from "@/contexts/view-mode-context";
 import {
@@ -26,6 +26,12 @@ const navItems = [
     title: "Memory Explorer",
     url: "/memory",
     icon: Activity,
+    adminOnly: true,
+  },
+  {
+    title: "Rules Audit",
+    url: "/rules-audit",
+    icon: ShieldCheck,
     adminOnly: true,
   },
 ];

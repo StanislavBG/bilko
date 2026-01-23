@@ -13,6 +13,7 @@ import { ViewModeIndicator } from "@/components/view-mode-indicator";
 import Landing from "@/pages/landing";
 import HomeDashboard from "@/pages/home-dashboard";
 import MemoryExplorer from "@/pages/memory-explorer";
+import RulesAudit from "@/pages/rules-audit";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -48,6 +49,7 @@ function AuthenticatedApp() {
               <Switch>
                 <Route path="/" component={() => <HomeDashboard user={user} />} />
                 <Route path="/memory" component={MemoryExplorer} />
+                <Route path="/rules-audit" component={RulesAudit} />
                 <Route component={NotFound} />
               </Switch>
             </main>
