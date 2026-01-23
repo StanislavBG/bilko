@@ -1,4 +1,4 @@
-import { Home, Settings, Activity, ShieldCheck } from "lucide-react";
+import { Home, Settings, Activity, BookOpen } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useViewMode } from "@/contexts/view-mode-context";
 import {
@@ -29,9 +29,9 @@ const navItems = [
     adminOnly: true,
   },
   {
-    title: "Rules Audit",
-    url: "/rules-audit",
-    icon: ShieldCheck,
+    title: "Rules Explorer",
+    url: "/rules",
+    icon: BookOpen,
     adminOnly: true,
   },
 ];

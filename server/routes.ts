@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { registerOrchestratorRoutes } from "./orchestrator";
 import { registerAuditorRoutes } from "./auditor";
+import { registerRulesRoutes } from "./rules/routes";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -17,6 +18,9 @@ export async function registerRoutes(
   
   // Auditor routes for rule compliance checking
   registerAuditorRoutes(app);
+  
+  // Rules catalog and preview routes
+  registerRulesRoutes(app);
 
   return httpServer;
 }
