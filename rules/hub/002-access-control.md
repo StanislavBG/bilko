@@ -21,31 +21,39 @@ These rules define how users are granted access to applications within the Hub.
 
 ## Directives
 
-### D1: Admin Field
+### D1: Permission-Gated Everything
+All UI elements, navigation items, routes, features, and data must be gated by the user's permissions. Users should only see and access what they have permission for.
+
+**DO**: Filter navigation, pages, and features based on user permissions
+**DO**: Implement access checks at every layer (nav, routes, API endpoints)
+**DON'T**: Show inaccessible items to users
+**DON'T**: Rely on a single layer of protection
+
+### D2: Admin Field
 Users have an `isAdmin` boolean field in the database. This is the single source of truth for admin status.
 
 **DO**: Check `user.isAdmin` for admin-only features
 **DON'T**: Hardcode admin checks by username or email
 
-### D2: App-Level Access Control
-Each application decides what to show based on user role. The Hub shell does not filter content.
+### D3: Defense in Depth
+Access control must be enforced at multiple layers. Navigation filtering is the first layer; apps and API endpoints provide additional layers.
 
-**DO**: Apps check user role and render appropriately
-**DON'T**: Have the Hub shell hide/show content based on role
+**DO**: Check permissions in nav, page components, AND API routes
+**DON'T**: Assume one layer of protection is sufficient
 
-### D3: Graceful Degradation
+### D4: Graceful Degradation
 If a user accesses an app they don't have permission for, show a friendly message - not an error.
 
 **DO**: "Coming soon" or "Access required" message
 **DON'T**: 403 error pages or blank screens
 
-### D4: Admin Identification
+### D5: Admin Identification
 The first admin (Bilko) is identified by their Replit user ID and marked as admin on first login.
 
 **DO**: Check Replit user ID and auto-promote to admin if matches
 **DON'T**: Require manual database edits to create the first admin
 
-### D5: View As User Mode
+### D6: View As User Mode
 Admins can temporarily view the application as a regular user for testing access control.
 
 **Implementation**:

@@ -34,19 +34,13 @@ The header bar sits above the application content area only, not the full viewpo
 **DO**: Header starts where the nav ends horizontally
 **DON'T**: Create a full-width header that spans over the nav
 
-### D3: Consistent Navigation
-All users see the same navigation structure. Access control happens at the app level, not the nav level.
-
-**DO**: Show all nav items to all users
-**DON'T**: Hide nav items based on user role (apps handle their own access)
-
-### D4: App Content Scrolling
+### D3: App Content Scrolling
 The application content area scrolls independently. The nav and header remain fixed.
 
 **DO**: overflow-y-auto on the content area
 **DON'T**: Make the entire page scroll
 
-### D5: Responsive Behavior
+### D4: Responsive Behavior
 On mobile, the left nav collapses to a hamburger menu. The layout adapts gracefully.
 
 ## Implementation Notes
