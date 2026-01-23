@@ -11,6 +11,10 @@ export interface AuditResult {
   passed: boolean;
   message: string;
   details?: string[];
+  endpoint: string;
+  runTimestamp: string;
+  checkName: string;
+  checkDescription: string;
 }
 
 export interface AuditReport {

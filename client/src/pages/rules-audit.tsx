@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Shield, Clock } from "lucide-react";
+import { CheckCircle, XCircle, AlertTriangle, RefreshCw, Shield, Clock, Server } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 
 interface AuditResult {
@@ -12,6 +12,10 @@ interface AuditResult {
   passed: boolean;
   message: string;
   details?: string[];
+  endpoint: string;
+  runTimestamp: string;
+  checkName: string;
+  checkDescription: string;
 }
 
 interface AuditReport {
@@ -46,15 +50,48 @@ function CheckCard({ result }: { result: AuditResult }) {
             <code className="text-sm font-semibold bg-muted px-2 py-0.5 rounded">
               {result.checkId}
             </code>
+            <span className="text-sm font-medium">{result.checkName}</span>
             <Badge variant={result.passed ? "default" : "destructive"}>
               {result.passed ? "Passed" : "Failed"}
             </Badge>
           </div>
+          
           <p className="mt-2 text-sm text-muted-foreground">
-            {result.message}
+            {result.checkDescription}
           </p>
+          
+          <div className="mt-3 p-3 bg-muted/50 rounded-md space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium">Result</span>
+              <span className={result.passed ? "text-green-600" : "text-destructive"}>
+                {result.message}
+              </span>
+            </div>
+            
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium flex items-center gap-1">
+                <Server className="h-3 w-3" />
+                Powered by
+              </span>
+              <code className="bg-background px-1.5 py-0.5 rounded text-muted-foreground" data-testid={`text-endpoint-${result.checkId.toLowerCase()}`}>
+                {result.endpoint}
+              </code>
+            </div>
+            
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                Run at
+              </span>
+              <span className="text-muted-foreground" data-testid={`text-timestamp-${result.checkId.toLowerCase()}`}>
+                {formatTimestamp(result.runTimestamp)}
+              </span>
+            </div>
+          </div>
+
           {result.details && result.details.length > 0 && (
             <div className="mt-3 space-y-1">
+              <span className="text-xs font-medium">Issues found:</span>
               {result.details.map((detail, i) => (
                 <div key={i} className="flex items-start gap-2 text-xs">
                   <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
