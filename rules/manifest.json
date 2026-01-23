@@ -231,6 +231,18 @@
       "dependencies": ["INT-001", "ARCH-003"],
       "crossReferences": ["ARCH-003"],
       "description": "API practices, recency protocol, and known issues registry."
+    },
+    "ARCH-006": {
+      "id": "ARCH-006",
+      "title": "Agent Bootstrap Protocol",
+      "path": "rules/architecture/006-agent-bootstrap.md",
+      "partition": "architecture",
+      "priority": "CRITICAL",
+      "version": "1.0.0",
+      "triggers": ["bootstrap", "session start", "new session", "how to use rules"],
+      "dependencies": ["ARCH-000"],
+      "crossReferences": [],
+      "description": "How AI developers should bootstrap and use the rule system."
     }
   },
   "partitions": {
@@ -279,6 +291,6 @@
       { "pattern": "endpoint|api route|authentication", "partitions": ["architecture"] },
       { "pattern": "new app|new feature", "partitions": ["apps", "architecture"] }
     ],
-    "alwaysInclude": ["ARCH-000"]
+    "alwaysInclude": ["ARCH-000", "ARCH-006"]
   }
 }

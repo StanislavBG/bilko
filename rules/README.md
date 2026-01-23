@@ -4,7 +4,22 @@
 
 **NO CODE SHALL BE WRITTEN WITHOUT FIRST CONSULTING THE RULES.**
 
-This directory contains the hierarchical rule system that guides the Replit build agent during development. The Rules Service (`/server/rules/`) validates this framework at application startup.
+This directory contains the hierarchical rule system that guides AI developers during development. The Rules Service (`/server/rules/`) validates this framework at application startup.
+
+## How to Use This System
+
+### For AI Developers (Replit Agent, etc.)
+
+1. You found this file via `replit.md` - good
+2. Read this entire document to understand the system
+3. Before each task, route through `manifest.json` or use the Rules Service
+4. Cite rules in your response footer
+
+### For Human Engineers
+
+1. Read this document for system overview
+2. Browse individual rule files for specific guidance
+3. Use manifest.json to understand dependencies
 
 ## Rule Service Integration
 
@@ -32,18 +47,28 @@ All rules are indexed in `manifest.json` with:
 - **dependencies**: Rules that must also be read
 - **crossReferences**: Related rules
 
-## Rule Consumption Protocol
+## Reading Order
 
-The Replit agent MUST read and apply rules in the following order:
+When consuming rules, follow this order:
 
-0. **ARCH-000** (Primary Directive) - ALWAYS first, no exceptions
-1. **Shared Rules** (`/rules/shared/`) - Cross-project rules; system context
-2. **Architecture Rules** (`/rules/architecture/`) - System-wide decisions
-3. **Hub Rules** (`/rules/hub/`) - Application Hub shell, layout, access
-4. **App Rules** (`/rules/apps/`) - Per-application specific rules
-5. **Data Rules** (`/rules/data/`) - Data models and persistence
-6. **UI Rules** (`/rules/ui/`) - User interface rules
-7. **Integration Rules** (`/rules/integration/`) - External service integration
+1. **ARCH-000** (Primary Directive) - ALWAYS first, no exceptions
+2. **ARCH-006** (Agent Bootstrap Protocol) - How to use this system
+3. **Shared Rules** (`/rules/shared/`) - Cross-project rules; system context
+4. **Architecture Rules** (`/rules/architecture/`) - System-wide decisions
+5. **Task-specific partitions** based on routing
+
+## Red Flags (Mandatory Reading Triggers)
+
+When these words/concepts appear in a task, STOP and read the indicated partition:
+
+| When you see... | Read this partition |
+|-----------------|---------------------|
+| `n8n`, `webhook`, `stripe`, `external service`, `API key` | `/rules/integration/` |
+| `database`, `table`, `schema`, `migrate`, `query` | `/rules/data/` |
+| `user sees`, `layout`, `page`, `component`, `styling` | `/rules/ui/` |
+| `hub`, `sidebar`, `navigation`, `shell`, `access control` | `/rules/hub/` |
+| `endpoint`, `API route`, `authentication`, `middleware` | `/rules/architecture/` |
+| `new app`, `new feature`, `add capability` | `/rules/apps/` + `/rules/architecture/` |
 
 ## Rule Partitions
 
@@ -62,6 +87,7 @@ System-wide architectural rules:
 - **ARCH-003**: Orchestration Layer
 - **ARCH-004**: Development Pacing
 - **ARCH-005**: System Boundaries
+- **ARCH-006**: Agent Bootstrap Protocol
 
 ### `/rules/hub/`
 Application Hub shell rules:
@@ -87,13 +113,31 @@ External service integration rules:
 - **INT-001**: n8n Integration Rules
 - **INT-002**: n8n API Best Practices (includes Recency Protocol)
 
-## Rule Format
+## Cross-Reference Protocol
 
-Each rule file follows this structure:
-- **Rule ID and priority level**
-- **Context**: When this rule applies
-- **Directive**: What the agent must do
-- **Rationale**: Why this rule exists
+When a rule cites another rule (e.g., "see ARCH-003"), read that referenced rule before proceeding with implementation.
+
+## Modification Protocol (per ARCH-002)
+
+Before changing ANY rule:
+1. Re-read ALL rules in that partition
+2. Check for conflicts with proposed change
+3. Update version number in the rule file
+4. Update `rules/manifest.json` to reflect changes
+
+## Accountability Footer
+
+Every response involving code changes MUST include:
+
+```
+---
+Rules consulted: ARCH-000, ARCH-006, [specific rules]
+Not applicable: [partitions not relevant]
+Primary Directive: Verified
+---
+```
+
+This creates an explicit reasoning trail and surfaces gaps early.
 
 ## Validation at Startup
 
@@ -105,47 +149,42 @@ The Rules Service validates:
 
 If validation fails, the application will not start.
 
-## Routing System
+## System Boundaries
 
-### Triggers
-Each rule has keywords that activate it. The Rules Service matches task descriptions against these triggers.
+- **Replit Application**: Web UI, authentication, orchestration layer, database, Rules Service
+- **n8n** (Cloud or Self-Hosted): AI agents, workflow automation, external API integrations
 
-### Red Flags
-Certain keywords force entire partitions to be read:
-- `n8n`, `stripe`, `external` → `/rules/integration/`
-- `database`, `table`, `schema` → `/rules/data/`
-- `user sees`, `layout`, `page` → `/rules/ui/`
-- `hub`, `sidebar`, `navigation` → `/rules/hub/`
-- `endpoint`, `api route`, `authentication` → `/rules/architecture/`
-- `new app`, `new feature` → `/rules/apps/` + `/rules/architecture/`
+Replit does NOT build AI agents - they live in n8n. See ARCH-005 for details.
 
-### Always Include
-ARCH-000 (Primary Directive) is always included in every routing result.
+## Project Structure
+
+```
+/rules/                    # Development rule framework (THE HEART)
+  manifest.json            # Machine-readable rule index
+  README.md                # This file - how to use the system
+  /shared/                 # Cross-project rules (copy to n8n project)
+  /architecture/           # System-wide architectural rules
+    000-primary-directive.md  # THE PRIMARY DIRECTIVE
+    001-agent-bootstrap.md    # How agents use this system
+  /hub/                    # Application Hub shell and access control
+  /apps/                   # Per-application rules
+  /data/                   # Data model and persistence rules
+  /ui/                     # User interface rules
+  /integration/            # External service integration rules
+
+/server/rules/             # Rules Service (FIRST-CLASS)
+  types.ts                 # TypeScript interfaces
+  manifest.ts              # Manifest loader
+  validator.ts             # Integrity validation
+  router.ts                # Task-to-rules routing
+  index.ts                 # Main service entry point
+```
 
 ## Core Principles
 
 1. **Rules live in the codebase** - Not in external management systems
-2. **Rules guide the agent** - Only the Replit agent consumes these rules
+2. **Rules guide the agent** - AI developers consume these rules
 3. **Rules are hierarchical** - More specific rules can override general ones
 4. **Human authors, agent executes** - Bilko creates rules; agent applies them
 5. **Rules are validated** - The Rules Service enforces integrity
-
-## Accountability
-
-Every response involving code changes must include:
-
-```
----
-Rules consulted: ARCH-000, ARCH-003, INT-002
-Not applicable: DATA-* (no database changes)
-Primary Directive: Verified
----
-```
-
-## Usage
-
-Before any development task, the agent should:
-1. Use the Rules Service to route the task
-2. Read the rules in the order specified
-3. Apply the rules during implementation
-4. Document which rules were consulted in the response
+6. **No spillage** - Rule content lives here, not in replit.md
