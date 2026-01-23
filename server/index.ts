@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { initializeRulesService } from "./rules";
 
 const app = express();
 const httpServer = createServer(app);
@@ -60,6 +61,15 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  try {
+    await initializeRulesService();
+    log("Rules Service initialized - Primary Directive active", "rules");
+  } catch (error) {
+    console.error("CRITICAL: Rules Service failed to initialize. Application cannot start.");
+    console.error(error);
+    process.exit(1);
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
