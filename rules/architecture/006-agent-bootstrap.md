@@ -72,6 +72,27 @@ Primary Directive: Verified
 | `rules/manifest.json` | Machine index | Human explanations |
 | Individual rules | Specific guidance | Content from other rules |
 
+### D1: replit.md Boundaries
+
+replit.md is a bootstrap pointer ONLY. Rule content lives in `/rules/`.
+
+**ALLOWED in replit.md**:
+- Primary Directive pointer
+- Rules location and quick reference
+- Tech stack summary
+- Current project state
+- User preferences (workflow preferences, not design rules)
+
+**NEVER in replit.md**:
+- Design principles
+- Directives
+- Red flags
+- Detailed guidance
+- Anything that belongs in a rule file
+
+**DO**: Keep replit.md minimal - it points to rules, nothing more
+**DON'T**: Add rule content to replit.md even if it "seems helpful"
+
 ## Rationale
 
 - **Clean separation**: Rule content stays in `/rules/`, not scattered

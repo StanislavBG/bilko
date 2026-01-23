@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { registerOrchestratorRoutes } from "./orchestrator";
+import { registerAuditorRoutes } from "./auditor";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -13,6 +14,9 @@ export async function registerRoutes(
   
   // Orchestrator routes for n8n communication
   registerOrchestratorRoutes(app);
+  
+  // Auditor routes for rule compliance checking
+  registerAuditorRoutes(app);
 
   return httpServer;
 }

@@ -40,9 +40,3 @@ Bilko Bibitkov is a rule-driven web application serving as the "face" for n8n-ho
 - No over-building or hallucinations
 - Rules are the heart of the project - first-class citizen
 - Super admin: Bilko
-
-## Design Principles
-
-- **RBAC-First**: Robust role-based access control is central to the design. The system is built to support many users and roles over time.
-- **Permission-Gated Everything**: All UI elements, navigation, routes, and data are filtered by user permissions. Users only see what they can access.
-- **Defense in Depth**: Access control enforced at multiple layers (nav, pages, API endpoints) - never rely on a single layer.
