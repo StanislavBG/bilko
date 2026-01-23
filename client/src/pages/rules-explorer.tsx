@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { EndpointInfo } from "@/components/endpoint-info";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { 
@@ -465,10 +466,13 @@ function CatalogTab() {
           <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
             <Book className="h-5 w-5 text-primary-foreground" />
           </div>
-          <div>
-            <h2 className="text-lg font-semibold" data-testid="text-catalog-title">
-              Rules Catalog
-            </h2>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-semibold" data-testid="text-catalog-title">
+                Rules Catalog
+              </h2>
+              <EndpointInfo endpoint="GET /api/rules" />
+            </div>
             <p className="text-sm text-muted-foreground">
               {catalog.totalRules} rules across {catalog.partitions.length} partitions
             </p>
@@ -541,9 +545,12 @@ function AuditTab() {
       <OverallStatus report={report} />
       
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          Check Results
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            Check Results
+          </h3>
+          <EndpointInfo endpoint="GET /api/audit" />
+        </div>
         {report.results.map((result) => (
           <CheckCard key={result.checkId} result={result} />
         ))}

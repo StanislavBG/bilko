@@ -4,6 +4,7 @@ import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { registerOrchestratorRoutes } from "./orchestrator";
 import { registerAuditorRoutes } from "./auditor";
 import { registerRulesRoutes } from "./rules/routes";
+import { getAllEndpoints } from "./endpoint-registry";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -21,6 +22,11 @@ export async function registerRoutes(
   
   // Rules catalog and preview routes
   registerRulesRoutes(app);
+  
+  // Endpoint registry for UI info icons
+  app.get("/api/endpoints", (_req, res) => {
+    res.json(getAllEndpoints());
+  });
 
   return httpServer;
 }

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EndpointInfo } from "@/components/endpoint-info";
 import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Zap, Loader2, ArrowRight, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -231,9 +232,12 @@ export default function MemoryExplorer() {
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">
-              Memory Explorer
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">
+                Memory Explorer
+              </h1>
+              <EndpointInfo endpoint="GET /api/traces" />
+            </div>
             <p className="text-muted-foreground">
               View orchestration layer communication traces
             </p>

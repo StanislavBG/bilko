@@ -208,6 +208,18 @@
       "crossReferences": ["HUB-001"],
       "description": "Rules for building user interfaces."
     },
+    "UI-002": {
+      "id": "UI-002",
+      "title": "Endpoint Info Pattern",
+      "path": "rules/ui/002-endpoint-info.md",
+      "partition": "ui",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["endpoint", "info icon", "api source", "data source", "endpoint info"],
+      "dependencies": ["UI-001", "ARCH-001"],
+      "crossReferences": [],
+      "description": "Pattern for displaying API endpoint metadata via info icons in UI sections."
+    },
     "INT-001": {
       "id": "INT-001",
       "title": "n8n Integration Rules",
