@@ -136,24 +136,90 @@ export async function getWorkflow(workflowId: string): Promise<N8nWorkflow> {
   return response.json();
 }
 
+export async function updateWorkflow(workflowId: string, params: { nodes: N8nNode[]; connections: Record<string, unknown> }): Promise<N8nWorkflow> {
+  const headers = await getHeaders();
+  console.log(`[n8n] Updating workflow ${workflowId}...`);
+  const response = await fetchWithTimeout(
+    `${getApiBaseUrl()}/workflows/${workflowId}`,
+    {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        nodes: params.nodes,
+        connections: params.connections,
+        settings: { executionOrder: "v1" },
+      }),
+    },
+    API_TIMEOUT
+  );
+  
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to update workflow: ${response.status} - ${error}`);
+  }
+  
+  console.log(`[n8n] Workflow ${workflowId} updated successfully`);
+  return response.json();
+}
+
 export async function createEchoTestWorkflow(): Promise<{ workflowId: string; webhookPath: string }> {
   console.log("[n8n] createEchoTestWorkflow: Starting...");
   const workflows = await listWorkflows();
   console.log(`[n8n] Found ${workflows.length} workflows`);
   const existing = workflows.find(w => w.name === "Bilko Echo Test");
   
+  const webhookPath = "bilko-echo-test";
+  const correctNodes: N8nNode[] = [
+    {
+      id: "webhook-trigger",
+      name: "Webhook",
+      type: "n8n-nodes-base.webhook",
+      typeVersion: 2,
+      position: [250, 300],
+      parameters: {
+        path: webhookPath,
+        httpMethod: "POST",
+        responseMode: "responseNode",
+      },
+    },
+    {
+      id: "respond-node",
+      name: "Respond",
+      type: "n8n-nodes-base.respondToWebhook",
+      typeVersion: 1,
+      position: [450, 300],
+      parameters: {
+        respondWith: "json",
+        responseBody: '={{ { "echo": $json, "timestamp": $now, "workflowId": "bilko-echo-test" } }}',
+      },
+    },
+  ];
+  const correctConnections = {
+    "Webhook": {
+      main: [[{ node: "Respond", type: "main", index: 0 }]],
+    },
+  };
+  
   if (existing) {
     console.log(`[n8n] Found existing workflow: ${existing.id}, active: ${existing.active}`);
     const fullWorkflow = await getWorkflow(existing.id);
     const webhookNode = fullWorkflow.nodes.find(n => n.type === "n8n-nodes-base.webhook");
-    const webhookPath = webhookNode?.parameters?.path as string || "bilko-echo-test";
-    console.log(`[n8n] Webhook path: ${webhookPath}, fullWorkflow.active: ${fullWorkflow.active}`);
+    const currentResponseMode = webhookNode?.parameters?.responseMode;
+    console.log(`[n8n] Current responseMode: ${currentResponseMode}`);
     
-    console.log(`[n8n] Ensuring workflow ${existing.id} is active...`);
+    if (currentResponseMode !== "responseNode") {
+      console.log(`[n8n] Fixing responseMode from '${currentResponseMode}' to 'responseNode'...`);
+      await updateWorkflow(existing.id, {
+        nodes: correctNodes,
+        connections: correctConnections,
+      });
+      console.log(`[n8n] Workflow updated, now activating...`);
+    }
+    
     try {
       await activateWorkflow(existing.id);
-      console.log(`[n8n] Activation call completed, waiting 3s for webhook to register...`);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log(`[n8n] Activation call completed, waiting 2s for webhook to register...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (activationError: any) {
       console.log(`[n8n] Activation error (may already be active): ${activationError.message}`);
     }
@@ -161,40 +227,10 @@ export async function createEchoTestWorkflow(): Promise<{ workflowId: string; we
     return { workflowId: existing.id, webhookPath };
   }
 
-  const webhookPath = "bilko-echo-test";
-  
   const workflow = await createWorkflow({
     name: "Bilko Echo Test",
-    nodes: [
-      {
-        id: "webhook-trigger",
-        name: "Webhook",
-        type: "n8n-nodes-base.webhook",
-        typeVersion: 2,
-        position: [250, 300],
-        parameters: {
-          path: webhookPath,
-          httpMethod: "POST",
-          responseMode: "lastNode",
-        },
-      },
-      {
-        id: "respond-node",
-        name: "Respond",
-        type: "n8n-nodes-base.respondToWebhook",
-        typeVersion: 1,
-        position: [450, 300],
-        parameters: {
-          respondWith: "json",
-          responseBody: '={{ { "echo": $json, "timestamp": $now, "workflowId": "' + webhookPath + '" } }}',
-        },
-      },
-    ],
-    connections: {
-      "Webhook": {
-        main: [[{ node: "Respond", type: "main", index: 0 }]],
-      },
-    },
+    nodes: correctNodes,
+    connections: correctConnections,
   });
 
   await activateWorkflow(workflow.id);
