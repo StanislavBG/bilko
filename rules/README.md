@@ -165,7 +165,8 @@ Replit does NOT build AI agents - they live in n8n. See ARCH-005 for details.
   /shared/                 # Cross-project rules (copy to n8n project)
   /architecture/           # System-wide architectural rules
     000-primary-directive.md  # THE PRIMARY DIRECTIVE
-    001-agent-bootstrap.md    # How agents use this system
+    001-core-principles.md    # Core Architecture Principles
+    006-agent-bootstrap.md    # How agents use this system
   /hub/                    # Application Hub shell and access control
   /apps/                   # Per-application rules
   /data/                   # Data model and persistence rules
