@@ -2,22 +2,57 @@
 
 Rule ID: INT-002
 Priority: HIGH
-Version: 1.1.0
+Version: 1.2.0
 
 ## Context
 These rules apply when integrating with n8n via API, whether using n8n cloud or self-hosted. The Replit coding agent should follow these practices for consistent, reliable integration.
 
+## CRITICAL: Recency Protocol
+
+### Why This Matters
+AI training data becomes stale. n8n v2.0 (December 2024) introduced breaking changes that invalidate prior knowledge. The agent MUST verify current behavior before implementing.
+
+### Mandatory Steps Before Any n8n Work
+1. **Search live documentation** using web search tools for the specific feature
+2. **Check the Known Issues Registry** (below) for documented bugs
+3. **Verify API endpoints** actually exist - don't assume from training data
+4. **Test in isolation** before integrating into application code
+
+### Current n8n Version Context
+- **Target Version**: n8n v2.0+ (December 2024 onwards)
+- **Major Change**: "Activate/Deactivate" replaced with "Publish/Unpublish"
+- **API Endpoint**: `/workflows/{id}/activate` still works but behavior changed
+- **Last Verified**: January 2026
+
+## Known Issues Registry
+
+### ISSUE-001: Webhook Registration Bug (CRITICAL)
+- **Status**: UNRESOLVED (as of January 2026)
+- **GitHub Issues**: #21614, #14646
+- **Description**: Workflows created or activated via API do not properly register webhooks. The webhook returns 404 "not registered" even when the workflow shows `active: true`.
+- **Workaround**: One-time manual action required - open workflow in n8n UI and save/toggle it to trigger internal webhook registration.
+- **Impact on D8**: This is an **exception** to the "API-only" rule. Document when manual intervention was required.
+
+### ISSUE-002: Respond to Webhook Configuration
+- **Status**: RESOLVED (configuration issue)
+- **Description**: Error "Unused Respond to Webhook node found in workflow"
+- **Root Cause**: Webhook node `responseMode` must be set to `"responseNode"` (not `"lastNode"`) when using a Respond to Webhook node.
+- **Fix**: Set `parameters.responseMode: "responseNode"` in Webhook node configuration.
+
 ## Documentation References
 
-### Primary Sources (Always Consult)
+### Primary Sources (ALWAYS Consult Live)
 1. **n8n API Documentation**: https://docs.n8n.io/api/
-2. **n8n Webhook Documentation**: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook/
-3. **Replit Documentation**: Use the documentation search tools for Replit best practices
+2. **n8n API Reference**: https://docs.n8n.io/api/api-reference/
+3. **n8n v2.0 Breaking Changes**: https://docs.n8n.io/2-0-breaking-changes/
+4. **n8n Webhook Documentation**: https://docs.n8n.io/integrations/builtin/core-nodes/n8n-nodes-base.webhook/
+5. **Replit Documentation**: Use the documentation search tools for Replit best practices
 
 ### Version Awareness
 - n8n API evolves; always check for the latest version
 - Document which n8n version the integration was built against
 - Test after n8n updates (cloud updates automatically)
+- **ALWAYS use web search** to verify current API behavior before implementation
 
 ## API Authentication
 
@@ -100,8 +135,8 @@ n8n has payload size limits:
 - Validate payload size before sending
 - For large data, consider chunking or external storage
 
-### D8: Programmatic-Only Workflow Management
-All n8n workflow creation, modification, and deletion MUST be done via the n8n Management API. Manual operations in the n8n UI are prohibited.
+### D8: Programmatic-First Workflow Management
+All n8n workflow creation, modification, and deletion SHOULD be done via the n8n Management API. Manual operations in the n8n UI are avoided except where documented bugs require it.
 
 Rationale:
 - Ensures reproducibility across environments
@@ -110,6 +145,12 @@ Rationale:
 - Aligns with orchestrator-first architecture (ARCH-003)
 
 The N8N_API_KEY secret enables all management operations programmatically.
+
+**Exception Protocol**: When a known bug (see Known Issues Registry) requires manual intervention:
+1. Document the manual action taken
+2. Note the date and reason
+3. Track in communication_traces if applicable
+4. Update the Known Issues Registry when bug is resolved
 
 ## n8n Workflow Design Guidelines
 
