@@ -154,11 +154,11 @@
       "path": "rules/hub/003-nested-navigation.md",
       "partition": "hub",
       "priority": "HIGH",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "triggers": ["nested nav", "secondary nav", "tertiary nav", "multi-level", "navigation levels"],
       "dependencies": ["HUB-001", "UI-001"],
-      "crossReferences": ["UI-003", "UI-004"],
-      "description": "Defines optional 2nd and 3rd level navigation within applications (max 3 levels). Includes header pinning and collapse button placement."
+      "crossReferences": ["UI-003", "UI-004", "UI-006"],
+      "description": "Defines optional 2nd and 3rd level navigation within applications (max 3 levels). Includes header pinning, collapse button placement, and mobile accordion behavior."
     },
     "APP-LANDING-001": {
       "id": "APP-LANDING-001",
@@ -277,8 +277,20 @@
       "version": "1.2.0",
       "triggers": ["minimal", "design", "text-only", "no icons", "relative sizing", "black white", "clean"],
       "dependencies": ["UI-001"],
-      "crossReferences": ["UI-004", "HUB-003"],
+      "crossReferences": ["UI-004", "HUB-003", "UI-006"],
       "description": "Minimal text-only aesthetic with relative sizing and no colored accents."
+    },
+    "UI-006": {
+      "id": "UI-006",
+      "title": "Mobile Layout",
+      "path": "rules/ui/006-mobile-layout.md",
+      "partition": "ui",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["mobile", "responsive", "accordion", "touch", "breakpoint", "on the go", "small screen"],
+      "dependencies": ["UI-001", "HUB-001", "HUB-003"],
+      "crossReferences": ["UI-004", "UI-005", "HUB-003"],
+      "description": "Mobile-responsive layout with accordion navigation showing one nav at a time."
     },
     "INT-001": {
       "id": "INT-001",

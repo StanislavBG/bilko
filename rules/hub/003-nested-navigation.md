@@ -2,7 +2,7 @@
 
 Rule ID: HUB-003
 Priority: HIGH
-Version: 1.4.0
+Version: 1.5.0
 
 ## Context
 Complex applications may require navigation beyond the main hub sidebar. This rule defines the optional nested navigation pattern supporting up to 3 levels.
@@ -105,6 +105,15 @@ Each navigation column has a collapse toggle button in its footer zone. See UI-0
 ### Memory Explorer (if needed)
 - Level 2: "Browse" | "Search" | "Stats"
 - Level 3: Optional, based on complexity
+
+## Mobile Behavior
+
+On mobile viewports (< 768px), nested navigation switches to accordion mode per UI-006:
+- Only one nav column visible at a time
+- Tapping a nav expands it and collapses others
+- Content is the default view; navs are accessed on-demand
+
+See UI-006: Mobile Layout for full mobile specifications.
 
 ## Rationale
 This pattern balances navigation depth with usability. Three levels allow complex applications to organize content without overwhelming users with too many choices at once.

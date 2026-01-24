@@ -47,3 +47,4 @@ This rule does NOT prohibit:
 - UI-001: UI Principles
 - UI-004: Left-Nav Collapsible Behavior
 - HUB-003: Nested Navigation Pattern
+- UI-006: Mobile Layout

@@ -115,11 +115,16 @@ const [isCollapsed, setIsCollapsed] = useState(false);
 
 Note: Action icons (like PanelLeft for collapse toggle) are permitted per UI-005 scope.
 
+## Mobile Behavior
+
+On mobile viewports, collapse behavior changes to accordion mode - see UI-006: Mobile Layout.
+
 ## Cross-References
 
 - HUB-001: Hub Layout (primary sidebar)
 - UI-003: Secondary Navigation Pattern
 - HUB-003: Nested Navigation Pattern (D6 specifies footer placement)
+- UI-006: Mobile Layout (accordion navigation on mobile)
 
 ## Version History
 
