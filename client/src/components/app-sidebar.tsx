@@ -54,12 +54,10 @@ export function AppSidebar() {
       <SidebarHeader className="border-b">
         <div className="flex items-center justify-center px-2 py-2">
           {isCollapsed ? (
-            <div 
-              className="h-8 w-8 rounded-md bg-primary flex items-center justify-center"
+            <span 
+              className="font-bold text-lg"
               data-testid="logo-collapsed"
-            >
-              <span className="text-primary-foreground font-bold text-lg">B</span>
-            </div>
+            >B</span>
           ) : (
             <span className="font-semibold text-lg" data-testid="logo-expanded">Bilko Bibitkov</span>
           )}
