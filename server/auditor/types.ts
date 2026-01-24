@@ -6,6 +6,30 @@ export interface AuditCheck {
   run: () => Promise<AuditResult>;
 }
 
+export interface PatternCheck {
+  pattern: string;
+  label: string;
+  found: boolean;
+  matchedText?: string;
+  lineNumber?: number;
+}
+
+export interface FileEvidence {
+  path: string;
+  exists: boolean;
+  sizeBytes?: number;
+  lineCount?: number;
+  contentPreview?: string;
+  relevantLines?: { lineNumber: number; content: string }[];
+}
+
+export interface AuditEvidence {
+  filesExamined: FileEvidence[];
+  patternsChecked?: PatternCheck[];
+  validationSteps?: { step: string; result: string; passed: boolean }[];
+  summary: string;
+}
+
 export interface AuditResult {
   checkId: string;
   passed: boolean;
@@ -15,6 +39,8 @@ export interface AuditResult {
   runTimestamp: string;
   checkName: string;
   checkDescription: string;
+  severity: "critical" | "warning" | "info";
+  evidence: AuditEvidence;
 }
 
 export interface AuditReport {

@@ -38,23 +38,6 @@ export function registerAuditorRoutes(app: Express) {
       next(err);
     }
   });
-
-  app.get("/api/audit/health", async (req: Request, res: Response) => {
-    try {
-      const report = await runAudit();
-      if (report.passed) {
-        res.json({ status: "healthy", criticalFailures: 0 });
-      } else {
-        res.status(500).json({ 
-          status: "unhealthy", 
-          criticalFailures: report.criticalFailures,
-          failures: report.results.filter(r => !r.passed).map(r => r.message),
-        });
-      }
-    } catch (err) {
-      res.status(500).json({ status: "error", message: (err as Error).message });
-    }
-  });
 }
 
 export async function validateOnStartup(): Promise<boolean> {

@@ -12,7 +12,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { 
   CheckCircle, XCircle, AlertTriangle, RefreshCw, Shield, Clock, Server,
-  Book, ChevronDown, ChevronRight, FileText, ArrowLeft, Layers, Tag, GitBranch, Link2
+  Book, ChevronDown, ChevronRight, FileText, ArrowLeft, Layers, Tag, GitBranch, Link2,
+  FileSearch, ListChecks, Search
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
 
@@ -53,6 +54,30 @@ interface RuleContent {
   content: string;
 }
 
+interface PatternCheck {
+  pattern: string;
+  label: string;
+  found: boolean;
+  matchedText?: string;
+  lineNumber?: number;
+}
+
+interface FileEvidence {
+  path: string;
+  exists: boolean;
+  sizeBytes?: number;
+  lineCount?: number;
+  contentPreview?: string;
+  relevantLines?: { lineNumber: number; content: string }[];
+}
+
+interface AuditEvidence {
+  filesExamined: FileEvidence[];
+  patternsChecked?: PatternCheck[];
+  validationSteps?: { step: string; result: string; passed: boolean }[];
+  summary: string;
+}
+
 interface AuditResult {
   checkId: string;
   passed: boolean;
@@ -62,6 +87,8 @@ interface AuditResult {
   runTimestamp: string;
   checkName: string;
   checkDescription: string;
+  severity: "critical" | "warning" | "info";
+  evidence: AuditEvidence;
 }
 
 interface AuditReport {
@@ -95,71 +122,201 @@ function CheckStatusIcon({ passed }: { passed: boolean }) {
   return <XCircle className="h-5 w-5 text-destructive" />;
 }
 
-function CheckCard({ result }: { result: AuditResult }) {
+function AuditCheckItem({ 
+  result, 
+  isSelected,
+  onSelect 
+}: { 
+  result: AuditResult;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
   return (
-    <Card className="p-4" data-testid={`card-check-${result.checkId.toLowerCase()}`}>
-      <div className="flex items-start gap-4">
-        <div className="mt-0.5">
-          <CheckStatusIcon passed={result.passed} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <code className="text-sm font-semibold bg-muted px-2 py-0.5 rounded">
-              {result.checkId}
-            </code>
-            <span className="text-sm font-medium">{result.checkName}</span>
-            <Badge variant={result.passed ? "default" : "destructive"}>
-              {result.passed ? "Passed" : "Failed"}
-            </Badge>
-          </div>
-          
-          <p className="mt-2 text-sm text-muted-foreground">
-            {result.checkDescription}
-          </p>
-          
-          <div className="mt-3 p-3 bg-muted/50 rounded-md space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-medium">Result</span>
-              <span className={result.passed ? "text-green-600" : "text-destructive"}>
-                {result.message}
-              </span>
-            </div>
-            
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-medium flex items-center gap-1">
-                <Server className="h-3 w-3" />
-                Powered by
-              </span>
-              <code className="bg-background px-1.5 py-0.5 rounded text-muted-foreground" data-testid={`text-endpoint-${result.checkId.toLowerCase()}`}>
-                {result.endpoint}
-              </code>
-            </div>
-            
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-medium flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                Run at
-              </span>
-              <span className="text-muted-foreground" data-testid={`text-timestamp-${result.checkId.toLowerCase()}`}>
-                {formatTimestamp(result.runTimestamp)}
-              </span>
-            </div>
-          </div>
+    <Button
+      variant="ghost"
+      className={`w-full justify-start gap-2 ${
+        isSelected ? "bg-accent text-accent-foreground" : ""
+      }`}
+      onClick={onSelect}
+      data-testid={`nav-check-${result.checkId.toLowerCase()}`}
+    >
+      <CheckStatusIcon passed={result.passed} />
+      <div className="flex-1 min-w-0 flex items-center gap-1.5">
+        <code className="text-xs font-medium">{result.checkId}</code>
+      </div>
+      <Badge 
+        variant={result.passed ? "default" : "destructive"} 
+        className="text-[10px] px-1"
+      >
+        {result.passed ? "OK" : "FAIL"}
+      </Badge>
+    </Button>
+  );
+}
 
-          {result.details && result.details.length > 0 && (
-            <div className="mt-3 space-y-1">
-              <span className="text-xs font-medium">Issues found:</span>
-              {result.details.map((detail, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs">
-                  <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
-                  <span className="text-muted-foreground">{detail}</span>
+function AuditDetailPanel({ result }: { result: AuditResult }) {
+  return (
+    <div className="h-full overflow-auto" data-testid={`detail-check-${result.checkId.toLowerCase()}`}>
+      <div className="p-4 border-b bg-muted/30">
+        <div className="flex items-center gap-2 flex-wrap mb-2">
+          <code className="text-sm font-bold bg-muted px-2 py-0.5 rounded">
+            {result.checkId}
+          </code>
+          <Badge variant={result.passed ? "default" : "destructive"}>
+            {result.passed ? "Passed" : "Failed"}
+          </Badge>
+          <Badge variant="outline" className="text-xs capitalize">
+            {result.severity}
+          </Badge>
+          <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            {formatTimestamp(result.runTimestamp)}
+          </span>
+        </div>
+        <h2 className="text-lg font-semibold" data-testid="text-check-title">
+          {result.checkName}
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">{result.checkDescription}</p>
+        
+        <div className="mt-3 p-2 bg-muted rounded-md">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="font-medium">Result:</span>
+            <span className={result.passed ? "text-green-600" : "text-destructive"}>
+              {result.message}
+            </span>
+          </div>
+        </div>
+
+        {result.details && result.details.length > 0 && (
+          <div className="mt-3 space-y-1">
+            <span className="text-xs font-medium text-destructive">Issues found:</span>
+            {result.details.map((detail, i) => (
+              <div key={i} className="flex items-start gap-2 text-xs bg-destructive/10 p-2 rounded">
+                <AlertTriangle className="h-3 w-3 text-destructive mt-0.5 shrink-0" />
+                <span>{detail}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 space-y-4">
+        <div className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+          <Search className="h-4 w-4" />
+          Evidence Summary
+        </div>
+        <p className="text-sm">{result.evidence.summary}</p>
+
+        {result.evidence.filesExamined.length > 0 && (
+          <div>
+            <div className="text-xs font-medium flex items-center gap-2 text-muted-foreground mb-2">
+              <FileSearch className="h-3 w-3" />
+              Files Examined ({result.evidence.filesExamined.length})
+            </div>
+            <div className="space-y-2">
+              {result.evidence.filesExamined.map((file, i) => (
+                <Card key={i} className="p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <code className="text-xs font-medium">{file.path}</code>
+                    {file.exists ? (
+                      <Badge variant="outline" className="text-[10px]">
+                        {file.lineCount} lines, {file.sizeBytes} bytes
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="text-[10px]">Not found</Badge>
+                    )}
+                  </div>
+                  {file.contentPreview && (
+                    <pre className="text-xs bg-muted p-2 rounded overflow-x-auto max-h-32 overflow-y-auto">
+                      {file.contentPreview}
+                    </pre>
+                  )}
+                  {file.relevantLines && file.relevantLines.length > 0 && (
+                    <div className="mt-2">
+                      <span className="text-xs text-muted-foreground">Relevant lines:</span>
+                      {file.relevantLines.map((line, j) => (
+                        <div key={j} className="flex gap-2 text-xs bg-muted/50 p-1 rounded mt-1">
+                          <span className="text-muted-foreground w-8 text-right shrink-0">
+                            {line.lineNumber}:
+                          </span>
+                          <code className="flex-1">{line.content}</code>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {result.evidence.patternsChecked && result.evidence.patternsChecked.length > 0 && (
+          <div>
+            <div className="text-xs font-medium flex items-center gap-2 text-muted-foreground mb-2">
+              <ListChecks className="h-3 w-3" />
+              Patterns Checked ({result.evidence.patternsChecked.length})
+            </div>
+            <div className="space-y-1">
+              {result.evidence.patternsChecked.map((pattern, i) => (
+                <div 
+                  key={i} 
+                  className={`flex items-start gap-2 text-xs p-2 rounded ${
+                    pattern.found ? "bg-destructive/10" : "bg-muted/50"
+                  }`}
+                >
+                  {pattern.found ? (
+                    <XCircle className="h-3 w-3 text-destructive mt-0.5 shrink-0" />
+                  ) : (
+                    <CheckCircle className="h-3 w-3 text-green-600 mt-0.5 shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <div className="font-medium">{pattern.label}</div>
+                    <code className="text-muted-foreground text-[10px]">{pattern.pattern}</code>
+                    {pattern.found && pattern.matchedText && (
+                      <div className="mt-1 text-destructive">
+                        Line {pattern.lineNumber}: "{pattern.matchedText}"
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {result.evidence.validationSteps && result.evidence.validationSteps.length > 0 && (
+          <div>
+            <div className="text-xs font-medium flex items-center gap-2 text-muted-foreground mb-2">
+              <ListChecks className="h-3 w-3" />
+              Validation Steps ({result.evidence.validationSteps.length})
+            </div>
+            <div className="space-y-1">
+              {result.evidence.validationSteps.map((step, i) => (
+                <div 
+                  key={i} 
+                  className={`flex items-start gap-2 text-xs p-2 rounded ${
+                    step.passed ? "bg-muted/50" : "bg-destructive/10"
+                  }`}
+                >
+                  {step.passed ? (
+                    <CheckCircle className="h-3 w-3 text-green-600 mt-0.5 shrink-0" />
+                  ) : (
+                    <XCircle className="h-3 w-3 text-destructive mt-0.5 shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <div className="font-medium">{step.step}</div>
+                    <div className={step.passed ? "text-muted-foreground" : "text-destructive"}>
+                      {step.result}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -690,6 +847,8 @@ function CatalogTab() {
 }
 
 function AuditTab() {
+  const [selectedCheckId, setSelectedCheckId] = useState<string | null>(null);
+  
   const { data: report, isLoading, refetch, isRefetching } = useQuery<AuditReport>({
     queryKey: ["/api/audit"],
   });
@@ -699,13 +858,17 @@ function AuditTab() {
     queryClient.invalidateQueries({ queryKey: ["/api/audit"] });
   };
 
+  const selectedResult = report?.results.find(r => r.checkId === selectedCheckId);
+
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
-        <Skeleton className="h-20 w-full" />
+      <div className="flex gap-4 h-[calc(100vh-220px)]">
+        <div className="w-64 shrink-0">
+          <Skeleton className="h-full w-full" />
+        </div>
+        <div className="flex-1">
+          <Skeleton className="h-full w-full" />
+        </div>
       </div>
     );
   }
@@ -723,33 +886,66 @@ function AuditTab() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleRefresh}
-          disabled={isRefetching}
-          data-testid="button-refresh-audit"
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
-          {isRefetching ? "Running..." : "Re-run Audit"}
-        </Button>
-      </div>
-
-      <OverallStatus report={report} />
-      
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            Check Results
-          </h3>
-          <EndpointInfo endpoint="GET /api/audit" />
+    <div className="flex gap-4 h-[calc(100vh-220px)]" data-testid="audit-layout">
+      <Card className="w-64 shrink-0 flex flex-col overflow-hidden">
+        <div className="p-3 border-b bg-muted/30">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium" data-testid="text-audit-title">
+                Audit Checks
+              </span>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={handleRefresh}
+              disabled={isRefetching}
+              data-testid="button-refresh-audit"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-xs text-muted-foreground">
+              {formatTimestamp(report.timestamp)}
+            </p>
+            <EndpointInfo endpoint="GET /api/audit" />
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            {report.passed ? (
+              <Badge variant="default" className="text-xs">All Passed</Badge>
+            ) : (
+              <Badge variant="destructive" className="text-xs">
+                {report.criticalFailures} Failed
+              </Badge>
+            )}
+          </div>
         </div>
-        {report.results.map((result) => (
-          <CheckCard key={result.checkId} result={result} />
-        ))}
-      </div>
+        <div className="flex-1 overflow-auto p-2 space-y-1">
+          {report.results.map((result) => (
+            <AuditCheckItem
+              key={result.checkId}
+              result={result}
+              isSelected={selectedCheckId === result.checkId}
+              onSelect={() => setSelectedCheckId(result.checkId)}
+            />
+          ))}
+        </div>
+      </Card>
+
+      <Card className="flex-1 overflow-hidden">
+        {selectedResult ? (
+          <AuditDetailPanel result={selectedResult} />
+        ) : (
+          <div className="h-full flex items-center justify-center text-muted-foreground">
+            <div className="text-center">
+              <Shield className="h-8 w-8 mx-auto opacity-50 mb-2" />
+              <p className="text-sm">Select a check to view evidence</p>
+            </div>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
@@ -799,10 +995,8 @@ export default function RulesExplorer() {
           <CatalogTab />
         </TabsContent>
 
-        <TabsContent value="audit" className="mt-0">
-          <div className="max-w-4xl">
-            <AuditTab />
-          </div>
+        <TabsContent value="audit" className="mt-0 flex-1">
+          <AuditTab />
         </TabsContent>
       </Tabs>
     </div>

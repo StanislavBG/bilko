@@ -18,11 +18,7 @@ const registry: EndpointRegistry = {
   },
   "GET /api/audit": {
     method: "GET",
-    description: "Runs all audit checks and returns compliance report"
-  },
-  "GET /api/audit/health": {
-    method: "GET",
-    description: "Quick health check for audit system status"
+    description: "Runs comprehensive audit with detailed evidence for each check including files examined, patterns checked, and validation steps"
   },
   "GET /api/traces": {
     method: "GET",
