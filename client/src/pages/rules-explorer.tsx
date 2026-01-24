@@ -160,25 +160,30 @@ function TertiaryNavPanel({
   return (
     <div className={`shrink-0 border-r bg-background flex flex-col ${className}`} data-testid={testId}>
       <div className="p-2 border-b">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium capitalize truncate flex-1">
-            {title}
-          </span>
-          {onClose && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              data-testid={`${testId}-close`}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
+        <span className="text-xs font-medium capitalize truncate">
+          {title}
+        </span>
       </div>
       <div className="flex-1 overflow-auto p-1 space-y-0.5">
         {children}
       </div>
+      {onClose && (
+        <div className="border-t p-2 flex justify-center">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onClose}
+                data-testid={`${testId}-close`}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Close</TooltipContent>
+          </Tooltip>
+        </div>
+      )}
     </div>
   );
 }
@@ -699,7 +704,7 @@ export default function RulesExplorer() {
       <div className={`shrink-0 border-r bg-sidebar flex flex-col h-full transition-all duration-200 ${
         isSecNavCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
       }`}>
-        <div className={`border-b shrink-0 flex items-center gap-2 ${
+        <div className={`border-b shrink-0 flex items-center ${
           isSecNavCollapsed ? "p-2 justify-center" : "p-3"
         }`}>
           {isSecNavCollapsed ? (
@@ -719,22 +724,6 @@ export default function RulesExplorer() {
               </p>
             </div>
           )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 shrink-0"
-                onClick={() => setIsSecNavCollapsed(!isSecNavCollapsed)}
-                data-testid="button-toggle-sec-nav"
-              >
-                <PanelLeft className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              {isSecNavCollapsed ? "Expand" : "Collapse"}
-            </TooltipContent>
-          </Tooltip>
         </div>
         <div className={`flex-1 space-y-1 overflow-y-auto ${isSecNavCollapsed ? "p-1" : "p-2"}`}>
           <SecondaryNavItem
@@ -751,6 +740,23 @@ export default function RulesExplorer() {
             testId="nav-audit"
             isCollapsed={isSecNavCollapsed}
           />
+        </div>
+        <div className="border-t p-2 flex justify-center">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setIsSecNavCollapsed(!isSecNavCollapsed)}
+                data-testid="button-toggle-sec-nav"
+              >
+                <PanelLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {isSecNavCollapsed ? "Expand" : "Collapse"}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
