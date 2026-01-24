@@ -1,18 +1,22 @@
 # UI-004: Left-Nav Collapsible Behavior
 
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Priority**: HIGH  
 **Partition**: ui
 
 ## Purpose
 
-Defines consistent collapsible behavior for all left navigation panels.
+Defines consistent collapsible behavior for left navigation panels.
 
 ## Requirements
 
-### 1. All Left-Navs Are Collapsible
+### 1. Collapsibility by Nav Level
 
-Every left navigation panel (primary sidebar, secondary nav, tertiary nav) must support a collapsed state.
+| Level | Example | Collapsible | Rationale |
+|-------|---------|-------------|-----------|
+| Primary | Main sidebar | Required | Always visible, user needs space control |
+| Secondary | Rules Explorer nav (Catalog/Audit) | Required | Persistent nav that benefits from minimizing |
+| Tertiary | Partitions list, rules list | Optional | Contextual panels that appear/disappear based on selection |
 
 ### 2. Collapsed State Appearance
 
@@ -41,6 +45,14 @@ When expanded:
 - Collapse state persists within session
 - Primary sidebar uses SidebarProvider context
 - Secondary navs manage local state (useState)
+
+## When to Skip Collapsibility
+
+Tertiary navs may skip collapsibility when:
+- They only appear contextually (after a selection)
+- They have no header/title area
+- Collapsing would provide minimal space savings
+- The panel content is already minimal (< 5 items)
 
 ## Implementation Pattern
 

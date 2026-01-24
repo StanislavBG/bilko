@@ -2,7 +2,7 @@
 
 Rule ID: ARCH-000
 Priority: ABSOLUTE
-Version: 1.0.0
+Version: 1.1.0
 
 ## The Primary Directive
 
@@ -65,6 +65,17 @@ Before any code change:
 - Rules Service confirms rule coverage
 - Gaps are surfaced before implementation begins
 - Unknown territory requires new rule creation first
+
+## The Development Loop
+
+ARCH-000 is the **entry directive** - consult rules before writing code.
+ARCH-010 is the **exit directive** - validate and update rules before completing.
+
+Together they form a complete development loop:
+1. **Entry**: Consult rules → write code
+2. **Exit**: Validate compliance → update rules if needed
+
+See ARCH-010 for the exit protocol.
 
 ## Hierarchy
 

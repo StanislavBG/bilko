@@ -10,10 +10,10 @@
       "path": "rules/architecture/000-primary-directive.md",
       "partition": "architecture",
       "priority": "ABSOLUTE",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "triggers": ["*"],
       "dependencies": [],
-      "crossReferences": [],
+      "crossReferences": ["ARCH-010"],
       "description": "NO CODE SHALL BE WRITTEN WITHOUT FIRST CONSULTING THE RULES."
     },
     "ARCH-001": {
@@ -130,7 +130,7 @@
       "path": "rules/hub/001-layout.md",
       "partition": "hub",
       "priority": "HIGH",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "triggers": ["hub", "layout", "sidebar", "navigation", "shell", "header"],
       "dependencies": ["ARCH-001", "UI-001"],
       "crossReferences": ["UI-001"],
@@ -262,7 +262,7 @@
       "path": "rules/ui/004-left-nav-collapsible.md",
       "partition": "ui",
       "priority": "HIGH",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "triggers": ["collapse", "collapsible", "left nav", "sidebar collapse", "single letter", "minimize nav"],
       "dependencies": ["UI-001", "HUB-001"],
       "crossReferences": ["UI-003", "HUB-003"],
@@ -313,8 +313,20 @@
       "version": "1.0.0",
       "triggers": ["audit", "rule audit", "rule architect", "evaluate rules", "check rules"],
       "dependencies": ["ARCH-000", "ARCH-002", "ARCH-006"],
-      "crossReferences": [],
+      "crossReferences": ["ARCH-010"],
       "description": "Protocol for AI agents to perform comprehensive rule audits via agentic reasoning."
+    },
+    "ARCH-010": {
+      "id": "ARCH-010",
+      "title": "Exit Directive",
+      "path": "rules/architecture/010-exit-directive.md",
+      "partition": "architecture",
+      "priority": "CRITICAL",
+      "version": "1.0.0",
+      "triggers": ["exit", "complete", "finish", "done", "validate rules", "update rules", "before completing"],
+      "dependencies": ["ARCH-000", "ARCH-002"],
+      "crossReferences": ["ARCH-000", "ARCH-009"],
+      "description": "Validate rule compliance and update rules before completing any task."
     },
     "APP-RULES-001": {
       "id": "APP-RULES-001",
