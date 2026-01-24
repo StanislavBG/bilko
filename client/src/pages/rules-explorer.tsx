@@ -13,7 +13,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { 
   Shield, Clock, Book, FileText, Layers, Tag, GitBranch, Link2,
-  Plus, History, ScrollText, Save, ChevronDown, ChevronRight, PanelLeft
+  Plus, History, ScrollText, Save, ChevronDown, ChevronRight, PanelLeft, X
 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
@@ -178,6 +178,55 @@ function PartitionNavItem({
       <span className="flex-1 text-left text-sm capitalize truncate">{partition.id}</span>
       <span className="text-xs text-muted-foreground">{partition.rules.length}</span>
     </Button>
+  );
+}
+
+function TertiaryNavPanel({
+  title,
+  subtitle,
+  icon: Icon,
+  onClose,
+  children,
+  className = "",
+  testId
+}: {
+  title: string;
+  subtitle?: string;
+  icon: typeof Layers;
+  onClose?: () => void;
+  children: React.ReactNode;
+  className?: string;
+  testId?: string;
+}) {
+  return (
+    <div className={`shrink-0 border-r bg-background flex flex-col ${className}`} data-testid={testId}>
+      <div className="p-2 border-b">
+        <div className="flex items-center gap-2">
+          <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="text-xs font-medium capitalize truncate flex-1">
+            {title}
+          </span>
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              data-testid={`${testId}-close`}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        {subtitle && (
+          <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">
+            {subtitle}
+          </p>
+        )}
+      </div>
+      <div className="flex-1 overflow-auto p-1 space-y-0.5">
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -419,30 +468,27 @@ function CatalogView({
       </div>
 
       {selectedPartition && (
-        <div className="w-48 shrink-0 border-r bg-background flex flex-col">
-          <div className="p-2 border-b">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs font-medium capitalize truncate">
-                {selectedPartition.id}
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">
-              {selectedPartition.description}
-            </p>
-          </div>
-          <div className="flex-1 overflow-auto p-1 space-y-0.5">
-            {selectedPartition.rules.map((rule) => (
-              <RuleNavItem
-                key={rule.id}
-                rule={rule}
-                isPrimary={rule.id === catalog.primaryDirectiveId}
-                isSelected={selectedRuleId === rule.id}
-                onSelect={() => setSelectedRuleId(rule.id)}
-              />
-            ))}
-          </div>
-        </div>
+        <TertiaryNavPanel
+          title={selectedPartition.id}
+          subtitle={selectedPartition.description}
+          icon={FileText}
+          onClose={() => {
+            setSelectedPartitionId(null);
+            setSelectedRuleId(null);
+          }}
+          className="w-48"
+          testId="tertiary-nav-rules"
+        >
+          {selectedPartition.rules.map((rule) => (
+            <RuleNavItem
+              key={rule.id}
+              rule={rule}
+              isPrimary={rule.id === catalog.primaryDirectiveId}
+              isSelected={selectedRuleId === rule.id}
+              onSelect={() => setSelectedRuleId(rule.id)}
+            />
+          ))}
+        </TertiaryNavPanel>
       )}
 
       <div className="flex-1 overflow-hidden bg-background">

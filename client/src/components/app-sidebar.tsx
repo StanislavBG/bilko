@@ -19,6 +19,7 @@ import {
   SidebarMenuItem,
   SidebarFooter,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const navItems = [
@@ -57,6 +58,8 @@ interface AppSidebarProps {
 
 export function AppSidebar({ user }: AppSidebarProps) {
   const [location] = useLocation();
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
   const { effectiveIsAdmin, isViewingAsUser, toggleViewMode, canToggleViewMode } = useViewMode();
   
   const visibleNavItems = navItems.filter(
@@ -74,8 +77,17 @@ export function AppSidebar({ user }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
-        <div className="flex items-center justify-between px-2 py-2">
-          <span className="font-semibold text-lg">Bilko Bibitkov</span>
+        <div className="flex items-center justify-between px-2 py-2 gap-2">
+          {isCollapsed ? (
+            <div 
+              className="h-8 w-8 rounded-md bg-primary flex items-center justify-center"
+              data-testid="logo-collapsed"
+            >
+              <span className="text-primary-foreground font-bold text-sm">B</span>
+            </div>
+          ) : (
+            <span className="font-semibold text-lg" data-testid="logo-expanded">Bilko Bibitkov</span>
+          )}
           <SidebarTrigger data-testid="button-sidebar-toggle" />
         </div>
       </SidebarHeader>
