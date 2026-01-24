@@ -220,6 +220,18 @@
       "crossReferences": [],
       "description": "Pattern for displaying API endpoint metadata via info icons in UI sections."
     },
+    "UI-003": {
+      "id": "UI-003",
+      "title": "Secondary Navigation Pattern",
+      "path": "rules/ui/003-secondary-navigation.md",
+      "partition": "ui",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["secondary nav", "tabs", "master detail", "two column", "secondary sidebar", "complex layout"],
+      "dependencies": ["UI-001", "HUB-001"],
+      "crossReferences": ["HUB-001"],
+      "description": "Defines when and how to implement secondary navigation within applications."
+    },
     "INT-001": {
       "id": "INT-001",
       "title": "n8n Integration Rules",
@@ -258,14 +270,14 @@
     }
   },
   "partitions": {
+    "architecture": {
+      "path": "rules/architecture/",
+      "description": "System-wide architectural rules and principles",
+      "readOrder": 0
+    },
     "shared": {
       "path": "rules/shared/",
       "description": "Cross-project rules (copy to n8n project)",
-      "readOrder": 0
-    },
-    "architecture": {
-      "path": "rules/architecture/",
-      "description": "System-wide architectural rules",
       "readOrder": 1
     },
     "hub": {
@@ -273,9 +285,9 @@
       "description": "Application Hub shell and access control",
       "readOrder": 2
     },
-    "apps": {
-      "path": "rules/apps/",
-      "description": "Per-application specific rules",
+    "ui": {
+      "path": "rules/ui/",
+      "description": "User interface patterns and components",
       "readOrder": 3
     },
     "data": {
@@ -283,9 +295,9 @@
       "description": "Data model and persistence rules",
       "readOrder": 4
     },
-    "ui": {
-      "path": "rules/ui/",
-      "description": "User interface rules",
+    "apps": {
+      "path": "rules/apps/",
+      "description": "Per-application specific rules",
       "readOrder": 5
     },
     "integration": {

@@ -56,21 +56,21 @@ export function registerRulesRoutes(app: Express): void {
 
       const partitionMap = new Map<string, RuleMetadata[]>();
       const partitionOrder: Record<string, number> = {
-        shared: 0,
-        architecture: 1,
+        architecture: 0,
+        shared: 1,
         hub: 2,
-        apps: 3,
+        ui: 3,
         data: 4,
-        ui: 5,
+        apps: 5,
         integration: 6
       };
       const partitionDescriptions: Record<string, string> = {
+        architecture: "System-wide architectural rules and principles",
         shared: "Cross-project rules (copy to n8n project)",
-        architecture: "System-wide architectural rules",
         hub: "Application Hub shell and access control",
-        apps: "Per-application specific rules",
+        ui: "User interface patterns and components",
         data: "Data model and persistence rules",
-        ui: "User interface rules",
+        apps: "Per-application specific rules",
         integration: "External service integration rules"
       };
 

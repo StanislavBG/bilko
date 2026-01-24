@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EndpointInfo } from "@/components/endpoint-info";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -104,15 +105,45 @@ function formatTimestamp(date: string): string {
   return d.toLocaleString();
 }
 
+const PRIORITY_INFO: Record<string, { color: string; description: string }> = {
+  ABSOLUTE: { 
+    color: "bg-red-600 text-white", 
+    description: "ABSOLUTE - Must always be followed without exception" 
+  },
+  CRITICAL: { 
+    color: "bg-orange-500 text-white", 
+    description: "CRITICAL - Essential for system integrity" 
+  },
+  HIGH: { 
+    color: "bg-amber-500 text-white", 
+    description: "HIGH - Important for correct behavior" 
+  },
+  MEDIUM: { 
+    color: "bg-blue-500 text-white", 
+    description: "MEDIUM - Recommended best practice" 
+  },
+  LOW: { 
+    color: "bg-slate-500 text-white", 
+    description: "LOW - Optional guidance" 
+  },
+};
+
+const SEVERITY_INFO: Record<string, string> = {
+  critical: "Critical - Failure blocks deployment",
+  warning: "Warning - Should be addressed",
+  info: "Info - For awareness only",
+};
+
 function getPriorityColor(priority: string): string {
-  switch (priority) {
-    case "ABSOLUTE": return "bg-red-600 text-white";
-    case "CRITICAL": return "bg-orange-500 text-white";
-    case "HIGH": return "bg-amber-500 text-white";
-    case "MEDIUM": return "bg-blue-500 text-white";
-    case "LOW": return "bg-slate-500 text-white";
-    default: return "bg-muted";
-  }
+  return PRIORITY_INFO[priority]?.color ?? "bg-muted";
+}
+
+function getPriorityDescription(priority: string): string {
+  return PRIORITY_INFO[priority]?.description ?? priority;
+}
+
+function getSeverityDescription(severity: string): string {
+  return SEVERITY_INFO[severity] ?? severity;
 }
 
 function CheckStatusIcon({ passed }: { passed: boolean }) {
@@ -165,9 +196,14 @@ function AuditDetailPanel({ result }: { result: AuditResult }) {
           <Badge variant={result.passed ? "default" : "destructive"}>
             {result.passed ? "Passed" : "Failed"}
           </Badge>
-          <Badge variant="outline" className="text-xs capitalize">
-            {result.severity}
-          </Badge>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="outline" className="text-xs capitalize cursor-help">
+                {result.severity}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>{getSeverityDescription(result.severity)}</TooltipContent>
+          </Tooltip>
           <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
             <Clock className="h-3 w-3" />
             {formatTimestamp(result.runTimestamp)}
@@ -417,12 +453,22 @@ function CompactRuleItem({
       <div className="flex-1 min-w-0 flex items-center gap-1.5">
         <code className="text-xs font-medium">{rule.id}</code>
         {isPrimary && (
-          <Shield className="h-3 w-3 text-primary shrink-0" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Shield className="h-3 w-3 text-primary shrink-0" />
+            </TooltipTrigger>
+            <TooltipContent>Primary Directive</TooltipContent>
+          </Tooltip>
         )}
       </div>
-      <span className={`text-[10px] px-1 py-0.5 rounded ${getPriorityColor(rule.priority)}`}>
-        {rule.priority.charAt(0)}
-      </span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={`text-[10px] px-1 py-0.5 rounded cursor-help ${getPriorityColor(rule.priority)}`}>
+            {rule.priority.charAt(0)}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{getPriorityDescription(rule.priority)}</TooltipContent>
+      </Tooltip>
     </Button>
   );
 }
