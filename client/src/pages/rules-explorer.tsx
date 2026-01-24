@@ -716,7 +716,7 @@ function AuditView({
                   Rule Architect Protocol
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Instructions for performing agentic rule audits (ARCH-009)
+                  Instructions for performing agentic rule audits (AGENT-001)
                 </p>
               </div>
               
