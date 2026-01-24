@@ -236,6 +236,199 @@ function RuleCard({
   );
 }
 
+function CompactRuleItem({ 
+  rule, 
+  isPrimary,
+  isSelected,
+  onSelect 
+}: { 
+  rule: RuleMetadata; 
+  isPrimary: boolean;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      className={`w-full text-left px-2 py-1.5 rounded-md transition-colors flex items-center gap-2 ${
+        isSelected 
+          ? "bg-accent text-accent-foreground" 
+          : "hover-elevate"
+      }`}
+      onClick={onSelect}
+      data-testid={`nav-rule-${rule.id.toLowerCase()}`}
+    >
+      <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      <div className="flex-1 min-w-0 flex items-center gap-1.5">
+        <code className="text-xs font-medium">{rule.id}</code>
+        {isPrimary && (
+          <Shield className="h-3 w-3 text-primary shrink-0" />
+        )}
+      </div>
+      <span className={`text-[10px] px-1 py-0.5 rounded ${getPriorityColor(rule.priority)}`}>
+        {rule.priority.charAt(0)}
+      </span>
+    </button>
+  );
+}
+
+function CompactPartitionSection({ 
+  partition, 
+  primaryDirectiveId,
+  selectedRuleId,
+  onSelectRule 
+}: { 
+  partition: PartitionInfo; 
+  primaryDirectiveId: string;
+  selectedRuleId: string | null;
+  onSelectRule: (ruleId: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(true);
+
+  return (
+    <div className="mb-1">
+      <button
+        className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wide"
+        onClick={() => setIsOpen(!isOpen)}
+        data-testid={`nav-partition-${partition.id}`}
+      >
+        {isOpen ? (
+          <ChevronDown className="h-3 w-3" />
+        ) : (
+          <ChevronRight className="h-3 w-3" />
+        )}
+        <span>{partition.id}</span>
+        <span className="text-[10px] opacity-70">({partition.rules.length})</span>
+      </button>
+      {isOpen && (
+        <div className="ml-1 space-y-0.5">
+          {partition.rules.map((rule) => (
+            <CompactRuleItem
+              key={rule.id}
+              rule={rule}
+              isPrimary={rule.id === primaryDirectiveId}
+              isSelected={selectedRuleId === rule.id}
+              onSelect={() => onSelectRule(rule.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RuleDetailPanel({ 
+  ruleId,
+  onSelectRule
+}: { 
+  ruleId: string;
+  onSelectRule: (ruleId: string) => void;
+}) {
+  const { data: rule, isLoading, error } = useQuery<RuleContent>({
+    queryKey: ["/api/rules", ruleId],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="p-4 space-y-3">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (error || !rule) {
+    return (
+      <div className="p-4 flex items-center justify-center h-full">
+        <p className="text-sm text-muted-foreground">Failed to load rule</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-auto" data-testid={`detail-rule-${ruleId.toLowerCase()}`}>
+      <div className="p-4 border-b bg-muted/30">
+        <div className="flex items-center gap-2 flex-wrap mb-2">
+          <code className="text-sm font-bold bg-muted px-2 py-0.5 rounded">
+            {rule.id}
+          </code>
+          <Badge className={getPriorityColor(rule.priority)}>
+            {rule.priority}
+          </Badge>
+          <Badge variant="outline" className="capitalize text-xs">
+            {rule.partition}
+          </Badge>
+          <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
+            <Tag className="h-3 w-3" />
+            v{rule.version}
+          </span>
+        </div>
+        <h2 className="text-lg font-semibold" data-testid="text-rule-title">
+          {rule.title}
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">{rule.description}</p>
+
+        {(rule.dependencies.length > 0 || rule.crossReferences.length > 0) && (
+          <div className="mt-3 pt-3 border-t flex flex-wrap gap-3">
+            {rule.dependencies.length > 0 && (
+              <div>
+                <span className="text-xs font-medium flex items-center gap-1 mb-1 text-muted-foreground">
+                  <GitBranch className="h-3 w-3" />
+                  Dependencies
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {rule.dependencies.map((dep) => (
+                    <Button
+                      key={dep}
+                      variant="outline"
+                      size="sm"
+                      className="h-5 text-xs px-1.5"
+                      onClick={() => onSelectRule(dep)}
+                      data-testid={`link-dep-${dep.toLowerCase()}`}
+                    >
+                      {dep}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {rule.crossReferences.length > 0 && (
+              <div>
+                <span className="text-xs font-medium flex items-center gap-1 mb-1 text-muted-foreground">
+                  <Link2 className="h-3 w-3" />
+                  Cross-References
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {rule.crossReferences.map((ref) => (
+                    <Button
+                      key={ref}
+                      variant="outline"
+                      size="sm"
+                      className="h-5 text-xs px-1.5"
+                      onClick={() => onSelectRule(ref)}
+                      data-testid={`link-ref-${ref.toLowerCase()}`}
+                    >
+                      {ref}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="p-4">
+        <div className="prose prose-sm dark:prose-invert max-w-none" data-testid="text-rule-content">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {rule.content}
+          </ReactMarkdown>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PartitionSection({ 
   partition, 
   primaryDirectiveId,
@@ -430,22 +623,15 @@ function CatalogTab() {
     queryKey: ["/api/rules"],
   });
 
-  if (selectedRuleId) {
-    return (
-      <RulePreview 
-        ruleId={selectedRuleId} 
-        onBack={() => setSelectedRuleId(null)}
-        onSelectRule={setSelectedRuleId}
-      />
-    );
-  }
-
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
+      <div className="flex gap-4 h-[calc(100vh-220px)]">
+        <div className="w-64 shrink-0">
+          <Skeleton className="h-full w-full" />
+        </div>
+        <div className="flex-1">
+          <Skeleton className="h-full w-full" />
+        </div>
       </div>
     );
   }
@@ -460,36 +646,48 @@ function CatalogTab() {
   }
 
   return (
-    <div className="space-y-4">
-      <Card className="p-4">
-        <div className="flex items-center gap-4">
-          <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
-            <Book className="h-5 w-5 text-primary-foreground" />
+    <div className="flex gap-4 h-[calc(100vh-220px)]" data-testid="catalog-layout">
+      <Card className="w-64 shrink-0 flex flex-col overflow-hidden">
+        <div className="p-3 border-b bg-muted/30">
+          <div className="flex items-center gap-2">
+            <Book className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium" data-testid="text-catalog-title">
+              Rules Catalog
+            </span>
+            <EndpointInfo endpoint="GET /api/rules" className="ml-auto" />
           </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold" data-testid="text-catalog-title">
-                Rules Catalog
-              </h2>
-              <EndpointInfo endpoint="GET /api/rules" />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {catalog.totalRules} rules across {catalog.partitions.length} partitions
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {catalog.totalRules} rules
+          </p>
+        </div>
+        <div className="flex-1 overflow-auto p-2">
+          {catalog.partitions.map((partition) => (
+            <CompactPartitionSection
+              key={partition.id}
+              partition={partition}
+              primaryDirectiveId={catalog.primaryDirectiveId}
+              selectedRuleId={selectedRuleId}
+              onSelectRule={setSelectedRuleId}
+            />
+          ))}
         </div>
       </Card>
 
-      <div className="space-y-1">
-        {catalog.partitions.map((partition) => (
-          <PartitionSection
-            key={partition.id}
-            partition={partition}
-            primaryDirectiveId={catalog.primaryDirectiveId}
+      <Card className="flex-1 overflow-hidden">
+        {selectedRuleId ? (
+          <RuleDetailPanel 
+            ruleId={selectedRuleId}
             onSelectRule={setSelectedRuleId}
           />
-        ))}
-      </div>
+        ) : (
+          <div className="h-full flex items-center justify-center text-muted-foreground">
+            <div className="text-center">
+              <Book className="h-8 w-8 mx-auto opacity-50 mb-2" />
+              <p className="text-sm">Select a rule to view details</p>
+            </div>
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
@@ -577,19 +775,18 @@ export default function RulesExplorer() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col gap-6 max-w-4xl">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">
-            Rules Explorer
-          </h1>
-          <p className="text-muted-foreground">
-            Browse the rules catalog and monitor system integrity
-          </p>
-        </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full max-w-md grid-cols-2">
+    <div className="p-6 h-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-4 h-full">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight" data-testid="text-page-title">
+              Rules Explorer
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Browse the rules catalog and monitor system integrity
+            </p>
+          </div>
+          <TabsList className="grid grid-cols-2">
             <TabsTrigger value="catalog" data-testid="tab-catalog">
               <Book className="h-4 w-4 mr-2" />
               Catalog
@@ -599,16 +796,18 @@ export default function RulesExplorer() {
               Audit
             </TabsTrigger>
           </TabsList>
+        </div>
 
-          <TabsContent value="catalog" className="mt-4">
-            <CatalogTab />
-          </TabsContent>
+        <TabsContent value="catalog" className="mt-0 flex-1">
+          <CatalogTab />
+        </TabsContent>
 
-          <TabsContent value="audit" className="mt-4">
+        <TabsContent value="audit" className="mt-0">
+          <div className="max-w-4xl">
             <AuditTab />
-          </TabsContent>
-        </Tabs>
-      </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
