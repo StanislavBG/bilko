@@ -16,9 +16,17 @@ const registry: EndpointRegistry = {
     method: "GET",
     description: "Returns single rule content with markdown body"
   },
-  "GET /api/audit": {
+  "GET /api/audit/protocol": {
     method: "GET",
-    description: "Runs comprehensive audit with detailed evidence for each check including files examined, patterns checked, and validation steps"
+    description: "Returns the Rule Architect Protocol markdown content"
+  },
+  "GET /api/audits": {
+    method: "GET",
+    description: "Returns all saved rule audit reports"
+  },
+  "POST /api/audits": {
+    method: "POST",
+    description: "Saves a new rule audit report"
   },
   "GET /api/traces": {
     method: "GET",
@@ -28,9 +36,13 @@ const registry: EndpointRegistry = {
     method: "GET",
     description: "Returns single trace with full request/response details"
   },
-  "POST /api/orchestrator/dispatch": {
+  "POST /api/orchestrate/:workflowId": {
     method: "POST",
-    description: "Dispatches a request to n8n workflow via orchestration layer"
+    description: "Forwards request to n8n workflow via orchestration layer"
+  },
+  "POST /api/test-connection": {
+    method: "POST",
+    description: "Tests connection to an n8n workflow"
   },
   "GET /api/auth/user": {
     method: "GET",

@@ -160,6 +160,18 @@
       "crossReferences": ["UI-003"],
       "description": "Defines optional 2nd and 3rd level navigation within applications (max 3 levels)."
     },
+    "APP-LANDING-001": {
+      "id": "APP-LANDING-001",
+      "title": "Landing Page",
+      "path": "rules/apps/landing/001-overview.md",
+      "partition": "apps",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["landing", "public", "sign in", "login page", "unauthenticated"],
+      "dependencies": ["ARCH-001"],
+      "crossReferences": [],
+      "description": "The public entry point for unauthenticated users."
+    },
     "APP-HOME-001": {
       "id": "APP-HOME-001",
       "title": "Home Dashboard",
@@ -167,7 +179,7 @@
       "partition": "apps",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["home", "dashboard", "overview", "landing"],
+      "triggers": ["home", "dashboard", "overview"],
       "dependencies": ["HUB-001", "HUB-002"],
       "crossReferences": [],
       "description": "The default application aggregating information from all apps."
