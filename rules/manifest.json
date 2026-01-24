@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "1.0.0",
-  "lastUpdated": "2026-01-24",
+  "lastUpdated": "2026-01-24T20:37:00Z",
   "primaryDirective": "ARCH-000",
   "rules": {
     "ARCH-000": {
@@ -334,11 +334,35 @@
       "path": "rules/architecture/009-rule-architect-protocol.md",
       "partition": "architecture",
       "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": ["audit", "rule audit", "rule architect", "evaluate rules", "check rules"],
+      "version": "2.0.0",
+      "triggers": ["audit", "rule audit", "rule architect", "evaluate rules", "check rules", "full audit"],
       "dependencies": ["ARCH-000", "ARCH-002", "ARCH-006"],
-      "crossReferences": ["ARCH-010"],
-      "description": "Protocol for AI agents to perform comprehensive rule audits via agentic reasoning."
+      "crossReferences": ["ARCH-010", "ARCH-011", "ARCH-012"],
+      "description": "Master protocol orchestrating rule audits (ARCH-011) and code audits (ARCH-012)."
+    },
+    "ARCH-011": {
+      "id": "ARCH-011",
+      "title": "Rule Audit Agent Protocol",
+      "path": "rules/architecture/011-rule-audit-agent.md",
+      "partition": "architecture",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["rule audit", "validate rules", "structural integrity", "routing coverage"],
+      "dependencies": ["ARCH-000", "ARCH-002", "ARCH-009"],
+      "crossReferences": ["ARCH-012"],
+      "description": "Agentic protocol for validating rule structure, consistency, and coverage."
+    },
+    "ARCH-012": {
+      "id": "ARCH-012",
+      "title": "Code Audit Agent Protocol",
+      "path": "rules/architecture/012-code-audit-agent.md",
+      "partition": "architecture",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["code audit", "code compliance", "verify code", "anti-pattern"],
+      "dependencies": ["ARCH-000", "ARCH-009", "ARCH-011"],
+      "crossReferences": ["ARCH-011"],
+      "description": "Agentic protocol for validating code implements documented rules correctly."
     },
     "ARCH-010": {
       "id": "ARCH-010",

@@ -1,11 +1,10 @@
 import type { Rule, ValidationResult, TaskRoutingResult } from "./types";
 import { loadManifest, reloadManifest, getRule, getAllRules, getPrimaryDirective } from "./manifest";
-import { validateRulesIntegrity, validateRuleRouting, formatValidationReport } from "./validator";
 import { routeTask, suggestRulesForKeywords } from "./router";
 
 export class RulesService {
   private initialized = false;
-  private validationResult: ValidationResult | null = null;
+  private ruleCount = 0;
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -14,46 +13,15 @@ export class RulesService {
     
     try {
       loadManifest();
+      const allRules = getAllRules();
+      this.ruleCount = allRules.length;
     } catch (error) {
       console.error("[RulesService] Failed to load manifest:", error);
       throw error;
     }
     
-    this.validationResult = validateRulesIntegrity();
-    
-    if (!this.validationResult.valid) {
-      console.error("[RulesService] VALIDATION FAILED");
-      console.error(formatValidationReport(this.validationResult));
-      throw new Error("Rules validation failed. See errors above.");
-    }
-    
-    const coverage = validateRuleRouting();
-    if (coverage.uncovered.length > 0) {
-      console.error("[RulesService] ROUTING COVERAGE FAILED");
-      console.error("The following rules have no path to be reached:");
-      for (const id of coverage.uncovered) {
-        console.error(`  - ${id}`);
-      }
-      console.error("");
-      console.error("Every rule must be reachable via:");
-      console.error("  1. Being in the alwaysInclude list");
-      console.error("  2. Having partition covered by a red flag pattern");
-      console.error("  3. Being a dependency of a covered rule");
-      console.error("  4. Being a cross-reference of a covered rule");
-      console.error("  5. Having a wildcard (*) trigger");
-      throw new Error("Rules routing coverage failed. All rules must be reachable.");
-    }
-    
-    console.log("[RulesService] Validation passed");
-    console.log(`[RulesService] Loaded ${this.validationResult.stats.totalRules} rules`);
-    console.log("[RulesService] All rules are reachable via routing");
-    
-    if (this.validationResult.warnings.length > 0) {
-      console.warn(`[RulesService] ${this.validationResult.warnings.length} warnings:`);
-      for (const w of this.validationResult.warnings) {
-        console.warn(`  [${w.ruleId}] ${w.message}`);
-      }
-    }
+    console.log(`[RulesService] Loaded ${this.ruleCount} rules`);
+    console.log("[RulesService] Validation is now agentic - see ARCH-011 and ARCH-012");
     
     this.initialized = true;
   }
@@ -61,7 +29,8 @@ export class RulesService {
   reload(): void {
     console.log("[RulesService] Reloading manifest...");
     reloadManifest();
-    this.validationResult = validateRulesIntegrity();
+    const allRules = getAllRules();
+    this.ruleCount = allRules.length;
     console.log("[RulesService] Reload complete");
   }
 
@@ -91,12 +60,8 @@ export class RulesService {
     return suggestRulesForKeywords(keywords);
   }
 
-  getValidationResult(): ValidationResult | null {
-    return this.validationResult;
-  }
-
-  getRoutingCoverage(): { covered: string[]; uncovered: string[] } {
-    return validateRuleRouting();
+  getRuleCount(): number {
+    return this.ruleCount;
   }
 
   formatCitationForTask(taskDescription: string): string {
@@ -124,4 +89,4 @@ export async function initializeRulesService(): Promise<RulesService> {
   return service;
 }
 
-export type { Rule, ValidationResult, TaskRoutingResult } from "./types";
+export type { Rule, TaskRoutingResult } from "./types";

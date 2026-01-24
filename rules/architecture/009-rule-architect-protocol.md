@@ -1,219 +1,126 @@
 # ARCH-009: Rule Architect Protocol
 
-**Version:** 1.0.0  
+**Version:** 2.0.0  
 **Priority:** HIGH  
 **Partition:** architecture  
 **Dependencies:** ARCH-000, ARCH-002, ARCH-006
 
 ## Overview
 
-This document defines the protocol for AI agents to perform comprehensive rule audits. When asked to "run a rule audit" or "act as Rule Architect", agents should follow this protocol to evaluate the rule system and provide actionable findings.
+This document defines the master protocol for AI agents to perform system audits. The Rule Architect role orchestrates two specialized audit types:
+
+1. **Rule Audit** (ARCH-011) - Validates rules against each other
+2. **Code Audit** (ARCH-012) - Validates code against rules
 
 ## Activation
 
 This protocol is activated when:
-- User says "run a rule audit" or "perform rule audit"
-- User says "act as Rule Architect"
-- User requests evaluation of the rules
+- User says "run a rule audit" or "perform rule audit" → Triggers ARCH-011
+- User says "run a code audit" or "check code compliance" → Triggers ARCH-012
+- User says "act as Rule Architect" → Triggers both audits
+- User requests "full audit" → Triggers both audits in sequence
 
-## Pre-Audit Steps
+## Audit Types
 
-Before performing the audit:
+### Rule Audit (ARCH-011)
 
-1. **Read all rules** - Fetch `/api/rules` to get the catalog, then read each rule file
-2. **Read the manifest** - Examine `rules/manifest.json` for structure and metadata
-3. **Sample the codebase** - Use search tools to understand current code patterns
-4. **Note recent changes** - Check git diff or recent modifications if available
+**Purpose**: Ensure rules are internally consistent, complete, and properly structured.
 
-## Audit Checks
+**Checks**:
+1. Structural Integrity - Files exist, dependencies valid
+2. Routing Coverage - All rules reachable via routing system
+3. Rule Specificity - Consolidation opportunities
+4. Content Quality - Proper formatting and actionable directives
+5. Rule Conflicts - No contradictions between rules
+6. Coverage Gaps - Missing rules for existing patterns
+7. Rule Evolution - Obsolete or outdated rules
 
-Perform the following checks in order. For each check, provide:
-- **Finding**: What you observed
-- **Severity**: CRITICAL / WARNING / INFO
-- **Recommendation**: What action to take (if any)
+See ARCH-011 for detailed protocol.
 
----
+### Code Audit (ARCH-012)
 
-### CHECK 1: Rule Specificity Analysis
+**Purpose**: Ensure code correctly implements documented rules.
 
-**Question**: Are there rules that are too specific and should be generalized?
+**Checks**:
+1. UI Pattern Compliance - UI-004, UI-005, UI-006
+2. Layout Pattern Compliance - HUB-003, HUB-001
+3. Data Pattern Compliance - DATA-001
+4. Architecture Compliance - ARCH-001
+5. Anti-Pattern Detection - Violations of specific rules
 
-Look for:
-- Rules that only apply to one very specific case
-- Rules that duplicate logic that could be consolidated
-- Overly detailed implementation instructions that limit flexibility
+See ARCH-012 for detailed protocol.
 
-**Output Format**:
-```
-CHECK 1: Rule Specificity Analysis
-----------------------------------
-[List each finding or "No issues found"]
-```
+## Workflow
 
----
+### Manual Audit (via Chat)
 
-### CHECK 2: Content Quality
+1. User activates audit via chat command
+2. Agent follows the relevant protocol(s)
+3. Agent presents findings in the specified format
+4. User reviews and either:
+   - Saves the report via Rules Explorer > Audit > New Audit
+   - Takes immediate action on findings
 
-**Question**: Is there text that doesn't look like rules?
+### Automated Audit (via n8n)
 
-Look for:
-- Prose or notes that should be converted to actionable rules
-- Orphaned documentation without clear directives
-- Inconsistent formatting that deviates from rule structure
-- Content that belongs elsewhere (replit.md, README, code comments)
+1. n8n workflow triggers POST /api/audits/run
+2. Agent performs audit following protocol
+3. Results posted to POST /api/audits
+4. UI displays saved audit with timestamp
 
-**Output Format**:
-```
-CHECK 2: Content Quality
-------------------------
-[List each finding or "No issues found"]
-```
+## Combining Audits
 
----
+When running both audits ("full audit"):
 
-### CHECK 3: Rule Conflicts
+1. Run Rule Audit first (ARCH-011)
+2. Fix any critical rule issues
+3. Run Code Audit second (ARCH-012)
+4. Compile combined report
 
-**Question**: Are there any conflicts or contradictions within the rules?
-
-Look for:
-- Rules that give opposing guidance on the same topic
-- Priority conflicts (e.g., two rules both claim ABSOLUTE for conflicting behaviors)
-- Dependency loops or circular references
-- Rules that override each other without acknowledgment
-
-**Output Format**:
-```
-CHECK 3: Rule Conflicts
------------------------
-[List each finding or "No issues found"]
-```
-
----
-
-### CHECK 4: Coverage Gaps
-
-**Question**: Are there new sections needed? What aspects aren't covered?
-
-Analyze:
-- Current codebase patterns that have no governing rules
-- User behaviors or workflows that lack guidance
-- New features that were added without corresponding rules
-- Cross-cutting concerns that span multiple partitions
-
-**Output Format**:
-```
-CHECK 4: Coverage Gaps
-----------------------
-[List each finding or "No issues found"]
-Suggested new rules or sections: [list if any]
-```
-
----
-
-### CHECK 5: Code Compliance
-
-**Question**: Does the current code follow the documented rules?
-
-For each major rule, sample the codebase to verify:
-- Implementation matches rule specifications
-- Patterns prescribed by rules are actually used
-- Anti-patterns forbidden by rules are absent
-- Architecture boundaries are respected
-
-**Output Format**:
-```
-CHECK 5: Code Compliance
-------------------------
-Rule ID | Compliant? | Evidence
---------|------------|----------
-[rule]  | YES/NO/PARTIAL | [brief evidence]
-```
-
----
-
-### CHECK 6: Rule Evolution
-
-**Question**: Should any rules be changed based on code or user patterns?
-
-Consider:
-- Rules that are consistently ignored or worked around
-- Rules that no longer apply to current architecture
-- Rules that could be simplified based on learned patterns
-- Rules that need version updates based on changes
-
-**Output Format**:
-```
-CHECK 6: Rule Evolution
------------------------
-[List each finding or "No issues found"]
-```
-
----
-
-## Output Format
-
-Compile all findings into a single report:
-
+Combined report format:
 ```
 ===========================================
-RULE AUDIT REPORT
+FULL SYSTEM AUDIT REPORT
 Date: [ISO date]
 Auditor: [Agent identifier]
 ===========================================
 
-SUMMARY
--------
-Total Findings: [count]
-Critical: [count]
-Warnings: [count]
-Info: [count]
+PART 1: RULE AUDIT
+[Include full ARCH-011 report]
 
-DETAILED FINDINGS
------------------
+PART 2: CODE AUDIT
+[Include full ARCH-012 report]
 
-CHECK 1: Rule Specificity Analysis
-[findings]
-
-CHECK 2: Content Quality
-[findings]
-
-CHECK 3: Rule Conflicts
-[findings]
-
-CHECK 4: Coverage Gaps
-[findings]
-
-CHECK 5: Code Compliance
-[findings]
-
-CHECK 6: Rule Evolution
-[findings]
-
-RECOMMENDED ACTIONS
--------------------
-1. [Prioritized action items]
-2. ...
+COMBINED RECOMMENDATIONS
+------------------------
+[Prioritized list merging findings from both audits]
 
 ===========================================
-END OF AUDIT REPORT
+END OF FULL AUDIT REPORT
 ===========================================
 ```
 
-## Saving Results
+## Agentic vs Hardcoded Validation
 
-After completing the audit:
-1. Present the full report to the user
-2. User will copy the report and save it via the Rules Explorer UI
-3. Saved audits are stored with timestamps for historical tracking
+This system uses **agentic validation** rather than hardcoded checks:
 
-## Future Automation
+| Aspect | Hardcoded Approach | Agentic Approach |
+|--------|-------------------|------------------|
+| Checks | Fixed code in validator.ts | Defined in rule protocols |
+| Flexibility | Requires code changes | Rules can be updated |
+| Reasoning | Boolean pass/fail | Contextual analysis |
+| Evolution | Developer must update | Agent learns from patterns |
 
-This protocol is designed to be automatable via n8n workflows:
-- n8n can call an agent with this protocol
-- Agent performs the audit
-- Results are posted to `/api/audits` endpoint
-- UI displays the saved audit
+The RulesService provides basic manifest loading and routing, but all validation logic is defined in these protocols for agents to execute.
+
+## Cross-References
+
+- ARCH-011: Rule Audit Agent Protocol
+- ARCH-012: Code Audit Agent Protocol
+- ARCH-002: Rule Maintenance
+- APP-RULES-001: Rules Explorer (UI for viewing audits)
 
 ## Version History
 
+- 2.0.0: Split into orchestrator role with ARCH-011 (rule audit) and ARCH-012 (code audit)
 - 1.0.0: Initial protocol definition
