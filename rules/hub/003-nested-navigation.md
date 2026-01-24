@@ -2,7 +2,7 @@
 
 Rule ID: HUB-003
 Priority: HIGH
-Version: 1.7.0
+Version: 1.8.0
 
 ## Context
 Complex applications may require navigation beyond the main hub sidebar. This rule defines the optional nested navigation pattern supporting up to 3 levels.
@@ -99,6 +99,38 @@ Level 2 (Application) and Level 3 (Section) navigation columns require a header 
 
 **DO**: Add header to Level 2 and Level 3 nav columns
 **DON'T**: Leave navigation columns without context labels
+
+### D8: Flex Layout Chain
+All layout containers use `flex-1` for height inheritance, never `h-full`. The layout chain must be unbroken from App.tsx through to content.
+
+**Flex Chain (required):**
+```
+App.tsx main: flex-1 flex overflow-hidden
+  └── Page root: flex flex-1
+        └── Nav columns: flex flex-col (no height class)
+        └── Content wrapper: flex-1 flex flex-col
+              └── PageContent: flex-1 flex flex-col overflow-hidden
+                    └── Content: flex-1 (or overflow-auto for scrollable)
+```
+
+**DO**: Use `flex-1` for height inheritance in flex containers
+**DON'T**: Use `h-full` or `h-screen` in flex children (breaks height chain)
+
+### D9: PageContent Wrapper
+All pages must use the PageContent wrapper for their main content area. This ensures consistent header rendering and proper flex context.
+
+**DO**: Wrap page content in `<PageContent>{children}</PageContent>`
+**DON'T**: Render GlobalHeader manually or skip PageContent wrapper
+
+### D10: Nav Column Heights
+Navigation columns must have consistent fixed heights for headers and footers:
+
+**Headers**: `h-8 flex items-center shrink-0`
+**Footers**: `h-11 flex items-center justify-center shrink-0`
+**Content**: `flex-1 overflow-auto`
+
+**DO**: Use fixed heights for headers/footers, flex-1 for scrollable content
+**DON'T**: Use padding-based heights that vary across columns
 
 ## Implementation Notes
 - Level 1: Use main Shadcn Sidebar (SidebarProvider in App.tsx)
