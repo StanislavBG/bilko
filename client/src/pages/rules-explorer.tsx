@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { EndpointInfo } from "@/components/endpoint-info";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -169,31 +168,25 @@ function PartitionNavItem({
   return (
     <Button
       variant="ghost"
-      className={`w-full justify-start gap-2 h-8 ${
+      className={`w-full justify-start h-8 ${
         isSelected ? "bg-accent text-accent-foreground" : ""
       }`}
       onClick={onSelect}
       data-testid={`nav-partition-${partition.id}`}
     >
-      <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-      <span className="flex-1 text-left text-sm capitalize truncate">{partition.id}</span>
-      <span className="text-xs text-muted-foreground">{partition.rules.length}</span>
+      <span className="text-sm capitalize truncate">{partition.id}</span>
     </Button>
   );
 }
 
 function TertiaryNavPanel({
   title,
-  subtitle,
-  icon: Icon,
   onClose,
   children,
   className = "",
   testId
 }: {
   title: string;
-  subtitle?: string;
-  icon: typeof Layers;
   onClose?: () => void;
   children: React.ReactNode;
   className?: string;
@@ -203,7 +196,6 @@ function TertiaryNavPanel({
     <div className={`shrink-0 border-r bg-background flex flex-col ${className}`} data-testid={testId}>
       <div className="p-2 border-b">
         <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
           <span className="text-xs font-medium capitalize truncate flex-1">
             {title}
           </span>
@@ -218,11 +210,6 @@ function TertiaryNavPanel({
             </Button>
           )}
         </div>
-        {subtitle && (
-          <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">
-            {subtitle}
-          </p>
-        )}
       </div>
       <div className="flex-1 overflow-auto p-1 space-y-0.5">
         {children}
@@ -233,44 +220,23 @@ function TertiaryNavPanel({
 
 function RuleNavItem({
   rule,
-  isPrimary,
   isSelected,
   onSelect
 }: {
   rule: RuleMetadata;
-  isPrimary: boolean;
   isSelected: boolean;
   onSelect: () => void;
 }) {
   return (
     <Button
       variant="ghost"
-      className={`w-full justify-start gap-2 h-8 ${
+      className={`w-full justify-start h-8 ${
         isSelected ? "bg-accent text-accent-foreground" : ""
       }`}
       onClick={onSelect}
       data-testid={`nav-rule-${rule.id.toLowerCase()}`}
     >
-      <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-      <div className="flex-1 min-w-0 flex items-center gap-1.5">
-        <code className="text-xs font-medium">{rule.id}</code>
-        {isPrimary && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Shield className="h-3 w-3 text-primary shrink-0" />
-            </TooltipTrigger>
-            <TooltipContent>Primary Directive</TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className={`text-[10px] px-1 py-0.5 rounded cursor-help ${getPriorityColor(rule.priority)}`}>
-            {rule.priority.charAt(0)}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>{getPriorityDescription(rule.priority)}</TooltipContent>
-      </Tooltip>
+      <code className="text-xs font-medium">{rule.id}</code>
     </Button>
   );
 }
@@ -440,18 +406,11 @@ function CatalogView({
 
   return (
     <>
-      <div className="w-44 shrink-0 border-r bg-muted/20 flex flex-col">
+      <div className="w-32 shrink-0 border-r bg-muted/20 flex flex-col">
         <div className="p-2 border-b">
-          <div className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Partitions
-            </span>
-            <EndpointInfo endpoint="GET /api/rules" className="ml-auto" />
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            {catalog.totalRules} rules
-          </p>
+          <span className="text-xs font-medium">
+            Partitions
+          </span>
         </div>
         <div className="flex-1 overflow-auto p-1 space-y-0.5">
           {catalog.partitions.map((partition) => (
@@ -471,20 +430,17 @@ function CatalogView({
       {selectedPartition && (
         <TertiaryNavPanel
           title={selectedPartition.id}
-          subtitle={selectedPartition.description}
-          icon={FileText}
           onClose={() => {
             setSelectedPartitionId(null);
             setSelectedRuleId(null);
           }}
-          className="w-48"
+          className="w-40"
           testId="tertiary-nav-rules"
         >
           {selectedPartition.rules.map((rule) => (
             <RuleNavItem
               key={rule.id}
               rule={rule}
-              isPrimary={rule.id === catalog.primaryDirectiveId}
               isSelected={selectedRuleId === rule.id}
               onSelect={() => setSelectedRuleId(rule.id)}
             />
@@ -530,22 +486,17 @@ function AuditNavItem({
   onSelect: () => void;
 }) {
   const dateStr = new Date(audit.createdAt).toLocaleDateString();
-  const timeStr = new Date(audit.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   
   return (
     <Button
       variant="ghost"
-      className={`w-full justify-start gap-2 h-10 ${
+      className={`w-full justify-start h-8 ${
         isSelected ? "bg-accent text-accent-foreground" : ""
       }`}
       onClick={onSelect}
       data-testid={`nav-audit-${audit.id}`}
     >
-      <History className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-      <div className="flex-1 min-w-0 text-left">
-        <div className="text-xs font-medium">{dateStr}</div>
-        <div className="text-[10px] text-muted-foreground">{timeStr}</div>
-      </div>
+      <span className="text-xs">{dateStr}</span>
     </Button>
   );
 }
@@ -596,50 +547,37 @@ function AuditView({
 
   return (
     <>
-      <div className="w-52 shrink-0 border-r bg-muted/20 flex flex-col">
+      <div className="w-32 shrink-0 border-r bg-muted/20 flex flex-col">
         <div className="p-2 border-b">
-          <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Audit
-            </span>
-            <EndpointInfo endpoint="GET /api/audits" className="ml-auto" />
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-1">
-            Agentic rule evaluation
-          </p>
+          <span className="text-xs font-medium">
+            Audit
+          </span>
         </div>
         
         <div className="p-1 space-y-0.5">
           <Button
             variant="ghost"
-            className={`w-full justify-start gap-2 h-8 ${activeTab === "protocol" ? "bg-accent text-accent-foreground" : ""}`}
+            className={`w-full justify-start h-8 ${activeTab === "protocol" ? "bg-accent text-accent-foreground" : ""}`}
             onClick={() => setActiveTab("protocol")}
             data-testid="nav-audit-protocol"
           >
-            <ScrollText className="h-3.5 w-3.5 shrink-0" />
-            <span className="text-sm">Protocol Guide</span>
+            <span className="text-sm">Protocol</span>
           </Button>
           <Button
             variant="ghost"
-            className={`w-full justify-start gap-2 h-8 ${activeTab === "new" ? "bg-accent text-accent-foreground" : ""}`}
+            className={`w-full justify-start h-8 ${activeTab === "new" ? "bg-accent text-accent-foreground" : ""}`}
             onClick={() => setActiveTab("new")}
             data-testid="nav-audit-new"
           >
-            <Plus className="h-3.5 w-3.5 shrink-0" />
             <span className="text-sm">New Audit</span>
           </Button>
           <Button
             variant="ghost"
-            className={`w-full justify-start gap-2 h-8 ${activeTab === "history" ? "bg-accent text-accent-foreground" : ""}`}
+            className={`w-full justify-start h-8 ${activeTab === "history" ? "bg-accent text-accent-foreground" : ""}`}
             onClick={() => setActiveTab("history")}
             data-testid="nav-audit-history"
           >
-            <History className="h-3.5 w-3.5 shrink-0" />
             <span className="text-sm">History</span>
-            {audits && audits.length > 0 && (
-              <Badge variant="outline" className="text-[10px] ml-auto">{audits.length}</Badge>
-            )}
           </Button>
         </div>
 
