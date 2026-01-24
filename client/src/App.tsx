@@ -8,8 +8,6 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/app-sidebar";
-import { GlobalHeader } from "@/components/global-header";
-import { ViewModeIndicator } from "@/components/view-mode-indicator";
 import Landing from "@/pages/landing";
 import HomeDashboard from "@/pages/home-dashboard";
 import MemoryExplorer from "@/pages/memory-explorer";
@@ -42,18 +40,14 @@ function AuthenticatedApp() {
       <SidebarProvider>
         <div className="flex h-screen w-full">
           <AppSidebar />
-          <div className="flex flex-col flex-1 overflow-hidden">
-            <ViewModeIndicator />
-            <GlobalHeader user={user} />
-            <main className="flex-1 overflow-y-auto">
-              <Switch>
-                <Route path="/" component={() => <HomeDashboard user={user} />} />
-                <Route path="/memory" component={MemoryExplorer} />
-                <Route path="/rules" component={RulesExplorer} />
-                <Route component={NotFound} />
-              </Switch>
-            </main>
-          </div>
+          <main className="flex-1 flex overflow-hidden">
+            <Switch>
+              <Route path="/" component={() => <HomeDashboard user={user} />} />
+              <Route path="/memory" component={MemoryExplorer} />
+              <Route path="/rules" component={RulesExplorer} />
+              <Route component={NotFound} />
+            </Switch>
+          </main>
         </div>
       </SidebarProvider>
     </ViewModeProvider>

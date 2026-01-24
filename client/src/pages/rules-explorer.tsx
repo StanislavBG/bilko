@@ -16,6 +16,7 @@ import {
   Plus, History, ScrollText, Save, ChevronDown, ChevronRight, PanelLeft, X
 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { PageContent } from "@/components/page-content";
 
 interface RuleMetadata {
   id: string;
@@ -491,28 +492,30 @@ function CatalogView({
         </TertiaryNavPanel>
       )}
 
-      <div className="flex-1 overflow-hidden bg-background">
-        {selectedRuleId ? (
-          <RuleDetailPanel 
-            ruleId={selectedRuleId}
-            onSelectRule={handleSelectRule}
-          />
-        ) : selectedPartition ? (
-          <div className="h-full flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <FileText className="h-8 w-8 mx-auto opacity-50 mb-2" />
-              <p className="text-sm">Select a rule to view details</p>
+      <PageContent>
+        <div className="h-full overflow-hidden bg-background">
+          {selectedRuleId ? (
+            <RuleDetailPanel 
+              ruleId={selectedRuleId}
+              onSelectRule={handleSelectRule}
+            />
+          ) : selectedPartition ? (
+            <div className="h-full flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <FileText className="h-8 w-8 mx-auto opacity-50 mb-2" />
+                <p className="text-sm">Select a rule to view details</p>
+              </div>
             </div>
-          </div>
-        ) : (
-          <div className="h-full flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <Layers className="h-8 w-8 mx-auto opacity-50 mb-2" />
-              <p className="text-sm">Select a partition to browse rules</p>
+          ) : (
+            <div className="h-full flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <Layers className="h-8 w-8 mx-auto opacity-50 mb-2" />
+                <p className="text-sm">Select a partition to browse rules</p>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </PageContent>
     </>
   );
 }
@@ -663,9 +666,10 @@ function AuditView({
         )}
       </div>
 
-      <div className="flex-1 overflow-hidden bg-background">
-        {activeTab === "protocol" && (
-          <div className="h-full overflow-auto p-4" data-testid="audit-protocol-view">
+      <PageContent>
+        <div className="h-full overflow-hidden bg-background">
+          {activeTab === "protocol" && (
+            <div className="h-full overflow-auto p-4" data-testid="audit-protocol-view">
             <div className="max-w-3xl">
               <div className="mb-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -770,7 +774,8 @@ function AuditView({
             )}
           </div>
         )}
-      </div>
+        </div>
+      </PageContent>
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { Home, Settings, Activity, BookOpen } from "lucide-react";
+import { Home, Activity, BookOpen } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -37,14 +37,6 @@ const navItems = [
   },
 ];
 
-const globalItems = [
-  {
-    title: "Settings",
-    url: "/settings",
-    icon: Settings,
-    disabled: true,
-  },
-];
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -89,25 +81,6 @@ export function AppSidebar() {
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Global</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {globalItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    disabled={item.disabled}
-                    className={item.disabled ? "opacity-50 cursor-not-allowed" : ""}
-                    data-testid={`nav-${item.title.toLowerCase()}${item.disabled ? "-disabled" : ""}`}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

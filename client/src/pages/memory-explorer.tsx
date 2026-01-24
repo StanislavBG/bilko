@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useViewMode } from "@/contexts/view-mode-context";
+import { PageContent } from "@/components/page-content";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -216,19 +217,22 @@ export default function MemoryExplorer() {
 
   if (!effectiveIsAdmin) {
     return (
-      <div className="p-6">
-        <div className="flex flex-col gap-6 max-w-4xl">
-          <h1 className="text-2xl font-semibold tracking-tight">Access Denied</h1>
-          <p className="text-muted-foreground">
-            You don't have permission to view this page.
-          </p>
+      <PageContent>
+        <div className="p-6">
+          <div className="flex flex-col gap-6 max-w-4xl">
+            <h1 className="text-2xl font-semibold tracking-tight">Access Denied</h1>
+            <p className="text-muted-foreground">
+              You don't have permission to view this page.
+            </p>
+          </div>
         </div>
-      </div>
+      </PageContent>
     );
   }
 
   return (
-    <div className="p-6">
+    <PageContent>
+      <div className="p-6">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-1">
@@ -382,6 +386,7 @@ export default function MemoryExplorer() {
         open={!!selectedTrace} 
         onClose={() => setSelectedTrace(null)} 
       />
-    </div>
+      </div>
+    </PageContent>
   );
 }
