@@ -2,7 +2,7 @@
 
 Rule ID: ARCH-000
 Priority: ABSOLUTE
-Version: 1.1.0
+Version: 2.0.0
 
 ## The Primary Directive
 
@@ -19,61 +19,58 @@ The rules system is the heart of this project. Every feature, every fix, every l
 3. **Enable learning** - Rules evolve based on what works
 4. **Create accountability** - Every decision has a traceable origin
 
-## The Rules Consultation Protocol
+## Rules Consultation Protocol
 
 Before ANY development task, the agent MUST:
 
-### Step 1: Identify Task Category
-Classify the task against the Rule Router (see Rules Service):
-- What partitions apply?
-- What specific rules govern this work?
-- Are there cross-references to follow?
+### 1. Identify Applicable Rules
+Use the manifest routing system to find relevant rules:
+- Check `routing.redFlags` patterns against the task
+- Always include `routing.alwaysInclude` rules (ARCH-000, ARCH-006)
+- Follow dependency chains from matched rules
 
-### Step 2: Load Applicable Rules
-Use the Rules Service to retrieve:
-- All rules matching the task keywords
-- All dependencies of those rules
-- Any rules cited by cross-reference
+### 2. Read and Apply Directives
+Load the full content of applicable rules and follow their directives. Pay attention to:
+- DO/DON'T statements
+- Version-specific changes
+- Cross-references to related rules
 
-### Step 3: Validate Rule Coverage
-Confirm that:
-- At least one rule authorizes this work
-- No rule prohibits this work
-- The approach aligns with rule directives
+### 3. Proceed with Implementation
+Only after steps 1-2 are complete may code be written.
 
-### Step 4: Cite Rules in Response
-Document which rules were consulted:
+## Rules Context Block (Required)
+
+Every task completion MUST include a Rules Context block documenting which rules were consulted and what directives were applied. This creates the audit trail essential for scaling.
+
+**Format:**
 ```
-Rules consulted: ARCH-000, ARCH-003, INT-002
-Not applicable: DATA-* (no database changes)
+## Rules Context
+Primary: ARCH-000 (entry), ARCH-010 (exit)
+Applied:
+- [RULE-ID] [Directive]: "[Key guidance applied]"
+- [RULE-ID] [Directive]: "[Key guidance applied]"
 ```
 
-### Step 5: Proceed with Implementation
-Only after steps 1-4 are complete may code be written.
+**Example:**
+```
+## Rules Context
+Primary: ARCH-000 (entry), ARCH-010 (exit)
+Applied:
+- HUB-003 D6: "L1 sidebar header h-11 with 'Bilko Bibitkov AI Academy'"
+- UI-005 D1: "Level 1 icons permitted, Level 2/3 text-only"
+- HUB-001 D1: "GlobalHeader at App.tsx level, sidebar below"
+```
 
-## Enforcement
-
-### Startup Validation
-The Rules Service validates the entire rules system at application startup:
-- All rules are parseable
-- All cross-references resolve
-- No orphan rules exist (rules with no routing path)
-- Manifest matches filesystem
-
-### Development-Time Checks
-Before any code change:
-- Rules Service confirms rule coverage
-- Gaps are surfaced before implementation begins
-- Unknown territory requires new rule creation first
+**Enforcement:** ARCH-010 (Exit Directive) requires this block before task completion. Tasks without Rules Context cannot be marked complete.
 
 ## The Development Loop
 
 ARCH-000 is the **entry directive** - consult rules before writing code.
-ARCH-010 is the **exit directive** - validate and update rules before completing.
+ARCH-010 is the **exit directive** - validate compliance and document rules applied.
 
 Together they form a complete development loop:
 1. **Entry**: Consult rules → write code
-2. **Exit**: Validate compliance → update rules if needed
+2. **Exit**: Validate compliance → document Rules Context → update rules if needed
 
 See ARCH-010 for the exit protocol.
 
@@ -105,4 +102,3 @@ ARCH-000 mandates the existence of a first-class Rules Service (`/server/rules/`
 4. **Exposes** rules to the application for runtime consultation
 
 See the Rules Service implementation for details.
-
