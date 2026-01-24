@@ -1,12 +1,12 @@
 # UI-006: Mobile Layout
 
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Priority**: HIGH  
 **Partition**: ui
 
 ## Purpose
 
-Defines mobile-responsive layout behavior for the "on the go" view, focusing on accordion-style navigation where only one nav column is expanded at a time.
+Defines mobile-responsive layout behavior for the "on the go" view, focusing on collapsible navigation columns with user-controlled expand/collapse.
 
 ## Scope
 
@@ -20,25 +20,26 @@ This rule applies when viewport width is below the mobile breakpoint (768px / md
 - Below 768px: Mobile layout applies
 - Above 768px: Desktop layout with side-by-side columns
 
-### D2: Accordion Navigation
+### D2: Collapsible Column Layout
 
-On mobile, only one navigation column is visible/expanded at a time:
+Navigation columns use the same layout on mobile and desktop. Users control collapse state:
 
 ```
-DESKTOP (>= 768px):           MOBILE (< 768px):
-+----+----+----+-------+      +------------------+
-|Nav1|Nav2|Nav3|Content|      |  Active Nav      |
-|    |    |    |       |  =>  |  (full width)    |
-|    |    |    |       |      +------------------+
-+----+----+----+-------+      |  Content         |
-                              +------------------+
+ALL VIEWPORTS:
++----+----+----+-------+      +--+--+--+--------+
+|Nav1|Nav2|Nav3|Content|  or  |N1|N2|N3|Content |
+|    |    |    |       |      |  |  |  |        |
+| expanded columns     |      | collapsed cols  |
++----+----+----+-------+      +--+--+--+--------+
 ```
 
 **Behavior:**
-- Tapping a collapsed nav expands it and collapses others
-- Nav columns overlay or replace the content area when expanded
-- Back/close action returns to content view
-- No new APIs required - use existing collapse state + CSS responsive classes
+- Columns use min-width/max-width constraints (rem-based)
+- Each column has a user-controlled collapse toggle in footer
+- When collapsed: ~48px wide with abbreviated content
+- When expanded: 8-12rem wide with full labels
+- No automatic collapse on mobile - user-driven only
+- All columns remain accessible at all viewport sizes
 
 ### D3: Touch-Friendly Sizing
 
@@ -49,57 +50,57 @@ DESKTOP (>= 768px):           MOBILE (< 768px):
 ### D4: Navigation Visibility
 
 On mobile:
-- Primary sidebar: Hidden by default, accessible via existing SidebarTrigger (per HUB-001)
-- Secondary nav: Shows as overlay or full-screen when active
-- Tertiary nav: Shows inline below secondary when secondary is active
+- Primary sidebar: Hidden by default, accessible via SidebarTrigger in mobile header (per HUB-001)
+- Secondary/tertiary navs: Remain visible as narrow collapsed columns
+- Each nav column uses its existing collapse toggle to expand/collapse
 
 No new navigation controls are introduced - reuse existing collapse toggles and SidebarTrigger.
 
 ### D5: No New APIs
 
 No new backend APIs or data persistence required:
-- Use CSS media queries and responsive Tailwind classes
 - Leverage existing collapse state (local useState) per nav column
-- Use `hidden md:flex` patterns for conditional visibility
-- Ephemeral local UI state (useState) is permitted for accordion behavior
-- "Stateless" means no backend persistence of mobile nav state, not prohibition of React state
-
-### D6: Content Priority
-
-On mobile:
-- Content area is the default view
-- Navigation is accessed on-demand via toggles
-- Preserve scroll position when toggling between nav and content
+- Ephemeral local UI state (useState) is permitted
+- "Stateless" means no backend persistence of nav state, not prohibition of React state
+- Primary sidebar uses Shadcn SidebarProvider with `hidden md:flex` pattern
 
 ## Implementation Pattern
 
 ```tsx
-// Accordion nav - only one expanded at a time on mobile
-const [activeNav, setActiveNav] = useState<'primary' | 'secondary' | 'content'>('content');
+// Each nav manages its own collapse state
+const [isNavCollapsed, setIsNavCollapsed] = useState(false);
 
-// Toggle that collapses others
-const toggleNav = (nav: 'primary' | 'secondary') => {
-  setActiveNav(current => current === nav ? 'content' : nav);
-};
-
-// Responsive visibility
-<div className={`
-  ${activeNav === 'secondary' ? 'flex' : 'hidden'} 
-  md:flex 
-  flex-col
-`}>
-  {/* Secondary nav content */}
+// Nav column with responsive sizing
+<div className={`shrink-0 border-r flex flex-col transition-all ${
+  isNavCollapsed ? "min-w-12 max-w-12" : "min-w-[8rem] max-w-[10rem] flex-1"
+}`}>
+  {/* Nav items with collapsed/expanded display */}
+  <div className="flex-1 overflow-auto">
+    {isNavCollapsed ? (
+      <Tooltip><Button>A</Button></Tooltip>  // Abbreviated
+    ) : (
+      <Button>Full Label</Button>  // Full text
+    )}
+  </div>
+  
+  {/* Footer toggle */}
+  <div className="border-t p-2 flex justify-center">
+    <Button onClick={() => setIsNavCollapsed(!isNavCollapsed)}>
+      <PanelLeft />
+    </Button>
+  </div>
 </div>
 ```
 
-## Responsive Class Patterns
+## Layout Patterns
 
-| Element | Mobile | Desktop |
-|---------|--------|---------|
-| Primary sidebar | `hidden md:flex` + toggle | Always visible |
-| Secondary nav | Overlay when active | Side column |
-| Tertiary nav | Inline below secondary | Side column |
-| Content area | Full width when no nav active | Remaining space |
+| Element | Mobile (< 768px) | Desktop (>= 768px) |
+|---------|------------------|-------------------|
+| Primary sidebar | Sheet overlay via SidebarTrigger | Persistent side column |
+| Secondary nav | User-controlled collapse | User-controlled collapse |
+| Tertiary nav | User-controlled collapse | User-controlled collapse |
+| Content area | Remaining space | Remaining space |
+| Mobile header | Visible with SidebarTrigger | Hidden |
 
 ## Cross-References
 
@@ -110,4 +111,5 @@ const toggleNav = (nav: 'primary' | 'secondary') => {
 
 ## Version History
 
+- 1.1.0: Simplified to user-controlled collapse (removed accordion hiding requirement)
 - 1.0.0: Initial mobile layout rule

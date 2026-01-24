@@ -286,11 +286,11 @@
       "path": "rules/ui/006-mobile-layout.md",
       "partition": "ui",
       "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": ["mobile", "responsive", "accordion", "touch", "breakpoint", "on the go", "small screen"],
+      "version": "1.1.0",
+      "triggers": ["mobile", "responsive", "collapse", "touch", "breakpoint", "on the go", "small screen"],
       "dependencies": ["UI-001", "HUB-001", "HUB-003"],
       "crossReferences": ["UI-004", "UI-005", "HUB-003"],
-      "description": "Mobile-responsive layout with accordion navigation showing one nav at a time."
+      "description": "Mobile-responsive layout with user-controlled collapsible navigation columns."
     },
     "INT-001": {
       "id": "INT-001",
