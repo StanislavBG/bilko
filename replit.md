@@ -45,6 +45,15 @@ Rule audits are performed via agentic reasoning (ARCH-009). To run an audit:
 
 Saved audits are stored in the database with timestamps for historical tracking.
 
+## Design Philosophy
+
+- Minimal, text-only aesthetic (UI-005)
+- No decorative icons in navigation - text labels only
+- Action icons (close, toggle) are permitted
+- Plain text for priority/status (no colored badges)
+- Relative sizing with rem-based min/max constraints
+- Black/white/gray color palette
+
 ## User Preferences
 
 - Move slowly and incrementally
