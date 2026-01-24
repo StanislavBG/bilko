@@ -41,7 +41,7 @@ All rules are indexed in `manifest.json` with:
 - **id**: Unique identifier (e.g., "ARCH-000", "INT-001")
 - **title**: Human-readable title
 - **path**: File path relative to project root
-- **partition**: Category (shared, architecture, hub, apps, data, ui, integration)
+- **partition**: Category (architecture, hub, ui, data, apps, integration)
 - **priority**: ABSOLUTE > CRITICAL > HIGH > MEDIUM > LOW
 - **triggers**: Keywords that activate this rule
 - **dependencies**: Rules that must also be read
@@ -53,9 +53,8 @@ When consuming rules, follow this order:
 
 1. **ARCH-000** (Primary Directive) - ALWAYS first, no exceptions
 2. **ARCH-006** (Agent Bootstrap Protocol) - How to use this system
-3. **Shared Rules** (`/rules/shared/`) - Cross-project rules; system context
-4. **Architecture Rules** (`/rules/architecture/`) - System-wide decisions
-5. **Task-specific partitions** based on routing
+3. **Architecture Rules** (`/rules/architecture/`) - System-wide decisions and cross-project coordination
+4. **Task-specific partitions** based on routing
 
 ## Red Flags (Mandatory Reading Triggers)
 
@@ -72,15 +71,8 @@ When these words/concepts appear in a task, STOP and read the indicated partitio
 
 ## Rule Partitions
 
-### `/rules/shared/` (Cross-Project)
-Rules that apply to BOTH Bilko Bibitkov projects:
-- **Web Application** (this project)
-- **n8n Workflow Engine** (separate Replit project)
-
-When setting up the n8n project, copy the entire `/rules/shared/` directory there.
-
 ### `/rules/architecture/`
-System-wide architectural rules:
+System-wide architectural rules and cross-project coordination:
 - **ARCH-000**: Primary Directive (NO CODE WITHOUT RULES)
 - **ARCH-001**: Core Architecture Principles
 - **ARCH-002**: Rule Maintenance
@@ -88,6 +80,10 @@ System-wide architectural rules:
 - **ARCH-004**: Development Pacing
 - **ARCH-005**: System Boundaries
 - **ARCH-006**: Agent Bootstrap Protocol
+- **ARCH-007**: System Purpose (cross-project)
+- **ARCH-008**: Agent Coordination (cross-project)
+
+When setting up the n8n project, copy ARCH-007, ARCH-008, INT-003, and INT-004 for shared context.
 
 ### `/rules/hub/`
 Application Hub shell rules:
@@ -109,9 +105,11 @@ User interface rules:
 - **UI-001**: UI Principles
 
 ### `/rules/integration/`
-External service integration rules:
+External service integration rules and cross-project contracts:
 - **INT-001**: n8n Integration Rules
 - **INT-002**: n8n API Best Practices (includes Recency Protocol)
+- **INT-003**: Orchestrator Communication Contract (cross-project)
+- **INT-004**: n8n Self-Hosting Setup Guide (cross-project)
 
 ## Cross-Reference Protocol
 
@@ -162,16 +160,21 @@ Replit does NOT build AI agents - they live in n8n. See ARCH-005 for details.
 /rules/                    # Development rule framework (THE HEART)
   manifest.json            # Machine-readable rule index
   README.md                # This file - how to use the system
-  /shared/                 # Cross-project rules (copy to n8n project)
-  /architecture/           # System-wide architectural rules
+  /architecture/           # System-wide rules + cross-project coordination
     000-primary-directive.md  # THE PRIMARY DIRECTIVE
     001-core-principles.md    # Core Architecture Principles
     006-agent-bootstrap.md    # How agents use this system
+    007-system-purpose.md     # Cross-project: system overview
+    008-agent-coordination.md # Cross-project: ownership boundaries
   /hub/                    # Application Hub shell and access control
   /apps/                   # Per-application rules
   /data/                   # Data model and persistence rules
   /ui/                     # User interface rules
-  /integration/            # External service integration rules
+  /integration/            # External service integration + contracts
+    001-n8n-integration.md    # n8n integration rules
+    002-n8n-api-practices.md  # API practices and known issues
+    003-orchestrator-contract.md  # Cross-project: communication contract
+    004-n8n-setup.md          # Cross-project: n8n setup guide
 
 /server/rules/             # Rules Service (FIRST-CLASS)
   types.ts                 # TypeScript interfaces

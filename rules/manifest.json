@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "1.0.0",
-  "lastUpdated": "2026-01-23",
+  "lastUpdated": "2026-01-24",
   "primaryDirective": "ARCH-000",
   "rules": {
     "ARCH-000": {
@@ -48,7 +48,7 @@
       "priority": "CRITICAL",
       "version": "1.0.0",
       "triggers": ["orchestrat", "proxy", "external", "n8n", "api call", "trace", "logging"],
-      "dependencies": ["ARCH-000", "SHARED-003"],
+      "dependencies": ["ARCH-000", "INT-003"],
       "crossReferences": ["DATA-002", "INT-001"],
       "description": "The intelligent proxy between web app and external services."
     },
@@ -72,57 +72,57 @@
       "priority": "HIGH",
       "version": "1.0.0",
       "triggers": ["boundary", "replit", "n8n", "separation", "owns", "ownership"],
-      "dependencies": ["ARCH-000", "SHARED-002"],
-      "crossReferences": ["SHARED-001", "SHARED-002"],
+      "dependencies": ["ARCH-000", "ARCH-008"],
+      "crossReferences": ["ARCH-007", "ARCH-008"],
       "description": "Defines boundaries between Replit app and external systems."
     },
-    "SHARED-001": {
-      "id": "SHARED-001",
+    "ARCH-007": {
+      "id": "ARCH-007",
       "title": "System Purpose",
-      "path": "rules/shared/001-system-purpose.md",
-      "partition": "shared",
+      "path": "rules/architecture/007-system-purpose.md",
+      "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "triggers": ["purpose", "mission", "overview", "system", "what is"],
       "dependencies": [],
       "crossReferences": [],
-      "description": "Defines the overall system purpose and mission."
+      "description": "Defines the overall system purpose and mission. (Migrated from SHARED-001)"
     },
-    "SHARED-002": {
-      "id": "SHARED-002",
+    "ARCH-008": {
+      "id": "ARCH-008",
       "title": "Agent Coordination",
-      "path": "rules/shared/002-agent-coordination.md",
-      "partition": "shared",
+      "path": "rules/architecture/008-agent-coordination.md",
+      "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "triggers": ["agent", "coordination", "ownership", "project", "replit", "n8n"],
-      "dependencies": ["SHARED-001"],
-      "crossReferences": ["ARCH-003"],
-      "description": "Defines ownership boundaries between Replit and n8n agents."
+      "dependencies": ["ARCH-007"],
+      "crossReferences": ["ARCH-003", "INT-003"],
+      "description": "Defines ownership boundaries between Replit and n8n agents. (Migrated from SHARED-002)"
     },
-    "SHARED-003": {
-      "id": "SHARED-003",
+    "INT-003": {
+      "id": "INT-003",
       "title": "Orchestrator Communication Contract",
-      "path": "rules/shared/003-n8n-webhook-contract.md",
-      "partition": "shared",
+      "path": "rules/integration/003-orchestrator-contract.md",
+      "partition": "integration",
       "priority": "HIGH",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "triggers": ["contract", "webhook", "request", "response", "payload", "format"],
-      "dependencies": ["SHARED-001", "ARCH-003"],
+      "dependencies": ["ARCH-007", "ARCH-003"],
       "crossReferences": ["ARCH-003", "INT-001"],
-      "description": "Technical contract for orchestrator communication."
+      "description": "Technical contract for orchestrator communication. (Migrated from SHARED-003)"
     },
-    "SHARED-004": {
-      "id": "SHARED-004",
+    "INT-004": {
+      "id": "INT-004",
       "title": "n8n Self-Hosting Setup Guide",
-      "path": "rules/shared/004-n8n-setup.md",
-      "partition": "shared",
+      "path": "rules/integration/004-n8n-setup.md",
+      "partition": "integration",
       "priority": "HIGH",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "triggers": ["self-host", "n8n setup", "n8n project", "deploy n8n"],
-      "dependencies": ["SHARED-001"],
-      "crossReferences": [],
-      "description": "Complete setup guide for self-hosting n8n on Replit."
+      "dependencies": ["ARCH-007"],
+      "crossReferences": ["INT-003", "ARCH-008"],
+      "description": "Complete setup guide for self-hosting n8n on Replit. (Migrated from SHARED-004)"
     },
     "HUB-001": {
       "id": "HUB-001",
@@ -240,8 +240,8 @@
       "priority": "HIGH",
       "version": "2.0.0",
       "triggers": ["n8n", "webhook", "integration", "workflow", "external"],
-      "dependencies": ["ARCH-003", "SHARED-003"],
-      "crossReferences": ["ARCH-003", "SHARED-003", "INT-002", "SHARED-004"],
+      "dependencies": ["ARCH-003", "INT-003"],
+      "crossReferences": ["ARCH-003", "INT-003", "INT-002", "INT-004"],
       "description": "Rules for building integrations with n8n workflows."
     },
     "INT-002": {
@@ -272,38 +272,33 @@
   "partitions": {
     "architecture": {
       "path": "rules/architecture/",
-      "description": "System-wide architectural rules and principles",
+      "description": "System-wide architectural rules, principles, and cross-project coordination",
       "readOrder": 0
-    },
-    "shared": {
-      "path": "rules/shared/",
-      "description": "Cross-project rules (copy to n8n project)",
-      "readOrder": 1
     },
     "hub": {
       "path": "rules/hub/",
       "description": "Application Hub shell and access control",
-      "readOrder": 2
+      "readOrder": 1
     },
     "ui": {
       "path": "rules/ui/",
       "description": "User interface patterns and components",
-      "readOrder": 3
+      "readOrder": 2
     },
     "data": {
       "path": "rules/data/",
       "description": "Data model and persistence rules",
-      "readOrder": 4
+      "readOrder": 3
     },
     "apps": {
       "path": "rules/apps/",
       "description": "Per-application specific rules",
-      "readOrder": 5
+      "readOrder": 4
     },
     "integration": {
       "path": "rules/integration/",
-      "description": "External service integration rules",
-      "readOrder": 6
+      "description": "External service integration and cross-project contracts",
+      "readOrder": 5
     }
   },
   "routing": {

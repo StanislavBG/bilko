@@ -1,9 +1,10 @@
 # System Purpose
 
-Rule ID: SHARED-001
+Rule ID: ARCH-007
 Priority: CRITICAL
-Version: 1.0.0
-Applies To: All Bilko Bibitkov projects (UI and n8n)
+Version: 1.1.0
+Partition: architecture
+Migrated From: SHARED-001 (v1.0.0)
 
 ## Context
 This rule defines the overall system purpose and must be understood by any agent working on any part of the Bilko Bibitkov system.

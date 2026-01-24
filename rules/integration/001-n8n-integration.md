@@ -30,7 +30,7 @@ The orchestrator:
 6. Returns result with trace ID
 
 ### D3: Request/Response Contract
-All n8n communication follows the contract in SHARED-003:
+All n8n communication follows the contract in INT-003:
 
 **Request to orchestrator:**
 ```typescript

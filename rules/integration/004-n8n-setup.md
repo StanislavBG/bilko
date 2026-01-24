@@ -1,9 +1,10 @@
 # n8n Self-Hosting Setup Guide
 
-Rule ID: SHARED-004
+Rule ID: INT-004
 Priority: HIGH
-Version: 1.0.1
-Applies To: n8n Replit project
+Version: 1.1.0
+Partition: integration
+Migrated From: SHARED-004 (v1.0.1)
 
 ## Context
 This rule provides the complete setup guide for self-hosting n8n on Replit as part of the Bilko Bibitkov system.
@@ -109,13 +110,13 @@ N8N_BASIC_AUTH_USER=bilko
 N8N_BASIC_AUTH_PASSWORD=<strong-password>
 ```
 
-## Copy Shared Rules
+## Copy Core Rules
 
-After project creation, copy the `/rules/shared/` directory from the web application project:
-- SHARED-001: System Purpose
-- SHARED-002: Agent Coordination  
-- SHARED-003: n8n Webhook Contract
-- SHARED-004: This setup guide
+After project creation, copy the following rules from the web application project:
+- ARCH-007: System Purpose (rules/architecture/)
+- ARCH-008: Agent Coordination (rules/architecture/)
+- INT-003: Orchestrator Communication Contract (rules/integration/)
+- INT-004: This setup guide (rules/integration/)
 
 This ensures both Replit agents understand the complete system.
 
@@ -133,7 +134,7 @@ After setup, verify:
 Once n8n is running:
 1. Create workflows with Webhook trigger nodes
 2. Note the webhook paths (e.g., `/webhook/chat`, `/webhook/support`)
-3. The web application will proxy requests via `/api/orchestrate/:workflowId` per SHARED-003
+3. The web application will proxy requests via `/api/orchestrate/:workflowId` per INT-003
 
 ## Troubleshooting
 
@@ -152,4 +153,4 @@ Once n8n is running:
 - Must restore original key or re-enter all credentials
 
 ## Rationale
-Self-hosting n8n on Replit provides full control over AI workflows while maintaining the separation of concerns defined in SHARED-002. The Reserved VM deployment ensures reliable webhook operation.
+Self-hosting n8n on Replit provides full control over AI workflows while maintaining the separation of concerns defined in ARCH-008. The Reserved VM deployment ensures reliable webhook operation.

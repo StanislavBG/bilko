@@ -1,9 +1,10 @@
 # Agent Coordination
 
-Rule ID: SHARED-002
+Rule ID: ARCH-008
 Priority: CRITICAL
-Version: 2.0.0
-Applies To: All Bilko Bibitkov projects (UI and n8n)
+Version: 2.1.0
+Partition: architecture
+Migrated From: SHARED-002 (v2.0.0)
 
 ## Context
 The Bilko Bibitkov system spans two Replit projects, each with its own build agent. This rule defines clear ownership boundaries.
@@ -71,13 +72,13 @@ All inter-service communication flows through the Orchestration Layer:
 Each project must stay within its ownership boundaries. If a feature requires both, implement the pieces in their respective projects.
 
 ### C2: Orchestrator Contract
-All communication between projects uses the orchestrator contract defined in SHARED-003.
+All communication between projects uses the orchestrator contract defined in INT-003.
 
 ### C3: Independent Deployment
 Each project can be deployed independently. Changes to one should not require changes to the other unless the contract changes.
 
-### C4: Shared Rules
-Both projects must have a copy of the `/rules/shared/` directory. Changes to shared rules must be propagated to both projects.
+### C4: Core Rules Synchronization
+Architecture and Integration rules relevant to both projects (ARCH-007, ARCH-008, INT-003, INT-004) should be shared. Changes to these rules must be communicated to both projects.
 
 ### C5: Trace Ownership
 The web application owns all communication traces. n8n workflows should not maintain their own execution logs beyond what n8n provides natively.

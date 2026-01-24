@@ -1,9 +1,10 @@
 # Orchestrator Communication Contract
 
-Rule ID: SHARED-003
+Rule ID: INT-003
 Priority: HIGH
-Version: 2.0.0
-Applies To: All Bilko Bibitkov projects (UI and n8n)
+Version: 2.1.0
+Partition: integration
+Migrated From: SHARED-003 (v2.0.0)
 
 ## Context
 This rule defines the technical contract for communication through the Orchestration Layer. All requests between the web application and n8n must flow through this layer.
@@ -164,7 +165,7 @@ X-Bilko-Attempt: <attempt number, starting at 1>
 - Webhook URLs stored as `N8N_WEBHOOK_<WORKFLOW_NAME>`
 
 ### Self-Hosted (Future)
-- See SHARED-004 for setup guide
+- See INT-004 for setup guide
 - Same contract applies
 
 ## Security

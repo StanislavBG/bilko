@@ -159,7 +159,7 @@ When designing n8n workflows to receive requests:
 ### Webhook Node Configuration
 - Use POST method
 - Accept JSON body
-- Return structured responses (see SHARED-003)
+- Return structured responses (see INT-003)
 - Include `workflowId` and `executionId` in responses
 
 ### Error Handling in Workflows
