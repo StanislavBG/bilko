@@ -124,12 +124,34 @@ function SecondaryNavItem({
 function PartitionNavItem({
   partition,
   isSelected,
-  onSelect
+  onSelect,
+  isCollapsed = false
 }: {
   partition: PartitionInfo;
   isSelected: boolean;
   onSelect: () => void;
+  isCollapsed?: boolean;
 }) {
+  if (isCollapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            className={`w-full justify-center h-8 ${
+              isSelected ? "bg-accent text-accent-foreground" : ""
+            }`}
+            onClick={onSelect}
+            data-testid={`nav-partition-${partition.id}`}
+          >
+            <span className="text-sm uppercase">{partition.id.charAt(0)}</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">{partition.id}</TooltipContent>
+      </Tooltip>
+    );
+  }
+  
   return (
     <Button
       variant="ghost"
@@ -145,45 +167,40 @@ function PartitionNavItem({
 }
 
 function TertiaryNavPanel({
-  title,
-  onClose,
   children,
   className = "",
-  testId
+  testId,
+  isCollapsed,
+  onToggleCollapse
 }: {
-  title: string;
-  onClose?: () => void;
   children: React.ReactNode;
   className?: string;
   testId?: string;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
 }) {
   return (
     <div className={`shrink-0 border-r bg-background flex flex-col ${className}`} data-testid={testId}>
-      <div className="p-2 border-b">
-        <span className="text-xs font-medium capitalize truncate">
-          {title}
-        </span>
-      </div>
       <div className="flex-1 overflow-auto p-1 space-y-0.5">
         {children}
       </div>
-      {onClose && (
-        <div className="border-t p-2 flex justify-center">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                data-testid={`${testId}-close`}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Close</TooltipContent>
-          </Tooltip>
-        </div>
-      )}
+      <div className="border-t p-2 flex justify-center">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleCollapse}
+              data-testid={`${testId}-toggle`}
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {isCollapsed ? "Expand" : "Collapse"}
+          </TooltipContent>
+        </Tooltip>
+      </div>
     </div>
   );
 }
@@ -191,12 +208,34 @@ function TertiaryNavPanel({
 function RuleNavItem({
   rule,
   isSelected,
-  onSelect
+  onSelect,
+  isCollapsed = false
 }: {
   rule: RuleMetadata;
   isSelected: boolean;
   onSelect: () => void;
+  isCollapsed?: boolean;
 }) {
+  if (isCollapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            className={`w-full justify-center h-8 ${
+              isSelected ? "bg-accent text-accent-foreground" : ""
+            }`}
+            onClick={onSelect}
+            data-testid={`nav-rule-${rule.id.toLowerCase()}`}
+          >
+            <code className="text-xs font-medium">{rule.id.split("-")[0]}</code>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">{rule.id}</TooltipContent>
+      </Tooltip>
+    );
+  }
+  
   return (
     <Button
       variant="ghost"
@@ -332,6 +371,8 @@ function CatalogView({
   selectedRuleId: string | null;
   setSelectedRuleId: (id: string | null) => void;
 }) {
+  const [isPartitionCollapsed, setIsPartitionCollapsed] = useState(false);
+  const [isTertiaryCollapsed, setIsTertiaryCollapsed] = useState(false);
   const { data: catalog, isLoading } = useQuery<RulesCatalog>({
     queryKey: ["/api/rules"],
   });
@@ -372,12 +413,9 @@ function CatalogView({
 
   return (
     <>
-      <div className="min-w-[8rem] max-w-[10rem] flex-1 shrink-0 border-r bg-muted/20 flex flex-col">
-        <div className="p-2 border-b">
-          <span className="text-xs font-medium">
-            Partitions
-          </span>
-        </div>
+      <div className={`shrink-0 border-r bg-muted/20 flex flex-col transition-all duration-200 ${
+        isPartitionCollapsed ? "min-w-12 max-w-12" : "min-w-[8rem] max-w-[10rem] flex-1"
+      }`} data-testid="partition-nav">
         <div className="flex-1 overflow-auto p-1 space-y-0.5">
           {catalog.partitions.map((partition) => (
             <PartitionNavItem
@@ -388,19 +426,36 @@ function CatalogView({
                 setSelectedPartitionId(partition.id);
                 setSelectedRuleId(null);
               }}
+              isCollapsed={isPartitionCollapsed}
             />
           ))}
+        </div>
+        <div className="border-t p-2 flex justify-center">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setIsPartitionCollapsed(!isPartitionCollapsed)}
+                data-testid="button-toggle-partition-nav"
+              >
+                <PanelLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {isPartitionCollapsed ? "Expand" : "Collapse"}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
       {selectedPartition && (
         <TertiaryNavPanel
-          title={selectedPartition.id}
-          onClose={() => {
-            setSelectedPartitionId(null);
-            setSelectedRuleId(null);
-          }}
-          className="min-w-[10rem] max-w-[12rem] flex-1"
+          isCollapsed={isTertiaryCollapsed}
+          onToggleCollapse={() => setIsTertiaryCollapsed(!isTertiaryCollapsed)}
+          className={`transition-all duration-200 ${
+            isTertiaryCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
+          }`}
           testId="tertiary-nav-rules"
         >
           {selectedPartition.rules.map((rule) => (
@@ -409,6 +464,7 @@ function CatalogView({
               rule={rule}
               isSelected={selectedRuleId === rule.id}
               onSelect={() => setSelectedRuleId(rule.id)}
+              isCollapsed={isTertiaryCollapsed}
             />
           ))}
         </TertiaryNavPanel>
@@ -439,13 +495,36 @@ function CatalogView({
 function AuditNavItem({
   audit,
   isSelected,
-  onSelect
+  onSelect,
+  isCollapsed = false
 }: {
   audit: RuleAudit;
   isSelected: boolean;
   onSelect: () => void;
+  isCollapsed?: boolean;
 }) {
   const dateStr = new Date(audit.createdAt).toLocaleDateString();
+  const shortDate = new Date(audit.createdAt).getDate().toString();
+  
+  if (isCollapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            className={`w-full justify-center h-8 ${
+              isSelected ? "bg-accent text-accent-foreground" : ""
+            }`}
+            onClick={onSelect}
+            data-testid={`nav-audit-${audit.id}`}
+          >
+            <span className="text-xs">{shortDate}</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">{dateStr}</TooltipContent>
+      </Tooltip>
+    );
+  }
   
   return (
     <Button
@@ -469,6 +548,7 @@ function AuditView({
   setSelectedAuditId: (id: string | null) => void;
 }) {
   const { toast } = useToast();
+  const [isAuditNavCollapsed, setIsAuditNavCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<"protocol" | "new" | "history">("protocol");
   const [newAuditContent, setNewAuditContent] = useState("");
 
@@ -507,38 +587,80 @@ function AuditView({
 
   return (
     <>
-      <div className="min-w-[8rem] max-w-[10rem] flex-1 shrink-0 border-r bg-muted/20 flex flex-col">
-        <div className="p-2 border-b">
-          <span className="text-xs font-medium">
-            Audit
-          </span>
-        </div>
-        
+      <div className={`shrink-0 border-r bg-muted/20 flex flex-col transition-all duration-200 ${
+        isAuditNavCollapsed ? "min-w-12 max-w-12" : "min-w-[8rem] max-w-[10rem] flex-1"
+      }`} data-testid="audit-nav">
         <div className="p-1 space-y-0.5">
-          <Button
-            variant="ghost"
-            className={`w-full justify-start h-8 ${activeTab === "protocol" ? "bg-accent text-accent-foreground" : ""}`}
-            onClick={() => setActiveTab("protocol")}
-            data-testid="nav-audit-protocol"
-          >
-            <span className="text-sm">Protocol</span>
-          </Button>
-          <Button
-            variant="ghost"
-            className={`w-full justify-start h-8 ${activeTab === "new" ? "bg-accent text-accent-foreground" : ""}`}
-            onClick={() => setActiveTab("new")}
-            data-testid="nav-audit-new"
-          >
-            <span className="text-sm">New Audit</span>
-          </Button>
-          <Button
-            variant="ghost"
-            className={`w-full justify-start h-8 ${activeTab === "history" ? "bg-accent text-accent-foreground" : ""}`}
-            onClick={() => setActiveTab("history")}
-            data-testid="nav-audit-history"
-          >
-            <span className="text-sm">History</span>
-          </Button>
+          {isAuditNavCollapsed ? (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-center h-8 ${activeTab === "protocol" ? "bg-accent text-accent-foreground" : ""}`}
+                    onClick={() => setActiveTab("protocol")}
+                    data-testid="nav-audit-protocol"
+                  >
+                    <span className="text-sm">P</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Protocol</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-center h-8 ${activeTab === "new" ? "bg-accent text-accent-foreground" : ""}`}
+                    onClick={() => setActiveTab("new")}
+                    data-testid="nav-audit-new"
+                  >
+                    <span className="text-sm">N</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">New Audit</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={`w-full justify-center h-8 ${activeTab === "history" ? "bg-accent text-accent-foreground" : ""}`}
+                    onClick={() => setActiveTab("history")}
+                    data-testid="nav-audit-history"
+                  >
+                    <span className="text-sm">H</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">History</TooltipContent>
+              </Tooltip>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                className={`w-full justify-start h-8 ${activeTab === "protocol" ? "bg-accent text-accent-foreground" : ""}`}
+                onClick={() => setActiveTab("protocol")}
+                data-testid="nav-audit-protocol"
+              >
+                <span className="text-sm">Protocol</span>
+              </Button>
+              <Button
+                variant="ghost"
+                className={`w-full justify-start h-8 ${activeTab === "new" ? "bg-accent text-accent-foreground" : ""}`}
+                onClick={() => setActiveTab("new")}
+                data-testid="nav-audit-new"
+              >
+                <span className="text-sm">New Audit</span>
+              </Button>
+              <Button
+                variant="ghost"
+                className={`w-full justify-start h-8 ${activeTab === "history" ? "bg-accent text-accent-foreground" : ""}`}
+                onClick={() => setActiveTab("history")}
+                data-testid="nav-audit-history"
+              >
+                <span className="text-sm">History</span>
+              </Button>
+            </>
+          )}
         </div>
 
         {activeTab === "history" && (
@@ -555,13 +677,32 @@ function AuditView({
                   audit={audit}
                   isSelected={selectedAuditId === audit.id}
                   onSelect={() => setSelectedAuditId(audit.id)}
+                  isCollapsed={isAuditNavCollapsed}
                 />
               ))
-            ) : (
+            ) : !isAuditNavCollapsed && (
               <p className="text-xs text-muted-foreground p-2 text-center">No audits yet</p>
             )}
           </div>
         )}
+        
+        <div className="border-t p-2 flex justify-center mt-auto">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setIsAuditNavCollapsed(!isAuditNavCollapsed)}
+                data-testid="button-toggle-audit-nav"
+              >
+                <PanelLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {isAuditNavCollapsed ? "Expand" : "Collapse"}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
       <PageContent>
@@ -704,27 +845,6 @@ export default function RulesExplorer() {
       <div className={`shrink-0 border-r bg-sidebar flex flex-col h-full transition-all duration-200 ${
         isSecNavCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
       }`}>
-        <div className={`border-b shrink-0 flex items-center ${
-          isSecNavCollapsed ? "p-2 justify-center" : "p-3"
-        }`}>
-          {isSecNavCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-sm font-semibold" data-testid="text-page-title">R</span>
-              </TooltipTrigger>
-              <TooltipContent side="right">Rules Explorer</TooltipContent>
-            </Tooltip>
-          ) : (
-            <div className="flex-1 min-w-0">
-              <h1 className="text-sm font-semibold" data-testid="text-page-title">
-                Rules Explorer
-              </h1>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
-                Browse and audit
-              </p>
-            </div>
-          )}
-        </div>
         <div className={`flex-1 space-y-1 overflow-y-auto ${isSecNavCollapsed ? "p-1" : "p-2"}`}>
           <SecondaryNavItem
             label="Catalog"
