@@ -1,6 +1,6 @@
 # UI-004: Left-Nav Collapsible Behavior
 
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **Priority**: HIGH  
 **Partition**: ui
 
@@ -21,17 +21,17 @@ Defines consistent collapsible behavior for left navigation panels.
 ### 2. Collapsed State Appearance
 
 When collapsed:
-- Width reduces to icon-only width (~3rem / 48px)
+- Width reduces to minimal width (flex-based or min-content)
 - Header shows single letter initial (e.g., "B" for Bilko, "R" for Rules)
-- Navigation items show icons only, no labels
+- Navigation items hidden or show abbreviated text
 - Tooltips appear on hover showing full label
 
 ### 3. Expanded State Appearance
 
 When expanded:
-- Standard width for content (varies by panel type)
+- Flex to fill available space within layout constraints
 - Full header text visible
-- Navigation items show icon + label
+- Navigation items show text labels
 - No tooltips needed (labels visible)
 
 ### 4. Collapse Trigger
@@ -60,7 +60,7 @@ Tertiary navs may skip collapsibility when:
 const [isCollapsed, setIsCollapsed] = useState(false);
 
 <div className={`shrink-0 border-r bg-sidebar flex flex-col h-full transition-all ${
-  isCollapsed ? "w-12" : "w-40"
+  isCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
 }`}>
   <div className="p-3 border-b shrink-0 flex items-center justify-between gap-2">
     {isCollapsed ? (
@@ -71,17 +71,18 @@ const [isCollapsed, setIsCollapsed] = useState(false);
     <Button
       size="icon"
       variant="ghost"
-      className="h-6 w-6 shrink-0"
       onClick={() => setIsCollapsed(!isCollapsed)}
     >
       <PanelLeft className="h-4 w-4" />
     </Button>
   </div>
   <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-    <NavItem icon={Icon} label={isCollapsed ? undefined : "Label"} />
+    <span className="text-sm">{isCollapsed ? "" : "Label"}</span>
   </nav>
 </div>
 ```
+
+Note: Action icons (like PanelLeft for collapse toggle) are permitted per UI-005 scope.
 
 ## Cross-References
 

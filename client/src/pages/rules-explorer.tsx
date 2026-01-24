@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
@@ -11,8 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { 
-  Shield, Clock, Book, FileText, Layers, Tag, GitBranch, Link2,
-  Plus, History, ScrollText, Save, ChevronDown, ChevronRight, PanelLeft, X
+  Clock, GitBranch, Link2,
+  Plus, History, ScrollText, Save, PanelLeft, X
 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { PageContent } from "@/components/page-content";
@@ -66,51 +65,28 @@ function formatTimestamp(date: string): string {
   return d.toLocaleString();
 }
 
-const PRIORITY_INFO: Record<string, { color: string; description: string }> = {
-  ABSOLUTE: { 
-    color: "bg-red-600 text-white", 
-    description: "ABSOLUTE - Must always be followed without exception" 
-  },
-  CRITICAL: { 
-    color: "bg-orange-500 text-white", 
-    description: "CRITICAL - Essential for system integrity" 
-  },
-  HIGH: { 
-    color: "bg-amber-500 text-white", 
-    description: "HIGH - Important for correct behavior" 
-  },
-  MEDIUM: { 
-    color: "bg-blue-500 text-white", 
-    description: "MEDIUM - Recommended best practice" 
-  },
-  LOW: { 
-    color: "bg-slate-500 text-white", 
-    description: "LOW - Optional guidance" 
-  },
+const PRIORITY_DESCRIPTIONS: Record<string, string> = {
+  ABSOLUTE: "Must always be followed without exception",
+  CRITICAL: "Essential for system integrity",
+  HIGH: "Important for correct behavior",
+  MEDIUM: "Recommended best practice",
+  LOW: "Optional guidance",
 };
 
-function getPriorityColor(priority: string): string {
-  return PRIORITY_INFO[priority]?.color ?? "bg-muted";
-}
-
 function getPriorityDescription(priority: string): string {
-  return PRIORITY_INFO[priority]?.description ?? priority;
+  return PRIORITY_DESCRIPTIONS[priority] ?? priority;
 }
 
 function SecondaryNavItem({ 
-  icon: Icon,
   label, 
   isActive, 
   onClick,
-  badge,
   testId,
   isCollapsed = false
 }: { 
-  icon: typeof Book;
   label: string;
   isActive: boolean;
   onClick: () => void;
-  badge?: { text: string; variant?: "default" | "destructive" };
   testId: string;
   isCollapsed?: boolean;
 }) {
@@ -118,21 +94,15 @@ function SecondaryNavItem({
     <Button
       variant="ghost"
       className={`w-full h-9 ${
-        isCollapsed ? "justify-center px-0" : "justify-start gap-2"
+        isCollapsed ? "justify-center px-0" : "justify-start"
       } ${isActive ? "bg-accent text-accent-foreground" : ""}`}
       onClick={onClick}
       data-testid={testId}
     >
-      <Icon className="h-4 w-4 shrink-0" />
-      {!isCollapsed && (
-        <>
-          <span className="flex-1 text-left text-sm">{label}</span>
-          {badge && (
-            <Badge variant={badge.variant || "default"} className="text-[10px] px-1.5">
-              {badge.text}
-            </Badge>
-          )}
-        </>
+      {isCollapsed ? (
+        <span className="text-sm font-medium">{label.charAt(0)}</span>
+      ) : (
+        <span className="text-sm">{label}</span>
       )}
     </Button>
   );
@@ -143,11 +113,6 @@ function SecondaryNavItem({
         <TooltipTrigger asChild>{button}</TooltipTrigger>
         <TooltipContent side="right">
           <span>{label}</span>
-          {badge && (
-            <Badge variant={badge.variant || "default"} className="ml-2 text-[10px] px-1.5">
-              {badge.text}
-            </Badge>
-          )}
         </TooltipContent>
       </Tooltip>
     );
@@ -273,18 +238,17 @@ function RuleDetailPanel({
   return (
     <div className="h-full overflow-auto" data-testid={`detail-rule-${ruleId.toLowerCase()}`}>
       <div className="p-4 border-b bg-muted/30">
-        <div className="flex items-center gap-2 flex-wrap mb-2">
+        <div className="flex items-center gap-3 flex-wrap mb-2">
           <code className="text-sm font-bold bg-muted px-2 py-0.5 rounded">
             {rule.id}
           </code>
-          <Badge className={getPriorityColor(rule.priority)} data-testid="badge-priority">
+          <span className="text-xs text-muted-foreground" data-testid="text-priority">
             {rule.priority}
-          </Badge>
-          <Badge variant="outline" className="capitalize text-xs">
+          </span>
+          <span className="text-xs text-muted-foreground capitalize">
             {rule.partition}
-          </Badge>
-          <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
-            <Tag className="h-3 w-3" />
+          </span>
+          <span className="text-xs text-muted-foreground ml-auto">
             v{rule.version}
           </span>
         </div>
@@ -386,10 +350,7 @@ function CatalogView({
   if (!catalog) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <Book className="h-8 w-8 mx-auto opacity-50 mb-2" />
-          <p className="text-sm text-muted-foreground">No rules catalog available</p>
-        </div>
+        <p className="text-sm text-muted-foreground">No rules catalog available</p>
       </div>
     );
   }
@@ -406,7 +367,7 @@ function CatalogView({
 
   return (
     <>
-      <div className="w-32 shrink-0 border-r bg-muted/20 flex flex-col">
+      <div className="min-w-[8rem] max-w-[10rem] flex-1 shrink-0 border-r bg-muted/20 flex flex-col">
         <div className="p-2 border-b">
           <span className="text-xs font-medium">
             Partitions
@@ -434,7 +395,7 @@ function CatalogView({
             setSelectedPartitionId(null);
             setSelectedRuleId(null);
           }}
-          className="w-40"
+          className="min-w-[10rem] max-w-[12rem] flex-1"
           testId="tertiary-nav-rules"
         >
           {selectedPartition.rules.map((rule) => (
@@ -457,17 +418,11 @@ function CatalogView({
             />
           ) : selectedPartition ? (
             <div className="h-full flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <FileText className="h-8 w-8 mx-auto opacity-50 mb-2" />
-                <p className="text-sm">Select a rule to view details</p>
-              </div>
+              <p className="text-sm">Select a rule to view details</p>
             </div>
           ) : (
             <div className="h-full flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <Layers className="h-8 w-8 mx-auto opacity-50 mb-2" />
-                <p className="text-sm">Select a partition to browse rules</p>
-              </div>
+              <p className="text-sm">Select a partition to browse rules</p>
             </div>
           )}
         </div>
@@ -547,7 +502,7 @@ function AuditView({
 
   return (
     <>
-      <div className="w-32 shrink-0 border-r bg-muted/20 flex flex-col">
+      <div className="min-w-[8rem] max-w-[10rem] flex-1 shrink-0 border-r bg-muted/20 flex flex-col">
         <div className="p-2 border-b">
           <span className="text-xs font-medium">
             Audit
@@ -742,7 +697,7 @@ export default function RulesExplorer() {
   return (
     <div className="flex h-full" data-testid="rules-explorer-layout">
       <div className={`shrink-0 border-r bg-sidebar flex flex-col h-full transition-all duration-200 ${
-        isSecNavCollapsed ? "w-12" : "w-40"
+        isSecNavCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
       }`}>
         <div className={`border-b shrink-0 flex items-center gap-2 ${
           isSecNavCollapsed ? "p-2 justify-center" : "p-3"
@@ -783,7 +738,6 @@ export default function RulesExplorer() {
         </div>
         <div className={`flex-1 space-y-1 overflow-y-auto ${isSecNavCollapsed ? "p-1" : "p-2"}`}>
           <SecondaryNavItem
-            icon={Book}
             label="Catalog"
             isActive={activeView === "catalog"}
             onClick={() => setActiveView("catalog")}
@@ -791,7 +745,6 @@ export default function RulesExplorer() {
             isCollapsed={isSecNavCollapsed}
           />
           <SecondaryNavItem
-            icon={Shield}
             label="Audit"
             isActive={activeView === "audit"}
             onClick={() => setActiveView("audit")}

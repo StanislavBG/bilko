@@ -1,0 +1,48 @@
+# UI-005: Minimal Design Principles
+
+**Version**: 1.1.0  
+**Priority**: HIGH  
+**Partition**: ui
+
+## Purpose
+
+Defines the minimal, professional aesthetic for navigation and data display.
+
+## Scope
+
+This rule applies to:
+- Navigation items (sidebar, secondary/tertiary nav panels)
+- Data display (badges, status indicators, metadata)
+- Layout sizing
+
+This rule does NOT prohibit:
+- Action icons (close, toggle, expand buttons) - these are functional, not decorative
+- Semantic icons in content areas (e.g., showing dependencies with link icons)
+
+## Directives
+
+### D1: Text-Only Navigation
+- Navigation items use text labels only
+- No decorative icons in 2nd or 3rd level navigation items
+- Primary sidebar may show single-letter initial when collapsed
+
+### D2: No Colored Badges or Accents
+- Priority levels displayed as plain text, not colored badges
+- No colored backgrounds on status indicators
+- Black/white/gray color palette for metadata display
+
+### D3: Relative Sizing
+- Avoid fixed pixel widths (e.g., w-32, w-40, 160px classes)
+- Use flex-based layouts with min-width/max-width constraints
+- rem-based constraints are acceptable (they scale with font size)
+- Panels expand to fill available space within constraints
+
+### D4: Clean Borders
+- Simple 1px borders for separation
+- No shadows, glows, or decorative elements
+
+## Cross-References
+
+- UI-001: UI Principles
+- UI-004: Left-Nav Collapsible Behavior
+- HUB-003: Nested Navigation Pattern
