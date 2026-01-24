@@ -77,7 +77,7 @@ For routine tasks:
 ### Full Exit
 For major features or refactors:
 - Document changes in commit message
-- Consider running full audit (ARCH-009)
+- Consider running full audit (AGENT-001)
 - Update replit.md if architecture changed
 
 ## Integration with Development Flow
@@ -104,4 +104,4 @@ For major features or refactors:
 
 - ARCH-000: Primary Directive (entry counterpart)
 - ARCH-002: Rule Maintenance (how to update rules)
-- ARCH-009: Rule Architect Protocol (full audit process)
+- AGENT-001: Rule Architect Protocol (full audit process)

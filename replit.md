@@ -36,14 +36,24 @@ Bilko Bibitkov is a rule-driven web application serving as the "face" for n8n-ho
 
 ## Rule Audits
 
-Rule audits are performed via agentic reasoning (ARCH-009). To run an audit:
+Rule audits are performed via agentic reasoning (AGENT-001). To run an audit:
 
 1. Ask the agent: "Run a rule audit" or "Act as Rule Architect"
-2. The agent will analyze all rules and code following the protocol in ARCH-009
+2. The agent will analyze all rules and code following the protocol in AGENT-001
 3. Copy the audit report the agent provides
 4. Go to Rules Explorer > Audit > New Audit and paste the report to save it
 
 Saved audits are stored in the database with timestamps for historical tracking.
+
+## Rule Partitions
+
+- **architecture** - System-wide rules and principles
+- **hub** - Application shell and access control
+- **ui** - User interface patterns
+- **data** - Data models and persistence
+- **apps** - Per-application rules
+- **integration** - External service contracts
+- **agent** - Agentic workflow protocols (audits, reasoning)
 
 ## Design Philosophy
 

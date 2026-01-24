@@ -328,40 +328,40 @@
       "crossReferences": [],
       "description": "How AI developers should bootstrap and use the rule system."
     },
-    "ARCH-009": {
-      "id": "ARCH-009",
+    "AGENT-001": {
+      "id": "AGENT-001",
       "title": "Rule Architect Protocol",
-      "path": "rules/architecture/009-rule-architect-protocol.md",
-      "partition": "architecture",
+      "path": "rules/agent/001-rule-architect-protocol.md",
+      "partition": "agent",
       "priority": "HIGH",
       "version": "2.0.0",
       "triggers": ["audit", "rule audit", "rule architect", "evaluate rules", "check rules", "full audit"],
       "dependencies": ["ARCH-000", "ARCH-002", "ARCH-006"],
-      "crossReferences": ["ARCH-010", "ARCH-011", "ARCH-012"],
-      "description": "Master protocol orchestrating rule audits (ARCH-011) and code audits (ARCH-012)."
+      "crossReferences": ["ARCH-010", "AGENT-002", "AGENT-003"],
+      "description": "Master protocol orchestrating rule audits (AGENT-002) and code audits (AGENT-003)."
     },
-    "ARCH-011": {
-      "id": "ARCH-011",
+    "AGENT-002": {
+      "id": "AGENT-002",
       "title": "Rule Audit Agent Protocol",
-      "path": "rules/architecture/011-rule-audit-agent.md",
-      "partition": "architecture",
+      "path": "rules/agent/002-rule-audit-agent.md",
+      "partition": "agent",
       "priority": "HIGH",
       "version": "1.0.0",
       "triggers": ["rule audit", "validate rules", "structural integrity", "routing coverage"],
-      "dependencies": ["ARCH-000", "ARCH-002", "ARCH-009"],
-      "crossReferences": ["ARCH-012"],
+      "dependencies": ["ARCH-000", "ARCH-002", "AGENT-001"],
+      "crossReferences": ["AGENT-003"],
       "description": "Agentic protocol for validating rule structure, consistency, and coverage."
     },
-    "ARCH-012": {
-      "id": "ARCH-012",
+    "AGENT-003": {
+      "id": "AGENT-003",
       "title": "Code Audit Agent Protocol",
-      "path": "rules/architecture/012-code-audit-agent.md",
-      "partition": "architecture",
+      "path": "rules/agent/003-code-audit-agent.md",
+      "partition": "agent",
       "priority": "HIGH",
       "version": "1.0.0",
       "triggers": ["code audit", "code compliance", "verify code", "anti-pattern"],
-      "dependencies": ["ARCH-000", "ARCH-009", "ARCH-011"],
-      "crossReferences": ["ARCH-011"],
+      "dependencies": ["ARCH-000", "AGENT-001", "AGENT-002"],
+      "crossReferences": ["AGENT-002"],
       "description": "Agentic protocol for validating code implements documented rules correctly."
     },
     "ARCH-010": {
@@ -373,7 +373,7 @@
       "version": "1.1.0",
       "triggers": ["exit", "complete", "finish", "done", "validate rules", "update rules", "before completing"],
       "dependencies": ["ARCH-000", "ARCH-002"],
-      "crossReferences": ["ARCH-000", "ARCH-009"],
+      "crossReferences": ["ARCH-000", "AGENT-001"],
       "description": "Validate rule compliance and propose rule updates before completing any task."
     },
     "APP-RULES-001": {
@@ -384,8 +384,8 @@
       "priority": "HIGH",
       "version": "1.0.0",
       "triggers": ["rules explorer", "rule catalog", "rule viewer", "browse rules"],
-      "dependencies": ["HUB-001", "HUB-002", "HUB-003", "ARCH-009"],
-      "crossReferences": ["ARCH-009", "DATA-003"],
+      "dependencies": ["HUB-001", "HUB-002", "HUB-003", "AGENT-001"],
+      "crossReferences": ["AGENT-001", "DATA-003"],
       "description": "Admin-only app for browsing, reading, and auditing the rule system."
     },
     "DATA-003": {
@@ -396,8 +396,8 @@
       "priority": "HIGH",
       "version": "1.0.0",
       "triggers": ["rule audit", "audit storage", "audit table", "audit schema"],
-      "dependencies": ["DATA-001", "ARCH-009"],
-      "crossReferences": ["ARCH-009", "APP-RULES-001"],
+      "dependencies": ["DATA-001", "AGENT-001"],
+      "crossReferences": ["AGENT-001", "APP-RULES-001"],
       "description": "Schema and practices for storing rule audit reports."
     }
   },
@@ -431,6 +431,11 @@
       "path": "rules/integration/",
       "description": "External service integration and cross-project contracts",
       "readOrder": 5
+    },
+    "agent": {
+      "path": "rules/agent/",
+      "description": "Agentic workflow protocols for audits and automated reasoning",
+      "readOrder": 6
     }
   },
   "routing": {
@@ -440,7 +445,8 @@
       { "pattern": "user sees|layout|page|component", "partitions": ["ui"] },
       { "pattern": "hub|sidebar|navigation|access control", "partitions": ["hub"] },
       { "pattern": "endpoint|api route|authentication", "partitions": ["architecture"] },
-      { "pattern": "new app|new feature", "partitions": ["apps", "architecture"] }
+      { "pattern": "new app|new feature", "partitions": ["apps", "architecture"] },
+      { "pattern": "audit|agentic|rule audit|code audit", "partitions": ["agent"] }
     ],
     "alwaysInclude": ["ARCH-000", "ARCH-006"]
   }

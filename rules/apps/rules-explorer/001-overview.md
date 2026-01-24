@@ -36,7 +36,7 @@ Browse rules by partition:
 
 ### V2: Audit View
 Manage rule audits:
-- **Protocol Guide** - Display ARCH-009 protocol instructions
+- **Protocol Guide** - Display AGENT-001 protocol instructions
 - **New Audit** - Textarea for pasting audit reports
 - **History** - List of saved audits with detail view
 
@@ -44,7 +44,7 @@ Manage rule audits:
 
 - `GET /api/rules` - List all rules from manifest
 - `GET /api/rules/:id` - Get single rule content
-- `GET /api/audit/protocol` - Get ARCH-009 protocol content
+- `GET /api/audit/protocol` - Get AGENT-001 protocol content
 - `GET /api/audits` - List saved audits
 - `POST /api/audits` - Save new audit report
 
