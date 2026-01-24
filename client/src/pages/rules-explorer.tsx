@@ -298,7 +298,7 @@ function RuleDetailPanel({
   }
 
   return (
-    <div className="h-full overflow-auto" data-testid={`detail-rule-${ruleId.toLowerCase()}`}>
+    <div className="flex-1 overflow-auto bg-background" data-testid={`detail-rule-${ruleId.toLowerCase()}`}>
       <div className="p-4 border-b bg-muted/30">
         <div className="flex items-center gap-3 flex-wrap mb-2">
           <code className="text-sm font-bold bg-muted px-2 py-0.5 rounded">
@@ -502,22 +502,20 @@ function CatalogView({
       )}
 
       <PageContent>
-        <div className="flex-1 flex flex-col overflow-hidden bg-background min-h-0">
-          {selectedRuleId ? (
-            <RuleDetailPanel 
-              ruleId={selectedRuleId}
-              onSelectRule={handleSelectRule}
-            />
-          ) : selectedPartition ? (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <p className="text-sm">Select a rule to view details</p>
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
-              <p className="text-sm">Select a partition to browse rules</p>
-            </div>
-          )}
-        </div>
+        {selectedRuleId ? (
+          <RuleDetailPanel 
+            ruleId={selectedRuleId}
+            onSelectRule={handleSelectRule}
+          />
+        ) : selectedPartition ? (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground bg-background">
+            <p className="text-sm">Select a rule to view details</p>
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center text-muted-foreground bg-background">
+            <p className="text-sm">Select a partition to browse rules</p>
+          </div>
+        )}
       </PageContent>
     </>
   );
@@ -749,9 +747,8 @@ function AuditView({
       </div>
 
       <PageContent>
-        <div className="flex-1 flex flex-col overflow-hidden bg-background min-h-0">
-          {activeTab === "protocol" && (
-            <div className="flex-1 overflow-auto p-4" data-testid="audit-protocol-view">
+        {activeTab === "protocol" && (
+          <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-protocol-view">
             <div className="max-w-3xl">
               <div className="mb-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -789,7 +786,7 @@ function AuditView({
         )}
 
         {activeTab === "new" && (
-          <div className="flex-1 overflow-auto p-4" data-testid="audit-new-view">
+          <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-new-view">
             <div className="max-w-3xl">
               <div className="mb-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -824,7 +821,7 @@ function AuditView({
         )}
 
         {activeTab === "history" && (
-          <div className="flex-1 overflow-auto flex flex-col" data-testid="audit-history-view">
+          <div className="flex-1 overflow-auto flex flex-col bg-background" data-testid="audit-history-view">
             {selectedAudit ? (
               <div className="p-4">
                 <div className="flex items-center gap-2 mb-4">
@@ -856,7 +853,6 @@ function AuditView({
             )}
           </div>
         )}
-        </div>
       </PageContent>
     </>
   );
