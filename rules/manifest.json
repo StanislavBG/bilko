@@ -322,11 +322,11 @@
       "path": "rules/architecture/010-exit-directive.md",
       "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "triggers": ["exit", "complete", "finish", "done", "validate rules", "update rules", "before completing"],
       "dependencies": ["ARCH-000", "ARCH-002"],
       "crossReferences": ["ARCH-000", "ARCH-009"],
-      "description": "Validate rule compliance and update rules before completing any task."
+      "description": "Validate rule compliance and propose rule updates before completing any task."
     },
     "APP-RULES-001": {
       "id": "APP-RULES-001",

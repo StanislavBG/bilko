@@ -1,6 +1,6 @@
 # ARCH-010: Exit Directive
 
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Priority**: CRITICAL  
 **Partition**: architecture  
 **Dependencies**: ARCH-000, ARCH-002
@@ -11,7 +11,16 @@ Defines the exit protocol for completing any development task. Just as ARCH-000 
 
 ## The Exit Directive
 
-**Before marking any task complete, validate that rules were followed and update rules if needed.**
+**Before marking any task complete, validate that rules were followed and propose rule updates if needed.**
+
+## Human Approval Required
+
+Rule modifications require explicit human approval. The agent:
+- **Identifies** gaps, inconsistencies, and outdated content
+- **Proposes** specific changes with rationale
+- **Waits** for human confirmation before modifying rule content
+
+Version bumps when touching rules are encouraged to track currency.
 
 ## Exit Checklist
 
@@ -32,7 +41,7 @@ Look for:
 - Constraints learned from implementation
 
 Actions:
-- Document as new rule if pattern is reusable
+- Propose new rule to human if pattern is reusable
 - Flag for next audit if uncertain
 
 ### 3. Rule Currency Check
@@ -45,8 +54,8 @@ Look for:
 - Constraints that were relaxed or tightened
 
 Actions:
-- Update rule version and content
-- Update manifest.json if metadata changed
+- Propose rule updates to human with specific changes
+- Update manifest.json version after human approval
 
 ### 4. Cross-Reference Integrity
 
@@ -62,7 +71,7 @@ Verify:
 ### Quick Exit (Default)
 For routine tasks:
 - Mental checklist of the 4 questions
-- Update rules inline if changes are minor
+- Note any rule issues for human review
 - No formal audit report needed
 
 ### Full Exit
@@ -86,17 +95,10 @@ For major features or refactors:
 │              ↓                                  │
 │                                                 │
 │   ARCH-010: Exit Directive                      │
-│   "Validate and update rules before completing" │
+│   "Validate and propose rule updates"           │
 │                                                 │
 └─────────────────────────────────────────────────┘
 ```
-
-## Automation Opportunities
-
-This protocol can be partially automated:
-- Pre-commit hooks to check manifest.json validity
-- CI checks for rule file syntax
-- Periodic scheduled audits via n8n
 
 ## Cross-References
 
