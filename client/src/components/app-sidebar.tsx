@@ -51,17 +51,15 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b">
-        <div className="flex items-center justify-center px-2 py-2">
-          {isCollapsed ? (
-            <span 
-              className="font-bold text-lg"
-              data-testid="logo-collapsed"
-            >B</span>
-          ) : (
-            <span className="font-semibold text-lg" data-testid="logo-expanded">Bilko Bibitkov</span>
-          )}
-        </div>
+      <SidebarHeader className="border-b h-8 flex items-center justify-center px-2 shrink-0">
+        {isCollapsed ? (
+          <span 
+            className="font-bold text-lg"
+            data-testid="logo-collapsed"
+          >B</span>
+        ) : (
+          <span className="font-semibold text-lg" data-testid="logo-expanded">Bilko Bibitkov</span>
+        )}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -86,10 +84,8 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t">
-        <div className="flex items-center justify-center p-2">
-          <SidebarTrigger data-testid="button-sidebar-toggle" />
-        </div>
+      <SidebarFooter className="border-t h-11 flex items-center justify-center shrink-0">
+        <SidebarTrigger data-testid="button-sidebar-toggle" />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
