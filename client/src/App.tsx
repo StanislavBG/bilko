@@ -8,7 +8,6 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/app-sidebar";
-import { AppHeader } from "@/components/app-header";
 import { ViewModeIndicator } from "@/components/view-mode-indicator";
 import Landing from "@/pages/landing";
 import HomeDashboard from "@/pages/home-dashboard";
@@ -41,10 +40,9 @@ function AuthenticatedApp() {
     <ViewModeProvider>
       <SidebarProvider>
         <div className="flex h-screen w-full">
-          <AppSidebar />
+          <AppSidebar user={user} />
           <div className="flex flex-col flex-1 overflow-hidden">
             <ViewModeIndicator />
-            <AppHeader user={user} />
             <main className="flex-1 overflow-y-auto">
               <Switch>
                 <Route path="/" component={() => <HomeDashboard user={user} />} />

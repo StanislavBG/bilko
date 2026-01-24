@@ -1,6 +1,12 @@
-import { Home, Settings, Activity, BookOpen } from "lucide-react";
+import { Home, Settings, Activity, BookOpen, LogOut, Eye, EyeOff } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useViewMode } from "@/contexts/view-mode-context";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import type { User } from "@shared/models/auth";
 import {
   Sidebar,
   SidebarContent,
@@ -11,6 +17,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarFooter,
   SidebarRail,
 } from "@/components/ui/sidebar";
 
@@ -44,19 +51,32 @@ const globalItems = [
   },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  user: User;
+}
+
+export function AppSidebar({ user }: AppSidebarProps) {
   const [location] = useLocation();
-  const { effectiveIsAdmin } = useViewMode();
+  const { effectiveIsAdmin, isViewingAsUser, toggleViewMode, canToggleViewMode } = useViewMode();
   
   const visibleNavItems = navItems.filter(
     (item) => !item.adminOnly || effectiveIsAdmin
   );
 
+  const initials = [user.firstName, user.lastName]
+    .filter(Boolean)
+    .map((n) => n?.[0])
+    .join("")
+    .toUpperCase() || user.email?.[0]?.toUpperCase() || "U";
+
+  const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || "User";
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
-        <div className="px-2 py-2">
+        <div className="flex items-center justify-between px-2 py-2">
           <span className="font-semibold text-lg">Bilko Bibitkov</span>
+          <SidebarTrigger data-testid="button-sidebar-toggle" />
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -101,6 +121,50 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className="border-t p-2">
+        <div className="flex items-center gap-2 mb-2">
+          <Avatar className="h-8 w-8">
+            <AvatarImage src={user.profileImageUrl ?? undefined} alt={displayName} />
+            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+          </Avatar>
+          <span className="text-sm font-medium truncate flex-1" data-testid="text-username">
+            {displayName}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          {canToggleViewMode && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={toggleViewMode}
+                  data-testid="button-toggle-view-mode"
+                >
+                  {isViewingAsUser ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                  <span className="sr-only">
+                    {isViewingAsUser ? "Exit user view" : "View as user"}
+                  </span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isViewingAsUser ? "Exit user view" : "View as user"}
+              </TooltipContent>
+            </Tooltip>
+          )}
+          <ThemeToggle />
+          <Button variant="ghost" size="icon" asChild data-testid="button-logout">
+            <a href="/api/logout">
+              <LogOut className="h-4 w-4" />
+              <span className="sr-only">Sign out</span>
+            </a>
+          </Button>
+        </div>
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );

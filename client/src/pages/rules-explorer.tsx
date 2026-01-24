@@ -727,8 +727,8 @@ export default function RulesExplorer() {
 
   return (
     <div className="flex h-full" data-testid="rules-explorer-layout">
-      <div className="w-40 shrink-0 border-r bg-sidebar flex flex-col">
-        <div className="p-3 border-b">
+      <div className="w-40 shrink-0 border-r bg-sidebar flex flex-col h-full">
+        <div className="p-3 border-b shrink-0">
           <h1 className="text-sm font-semibold" data-testid="text-page-title">
             Rules Explorer
           </h1>
@@ -736,7 +736,7 @@ export default function RulesExplorer() {
             Browse and audit
           </p>
         </div>
-        <div className="flex-1 p-2 space-y-1">
+        <div className="flex-1 p-2 space-y-1 overflow-y-auto">
           <SecondaryNavItem
             icon={Book}
             label="Catalog"
