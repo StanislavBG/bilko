@@ -2,7 +2,7 @@
 
 Rule ID: ARCH-002
 Priority: CRITICAL
-Version: 1.0.0
+Version: 1.1.0
 
 ## Context
 This rule applies when the agent needs to create, modify, or extend the rule framework itself.
@@ -42,6 +42,15 @@ Changes to rules that define cross-project contracts (ARCH-007, ARCH-008, INT-00
 
 **DO**: Add a comment noting "Propagate to n8n project" when modifying cross-project contracts
 **DON'T**: Assume cross-project rule changes will automatically sync
+
+### D6: Human Approval Required
+All rule content modifications require explicit human approval per ARCH-010 (Exit Directive).
+
+**DO**: Identify issues and propose specific changes to the user
+**DO**: Wait for human confirmation before modifying rule content
+**DON'T**: Modify rules autonomously without user approval
+
+Version bumps when touching rules are encouraged to track currency.
 
 ## Rationale
 The rule framework is the source of truth for agent behavior. Careless modifications can introduce contradictions or break established patterns.

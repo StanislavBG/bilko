@@ -2,7 +2,7 @@
 
 Rule ID: HUB-003
 Priority: HIGH
-Version: 1.0.0
+Version: 1.1.0
 
 ## Context
 Complex applications may require navigation beyond the main hub sidebar. This rule defines the optional nested navigation pattern supporting up to 3 levels.
@@ -11,10 +11,10 @@ Complex applications may require navigation beyond the main hub sidebar. This ru
 
 ```
 ┌────────────┬────────────┬────────────┬──────────────────────┐
-│            │            │            │  App Header          │
-│  Level 1   │  Level 2   │  Level 3   ├──────────────────────│
+│            │            │            │                      │
+│  Level 1   │  Level 2   │  Level 3   │   Content Area       │
 │  (Hub)     │  (App)     │  (Section) │                      │
-│            │            │            │   Content Area       │
+│            │            │            │                      │
 │  - Home    │ - Catalog  │ - arch     │                      │
 │  - Rules   │ - Audit    │ - hub      │                      │
 │  - Memory  │            │ - ui       │                      │

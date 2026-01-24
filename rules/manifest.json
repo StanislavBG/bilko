@@ -34,10 +34,10 @@
       "path": "rules/architecture/002-rule-maintenance.md",
       "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "triggers": ["rule", "rules", "modify rule", "create rule", "new rule", "update rule"],
       "dependencies": ["ARCH-000"],
-      "crossReferences": [],
+      "crossReferences": ["ARCH-010"],
       "description": "How to create, modify, and version rules."
     },
     "ARCH-003": {
@@ -154,7 +154,7 @@
       "path": "rules/hub/003-nested-navigation.md",
       "partition": "hub",
       "priority": "HIGH",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "triggers": ["nested nav", "secondary nav", "tertiary nav", "multi-level", "navigation levels"],
       "dependencies": ["HUB-001", "UI-001"],
       "crossReferences": ["UI-003"],
