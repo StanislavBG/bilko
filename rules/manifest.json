@@ -256,6 +256,18 @@
       "crossReferences": ["HUB-001"],
       "description": "Defines when and how to implement secondary navigation within applications."
     },
+    "UI-004": {
+      "id": "UI-004",
+      "title": "Left-Nav Collapsible Behavior",
+      "path": "rules/ui/004-left-nav-collapsible.md",
+      "partition": "ui",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["collapse", "collapsible", "left nav", "sidebar collapse", "single letter", "minimize nav"],
+      "dependencies": ["UI-001", "HUB-001"],
+      "crossReferences": ["UI-003", "HUB-003"],
+      "description": "Consistent collapsible behavior for all left navigation panels."
+    },
     "INT-001": {
       "id": "INT-001",
       "title": "n8n Integration Rules",

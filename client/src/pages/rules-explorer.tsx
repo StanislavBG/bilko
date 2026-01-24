@@ -13,7 +13,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { 
   Shield, Clock, Book, FileText, Layers, Tag, GitBranch, Link2,
-  Plus, History, ScrollText, Save, ChevronDown, ChevronRight
+  Plus, History, ScrollText, Save, ChevronDown, ChevronRight, PanelLeft
 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 
@@ -103,7 +103,8 @@ function SecondaryNavItem({
   isActive, 
   onClick,
   badge,
-  testId
+  testId,
+  isCollapsed = false
 }: { 
   icon: typeof Book;
   label: string;
@@ -111,25 +112,48 @@ function SecondaryNavItem({
   onClick: () => void;
   badge?: { text: string; variant?: "default" | "destructive" };
   testId: string;
+  isCollapsed?: boolean;
 }) {
-  return (
+  const button = (
     <Button
       variant="ghost"
-      className={`w-full justify-start gap-2 h-9 ${
-        isActive ? "bg-accent text-accent-foreground" : ""
-      }`}
+      className={`w-full h-9 ${
+        isCollapsed ? "justify-center px-0" : "justify-start gap-2"
+      } ${isActive ? "bg-accent text-accent-foreground" : ""}`}
       onClick={onClick}
       data-testid={testId}
     >
       <Icon className="h-4 w-4 shrink-0" />
-      <span className="flex-1 text-left text-sm">{label}</span>
-      {badge && (
-        <Badge variant={badge.variant || "default"} className="text-[10px] px-1.5">
-          {badge.text}
-        </Badge>
+      {!isCollapsed && (
+        <>
+          <span className="flex-1 text-left text-sm">{label}</span>
+          {badge && (
+            <Badge variant={badge.variant || "default"} className="text-[10px] px-1.5">
+              {badge.text}
+            </Badge>
+          )}
+        </>
       )}
     </Button>
   );
+
+  if (isCollapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent side="right">
+          <span>{label}</span>
+          {badge && (
+            <Badge variant={badge.variant || "default"} className="ml-2 text-[10px] px-1.5">
+              {badge.text}
+            </Badge>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return button;
 }
 
 function PartitionNavItem({
@@ -711,6 +735,7 @@ export default function RulesExplorer() {
   const [selectedPartitionId, setSelectedPartitionId] = useState<string | null>(null);
   const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
   const [selectedAuditId, setSelectedAuditId] = useState<string | null>(null);
+  const [isSecNavCollapsed, setIsSecNavCollapsed] = useState(false);
 
   if (!effectiveIsAdmin) {
     return (
@@ -727,22 +752,54 @@ export default function RulesExplorer() {
 
   return (
     <div className="flex h-full" data-testid="rules-explorer-layout">
-      <div className="w-40 shrink-0 border-r bg-sidebar flex flex-col h-full">
-        <div className="p-3 border-b shrink-0">
-          <h1 className="text-sm font-semibold" data-testid="text-page-title">
-            Rules Explorer
-          </h1>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            Browse and audit
-          </p>
+      <div className={`shrink-0 border-r bg-sidebar flex flex-col h-full transition-all duration-200 ${
+        isSecNavCollapsed ? "w-12" : "w-40"
+      }`}>
+        <div className={`border-b shrink-0 flex items-center gap-2 ${
+          isSecNavCollapsed ? "p-2 justify-center" : "p-3"
+        }`}>
+          {isSecNavCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-sm font-semibold" data-testid="text-page-title">R</span>
+              </TooltipTrigger>
+              <TooltipContent side="right">Rules Explorer</TooltipContent>
+            </Tooltip>
+          ) : (
+            <div className="flex-1 min-w-0">
+              <h1 className="text-sm font-semibold" data-testid="text-page-title">
+                Rules Explorer
+              </h1>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Browse and audit
+              </p>
+            </div>
+          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 shrink-0"
+                onClick={() => setIsSecNavCollapsed(!isSecNavCollapsed)}
+                data-testid="button-toggle-sec-nav"
+              >
+                <PanelLeft className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {isSecNavCollapsed ? "Expand" : "Collapse"}
+            </TooltipContent>
+          </Tooltip>
         </div>
-        <div className="flex-1 p-2 space-y-1 overflow-y-auto">
+        <div className={`flex-1 space-y-1 overflow-y-auto ${isSecNavCollapsed ? "p-1" : "p-2"}`}>
           <SecondaryNavItem
             icon={Book}
             label="Catalog"
             isActive={activeView === "catalog"}
             onClick={() => setActiveView("catalog")}
             testId="nav-catalog"
+            isCollapsed={isSecNavCollapsed}
           />
           <SecondaryNavItem
             icon={Shield}
@@ -750,6 +807,7 @@ export default function RulesExplorer() {
             isActive={activeView === "audit"}
             onClick={() => setActiveView("audit")}
             testId="nav-audit"
+            isCollapsed={isSecNavCollapsed}
           />
         </div>
       </div>
