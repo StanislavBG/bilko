@@ -184,11 +184,11 @@ function TertiaryNavPanel({
   return (
     <div className={`shrink-0 border-r bg-background flex flex-col ${className}`} data-testid={testId}>
       {header && (
-        <div className="border-b px-2 py-2 shrink-0">
+        <div className="border-b px-2 h-8 flex items-center shrink-0">
           {isCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-xs font-medium text-muted-foreground block text-center cursor-default">
+                <span className="text-xs font-medium text-muted-foreground block w-full text-center cursor-default">
                   {header.charAt(0)}
                 </span>
               </TooltipTrigger>
@@ -434,11 +434,11 @@ function CatalogView({
       <div className={`shrink-0 border-r bg-muted/20 flex flex-col transition-all duration-200 ${
         isPartitionCollapsed ? "min-w-12 max-w-12" : "min-w-[8rem] max-w-[10rem] flex-1"
       }`} data-testid="partition-nav">
-        <div className="border-b px-2 py-2 shrink-0">
+        <div className="border-b px-2 h-8 flex items-center shrink-0">
           {isPartitionCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-xs font-medium text-muted-foreground block text-center cursor-default">P</span>
+                <span className="text-xs font-medium text-muted-foreground block w-full text-center cursor-default">P</span>
               </TooltipTrigger>
               <TooltipContent side="right">Partitions</TooltipContent>
             </Tooltip>
@@ -621,11 +621,11 @@ function AuditView({
       <div className={`shrink-0 border-r bg-muted/20 flex flex-col transition-all duration-200 ${
         isAuditNavCollapsed ? "min-w-12 max-w-12" : "min-w-[8rem] max-w-[10rem] flex-1"
       }`} data-testid="audit-nav">
-        <div className="border-b px-2 py-2 shrink-0">
+        <div className="border-b px-2 h-8 flex items-center shrink-0">
           {isAuditNavCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-xs font-medium text-muted-foreground block text-center cursor-default">A</span>
+                <span className="text-xs font-medium text-muted-foreground block w-full text-center cursor-default">A</span>
               </TooltipTrigger>
               <TooltipContent side="right">Audits</TooltipContent>
             </Tooltip>
@@ -888,11 +888,11 @@ export default function RulesExplorer() {
       <div className={`shrink-0 border-r bg-sidebar flex flex-col h-full transition-all duration-200 ${
         isSecNavCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
       }`}>
-        <div className="border-b px-2 py-2 shrink-0">
+        <div className="border-b px-2 h-8 flex items-center shrink-0">
           {isSecNavCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-xs font-medium text-muted-foreground block text-center cursor-default">R</span>
+                <span className="text-xs font-medium text-muted-foreground block w-full text-center cursor-default">R</span>
               </TooltipTrigger>
               <TooltipContent side="right">Rules Explorer</TooltipContent>
             </Tooltip>
