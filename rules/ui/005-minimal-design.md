@@ -1,6 +1,6 @@
 # UI-005: Minimal Design Principles
 
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **Priority**: HIGH  
 **Partition**: ui
 
@@ -36,6 +36,7 @@ This rule does NOT prohibit:
 - Use flex-based layouts with min-width/max-width constraints
 - rem-based constraints are acceptable (they scale with font size)
 - Panels expand to fill available space within constraints
+- Note: Shadcn component defaults (e.g., max-w-lg on Dialog, max-w-sm on Sheet) are acceptable as they use rem-based sizing
 
 ### D4: Clean Borders
 - Simple 1px borders for separation

@@ -1,6 +1,6 @@
 # UI-004: Left-Nav Collapsible Behavior
 
-**Version**: 1.2.0  
+**Version**: 1.3.0  
 **Priority**: HIGH  
 **Partition**: ui
 
@@ -16,43 +16,56 @@ Defines consistent collapsible behavior for left navigation panels.
 |-------|---------|-------------|-----------|
 | Primary | Main sidebar | Required | Always visible, user needs space control |
 | Secondary | Rules Explorer nav (Catalog/Audit) | Required | Persistent nav that benefits from minimizing |
-| Tertiary | Partitions list, rules list | Optional | Contextual panels that appear/disappear based on selection |
+| Tertiary | Partitions list, rules list | Recommended | Contextual panels benefit from consistent behavior |
 
 ### 2. Collapsed State Appearance
 
 When collapsed:
 - Width reduces to minimal width (flex-based or min-content)
-- Header shows single letter initial (e.g., "B" for Bilko, "R" for Rules)
-- Navigation items hidden or show abbreviated text
+- Navigation items show abbreviated text (single letter or short code)
 - Tooltips appear on hover showing full label
 
 ### 3. Expanded State Appearance
 
 When expanded:
 - Flex to fill available space within layout constraints
-- Full header text visible
-- Navigation items show text labels
+- Navigation items show full text labels
 - No tooltips needed (labels visible)
 
 ### 4. Collapse Trigger
 
-- Trigger icon in header (chevron or panel-left icon)
+- Trigger uses PanelLeft icon
 - Click toggles between expanded/collapsed
-- Position: right side of header area
+- Position: footer zone of each nav column (per HUB-003 D6)
+- Centered within footer with border-t styling
 
 ### 5. State Persistence
 
 - Collapse state persists within session
 - Primary sidebar uses SidebarProvider context
-- Secondary navs manage local state (useState)
+- Secondary/tertiary navs manage local state (useState)
 
 ## When to Skip Collapsibility
 
 Tertiary navs may skip collapsibility when:
 - They only appear contextually (after a selection)
-- They have no header/title area
 - Collapsing would provide minimal space savings
 - The panel content is already minimal (< 5 items)
+
+## Nav Column Structure
+
+Navigation columns follow this recommended structure:
+
+```
++------------------+
+|                  |
+|   Nav Items      |  <- Content area with nav buttons
+|   (full height)  |
+|                  |
+|------------------|  <- border-t
+|     [ < ]        |  <- Centered collapse toggle
++------------------+
+```
 
 ## Implementation Pattern
 
@@ -62,23 +75,41 @@ const [isCollapsed, setIsCollapsed] = useState(false);
 <div className={`shrink-0 border-r bg-sidebar flex flex-col h-full transition-all ${
   isCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
 }`}>
-  <div className="p-3 border-b shrink-0 flex items-center justify-between gap-2">
+  {/* Content area - no header */}
+  <div className="flex-1 p-2 space-y-1 overflow-y-auto">
     {isCollapsed ? (
-      <span className="text-sm font-semibold w-full text-center">R</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" className="w-full justify-center">
+            <span>C</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Catalog</TooltipContent>
+      </Tooltip>
     ) : (
-      <h1 className="text-sm font-semibold">Rules Explorer</h1>
+      <Button variant="ghost" className="w-full justify-start">
+        Catalog
+      </Button>
     )}
-    <Button
-      size="icon"
-      variant="ghost"
-      onClick={() => setIsCollapsed(!isCollapsed)}
-    >
-      <PanelLeft className="h-4 w-4" />
-    </Button>
   </div>
-  <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-    <span className="text-sm">{isCollapsed ? "" : "Label"}</span>
-  </nav>
+  
+  {/* Footer with collapse toggle */}
+  <div className="border-t p-2 flex justify-center">
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          <PanelLeft className="h-4 w-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="right">
+        {isCollapsed ? "Expand" : "Collapse"}
+      </TooltipContent>
+    </Tooltip>
+  </div>
 </div>
 ```
 
@@ -88,4 +119,10 @@ Note: Action icons (like PanelLeft for collapse toggle) are permitted per UI-005
 
 - HUB-001: Hub Layout (primary sidebar)
 - UI-003: Secondary Navigation Pattern
-- HUB-003: Nested Navigation Pattern
+- HUB-003: Nested Navigation Pattern (D6 specifies footer placement)
+
+## Version History
+
+- 1.3.0: Updated collapse trigger to footer zone per HUB-003 D6, removed header requirement, all nav levels now required to be collapsible
+- 1.2.0: Added tertiary nav collapsibility as optional
+- 1.1.0: Initial release

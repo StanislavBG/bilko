@@ -262,11 +262,11 @@
       "path": "rules/ui/004-left-nav-collapsible.md",
       "partition": "ui",
       "priority": "HIGH",
-      "version": "1.2.0",
-      "triggers": ["collapse", "collapsible", "left nav", "sidebar collapse", "single letter", "minimize nav"],
+      "version": "1.3.0",
+      "triggers": ["collapse", "collapsible", "left nav", "sidebar collapse", "single letter", "minimize nav", "footer toggle"],
       "dependencies": ["UI-001", "HUB-001"],
       "crossReferences": ["UI-003", "HUB-003", "UI-005"],
-      "description": "Consistent collapsible behavior for all left navigation panels."
+      "description": "Consistent collapsible behavior for all left navigation panels with footer-based toggles."
     },
     "UI-005": {
       "id": "UI-005",
@@ -274,7 +274,7 @@
       "path": "rules/ui/005-minimal-design.md",
       "partition": "ui",
       "priority": "HIGH",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "triggers": ["minimal", "design", "text-only", "no icons", "relative sizing", "black white", "clean"],
       "dependencies": ["UI-001"],
       "crossReferences": ["UI-004", "HUB-003"],
