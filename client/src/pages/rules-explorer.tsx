@@ -248,11 +248,10 @@ function CompactRuleItem({
   onSelect: () => void;
 }) {
   return (
-    <button
-      className={`w-full text-left px-2 py-1.5 rounded-md transition-colors flex items-center gap-2 ${
-        isSelected 
-          ? "bg-accent text-accent-foreground" 
-          : "hover-elevate"
+    <Button
+      variant="ghost"
+      className={`w-full justify-start gap-2 ${
+        isSelected ? "bg-accent text-accent-foreground" : ""
       }`}
       onClick={onSelect}
       data-testid={`nav-rule-${rule.id.toLowerCase()}`}
@@ -267,7 +266,7 @@ function CompactRuleItem({
       <span className={`text-[10px] px-1 py-0.5 rounded ${getPriorityColor(rule.priority)}`}>
         {rule.priority.charAt(0)}
       </span>
-    </button>
+    </Button>
   );
 }
 
@@ -382,11 +381,10 @@ function RuleDetailPanel({
                       key={dep}
                       variant="outline"
                       size="sm"
-                      className="h-5 text-xs px-1.5"
                       onClick={() => onSelectRule(dep)}
                       data-testid={`link-dep-${dep.toLowerCase()}`}
                     >
-                      {dep}
+                      <code className="text-xs">{dep}</code>
                     </Button>
                   ))}
                 </div>
@@ -404,11 +402,10 @@ function RuleDetailPanel({
                       key={ref}
                       variant="outline"
                       size="sm"
-                      className="h-5 text-xs px-1.5"
                       onClick={() => onSelectRule(ref)}
                       data-testid={`link-ref-${ref.toLowerCase()}`}
                     >
-                      {ref}
+                      <code className="text-xs">{ref}</code>
                     </Button>
                   ))}
                 </div>
