@@ -154,7 +154,7 @@
       "path": "rules/hub/003-nested-navigation.md",
       "partition": "hub",
       "priority": "HIGH",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "triggers": ["nested nav", "secondary nav", "tertiary nav", "multi-level", "navigation levels"],
       "dependencies": ["HUB-001", "UI-001"],
       "crossReferences": ["UI-003"],

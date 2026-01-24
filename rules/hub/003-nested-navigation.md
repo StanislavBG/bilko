@@ -2,7 +2,7 @@
 
 Rule ID: HUB-003
 Priority: HIGH
-Version: 1.1.0
+Version: 1.2.0
 
 ## Context
 Complex applications may require navigation beyond the main hub sidebar. This rule defines the optional nested navigation pattern supporting up to 3 levels.
@@ -11,16 +11,18 @@ Complex applications may require navigation beyond the main hub sidebar. This ru
 
 ```
 ┌────────────┬────────────┬────────────┬──────────────────────┐
-│            │            │            │                      │
-│  Level 1   │  Level 2   │  Level 3   │   Content Area       │
+│            │            │            │  Global Header       │
+│  Level 1   │  Level 2   │  Level 3   ├──────────────────────┤
 │  (Hub)     │  (App)     │  (Section) │                      │
-│            │            │            │                      │
+│            │            │            │   Content Area       │
 │  - Home    │ - Catalog  │ - arch     │                      │
 │  - Rules   │ - Audit    │ - hub      │                      │
 │  - Memory  │            │ - ui       │                      │
 │            │            │            │                      │
 └────────────┴────────────┴────────────┴──────────────────────┘
 ```
+
+The three left navigation columns extend full-height. The Global Header sits above the Content Area only, containing user info and global actions (theme toggle, view mode, logout).
 
 ### Level 1: Hub Navigation (Required)
 - Managed by the hub shell (see HUB-001)
