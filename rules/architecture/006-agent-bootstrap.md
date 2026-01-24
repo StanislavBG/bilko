@@ -15,14 +15,14 @@ This rule applies to any AI developer (Replit Agent or future alternatives) at t
 When beginning a new session:
 
 1. **Read `replit.md`** - This is your entry point
-2. **Read `rules/README.md`** - This explains how the rule system works
+2. **Read this rule (ARCH-006)** - This explains how the rule system works
 3. **Note the Primary Directive** - ARCH-000 is absolute
 
 ### Before Each Task
 
 For every development task:
 
-1. **Identify red flags** in the task description (see README.md for list)
+1. **Identify red flags** in the task description (see `manifest.json` routing section)
 2. **Route the task** using `manifest.json` or the Rules Service
 3. **Read applicable rules** in the specified order
 4. **Apply rules** during implementation
@@ -68,8 +68,7 @@ Primary Directive: Verified
 | Location | Purpose | Do NOT duplicate here |
 |----------|---------|----------------------|
 | `replit.md` | Bootstrap pointer only | Rule details, red flags, reading order |
-| `rules/README.md` | System explanation | Project structure, tech stack |
-| `rules/manifest.json` | Machine index | Human explanations |
+| `rules/manifest.json` | Machine index + routing | Human explanations |
 | Individual rules | Specific guidance | Content from other rules |
 
 ### D1: replit.md Boundaries

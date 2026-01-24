@@ -12,7 +12,7 @@ This rule applies when the agent needs to create, modify, or extend the rule fra
 ### D1: Re-Read Before Modify
 Before making ANY changes to rules, the agent MUST re-read all existing rules in the affected partition(s) to understand the current state.
 
-**DO**: Read `/rules/README.md` and all rules in the partition before editing
+**DO**: Read all rules in the partition before editing
 **DON'T**: Modify rules based on memory or assumptions about their current content
 
 ### D2: Extend Logically
@@ -32,10 +32,10 @@ When modifying existing rules, preserve the original intent unless explicitly in
 **DON'T**: Remove or substantially alter existing directives without approval
 
 ### D4: Document Changes
-When rules are added or modified, update `/rules/README.md` if the change affects:
-- The rule hierarchy
+When rules are added or modified, update `manifest.json` to reflect:
+- New rule entries
 - New partitions
-- Consumption protocol changes
+- Updated cross-references or dependencies
 
 ### D5: Cross-Project Rule Propagation
 Changes to rules that define cross-project contracts (ARCH-007, ARCH-008, INT-003) require noting that the n8n project needs the same update.

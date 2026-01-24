@@ -8,12 +8,12 @@
 
 All development rules are in `/rules/`. The Rules Service validates at startup - the application will not start if rules are invalid.
 
-**Before any task**: Read `/rules/README.md` for how the rule system works.
+**Before any task**: Read `ARCH-006` (Agent Bootstrap Protocol) for how the rule system works.
 
 ## Quick Reference
 
 - **Rules Index**: `rules/manifest.json`
-- **Rules Guide**: `rules/README.md`
+- **Bootstrap Protocol**: `rules/architecture/006-agent-bootstrap.md`
 - **Rules Service**: `/server/rules/`
 
 ## Project Overview
