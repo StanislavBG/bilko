@@ -202,7 +202,7 @@ function TertiaryNavPanel({
       <div className="flex-1 overflow-auto p-1 space-y-0.5">
         {children}
       </div>
-      <div className="border-t p-2 flex justify-center">
+      <div className="border-t h-11 flex items-center justify-center shrink-0">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -460,7 +460,7 @@ function CatalogView({
             />
           ))}
         </div>
-        <div className="border-t p-2 flex justify-center">
+        <div className="border-t h-11 flex items-center justify-center shrink-0">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -729,7 +729,7 @@ function AuditView({
           </div>
         )}
         
-        <div className="border-t p-2 flex justify-center mt-auto">
+        <div className="border-t h-11 flex items-center justify-center shrink-0">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -916,7 +916,7 @@ export default function RulesExplorer() {
             isCollapsed={isSecNavCollapsed}
           />
         </div>
-        <div className="border-t p-2 flex justify-center">
+        <div className="border-t h-11 flex items-center justify-center shrink-0">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
