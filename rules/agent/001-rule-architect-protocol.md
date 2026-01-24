@@ -119,8 +119,3 @@ The RulesService provides basic manifest loading and routing, but all validation
 - AGENT-003: Code Audit Agent Protocol
 - ARCH-002: Rule Maintenance
 - APP-RULES-001: Rules Explorer (UI for viewing audits)
-
-## Version History
-
-- 2.0.0: Migrated from ARCH-009 to agent partition; updated references to AGENT-002/003
-- 1.0.0: Initial protocol definition (as ARCH-009)

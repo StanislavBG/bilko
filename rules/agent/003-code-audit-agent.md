@@ -206,7 +206,3 @@ Run both audits periodically to maintain system integrity:
 - AGENT-001: Rule Architect Protocol (parent protocol)
 - AGENT-002: Rule Audit Agent Protocol (companion for rule validation)
 - ARCH-002: Rule Maintenance (how to modify rules)
-
-## Version History
-
-- 1.0.0: Migrated from ARCH-012 to agent partition

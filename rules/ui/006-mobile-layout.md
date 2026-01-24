@@ -108,8 +108,3 @@ const [isNavCollapsed, setIsNavCollapsed] = useState(false);
 - UI-004: Left-Nav Collapsible Behavior (collapse mechanics)
 - UI-005: Minimal Design Principles (sizing, aesthetics)
 - HUB-001: Hub Layout (primary sidebar)
-
-## Version History
-
-- 1.1.0: Simplified to user-controlled collapse (removed accordion hiding requirement)
-- 1.0.0: Initial mobile layout rule

@@ -202,7 +202,3 @@ This protocol can be triggered via n8n:
 - AGENT-001: Rule Architect Protocol (parent protocol)
 - AGENT-003: Code Audit Agent Protocol (companion for code validation)
 - ARCH-002: Rule Maintenance (how to modify rules)
-
-## Version History
-
-- 1.0.0: Migrated from ARCH-011 to agent partition
