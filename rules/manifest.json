@@ -148,6 +148,18 @@
       "crossReferences": [],
       "description": "Defines how users are granted access to Hub applications."
     },
+    "HUB-003": {
+      "id": "HUB-003",
+      "title": "Nested Navigation Pattern",
+      "path": "rules/hub/003-nested-navigation.md",
+      "partition": "hub",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["nested nav", "secondary nav", "tertiary nav", "multi-level", "navigation levels"],
+      "dependencies": ["HUB-001", "UI-001"],
+      "crossReferences": ["UI-003"],
+      "description": "Defines optional 2nd and 3rd level navigation within applications (max 3 levels)."
+    },
     "APP-HOME-001": {
       "id": "APP-HOME-001",
       "title": "Home Dashboard",

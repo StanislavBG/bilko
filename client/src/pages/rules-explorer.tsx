@@ -5,15 +5,13 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { EndpointInfo } from "@/components/endpoint-info";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { 
-  CheckCircle, XCircle, AlertTriangle, RefreshCw, Shield, Clock, Server,
-  Book, ChevronDown, ChevronRight, FileText, ArrowLeft, Layers, Tag, GitBranch, Link2,
+  CheckCircle, XCircle, AlertTriangle, RefreshCw, Shield, Clock,
+  Book, ChevronDown, ChevronRight, FileText, Layers, Tag, GitBranch, Link2,
   FileSearch, ListChecks, Search
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
@@ -148,16 +146,120 @@ function getSeverityDescription(severity: string): string {
 
 function CheckStatusIcon({ passed }: { passed: boolean }) {
   if (passed) {
-    return <CheckCircle className="h-5 w-5 text-green-600" />;
+    return <CheckCircle className="h-4 w-4 text-green-600" />;
   }
-  return <XCircle className="h-5 w-5 text-destructive" />;
+  return <XCircle className="h-4 w-4 text-destructive" />;
 }
 
-function AuditCheckItem({ 
-  result, 
-  isSelected,
-  onSelect 
+function SecondaryNavItem({ 
+  icon: Icon,
+  label, 
+  isActive, 
+  onClick,
+  badge,
+  testId
 }: { 
+  icon: typeof Book;
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+  badge?: { text: string; variant?: "default" | "destructive" };
+  testId: string;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      className={`w-full justify-start gap-2 h-9 ${
+        isActive ? "bg-accent text-accent-foreground" : ""
+      }`}
+      onClick={onClick}
+      data-testid={testId}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="flex-1 text-left text-sm">{label}</span>
+      {badge && (
+        <Badge variant={badge.variant || "default"} className="text-[10px] px-1.5">
+          {badge.text}
+        </Badge>
+      )}
+    </Button>
+  );
+}
+
+function PartitionNavItem({
+  partition,
+  isSelected,
+  onSelect
+}: {
+  partition: PartitionInfo;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      className={`w-full justify-start gap-2 h-8 ${
+        isSelected ? "bg-accent text-accent-foreground" : ""
+      }`}
+      onClick={onSelect}
+      data-testid={`nav-partition-${partition.id}`}
+    >
+      <Layers className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      <span className="flex-1 text-left text-sm capitalize truncate">{partition.id}</span>
+      <span className="text-xs text-muted-foreground">{partition.rules.length}</span>
+    </Button>
+  );
+}
+
+function RuleNavItem({
+  rule,
+  isPrimary,
+  isSelected,
+  onSelect
+}: {
+  rule: RuleMetadata;
+  isPrimary: boolean;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      className={`w-full justify-start gap-2 h-8 ${
+        isSelected ? "bg-accent text-accent-foreground" : ""
+      }`}
+      onClick={onSelect}
+      data-testid={`nav-rule-${rule.id.toLowerCase()}`}
+    >
+      <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      <div className="flex-1 min-w-0 flex items-center gap-1.5">
+        <code className="text-xs font-medium">{rule.id}</code>
+        {isPrimary && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Shield className="h-3 w-3 text-primary shrink-0" />
+            </TooltipTrigger>
+            <TooltipContent>Primary Directive</TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={`text-[10px] px-1 py-0.5 rounded cursor-help ${getPriorityColor(rule.priority)}`}>
+            {rule.priority.charAt(0)}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{getPriorityDescription(rule.priority)}</TooltipContent>
+      </Tooltip>
+    </Button>
+  );
+}
+
+function AuditCheckNavItem({
+  result,
+  isSelected,
+  onSelect
+}: {
   result: AuditResult;
   isSelected: boolean;
   onSelect: () => void;
@@ -165,16 +267,14 @@ function AuditCheckItem({
   return (
     <Button
       variant="ghost"
-      className={`w-full justify-start gap-2 ${
+      className={`w-full justify-start gap-2 h-8 ${
         isSelected ? "bg-accent text-accent-foreground" : ""
       }`}
       onClick={onSelect}
       data-testid={`nav-check-${result.checkId.toLowerCase()}`}
     >
       <CheckStatusIcon passed={result.passed} />
-      <div className="flex-1 min-w-0 flex items-center gap-1.5">
-        <code className="text-xs font-medium">{result.checkId}</code>
-      </div>
+      <code className="text-xs font-medium flex-1 text-left">{result.checkId}</code>
       <Badge 
         variant={result.passed ? "default" : "destructive"} 
         className="text-[10px] px-1"
@@ -182,6 +282,117 @@ function AuditCheckItem({
         {result.passed ? "OK" : "FAIL"}
       </Badge>
     </Button>
+  );
+}
+
+function RuleDetailPanel({ 
+  ruleId,
+  onSelectRule
+}: { 
+  ruleId: string;
+  onSelectRule: (ruleId: string) => void;
+}) {
+  const { data: rule, isLoading, error } = useQuery<RuleContent>({
+    queryKey: ["/api/rules", ruleId],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="p-4 space-y-3">
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (error || !rule) {
+    return (
+      <div className="p-4 flex items-center justify-center h-full">
+        <p className="text-sm text-muted-foreground">Failed to load rule</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-auto" data-testid={`detail-rule-${ruleId.toLowerCase()}`}>
+      <div className="p-4 border-b bg-muted/30">
+        <div className="flex items-center gap-2 flex-wrap mb-2">
+          <code className="text-sm font-bold bg-muted px-2 py-0.5 rounded">
+            {rule.id}
+          </code>
+          <Badge className={getPriorityColor(rule.priority)} data-testid="badge-priority">
+            {rule.priority}
+          </Badge>
+          <Badge variant="outline" className="capitalize text-xs">
+            {rule.partition}
+          </Badge>
+          <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
+            <Tag className="h-3 w-3" />
+            v{rule.version}
+          </span>
+        </div>
+        <h2 className="text-lg font-semibold" data-testid="text-rule-title">
+          {rule.title}
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">{rule.description}</p>
+
+        {(rule.dependencies.length > 0 || rule.crossReferences.length > 0) && (
+          <div className="mt-3 pt-3 border-t flex flex-wrap gap-3">
+            {rule.dependencies.length > 0 && (
+              <div>
+                <span className="text-xs font-medium flex items-center gap-1 mb-1 text-muted-foreground">
+                  <GitBranch className="h-3 w-3" />
+                  Dependencies
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {rule.dependencies.map((dep) => (
+                    <Button
+                      key={dep}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSelectRule(dep)}
+                      data-testid={`link-dep-${dep.toLowerCase()}`}
+                    >
+                      <code className="text-xs">{dep}</code>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {rule.crossReferences.length > 0 && (
+              <div>
+                <span className="text-xs font-medium flex items-center gap-1 mb-1 text-muted-foreground">
+                  <Link2 className="h-3 w-3" />
+                  Cross-References
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {rule.crossReferences.map((ref) => (
+                    <Button
+                      key={ref}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onSelectRule(ref)}
+                      data-testid={`link-ref-${ref.toLowerCase()}`}
+                    >
+                      <code className="text-xs">{ref}</code>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="p-4">
+        <div className="prose prose-sm dark:prose-invert max-w-none" data-testid="text-rule-content">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {rule.content}
+          </ReactMarkdown>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -356,545 +567,148 @@ function AuditDetailPanel({ result }: { result: AuditResult }) {
   );
 }
 
-function OverallStatus({ report }: { report: AuditReport }) {
-  const statusColor = report.passed ? "bg-green-600" : "bg-destructive";
-  const statusText = report.passed ? "All Checks Passed" : "Checks Failed";
-  
-  return (
-    <Card className="p-6" data-testid="card-overall-status">
-      <div className="flex items-center gap-4">
-        <div className={`h-12 w-12 rounded-full ${statusColor} flex items-center justify-center`}>
-          <Shield className="h-6 w-6 text-white" />
-        </div>
-        <div className="flex-1">
-          <h2 className="text-xl font-semibold" data-testid="text-overall-status">
-            {statusText}
-          </h2>
-          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span>Last run: {formatTimestamp(report.timestamp)}</span>
-            </div>
-            <span>{report.results.length} checks</span>
-            {report.criticalFailures > 0 && (
-              <Badge variant="destructive">{report.criticalFailures} critical</Badge>
-            )}
-            {report.warnings > 0 && (
-              <Badge variant="secondary">{report.warnings} warnings</Badge>
-            )}
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-function RuleCard({ 
-  rule, 
-  isPrimary,
-  onSelect 
-}: { 
-  rule: RuleMetadata; 
-  isPrimary: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <Card 
-      className="p-3 hover-elevate cursor-pointer" 
-      onClick={onSelect}
-      data-testid={`card-rule-${rule.id.toLowerCase()}`}
-    >
-      <div className="flex items-start gap-3">
-        <FileText className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <code className="text-xs font-semibold bg-muted px-1.5 py-0.5 rounded">
-              {rule.id}
-            </code>
-            <Badge className={`text-xs ${getPriorityColor(rule.priority)}`} variant="secondary">
-              {rule.priority}
-            </Badge>
-            {isPrimary && (
-              <Badge variant="default" className="text-xs">
-                Primary Directive
-              </Badge>
-            )}
-          </div>
-          <p className="mt-1 text-sm font-medium">{rule.title}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{rule.description}</p>
-        </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-      </div>
-    </Card>
-  );
-}
-
-function CompactRuleItem({ 
-  rule, 
-  isPrimary,
-  isSelected,
-  onSelect 
-}: { 
-  rule: RuleMetadata; 
-  isPrimary: boolean;
-  isSelected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <Button
-      variant="ghost"
-      className={`w-full justify-start gap-2 ${
-        isSelected ? "bg-accent text-accent-foreground" : ""
-      }`}
-      onClick={onSelect}
-      data-testid={`nav-rule-${rule.id.toLowerCase()}`}
-    >
-      <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-      <div className="flex-1 min-w-0 flex items-center gap-1.5">
-        <code className="text-xs font-medium">{rule.id}</code>
-        {isPrimary && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Shield className="h-3 w-3 text-primary shrink-0" />
-            </TooltipTrigger>
-            <TooltipContent>Primary Directive</TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className={`text-[10px] px-1 py-0.5 rounded cursor-help ${getPriorityColor(rule.priority)}`}>
-            {rule.priority.charAt(0)}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>{getPriorityDescription(rule.priority)}</TooltipContent>
-      </Tooltip>
-    </Button>
-  );
-}
-
-function CompactPartitionSection({ 
-  partition, 
-  primaryDirectiveId,
+function CatalogView({
+  selectedPartitionId,
+  setSelectedPartitionId,
   selectedRuleId,
-  onSelectRule 
-}: { 
-  partition: PartitionInfo; 
-  primaryDirectiveId: string;
+  setSelectedRuleId
+}: {
+  selectedPartitionId: string | null;
+  setSelectedPartitionId: (id: string | null) => void;
   selectedRuleId: string | null;
-  onSelectRule: (ruleId: string) => void;
+  setSelectedRuleId: (id: string | null) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(true);
-
-  return (
-    <div className="mb-1">
-      <button
-        className="w-full flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-muted-foreground uppercase tracking-wide"
-        onClick={() => setIsOpen(!isOpen)}
-        data-testid={`nav-partition-${partition.id}`}
-      >
-        {isOpen ? (
-          <ChevronDown className="h-3 w-3" />
-        ) : (
-          <ChevronRight className="h-3 w-3" />
-        )}
-        <span>{partition.id}</span>
-        <span className="text-[10px] opacity-70">({partition.rules.length})</span>
-      </button>
-      {isOpen && (
-        <div className="ml-1 space-y-0.5">
-          {partition.rules.map((rule) => (
-            <CompactRuleItem
-              key={rule.id}
-              rule={rule}
-              isPrimary={rule.id === primaryDirectiveId}
-              isSelected={selectedRuleId === rule.id}
-              onSelect={() => onSelectRule(rule.id)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RuleDetailPanel({ 
-  ruleId,
-  onSelectRule
-}: { 
-  ruleId: string;
-  onSelectRule: (ruleId: string) => void;
-}) {
-  const { data: rule, isLoading, error } = useQuery<RuleContent>({
-    queryKey: ["/api/rules", ruleId],
-  });
-
-  if (isLoading) {
-    return (
-      <div className="p-4 space-y-3">
-        <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-48 w-full" />
-      </div>
-    );
-  }
-
-  if (error || !rule) {
-    return (
-      <div className="p-4 flex items-center justify-center h-full">
-        <p className="text-sm text-muted-foreground">Failed to load rule</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-full overflow-auto" data-testid={`detail-rule-${ruleId.toLowerCase()}`}>
-      <div className="p-4 border-b bg-muted/30">
-        <div className="flex items-center gap-2 flex-wrap mb-2">
-          <code className="text-sm font-bold bg-muted px-2 py-0.5 rounded">
-            {rule.id}
-          </code>
-          <Badge className={getPriorityColor(rule.priority)}>
-            {rule.priority}
-          </Badge>
-          <Badge variant="outline" className="capitalize text-xs">
-            {rule.partition}
-          </Badge>
-          <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
-            <Tag className="h-3 w-3" />
-            v{rule.version}
-          </span>
-        </div>
-        <h2 className="text-lg font-semibold" data-testid="text-rule-title">
-          {rule.title}
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">{rule.description}</p>
-
-        {(rule.dependencies.length > 0 || rule.crossReferences.length > 0) && (
-          <div className="mt-3 pt-3 border-t flex flex-wrap gap-3">
-            {rule.dependencies.length > 0 && (
-              <div>
-                <span className="text-xs font-medium flex items-center gap-1 mb-1 text-muted-foreground">
-                  <GitBranch className="h-3 w-3" />
-                  Dependencies
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {rule.dependencies.map((dep) => (
-                    <Button
-                      key={dep}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onSelectRule(dep)}
-                      data-testid={`link-dep-${dep.toLowerCase()}`}
-                    >
-                      <code className="text-xs">{dep}</code>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {rule.crossReferences.length > 0 && (
-              <div>
-                <span className="text-xs font-medium flex items-center gap-1 mb-1 text-muted-foreground">
-                  <Link2 className="h-3 w-3" />
-                  Cross-References
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {rule.crossReferences.map((ref) => (
-                    <Button
-                      key={ref}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onSelectRule(ref)}
-                      data-testid={`link-ref-${ref.toLowerCase()}`}
-                    >
-                      <code className="text-xs">{ref}</code>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="p-4">
-        <div className="prose prose-sm dark:prose-invert max-w-none" data-testid="text-rule-content">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {rule.content}
-          </ReactMarkdown>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PartitionSection({ 
-  partition, 
-  primaryDirectiveId,
-  onSelectRule 
-}: { 
-  partition: PartitionInfo; 
-  primaryDirectiveId: string;
-  onSelectRule: (ruleId: string) => void;
-}) {
-  const [isOpen, setIsOpen] = useState(true);
-
-  return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger asChild>
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start gap-2 h-auto py-3"
-          data-testid={`button-partition-${partition.id}`}
-        >
-          {isOpen ? (
-            <ChevronDown className="h-4 w-4 shrink-0" />
-          ) : (
-            <ChevronRight className="h-4 w-4 shrink-0" />
-          )}
-          <Layers className="h-4 w-4 shrink-0" />
-          <div className="flex-1 text-left">
-            <span className="font-medium capitalize">{partition.id}</span>
-            <span className="ml-2 text-xs text-muted-foreground">
-              ({partition.rules.length} {partition.rules.length === 1 ? "rule" : "rules"})
-            </span>
-          </div>
-        </Button>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="pl-6 pb-2 space-y-2">
-          <p className="text-xs text-muted-foreground mb-3">{partition.description}</p>
-          {partition.rules.map((rule) => (
-            <RuleCard 
-              key={rule.id} 
-              rule={rule} 
-              isPrimary={rule.id === primaryDirectiveId}
-              onSelect={() => onSelectRule(rule.id)}
-            />
-          ))}
-        </div>
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
-function RulePreview({ 
-  ruleId, 
-  onBack,
-  onSelectRule
-}: { 
-  ruleId: string; 
-  onBack: () => void;
-  onSelectRule: (ruleId: string) => void;
-}) {
-  const { data: rule, isLoading, error } = useQuery<RuleContent>({
-    queryKey: ["/api/rules", ruleId],
-  });
-
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
-
-  if (error || !rule) {
-    return (
-      <div className="space-y-4">
-        <Button variant="ghost" onClick={onBack} className="gap-2">
-          <ArrowLeft className="h-4 w-4" />
-          Back to Catalog
-        </Button>
-        <Card className="p-6 text-center">
-          <p className="text-muted-foreground">Failed to load rule: {ruleId}</p>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4" data-testid={`preview-rule-${ruleId.toLowerCase()}`}>
-      <Button 
-        variant="ghost" 
-        onClick={onBack} 
-        className="gap-2"
-        data-testid="button-back-to-catalog"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Catalog
-      </Button>
-
-      <Card className="p-4">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <code className="text-sm font-bold bg-muted px-2 py-1 rounded">
-                {rule.id}
-              </code>
-              <Badge className={getPriorityColor(rule.priority)}>
-                {rule.priority}
-              </Badge>
-              <Badge variant="outline" className="capitalize">
-                {rule.partition}
-              </Badge>
-            </div>
-            <h2 className="mt-2 text-xl font-semibold" data-testid="text-rule-title">
-              {rule.title}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">{rule.description}</p>
-          </div>
-          <div className="text-right text-xs text-muted-foreground">
-            <div className="flex items-center gap-1 justify-end">
-              <Tag className="h-3 w-3" />
-              v{rule.version}
-            </div>
-          </div>
-        </div>
-
-        {(rule.dependencies.length > 0 || rule.crossReferences.length > 0) && (
-          <div className="mt-4 pt-4 border-t flex flex-wrap gap-4">
-            {rule.dependencies.length > 0 && (
-              <div>
-                <span className="text-xs font-medium flex items-center gap-1 mb-1">
-                  <GitBranch className="h-3 w-3" />
-                  Dependencies
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {rule.dependencies.map((dep) => (
-                    <Button
-                      key={dep}
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-xs"
-                      onClick={() => onSelectRule(dep)}
-                      data-testid={`link-dep-${dep.toLowerCase()}`}
-                    >
-                      {dep}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {rule.crossReferences.length > 0 && (
-              <div>
-                <span className="text-xs font-medium flex items-center gap-1 mb-1">
-                  <Link2 className="h-3 w-3" />
-                  Cross-References
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {rule.crossReferences.map((ref) => (
-                    <Button
-                      key={ref}
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-xs"
-                      onClick={() => onSelectRule(ref)}
-                      data-testid={`link-ref-${ref.toLowerCase()}`}
-                    >
-                      {ref}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </Card>
-
-      <Card className="p-6">
-        <div className="prose prose-sm dark:prose-invert max-w-none" data-testid="text-rule-content">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {rule.content}
-          </ReactMarkdown>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-function CatalogTab() {
-  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
-
   const { data: catalog, isLoading } = useQuery<RulesCatalog>({
     queryKey: ["/api/rules"],
   });
 
   if (isLoading) {
     return (
-      <div className="flex gap-4 h-[calc(100vh-220px)]">
-        <div className="w-64 shrink-0">
+      <>
+        <div className="w-44 shrink-0 border-r bg-muted/20 p-2">
+          <Skeleton className="h-6 w-full mb-2" />
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <Skeleton key={i} className="h-8 w-full mb-1" />
+          ))}
+        </div>
+        <div className="flex-1 p-4">
           <Skeleton className="h-full w-full" />
         </div>
-        <div className="flex-1">
-          <Skeleton className="h-full w-full" />
-        </div>
-      </div>
+      </>
     );
   }
 
   if (!catalog) {
     return (
-      <Card className="p-8 text-center">
-        <Book className="h-8 w-8 mx-auto opacity-50" />
-        <p className="mt-2 text-muted-foreground">No rules catalog available</p>
-      </Card>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <Book className="h-8 w-8 mx-auto opacity-50 mb-2" />
+          <p className="text-sm text-muted-foreground">No rules catalog available</p>
+        </div>
+      </div>
     );
   }
 
+  const selectedPartition = catalog.partitions.find(p => p.id === selectedPartitionId);
+
+  const handleSelectRule = (ruleId: string) => {
+    const rule = catalog.partitions.flatMap(p => p.rules).find(r => r.id === ruleId);
+    if (rule) {
+      setSelectedPartitionId(rule.partition);
+      setSelectedRuleId(ruleId);
+    }
+  };
+
   return (
-    <div className="flex gap-4 h-[calc(100vh-220px)]" data-testid="catalog-layout">
-      <Card className="w-64 shrink-0 flex flex-col overflow-hidden">
-        <div className="p-3 border-b bg-muted/30">
+    <>
+      <div className="w-44 shrink-0 border-r bg-muted/20 flex flex-col">
+        <div className="p-2 border-b">
           <div className="flex items-center gap-2">
-            <Book className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium" data-testid="text-catalog-title">
-              Rules Catalog
+            <Layers className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Partitions
             </span>
             <EndpointInfo endpoint="GET /api/rules" className="ml-auto" />
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-[10px] text-muted-foreground mt-1">
             {catalog.totalRules} rules
           </p>
         </div>
-        <div className="flex-1 overflow-auto p-2">
+        <div className="flex-1 overflow-auto p-1 space-y-0.5">
           {catalog.partitions.map((partition) => (
-            <CompactPartitionSection
+            <PartitionNavItem
               key={partition.id}
               partition={partition}
-              primaryDirectiveId={catalog.primaryDirectiveId}
-              selectedRuleId={selectedRuleId}
-              onSelectRule={setSelectedRuleId}
+              isSelected={selectedPartitionId === partition.id}
+              onSelect={() => {
+                setSelectedPartitionId(partition.id);
+                setSelectedRuleId(null);
+              }}
             />
           ))}
         </div>
-      </Card>
+      </div>
 
-      <Card className="flex-1 overflow-hidden">
+      {selectedPartition && (
+        <div className="w-48 shrink-0 border-r bg-background flex flex-col">
+          <div className="p-2 border-b">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-medium capitalize truncate">
+                {selectedPartition.id}
+              </span>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">
+              {selectedPartition.description}
+            </p>
+          </div>
+          <div className="flex-1 overflow-auto p-1 space-y-0.5">
+            {selectedPartition.rules.map((rule) => (
+              <RuleNavItem
+                key={rule.id}
+                rule={rule}
+                isPrimary={rule.id === catalog.primaryDirectiveId}
+                isSelected={selectedRuleId === rule.id}
+                onSelect={() => setSelectedRuleId(rule.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-hidden bg-background">
         {selectedRuleId ? (
           <RuleDetailPanel 
             ruleId={selectedRuleId}
-            onSelectRule={setSelectedRuleId}
+            onSelectRule={handleSelectRule}
           />
-        ) : (
+        ) : selectedPartition ? (
           <div className="h-full flex items-center justify-center text-muted-foreground">
             <div className="text-center">
-              <Book className="h-8 w-8 mx-auto opacity-50 mb-2" />
+              <FileText className="h-8 w-8 mx-auto opacity-50 mb-2" />
               <p className="text-sm">Select a rule to view details</p>
             </div>
           </div>
+        ) : (
+          <div className="h-full flex items-center justify-center text-muted-foreground">
+            <div className="text-center">
+              <Layers className="h-8 w-8 mx-auto opacity-50 mb-2" />
+              <p className="text-sm">Select a partition to browse rules</p>
+            </div>
+          </div>
         )}
-      </Card>
-    </div>
+      </div>
+    </>
   );
 }
 
-function AuditTab() {
-  const [selectedCheckId, setSelectedCheckId] = useState<string | null>(null);
-  
+function AuditView({
+  selectedCheckId,
+  setSelectedCheckId
+}: {
+  selectedCheckId: string | null;
+  setSelectedCheckId: (id: string | null) => void;
+}) {
   const { data: report, isLoading, refetch, isRefetching } = useQuery<AuditReport>({
     queryKey: ["/api/audit"],
   });
@@ -908,69 +722,75 @@ function AuditTab() {
 
   if (isLoading) {
     return (
-      <div className="flex gap-4 h-[calc(100vh-220px)]">
-        <div className="w-64 shrink-0">
+      <>
+        <div className="w-52 shrink-0 border-r bg-muted/20 p-2">
+          <Skeleton className="h-6 w-full mb-2" />
+          {[1, 2, 3].map(i => (
+            <Skeleton key={i} className="h-8 w-full mb-1" />
+          ))}
+        </div>
+        <div className="flex-1 p-4">
           <Skeleton className="h-full w-full" />
         </div>
-        <div className="flex-1">
-          <Skeleton className="h-full w-full" />
-        </div>
-      </div>
+      </>
     );
   }
 
   if (!report) {
     return (
-      <Card className="p-8 text-center">
-        <Shield className="h-8 w-8 mx-auto opacity-50" />
-        <p className="mt-2 text-muted-foreground">No audit data available</p>
-        <Button variant="outline" size="sm" onClick={handleRefresh} className="mt-4">
-          Run Audit
-        </Button>
-      </Card>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <Shield className="h-8 w-8 mx-auto opacity-50 mb-2" />
+          <p className="text-sm text-muted-foreground">No audit data available</p>
+          <Button variant="outline" size="sm" onClick={handleRefresh} className="mt-4">
+            Run Audit
+          </Button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-220px)]" data-testid="audit-layout">
-      <Card className="w-64 shrink-0 flex flex-col overflow-hidden">
-        <div className="p-3 border-b bg-muted/30">
+    <>
+      <div className="w-52 shrink-0 border-r bg-muted/20 flex flex-col">
+        <div className="p-2 border-b">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium" data-testid="text-audit-title">
-                Audit Checks
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Checks
               </span>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={handleRefresh}
-              disabled={isRefetching}
-              data-testid="button-refresh-audit"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
-            </Button>
+            <div className="flex items-center gap-1">
+              <EndpointInfo endpoint="GET /api/audit" />
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="h-6 w-6"
+                onClick={handleRefresh}
+                disabled={isRefetching}
+                data-testid="button-refresh-audit"
+              >
+                <RefreshCw className={`h-3 w-3 ${isRefetching ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 mt-1">
-            <p className="text-xs text-muted-foreground">
-              {formatTimestamp(report.timestamp)}
-            </p>
-            <EndpointInfo endpoint="GET /api/audit" />
-          </div>
-          <div className="mt-2 flex items-center gap-2">
+          <p className="text-[10px] text-muted-foreground mt-1">
+            {formatTimestamp(report.timestamp)}
+          </p>
+          <div className="mt-1.5">
             {report.passed ? (
-              <Badge variant="default" className="text-xs">All Passed</Badge>
+              <Badge variant="default" className="text-[10px]">All Passed</Badge>
             ) : (
-              <Badge variant="destructive" className="text-xs">
+              <Badge variant="destructive" className="text-[10px]">
                 {report.criticalFailures} Failed
               </Badge>
             )}
           </div>
         </div>
-        <div className="flex-1 overflow-auto p-2 space-y-1">
+        <div className="flex-1 overflow-auto p-1 space-y-0.5">
           {report.results.map((result) => (
-            <AuditCheckItem
+            <AuditCheckNavItem
               key={result.checkId}
               result={result}
               isSelected={selectedCheckId === result.checkId}
@@ -978,9 +798,9 @@ function AuditTab() {
             />
           ))}
         </div>
-      </Card>
+      </div>
 
-      <Card className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden bg-background">
         {selectedResult ? (
           <AuditDetailPanel result={selectedResult} />
         ) : (
@@ -991,14 +811,17 @@ function AuditTab() {
             </div>
           </div>
         )}
-      </Card>
-    </div>
+      </div>
+    </>
   );
 }
 
 export default function RulesExplorer() {
   const { effectiveIsAdmin } = useViewMode();
-  const [activeTab, setActiveTab] = useState("catalog");
+  const [activeView, setActiveView] = useState<"catalog" | "audit">("catalog");
+  const [selectedPartitionId, setSelectedPartitionId] = useState<string | null>(null);
+  const [selectedRuleId, setSelectedRuleId] = useState<string | null>(null);
+  const [selectedCheckId, setSelectedCheckId] = useState<string | null>(null);
 
   if (!effectiveIsAdmin) {
     return (
@@ -1014,37 +837,49 @@ export default function RulesExplorer() {
   }
 
   return (
-    <div className="p-6 h-full">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col gap-4 h-full">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight" data-testid="text-page-title">
-              Rules Explorer
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Browse the rules catalog and monitor system integrity
-            </p>
-          </div>
-          <TabsList className="grid grid-cols-2">
-            <TabsTrigger value="catalog" data-testid="tab-catalog">
-              <Book className="h-4 w-4 mr-2" />
-              Catalog
-            </TabsTrigger>
-            <TabsTrigger value="audit" data-testid="tab-audit">
-              <Shield className="h-4 w-4 mr-2" />
-              Audit
-            </TabsTrigger>
-          </TabsList>
+    <div className="flex h-full" data-testid="rules-explorer-layout">
+      <div className="w-40 shrink-0 border-r bg-sidebar flex flex-col">
+        <div className="p-3 border-b">
+          <h1 className="text-sm font-semibold" data-testid="text-page-title">
+            Rules Explorer
+          </h1>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Browse and audit
+          </p>
         </div>
+        <div className="flex-1 p-2 space-y-1">
+          <SecondaryNavItem
+            icon={Book}
+            label="Catalog"
+            isActive={activeView === "catalog"}
+            onClick={() => setActiveView("catalog")}
+            testId="nav-catalog"
+          />
+          <SecondaryNavItem
+            icon={Shield}
+            label="Audit"
+            isActive={activeView === "audit"}
+            onClick={() => setActiveView("audit")}
+            testId="nav-audit"
+          />
+        </div>
+      </div>
 
-        <TabsContent value="catalog" className="mt-0 flex-1">
-          <CatalogTab />
-        </TabsContent>
-
-        <TabsContent value="audit" className="mt-0 flex-1">
-          <AuditTab />
-        </TabsContent>
-      </Tabs>
+      <div className="flex-1 flex overflow-hidden">
+        {activeView === "catalog" ? (
+          <CatalogView
+            selectedPartitionId={selectedPartitionId}
+            setSelectedPartitionId={setSelectedPartitionId}
+            selectedRuleId={selectedRuleId}
+            setSelectedRuleId={setSelectedRuleId}
+          />
+        ) : (
+          <AuditView
+            selectedCheckId={selectedCheckId}
+            setSelectedCheckId={setSelectedCheckId}
+          />
+        )}
+      </div>
     </div>
   );
 }

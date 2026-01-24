@@ -86,10 +86,11 @@ Use master-detail when:
 
 ## Examples in This Project
 
-- **Rules Explorer**: Uses tabs (Catalog/Audit) with master-detail within each tab
-- **Memory Explorer**: May use tabs for trace types or filters
+- **Rules Explorer**: Uses secondary sidebar (Level 2: Catalog/Audit) with tertiary sidebar (Level 3: partitions or checks)
+- **Memory Explorer**: May use secondary sidebar for trace types or filters
 
 ## Cross-References
 
 - HUB-001: Hub Layout (primary sidebar)
+- HUB-003: Nested Navigation Pattern (defines max 3 levels)
 - UI-001: UI Principles
