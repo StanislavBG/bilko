@@ -154,11 +154,11 @@
       "path": "rules/hub/003-nested-navigation.md",
       "partition": "hub",
       "priority": "HIGH",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "triggers": ["nested nav", "secondary nav", "tertiary nav", "multi-level", "navigation levels"],
       "dependencies": ["HUB-001", "UI-001"],
       "crossReferences": ["UI-003", "UI-004", "UI-006"],
-      "description": "Defines optional 2nd and 3rd level navigation within applications (max 3 levels). Includes header pinning, collapse button placement, and mobile accordion behavior."
+      "description": "Defines optional 2nd and 3rd level navigation within applications (max 3 levels). Includes header pinning, collapse button placement, and user-controlled mobile collapse."
     },
     "APP-LANDING-001": {
       "id": "APP-LANDING-001",
@@ -262,10 +262,10 @@
       "path": "rules/ui/004-left-nav-collapsible.md",
       "partition": "ui",
       "priority": "HIGH",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "triggers": ["collapse", "collapsible", "left nav", "sidebar collapse", "single letter", "minimize nav", "footer toggle"],
       "dependencies": ["UI-001", "HUB-001"],
-      "crossReferences": ["UI-003", "HUB-003", "UI-005"],
+      "crossReferences": ["UI-003", "HUB-003", "UI-005", "UI-006"],
       "description": "Consistent collapsible behavior for all left navigation panels with footer-based toggles."
     },
     "UI-005": {

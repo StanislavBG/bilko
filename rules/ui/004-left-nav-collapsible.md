@@ -1,6 +1,6 @@
 # UI-004: Left-Nav Collapsible Behavior
 
-**Version**: 1.3.0  
+**Version**: 1.4.0  
 **Priority**: HIGH  
 **Partition**: ui
 
@@ -117,17 +117,18 @@ Note: Action icons (like PanelLeft for collapse toggle) are permitted per UI-005
 
 ## Mobile Behavior
 
-On mobile viewports, collapse behavior changes to accordion mode - see UI-006: Mobile Layout.
+On mobile viewports, the same user-controlled collapse behavior applies. See UI-006: Mobile Layout for details.
 
 ## Cross-References
 
 - HUB-001: Hub Layout (primary sidebar)
 - UI-003: Secondary Navigation Pattern
 - HUB-003: Nested Navigation Pattern (D6 specifies footer placement)
-- UI-006: Mobile Layout (accordion navigation on mobile)
+- UI-006: Mobile Layout (user-controlled collapse on mobile)
 
 ## Version History
 
+- 1.4.0: Aligned mobile behavior with UI-006 v1.1.0 (user-controlled collapse, not accordion)
 - 1.3.0: Updated collapse trigger to footer zone per HUB-003 D6, removed header requirement, all nav levels now required to be collapsible
 - 1.2.0: Added tertiary nav collapsibility as optional
 - 1.1.0: Initial release
