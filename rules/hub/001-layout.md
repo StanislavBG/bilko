@@ -2,10 +2,10 @@
 
 Rule ID: HUB-001
 Priority: HIGH
-Version: 1.1.0
+Version: 1.2.0
 
 ## Context
-These rules define the Application Hub shell layout. All applications render within this structure.
+These rules define the Application Hub shell layout (Level 1 navigation). This is the primary sidebar that is always present. Applications may add Level 2 and Level 3 navigation columns - see HUB-003 for the full 3-column layout pattern.
 
 ## Layout Structure
 
@@ -14,18 +14,21 @@ These rules define the Application Hub shell layout. All applications render wit
 │  Header  │                                      │
 │  (app    │                                      │
 │  name)   │   Application Content Area           │
-│          │                                      │
+│          │   (may contain Level 2/3 nav +       │
+│          │    Global Header + Main Content)     │
 ├──────────┤                                      │
 │  Nav     │                                      │
 │  items   │                                      │
 │          │                                      │
 ├──────────┤                                      │
 │  Footer  │                                      │
-│  (user   │                                      │
-│  controls│                                      │
-│  theme)  │                                      │
+│  (toggle │                                      │
+│  collapse│                                      │
+│  button) │                                      │
 └──────────┴──────────────────────────────────────┘
 ```
+
+This diagram shows Level 1 (Hub) navigation only. For applications requiring additional navigation levels, see HUB-003.
 
 ## Directives
 
@@ -37,12 +40,14 @@ The left navigation extends from the top of the viewport to the bottom. All cont
 
 ### D2: Sidebar Zones
 The sidebar contains three zones:
-- **Header**: App name/logo with optional collapse trigger
+- **Header**: App name/logo (shows single letter when collapsed)
 - **Content**: Navigation items (scrollable if needed)
-- **Footer**: User avatar, theme toggle, view mode toggle, logout
+- **Footer**: Collapse toggle button
 
-**DO**: Keep all user controls in the sidebar footer
-**DON'T**: Create a separate horizontal header bar for user controls
+**DO**: Keep the collapse toggle in the sidebar footer
+**DON'T**: Place navigation controls outside the sidebar
+
+Note: User controls (theme toggle, view mode, logout) live in the Global Header within the content area - see HUB-003 D5.
 
 ### D3: App Content Scrolling
 The application content area scrolls independently. The nav remains fixed.

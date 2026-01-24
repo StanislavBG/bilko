@@ -2,7 +2,7 @@
 
 Rule ID: HUB-003
 Priority: HIGH
-Version: 1.3.0
+Version: 1.4.0
 
 ## Context
 Complex applications may require navigation beyond the main hub sidebar. This rule defines the optional nested navigation pattern supporting up to 3 levels.
@@ -10,19 +10,29 @@ Complex applications may require navigation beyond the main hub sidebar. This ru
 ## Navigation Levels
 
 ```
-┌────────────┬────────────┬────────────┬──────────────────────┐
-│            │            │            │  Global Header       │
-│  Level 1   │  Level 2   │  Level 3   ├──────────────────────┤
-│  (Hub)     │  (App)     │  (Section) │                      │
-│            │            │            │   Content Area       │
-│  - Home    │ - Catalog  │ - arch     │                      │
-│  - Rules   │ - Audit    │ - hub      │                      │
-│  - Memory  │            │ - ui       │                      │
-│            │            │            │                      │
-└────────────┴────────────┴────────────┴──────────────────────┘
+____________________________________________________________________________________
+| BAR 1      | BAR 2          | BAR 3          | HEADER (Pinned to top of Main)    |
+| (Global)   | (Category)     | (Detail)       |___________________________________|
+|            |                |                |                                   |
+| Icon A     | [ Folder ]     | - Page 1       |                                   |
+| Icon B     | [ Folder ]     | - Page 2       |                                   |
+| Icon C     | [ Folder ]     | - Page 3       |          MAIN CONTENT             |
+|            |                |                |              AREA                 |
+|            |                |                |                                   |
+|            |                |                |                                   |
+|            |                |                |                                   |
+|            |                |                |                                   |
+|            |                |                |                                   |
+|____________|________________|________________|                                   |
+| [ < ]      | [ < ]          | [ < ]          |                                   |
+| (Collapse) | (Collapse)     | (Collapse)     |___________________________________|
 ```
 
-The three left navigation columns extend full-height. The Global Header sits above the Content Area only, containing user info and global actions (theme toggle, view mode, logout).
+**Key Layout Principles:**
+- All three navigation columns extend full-height (viewport height)
+- The Global Header sits above the Content Area ONLY - it does NOT span across the navigation columns
+- Each navigation column has a collapse button at its footer
+- Only the Main Content Area scrolls; navigation columns remain fixed
 
 ### Level 1: Hub Navigation (Required)
 - Managed by the hub shell (see HUB-001)
@@ -65,11 +75,25 @@ Applications decide whether to use Level 2 and Level 3 navigation. The hub shell
 **DO**: Let each app manage its own nested nav
 **DON'T**: Force nested nav on simple applications
 
+### D5: Header Pinning
+The Global Header is pinned to the top of the Main Content Area only. It does NOT span across the navigation columns.
+
+**DO**: Place header inside the content area, above scrollable content
+**DON'T**: Create a top-spanning header bar that sits above the nav columns
+
+### D6: Collapse Button Placement
+Each navigation column has a collapse toggle button in its footer zone. See UI-004 for collapse behavior details.
+
+**DO**: Place collapse buttons at the bottom of each nav column
+**DON'T**: Hide collapse controls or place them in headers only
+
 ## Implementation Notes
 - Level 1: Use main Shadcn Sidebar (SidebarProvider in App.tsx)
 - Level 2/3: Use additional vertical nav within the application content area
 - Use relative sizing (flex, min-width) so panels expand to fill available space
 - All levels remain fixed; only the content area scrolls
+- Header component renders inside the main content flex container, not at the root level
+- Each nav column footer contains its collapse toggle (see UI-004)
 
 ## Examples
 
