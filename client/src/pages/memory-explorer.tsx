@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { PageContent } from "@/components/page-content";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,24 +33,21 @@ function JsonDisplay({ data }: { data: unknown }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  switch (status) {
-    case "success":
-      return <Badge variant="default" className="bg-green-600">Success</Badge>;
-    case "failed":
-      return <Badge variant="destructive">Failed</Badge>;
-    case "in_progress":
-      return <Badge variant="secondary">In Progress</Badge>;
-    default:
-      return <Badge variant="outline">Pending</Badge>;
-  }
+  const labels: Record<string, string> = {
+    success: "Success",
+    failed: "Failed",
+    in_progress: "In Progress",
+    pending: "Pending"
+  };
+  return <span className="text-sm text-muted-foreground">{labels[status] || status}</span>;
 }
 
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
     case "success":
-      return <CheckCircle className="h-4 w-4 text-green-600" />;
+      return <CheckCircle className="h-4 w-4 text-foreground" />;
     case "failed":
-      return <XCircle className="h-4 w-4 text-destructive" />;
+      return <XCircle className="h-4 w-4 text-foreground" />;
     case "in_progress":
       return <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />;
     default:
@@ -82,7 +78,7 @@ function CopyButton({ text, onCopy }: { text: string; onCopy: () => void }) {
       data-testid="button-copy-trace-id"
     >
       {copied ? (
-        <Check className="h-4 w-4 text-green-600" />
+        <Check className="h-4 w-4 text-foreground" />
       ) : (
         <Copy className="h-4 w-4" />
       )}
@@ -345,11 +341,7 @@ export default function MemoryExplorer() {
                       <td className="p-3">
                         <div className="flex items-center gap-1">
                           <StatusIcon status={trace.overallStatus} />
-                          <span className={
-                            trace.overallStatus === "success" ? "text-green-600" :
-                            trace.overallStatus === "failed" ? "text-destructive" :
-                            "text-muted-foreground"
-                          }>
+                          <span className="text-muted-foreground">
                             {trace.overallStatus === "success" ? "Success" :
                              trace.overallStatus === "failed" ? "Failed" :
                              trace.overallStatus === "in_progress" ? "In Progress" :
