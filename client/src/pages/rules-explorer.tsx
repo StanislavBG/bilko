@@ -880,8 +880,8 @@ export default function RulesExplorer() {
   }
 
   return (
-    <div className="flex h-full" data-testid="rules-explorer-layout">
-      <div className={`shrink-0 border-r bg-sidebar flex flex-col h-full transition-all duration-200 ${
+    <div className="flex flex-1" data-testid="rules-explorer-layout">
+      <div className={`shrink-0 border-r bg-sidebar flex flex-col transition-all duration-200 ${
         isSecNavCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
       }`}>
         <div className="border-b px-2 h-8 flex items-center shrink-0">
