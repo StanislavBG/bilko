@@ -2,7 +2,7 @@
 
 Rule ID: HUB-003
 Priority: HIGH
-Version: 1.9.0
+Version: 2.0.0
 
 ## Context
 Complex applications may require navigation beyond the main hub sidebar. This rule defines the optional nested navigation pattern supporting up to 3 levels.
@@ -12,22 +12,22 @@ Complex applications may require navigation beyond the main hub sidebar. This ru
 ```
 ____________________________________________________________________________________
 | GLOBAL HEADER (Full width, h-11, spans entire viewport width)                    |
-| [Toggle] Bilko Bibitkov                                        [Actions] [Theme] |
+| [Toggle]                                                       [Actions] [Theme] |
 |__________________________________________________________________________________|
-| BAR 1      | BAR 2          | BAR 3          |                                   |
-| (Global)   | App Name       | Section Name   |                                   |
-|            |________________|________________|                                   |
-| Icon A     | [ Folder ]     | - Page 1       |          MAIN CONTENT             |
-| Icon B     | [ Folder ]     | - Page 2       |              AREA                 |
-| Icon C     | [ Folder ]     | - Page 3       |                                   |
-|            |                |                |                                   |
+| Bilko      | BAR 2          | BAR 3          |                                   |
+| Bibitkov   | App Name       | Section Name   |                                   |
+| AI Academy |________________|________________|                                   |
+| (h-11 hdr) | [ Folder ]     | - Page 1       |          MAIN CONTENT             |
+| Icon A     | [ Folder ]     | - Page 2       |              AREA                 |
+| Icon B     | [ Folder ]     | - Page 3       |                                   |
+| Icon C     |                |                |                                   |
 |____________|________________|________________|___________________________________|
 ```
 
 **Key Layout Principles:**
 - GlobalHeader is at App.tsx level, spanning full width above both sidebar and main content
-- GlobalHeader contains: sidebar toggle, app title, action buttons (theme, logout, etc.)
-- Level 1 sidebar (BAR 1) has no header - the app title lives in GlobalHeader
+- GlobalHeader contains: sidebar toggle and action buttons (theme, logout, etc.)
+- Level 1 sidebar has h-11 header with "Bilko Bibitkov AI Academy" (or "B" when collapsed)
 - Level 2 and Level 3 columns have their own headers showing the section name
 - Only the Main Content Area scrolls; navigation columns remain fixed
 
@@ -78,11 +78,18 @@ The GlobalHeader is rendered at App.tsx level, spanning full viewport width abov
 **DO**: Place GlobalHeader in App.tsx above the sidebar+main flex container
 **DON'T**: Render GlobalHeader inside individual pages or inside the sidebar
 
-### D6: Level 1 Sidebar Without Header
-The Level 1 sidebar (AppSidebar) has no header or footer. The app title and sidebar toggle live in the GlobalHeader. The sidebar contains only navigation items.
+### D6: Level 1 Sidebar Header
+The Level 1 sidebar (AppSidebar) has a header displaying the application identity. Height matches GlobalHeader (h-11) for visual alignment.
 
-**DO**: Keep Level 1 sidebar minimal with only navigation content
-**DON'T**: Add header/footer to Level 1 sidebar (those belong in GlobalHeader)
+**Expanded State:**
+- Display "Bilko Bibitkov AI Academy" in small text (text-xs)
+- Text must not wrap (whitespace-nowrap)
+
+**Collapsed State:**
+- Display single letter "B"
+
+**DO**: Keep L1 sidebar header height matching GlobalHeader (h-11)
+**DON'T**: Wrap text or use larger font sizes that cause overflow
 
 ### D7: Nav Column Headers
 Level 2 (Application) and Level 3 (Section) navigation columns require a header zone at the top indicating their purpose.
@@ -107,7 +114,7 @@ App.tsx:
   div.flex.flex-col.h-screen.w-full
     └── GlobalHeader (h-11, shrink-0, full width)
     └── div.flex.flex-1.overflow-hidden
-          └── AppSidebar (no header/footer)
+          └── AppSidebar (with h-11 header matching GlobalHeader)
           └── main.flex-1.flex.overflow-hidden
                 └── Page root: flex flex-1 (NOT h-full)
                       └── Nav columns (L2, L3): flex flex-col shrink-0 (with own headers)
@@ -127,19 +134,20 @@ All pages must use the PageContent wrapper for their main content area. This ens
 **DO**: Wrap page content in `<PageContent>{children}</PageContent>`
 **DON'T**: Render GlobalHeader manually or skip PageContent wrapper
 
-### D10: Nav Column Heights (Level 2 and Level 3 only)
-Level 2 and Level 3 navigation columns must have consistent fixed heights for headers and footers. Level 1 (AppSidebar) has no header/footer.
+### D10: Nav Column Heights
+All navigation columns have headers with fixed heights for visual alignment.
 
+**Level 1 Header**: `h-11` (matches GlobalHeader height)
 **L2/L3 Headers**: `h-8 flex items-center shrink-0`
 **L2/L3 Footers**: `h-11 flex items-center justify-center shrink-0`
 **Content**: `flex-1 overflow-auto`
 
-**DO**: Use fixed heights for L2/L3 headers/footers, flex-1 for scrollable content
-**DON'T**: Add header/footer to Level 1 sidebar (use GlobalHeader instead)
+**DO**: Use h-11 for L1 header, h-8 for L2/L3 headers, flex-1 for scrollable content
+**DON'T**: Use different heights that cause misalignment
 
 ## Implementation Notes
-- GlobalHeader: Rendered in App.tsx, contains sidebar toggle, app title "Bilko Bibitkov", and action buttons
-- Level 1: Use main Shadcn Sidebar (no header/footer - those are in GlobalHeader)
+- GlobalHeader: Rendered in App.tsx, contains sidebar toggle and action buttons (theme, logout)
+- Level 1: Use main Shadcn Sidebar with h-11 header showing "Bilko Bibitkov AI Academy" (or "B" when collapsed)
 - Level 2/3: Use additional vertical nav within the application content area (with their own headers)
 - Use relative sizing (flex, min-width) so panels expand to fill available space
 - All levels remain fixed; only the content area scrolls

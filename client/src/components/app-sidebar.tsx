@@ -7,10 +7,12 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const navItems = [
@@ -38,6 +40,8 @@ const navItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { effectiveIsAdmin } = useViewMode();
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
   
   const visibleNavItems = navItems.filter(
     (item) => !item.adminOnly || effectiveIsAdmin
@@ -45,6 +49,15 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
+      <SidebarHeader className="h-11 flex items-center justify-center border-b shrink-0 px-2">
+        {isCollapsed ? (
+          <span className="font-bold text-base" data-testid="sidebar-logo-collapsed">B</span>
+        ) : (
+          <span className="font-semibold text-xs whitespace-nowrap" data-testid="sidebar-logo-expanded">
+            Bilko Bibitkov AI Academy
+          </span>
+        )}
+      </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Applications</SidebarGroupLabel>
