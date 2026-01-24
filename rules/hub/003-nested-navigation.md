@@ -101,20 +101,22 @@ Level 2 (Application) and Level 3 (Section) navigation columns require a header 
 **DON'T**: Leave navigation columns without context labels
 
 ### D8: Flex Layout Chain
-All layout containers use `flex-1` for height inheritance, never `h-full`. The layout chain must be unbroken from App.tsx through to content.
+Page root containers must use `flex-1` for height inheritance within the App.tsx flex context. The layout chain must be unbroken from App.tsx through to content.
 
 **Flex Chain (required):**
 ```
 App.tsx main: flex-1 flex overflow-hidden
-  └── Page root: flex flex-1
-        └── Nav columns: flex flex-col (no height class)
+  └── Page root: flex flex-1 (NOT h-full)
+        └── Nav columns: flex flex-col shrink-0
         └── Content wrapper: flex-1 flex flex-col
               └── PageContent: flex-1 flex flex-col overflow-hidden
                     └── Content: flex-1 (or overflow-auto for scrollable)
 ```
 
-**DO**: Use `flex-1` for height inheritance in flex containers
-**DON'T**: Use `h-full` or `h-screen` in flex children (breaks height chain)
+**Scope**: This directive applies to page root containers and primary content wrappers. Component-level containers (e.g., skeletons, inner panels) may use `h-full` when their parent has explicit height.
+
+**DO**: Use `flex-1` for page root and content wrappers in flex contexts
+**DON'T**: Use `h-full` on page root containers (breaks flex height chain)
 
 ### D9: PageContent Wrapper
 All pages must use the PageContent wrapper for their main content area. This ensures consistent header rendering and proper flex context.

@@ -291,7 +291,7 @@ function RuleDetailPanel({
 
   if (error || !rule) {
     return (
-      <div className="p-4 flex items-center justify-center h-full">
+      <div className="flex-1 p-4 flex items-center justify-center bg-background">
         <p className="text-sm text-muted-foreground">Failed to load rule</p>
       </div>
     );
@@ -868,14 +868,16 @@ export default function RulesExplorer() {
 
   if (!effectiveIsAdmin) {
     return (
-      <div className="p-6">
-        <div className="flex flex-col gap-6 max-w-4xl">
-          <h1 className="text-2xl font-semibold tracking-tight">Access Denied</h1>
-          <p className="text-muted-foreground">
-            You don't have permission to view this page.
-          </p>
+      <PageContent>
+        <div className="p-6">
+          <div className="flex flex-col gap-6 max-w-4xl">
+            <h1 className="text-2xl font-semibold tracking-tight">Access Denied</h1>
+            <p className="text-muted-foreground">
+              You don't have permission to view this page.
+            </p>
+          </div>
         </div>
-      </div>
+      </PageContent>
     );
   }
 
