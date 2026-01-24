@@ -3,12 +3,21 @@ import { useViewMode } from "@/contexts/view-mode-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 
 export function GlobalHeader() {
   const { isViewingAsUser, toggleViewMode, canToggleViewMode } = useViewMode();
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
 
   return (
-    <header className="h-12 shrink-0 border-b bg-background flex items-center justify-end gap-1 px-4" data-testid="global-header">
+    <header className="h-11 shrink-0 border-b bg-sidebar flex items-center gap-2 px-2" data-testid="global-header">
+      <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
+      <span className="font-semibold text-sm shrink-0" data-testid="logo-text">
+        {isCollapsed ? "B" : "Bilko Bibitkov"}
+      </span>
+      <div className="flex-1" />
+      <div className="flex items-center gap-1">
       {canToggleViewMode && (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -55,6 +64,7 @@ export function GlobalHeader() {
           <span className="sr-only">Sign out</span>
         </a>
       </Button>
+      </div>
     </header>
   );
 }
