@@ -279,6 +279,18 @@
       "dependencies": ["ARCH-000"],
       "crossReferences": [],
       "description": "How AI developers should bootstrap and use the rule system."
+    },
+    "ARCH-009": {
+      "id": "ARCH-009",
+      "title": "Rule Architect Protocol",
+      "path": "rules/architecture/009-rule-architect-protocol.md",
+      "partition": "architecture",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["audit", "rule audit", "rule architect", "evaluate rules", "check rules"],
+      "dependencies": ["ARCH-000", "ARCH-002", "ARCH-006"],
+      "crossReferences": [],
+      "description": "Protocol for AI agents to perform comprehensive rule audits via agentic reasoning."
     }
   },
   "partitions": {

@@ -31,8 +31,19 @@ Bilko Bibitkov is a rule-driven web application serving as the "face" for n8n-ho
 
 - Phase 2: Application Hub with Memory Explorer
 - Auth: Replit Auth configured with admin role
-- Database: PostgreSQL with users and communication_traces tables
+- Database: PostgreSQL with users, communication_traces, and rule_audits tables
 - Admin: Bilko (user ID 45353844)
+
+## Rule Audits
+
+Rule audits are performed via agentic reasoning (ARCH-009). To run an audit:
+
+1. Ask the agent: "Run a rule audit" or "Act as Rule Architect"
+2. The agent will analyze all rules and code following the protocol in ARCH-009
+3. Copy the audit report the agent provides
+4. Go to Rules Explorer > Audit > New Audit and paste the report to save it
+
+Saved audits are stored in the database with timestamps for historical tracking.
 
 ## User Preferences
 
