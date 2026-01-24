@@ -1,6 +1,6 @@
 # UI-005: Minimal Design Principles
 
-**Version**: 1.2.0  
+**Version**: 1.3.0  
 **Priority**: HIGH  
 **Partition**: ui
 
@@ -21,10 +21,10 @@ This rule does NOT prohibit:
 
 ## Directives
 
-### D1: Text-Only Navigation
-- Navigation items use text labels only
-- No decorative icons in 2nd or 3rd level navigation items
-- Primary sidebar may show single-letter initial when collapsed
+### D1: Navigation Icon Policy
+- **Level 1 (Hub Sidebar)**: Icons permitted alongside text labels for quick visual identification
+- **Level 2/3 (Application Nav)**: Text labels only, no decorative icons
+- Collapsed state: Show single-letter abbreviation with tooltip
 
 ### D2: No Colored Badges or Accents
 - Priority levels displayed as plain text, not colored badges

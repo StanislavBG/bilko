@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "1.0.0",
-  "lastUpdated": "2026-01-24T20:37:00Z",
+  "lastUpdated": "2026-01-24T23:30:00Z",
   "primaryDirective": "ARCH-000",
   "rules": {
     "ARCH-000": {
@@ -86,7 +86,7 @@
       "triggers": ["purpose", "mission", "overview", "system", "what is"],
       "dependencies": [],
       "crossReferences": [],
-      "description": "Defines the overall system purpose and mission. (Migrated from SHARED-001)"
+      "description": "Defines the overall system purpose and mission."
     },
     "ARCH-008": {
       "id": "ARCH-008",
@@ -98,7 +98,7 @@
       "triggers": ["agent", "coordination", "ownership", "project", "replit", "n8n"],
       "dependencies": ["ARCH-007"],
       "crossReferences": ["ARCH-003", "INT-003"],
-      "description": "Defines ownership boundaries between Replit and n8n agents. (Migrated from SHARED-002)"
+      "description": "Defines ownership boundaries between Replit and n8n agents."
     },
     "INT-003": {
       "id": "INT-003",
@@ -110,7 +110,7 @@
       "triggers": ["contract", "webhook", "request", "response", "payload", "format"],
       "dependencies": ["ARCH-007", "ARCH-003"],
       "crossReferences": ["ARCH-003", "INT-001"],
-      "description": "Technical contract for orchestrator communication. (Migrated from SHARED-003)"
+      "description": "Technical contract for orchestrator communication."
     },
     "INT-004": {
       "id": "INT-004",
@@ -122,7 +122,7 @@
       "triggers": ["self-host", "n8n setup", "n8n project", "deploy n8n"],
       "dependencies": ["ARCH-007"],
       "crossReferences": ["INT-003", "ARCH-008"],
-      "description": "Complete setup guide for self-hosting n8n on Replit. (Migrated from SHARED-004)"
+      "description": "Complete setup guide for self-hosting n8n on Replit."
     },
     "HUB-001": {
       "id": "HUB-001",
@@ -130,7 +130,7 @@
       "path": "rules/hub/001-layout.md",
       "partition": "hub",
       "priority": "HIGH",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "triggers": ["hub", "layout", "sidebar", "navigation", "shell", "header"],
       "dependencies": ["ARCH-001", "UI-001"],
       "crossReferences": ["UI-001"],
@@ -154,7 +154,7 @@
       "path": "rules/hub/003-nested-navigation.md",
       "partition": "hub",
       "priority": "HIGH",
-      "version": "1.6.0",
+      "version": "2.0.0",
       "triggers": ["nested nav", "secondary nav", "tertiary nav", "multi-level", "navigation levels"],
       "dependencies": ["HUB-001", "UI-001"],
       "crossReferences": ["UI-003", "UI-004", "UI-006"],
@@ -274,7 +274,7 @@
       "path": "rules/ui/005-minimal-design.md",
       "partition": "ui",
       "priority": "HIGH",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "triggers": ["minimal", "design", "text-only", "no icons", "relative sizing", "black white", "clean"],
       "dependencies": ["UI-001"],
       "crossReferences": ["UI-004", "HUB-003", "UI-006"],

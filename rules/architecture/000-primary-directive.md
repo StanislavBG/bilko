@@ -106,15 +106,3 @@ ARCH-000 mandates the existence of a first-class Rules Service (`/server/rules/`
 
 See the Rules Service implementation for details.
 
-## Accountability Statement
-
-Every response involving code changes must include:
-
-```
----
-Rules Consulted: [list]
-Primary Directive: Verified
----
-```
-
-This creates an audit trail proving the Primary Directive was honored.
