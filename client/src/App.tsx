@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -40,14 +40,21 @@ function AuthenticatedApp() {
       <SidebarProvider>
         <div className="flex h-screen w-full">
           <AppSidebar />
-          <main className="flex-1 flex overflow-hidden">
-            <Switch>
-              <Route path="/" component={() => <HomeDashboard user={user} />} />
-              <Route path="/memory" component={MemoryExplorer} />
-              <Route path="/rules" component={RulesExplorer} />
-              <Route component={NotFound} />
-            </Switch>
-          </main>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Mobile header with sidebar trigger - hidden on desktop */}
+            <header className="flex md:hidden items-center gap-2 p-2 border-b bg-background shrink-0">
+              <SidebarTrigger data-testid="mobile-sidebar-trigger" />
+              <span className="font-semibold text-sm">Bilko Bibitkov</span>
+            </header>
+            <main className="flex-1 flex overflow-hidden">
+              <Switch>
+                <Route path="/" component={() => <HomeDashboard user={user} />} />
+                <Route path="/memory" component={MemoryExplorer} />
+                <Route path="/rules" component={RulesExplorer} />
+                <Route component={NotFound} />
+              </Switch>
+            </main>
+          </div>
         </div>
       </SidebarProvider>
     </ViewModeProvider>
