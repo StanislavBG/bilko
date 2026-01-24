@@ -37,11 +37,11 @@ When rules are added or modified, update `/rules/README.md` if the change affect
 - New partitions
 - Consumption protocol changes
 
-### D5: Shared Rule Propagation
-Changes to `/rules/shared/` require noting that the other project (n8n) needs the same update.
+### D5: Cross-Project Rule Propagation
+Changes to rules that define cross-project contracts (ARCH-007, ARCH-008, INT-003) require noting that the n8n project needs the same update.
 
-**DO**: Add a comment noting "Propagate to n8n project" when modifying shared rules
-**DON'T**: Assume shared rule changes will automatically sync
+**DO**: Add a comment noting "Propagate to n8n project" when modifying cross-project contracts
+**DON'T**: Assume cross-project rule changes will automatically sync
 
 ## Rationale
 The rule framework is the source of truth for agent behavior. Careless modifications can introduce contradictions or break established patterns.

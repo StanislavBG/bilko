@@ -71,9 +71,8 @@ Before any code change:
 This rule (ARCH-000) supersedes all other rules. In case of conflict:
 
 1. ARCH-000 (Primary Directive) - absolute authority
-2. /rules/shared/* - cross-project contracts
-3. /rules/architecture/* - system-wide decisions
-4. Partition-specific rules - domain rules
+2. /rules/architecture/* - system-wide decisions and cross-project contracts
+3. Partition-specific rules - domain rules
 
 ## Rationale
 
