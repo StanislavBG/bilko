@@ -171,16 +171,34 @@ function TertiaryNavPanel({
   className = "",
   testId,
   isCollapsed,
-  onToggleCollapse
+  onToggleCollapse,
+  header
 }: {
   children: React.ReactNode;
   className?: string;
   testId?: string;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  header?: string;
 }) {
   return (
     <div className={`shrink-0 border-r bg-background flex flex-col ${className}`} data-testid={testId}>
+      {header && (
+        <div className="border-b px-2 py-2 shrink-0">
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-xs font-medium text-muted-foreground block text-center cursor-default">
+                  {header.charAt(0)}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="right">{header}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="text-xs font-medium text-muted-foreground">{header}</span>
+          )}
+        </div>
+      )}
       <div className="flex-1 overflow-auto p-1 space-y-0.5">
         {children}
       </div>
@@ -416,6 +434,18 @@ function CatalogView({
       <div className={`shrink-0 border-r bg-muted/20 flex flex-col transition-all duration-200 ${
         isPartitionCollapsed ? "min-w-12 max-w-12" : "min-w-[8rem] max-w-[10rem] flex-1"
       }`} data-testid="partition-nav">
+        <div className="border-b px-2 py-2 shrink-0">
+          {isPartitionCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-xs font-medium text-muted-foreground block text-center cursor-default">P</span>
+              </TooltipTrigger>
+              <TooltipContent side="right">Partitions</TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="text-xs font-medium text-muted-foreground">Partitions</span>
+          )}
+        </div>
         <div className="flex-1 overflow-auto p-1 space-y-0.5">
           {catalog.partitions.map((partition) => (
             <PartitionNavItem
@@ -457,6 +487,7 @@ function CatalogView({
             isTertiaryCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
           }`}
           testId="tertiary-nav-rules"
+          header="Rules"
         >
           {selectedPartition.rules.map((rule) => (
             <RuleNavItem
@@ -590,7 +621,19 @@ function AuditView({
       <div className={`shrink-0 border-r bg-muted/20 flex flex-col transition-all duration-200 ${
         isAuditNavCollapsed ? "min-w-12 max-w-12" : "min-w-[8rem] max-w-[10rem] flex-1"
       }`} data-testid="audit-nav">
-        <div className="p-1 space-y-0.5">
+        <div className="border-b px-2 py-2 shrink-0">
+          {isAuditNavCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-xs font-medium text-muted-foreground block text-center cursor-default">A</span>
+              </TooltipTrigger>
+              <TooltipContent side="right">Audits</TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="text-xs font-medium text-muted-foreground">Audits</span>
+          )}
+        </div>
+        <div className="p-1 space-y-0.5 flex-1 overflow-auto">
           {isAuditNavCollapsed ? (
             <>
               <Tooltip>
@@ -845,6 +888,18 @@ export default function RulesExplorer() {
       <div className={`shrink-0 border-r bg-sidebar flex flex-col h-full transition-all duration-200 ${
         isSecNavCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
       }`}>
+        <div className="border-b px-2 py-2 shrink-0">
+          {isSecNavCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-xs font-medium text-muted-foreground block text-center cursor-default">R</span>
+              </TooltipTrigger>
+              <TooltipContent side="right">Rules Explorer</TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="text-xs font-medium text-muted-foreground">Rules Explorer</span>
+          )}
+        </div>
         <div className={`flex-1 space-y-1 overflow-y-auto ${isSecNavCollapsed ? "p-1" : "p-2"}`}>
           <SecondaryNavItem
             label="Catalog"
