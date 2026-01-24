@@ -11,7 +11,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarFooter,
   SidebarRail,
 } from "@/components/ui/sidebar";
 
@@ -56,10 +55,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b">
-        <div className="flex items-center gap-2 px-2 py-2">
-          <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">B</span>
-          </div>
+        <div className="px-2 py-2">
           <span className="font-semibold text-lg">Bilko Bibitkov</span>
         </div>
       </SidebarHeader>
@@ -105,11 +101,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t">
-        <div className="px-2 py-2 text-xs text-muted-foreground">
-          Bilko Bibitkov
-        </div>
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
