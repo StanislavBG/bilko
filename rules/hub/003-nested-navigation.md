@@ -2,7 +2,7 @@
 
 Rule ID: HUB-003
 Priority: HIGH
-Version: 1.6.0
+Version: 1.7.0
 
 ## Context
 Complex applications may require navigation beyond the main hub sidebar. This rule defines the optional nested navigation pattern supporting up to 3 levels.
@@ -12,14 +12,12 @@ Complex applications may require navigation beyond the main hub sidebar. This ru
 ```
 ____________________________________________________________________________________
 | BAR 1      | BAR 2          | BAR 3          | HEADER (Pinned to top of Main)    |
-| (Global)   | (Category)     | (Detail)       |___________________________________|
-|            |                |                |                                   |
-| Icon A     | [ Folder ]     | - Page 1       |                                   |
-| Icon B     | [ Folder ]     | - Page 2       |                                   |
-| Icon C     | [ Folder ]     | - Page 3       |          MAIN CONTENT             |
-|            |                |                |              AREA                 |
-|            |                |                |                                   |
-|            |                |                |                                   |
+| (Global)   |________________|________________|___________________________________|
+|            | App Name       | Section Name   |                                   |
+|            |________________|________________|                                   |
+| Icon A     | [ Folder ]     | - Page 1       |          MAIN CONTENT             |
+| Icon B     | [ Folder ]     | - Page 2       |              AREA                 |
+| Icon C     | [ Folder ]     | - Page 3       |                                   |
 |            |                |                |                                   |
 |            |                |                |                                   |
 |            |                |                |                                   |
@@ -31,6 +29,7 @@ ________________________________________________________________________________
 **Key Layout Principles:**
 - All three navigation columns extend full-height (viewport height)
 - The Global Header sits above the Content Area ONLY - it does NOT span across the navigation columns
+- Level 2 and Level 3 columns have their own headers showing the application/section name
 - Each navigation column has a collapse button at its footer
 - Only the Main Content Area scrolls; navigation columns remain fixed
 
@@ -86,6 +85,20 @@ Each navigation column has a collapse toggle button in its footer zone. See UI-0
 
 **DO**: Place collapse buttons at the bottom of each nav column
 **DON'T**: Hide collapse controls or place them in headers only
+
+### D7: Nav Column Headers
+Level 2 (Application) and Level 3 (Section) navigation columns require a header zone at the top indicating their purpose.
+
+**Expanded State:**
+- Display the full text label (e.g., "Catalog", "Partitions", "Rules")
+- Use muted text styling consistent with the design system
+
+**Collapsed State:**
+- Display a single-letter abbreviation with a tooltip showing the full text
+- Examples: "C" for Catalog, "P" for Partitions, "R" for Rules
+
+**DO**: Add header to Level 2 and Level 3 nav columns
+**DON'T**: Leave navigation columns without context labels
 
 ## Implementation Notes
 - Level 1: Use main Shadcn Sidebar (SidebarProvider in App.tsx)
