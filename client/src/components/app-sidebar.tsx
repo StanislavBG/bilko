@@ -1,9 +1,12 @@
-import { Home, Activity, BookOpen } from "lucide-react";
+import { Home, Activity, BookOpen, PanelLeft } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useViewMode } from "@/contexts/view-mode-context";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -11,7 +14,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
 
@@ -40,7 +42,7 @@ const navItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { effectiveIsAdmin } = useViewMode();
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   
   const visibleNavItems = navItems.filter(
@@ -81,7 +83,23 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarRail />
+      <SidebarFooter className="border-t h-11 flex items-center justify-center shrink-0 p-0">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => toggleSidebar()}
+              data-testid="button-toggle-sidebar"
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {isCollapsed ? "Expand" : "Collapse"}
+          </TooltipContent>
+        </Tooltip>
+      </SidebarFooter>
     </Sidebar>
   );
 }
