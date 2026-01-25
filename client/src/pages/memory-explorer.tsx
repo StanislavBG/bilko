@@ -2,15 +2,16 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { PageContent } from "@/components/page-content";
+import { ActionBar } from "@/components/action-bar";
+import { ActionPanel } from "@/components/action-panel";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EndpointInfo } from "@/components/endpoint-info";
-import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Zap, Loader2, ArrowRight, Copy, Check } from "lucide-react";
+import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Zap, Loader2, ArrowRight, Copy, Check, Database } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { CommunicationTrace } from "@shared/schema";
+import { Button } from "@/components/ui/button";
 
 function formatDuration(ms: number | null): string {
   if (ms === null) return "-";
@@ -182,6 +183,7 @@ function TraceDetailModal({
 export default function MemoryExplorer() {
   const { effectiveIsAdmin } = useViewMode();
   const [selectedTrace, setSelectedTrace] = useState<CommunicationTrace | null>(null);
+  const [isActionPanelCollapsed, setIsActionPanelCollapsed] = useState(false);
   const { toast } = useToast();
 
   const { data: traces, isLoading, refetch, isRefetching } = useQuery<CommunicationTrace[]>({
@@ -227,158 +229,165 @@ export default function MemoryExplorer() {
   }
 
   return (
-    <PageContent>
-      <div className="p-6">
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">
-                Memory Explorer
-              </h1>
-              <EndpointInfo endpoint="GET /api/traces" />
-            </div>
-            <p className="text-muted-foreground">
-              View orchestration layer communication traces
-            </p>
+    <PageContent className="flex-row">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="p-6">
+          <div className="flex flex-col gap-6">
+            <ActionBar
+              variant="page"
+              icon={<Database className="h-5 w-5 text-muted-foreground" />}
+              title="Memory Explorer"
+              description="View orchestration layer communication traces"
+              testId="action-bar-memory"
+            />
+
+            <Card>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm" data-testid="table-traces">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="text-left p-3 font-medium">Trace ID</th>
+                      <th className="text-left p-3 font-medium">Timestamp</th>
+                      <th className="text-left p-3 font-medium">Routing</th>
+                      <th className="text-left p-3 font-medium">Workflow</th>
+                      <th className="text-left p-3 font-medium">Action</th>
+                      <th className="text-left p-3 font-medium">Status</th>
+                      <th className="text-left p-3 font-medium">Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoading ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <tr key={i} className="border-b">
+                          <td className="p-3"><Skeleton className="h-4 w-24" /></td>
+                          <td className="p-3"><Skeleton className="h-4 w-32" /></td>
+                          <td className="p-3"><Skeleton className="h-4 w-28" /></td>
+                          <td className="p-3"><Skeleton className="h-4 w-24" /></td>
+                          <td className="p-3"><Skeleton className="h-4 w-20" /></td>
+                          <td className="p-3"><Skeleton className="h-4 w-16" /></td>
+                          <td className="p-3"><Skeleton className="h-4 w-12" /></td>
+                        </tr>
+                      ))
+                    ) : traces && traces.length > 0 ? (
+                      traces.map((trace) => (
+                        <tr 
+                          key={trace.id} 
+                          className="border-b hover-elevate cursor-pointer"
+                          onClick={() => setSelectedTrace(trace)}
+                          data-testid={`row-trace-${trace.id}`}
+                        >
+                          <td className="p-3">
+                            <div className="flex items-center gap-1">
+                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono" data-testid={`text-trace-id-${trace.id}`}>
+                                {trace.traceId ? `${trace.traceId.slice(0, 12)}...` : "-"}
+                              </code>
+                              {trace.traceId && (
+                                <CopyButton 
+                                  text={trace.traceId} 
+                                  onCopy={() => toast({
+                                    title: "Copied!",
+                                    description: `Trace ID ${trace.traceId} copied to clipboard`,
+                                  })}
+                                />
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              <span>{formatTimestamp(trace.requestedAt)}</span>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1 text-xs">
+                              <code className="bg-muted px-1 py-0.5 rounded">{trace.sourceService}</code>
+                              <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                              <code className="bg-muted px-1 py-0.5 rounded">{trace.destinationService}</code>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                              {trace.workflowId}
+                            </code>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            {trace.action || "-"}
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1">
+                              <StatusIcon status={trace.overallStatus} />
+                              <span className="text-muted-foreground">
+                                {trace.overallStatus === "success" ? "Success" :
+                                 trace.overallStatus === "failed" ? "Failed" :
+                                 trace.overallStatus === "in_progress" ? "In Progress" :
+                                 "Pending"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="p-3 text-muted-foreground">
+                            {formatDuration(trace.durationMs)}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                          <div className="flex flex-col items-center gap-2">
+                            <Activity className="h-8 w-8 opacity-50" />
+                            <p>No traces yet</p>
+                            <p className="text-xs">
+                              Traces will appear here when the orchestrator processes requests
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="default" 
-              size="sm" 
-              onClick={() => testConnection.mutate()}
-              disabled={testConnection.isPending}
-              data-testid="button-test-connection"
-            >
-              <Zap className={`h-4 w-4 mr-2 ${testConnection.isPending ? "animate-pulse" : ""}`} />
-              {testConnection.isPending ? "Testing..." : "Test Connection"}
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => refetch()}
-              disabled={isRefetching}
-              data-testid="button-refresh"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefetching ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-          </div>
+
+          <TraceDetailModal 
+            trace={selectedTrace} 
+            open={!!selectedTrace} 
+            onClose={() => setSelectedTrace(null)} 
+          />
         </div>
-
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" data-testid="table-traces">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="text-left p-3 font-medium">Trace ID</th>
-                  <th className="text-left p-3 font-medium">Timestamp</th>
-                  <th className="text-left p-3 font-medium">Routing</th>
-                  <th className="text-left p-3 font-medium">Workflow</th>
-                  <th className="text-left p-3 font-medium">Action</th>
-                  <th className="text-left p-3 font-medium">Status</th>
-                  <th className="text-left p-3 font-medium">Duration</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} className="border-b">
-                      <td className="p-3"><Skeleton className="h-4 w-24" /></td>
-                      <td className="p-3"><Skeleton className="h-4 w-32" /></td>
-                      <td className="p-3"><Skeleton className="h-4 w-28" /></td>
-                      <td className="p-3"><Skeleton className="h-4 w-24" /></td>
-                      <td className="p-3"><Skeleton className="h-4 w-20" /></td>
-                      <td className="p-3"><Skeleton className="h-4 w-16" /></td>
-                      <td className="p-3"><Skeleton className="h-4 w-12" /></td>
-                    </tr>
-                  ))
-                ) : traces && traces.length > 0 ? (
-                  traces.map((trace) => (
-                    <tr 
-                      key={trace.id} 
-                      className="border-b hover-elevate cursor-pointer"
-                      onClick={() => setSelectedTrace(trace)}
-                      data-testid={`row-trace-${trace.id}`}
-                    >
-                      <td className="p-3">
-                        <div className="flex items-center gap-1">
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono" data-testid={`text-trace-id-${trace.id}`}>
-                            {trace.traceId ? `${trace.traceId.slice(0, 12)}...` : "-"}
-                          </code>
-                          {trace.traceId && (
-                            <CopyButton 
-                              text={trace.traceId} 
-                              onCopy={() => toast({
-                                title: "Copied!",
-                                description: `Trace ID ${trace.traceId} copied to clipboard`,
-                              })}
-                            />
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-3 w-3 text-muted-foreground" />
-                          <span>{formatTimestamp(trace.requestedAt)}</span>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-1 text-xs">
-                          <code className="bg-muted px-1 py-0.5 rounded">{trace.sourceService}</code>
-                          <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                          <code className="bg-muted px-1 py-0.5 rounded">{trace.destinationService}</code>
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                          {trace.workflowId}
-                        </code>
-                      </td>
-                      <td className="p-3 text-muted-foreground">
-                        {trace.action || "-"}
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-1">
-                          <StatusIcon status={trace.overallStatus} />
-                          <span className="text-muted-foreground">
-                            {trace.overallStatus === "success" ? "Success" :
-                             trace.overallStatus === "failed" ? "Failed" :
-                             trace.overallStatus === "in_progress" ? "In Progress" :
-                             "Pending"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-3 text-muted-foreground">
-                        {formatDuration(trace.durationMs)}
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                      <div className="flex flex-col items-center gap-2">
-                        <Activity className="h-8 w-8 opacity-50" />
-                        <p>No traces yet</p>
-                        <p className="text-xs">
-                          Traces will appear here when the orchestrator processes requests
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </Card>
       </div>
 
-      <TraceDetailModal 
-        trace={selectedTrace} 
-        open={!!selectedTrace} 
-        onClose={() => setSelectedTrace(null)} 
+      {/* Right Action Panel */}
+      <ActionPanel
+        title="Actions"
+        isCollapsed={isActionPanelCollapsed}
+        onToggleCollapse={() => setIsActionPanelCollapsed(!isActionPanelCollapsed)}
+        testId="memory-action-panel"
+        actions={[
+          {
+            id: "test-connection",
+            label: testConnection.isPending ? "Testing..." : "Test Connection",
+            icon: <Zap className={`h-4 w-4 ${testConnection.isPending ? "animate-pulse" : ""}`} />,
+            endpoint: "/api/test-connection",
+            method: "POST",
+            description: "Send test request to n8n",
+            onClick: () => testConnection.mutate(),
+            disabled: testConnection.isPending,
+            variant: "default"
+          },
+          {
+            id: "refresh",
+            label: "Refresh",
+            icon: <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />,
+            endpoint: "/api/traces",
+            method: "GET",
+            description: "Reload trace list",
+            onClick: () => refetch(),
+            disabled: isRefetching,
+            variant: "outline"
+          }
+        ]}
       />
-      </div>
     </PageContent>
   );
 }
