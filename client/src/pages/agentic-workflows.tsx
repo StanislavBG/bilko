@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Play, RefreshCw, Workflow, Image, FileText } from "lucide-react";
+import { Play, RefreshCw, Workflow, Image, FileText, History } from "lucide-react";
 import { ActionBar } from "@/components/action-bar";
 import { ActionPanel } from "@/components/action-panel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { ExecutionsList } from "@/components/executions-list";
+import { ExecutionDetail } from "@/components/execution-detail";
 
 interface WorkflowDefinition {
   id: string;
@@ -181,10 +183,18 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
   );
 }
 
+interface SelectedExecution {
+  id: string;
+  workflowId: string;
+  status: string;
+}
+
 export default function AgenticWorkflows() {
   const { toast } = useToast();
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowDefinition | null>(null);
+  const [selectedExecution, setSelectedExecution] = useState<SelectedExecution | null>(null);
   const [isActionPanelCollapsed, setIsActionPanelCollapsed] = useState(false);
+  const [viewMode, setViewMode] = useState<"latest" | "history">("latest");
 
   const { data, isLoading } = useQuery<WorkflowsResponse>({
     queryKey: ["/api/workflows"],
@@ -261,7 +271,7 @@ export default function AgenticWorkflows() {
             workflows.map((workflow) => (
               <button
                 key={workflow.id}
-                onClick={() => setSelectedWorkflow(workflow)}
+                onClick={() => { setSelectedWorkflow(workflow); setSelectedExecution(null); setViewMode("latest"); }}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
                   selectedWorkflow?.id === workflow.id
                     ? "bg-foreground text-background"
@@ -308,8 +318,44 @@ export default function AgenticWorkflows() {
               </CardContent>
             </Card>
 
-            {selectedWorkflow.id === "european-football-daily" && (
-              <WorkflowOutputPreview workflowId={selectedWorkflow.id} />
+            {selectedWorkflow.mode === "n8n" && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={viewMode === "latest" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => { setViewMode("latest"); setSelectedExecution(null); }}
+                    data-testid="button-view-latest"
+                  >
+                    <FileText className="h-3 w-3 mr-1" />
+                    Latest
+                  </Button>
+                  <Button
+                    variant={viewMode === "history" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setViewMode("history")}
+                    data-testid="button-view-history"
+                  >
+                    <History className="h-3 w-3 mr-1" />
+                    History
+                  </Button>
+                </div>
+
+                {viewMode === "latest" ? (
+                  <WorkflowOutputPreview workflowId={selectedWorkflow.id} />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ExecutionsList
+                      workflowId={selectedWorkflow.id}
+                      selectedExecutionId={selectedExecution?.id || null}
+                      onSelectExecution={(exec) => setSelectedExecution({ id: exec.id, workflowId: exec.workflowId, status: exec.status })}
+                    />
+                    {selectedExecution && (
+                      <ExecutionDetail executionId={selectedExecution.id} />
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         ) : (
