@@ -166,14 +166,18 @@ async function executeN8nWorkflow(
     const data = await response.json();
     const isSuccess = response.ok && data.success !== false;
 
+    const errorCode = data.error?.code || data.code || "N8N_ERROR";
+    const errorMessage = data.error?.message || data.message || "Workflow execution failed";
+    const errorHint = data.hint;
+
     return {
       success: isSuccess,
       data: isSuccess ? (data.data || data) : undefined,
       error: !isSuccess ? {
-        code: data.error?.code || "N8N_ERROR",
-        message: data.error?.message || "Workflow execution failed",
-        retryable: data.error?.retryable ?? true,
-        details: data.error?.details,
+        code: String(errorCode),
+        message: errorHint ? `${errorMessage} ${errorHint}` : errorMessage,
+        retryable: data.error?.retryable ?? (response.status >= 500),
+        details: data.error?.details || (errorHint ? { hint: errorHint } : undefined),
       } : undefined,
       metadata: {
         workflowId: workflow.id,

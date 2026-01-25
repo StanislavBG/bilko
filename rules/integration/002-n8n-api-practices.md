@@ -53,6 +53,13 @@ AI training data becomes stale. n8n v2.0 (December 2024) introduced breaking cha
 - **Workaround**: Derive webhook URLs from LOCAL workflow definitions (registry.json), not from n8n API responses. Cache these URLs during sync.
 - **Impact on headless**: Webhook URL auto-caching must use source definitions, not API responses.
 
+### ISSUE-005: Error Response Format Mismatch
+- **Status**: RESOLVED (January 2026)
+- **Description**: n8n error responses (e.g., 404 for unregistered webhooks) use a different format than our expected AGENT-003 contract. Errors were logged as generic "N8N_ERROR" / "Workflow execution failed" instead of actual n8n messages.
+- **Root Cause**: n8n returns `{code: 404, message: "...", hint: "..."}` at top level, but router expected `{error: {code, message}}`.
+- **Fix**: Updated `server/workflows/router.ts` to extract error details from both formats: `data.error?.code || data.code` and `data.error?.message || data.message`, plus capture `data.hint`.
+- **Impact**: Traces now correctly show actual n8n error messages like "The workflow must be active for a production URL to run successfully."
+
 ## Documentation References
 
 ### Primary Sources (ALWAYS Consult Live)
