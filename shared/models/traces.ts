@@ -1,12 +1,16 @@
 import { pgTable, text, timestamp, jsonb, integer, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { workflowExecutions } from "./executions";
 
 export const overallStatusEnum = ["pending", "in_progress", "success", "failed"] as const;
 export type OverallStatus = typeof overallStatusEnum[number];
 
 export const communicationTraces = pgTable("communication_traces", {
   id: uuid("id").defaultRandom().primaryKey(),
+  
+  // Execution link
+  executionId: uuid("execution_id").references(() => workflowExecutions.id),
   
   // Correlation
   traceId: text("trace_id").notNull(),

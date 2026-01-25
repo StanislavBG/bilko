@@ -1,5 +1,12 @@
-import { communicationTraces, type CommunicationTrace, type InsertCommunicationTrace } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { 
+  communicationTraces, 
+  workflowExecutions,
+  type CommunicationTrace, 
+  type InsertCommunicationTrace,
+  type WorkflowExecution,
+  type InsertWorkflowExecution
+} from "@shared/schema";
+import { eq, desc, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
@@ -19,6 +26,13 @@ export interface IOrchestratorStorage {
   getTrace(id: string): Promise<CommunicationTrace | undefined>;
   getTracesByTraceId(traceId: string): Promise<CommunicationTrace[]>;
   getRecentTraces(limit: number): Promise<CommunicationTrace[]>;
+  
+  createExecution(execution: InsertWorkflowExecution): Promise<WorkflowExecution>;
+  updateExecution(id: string, updates: Partial<InsertWorkflowExecution>): Promise<WorkflowExecution | undefined>;
+  getExecution(id: string): Promise<WorkflowExecution | undefined>;
+  getExecutionByTriggerTrace(traceId: string): Promise<WorkflowExecution | undefined>;
+  getWorkflowExecutions(workflowId: string, limit?: number): Promise<WorkflowExecution[]>;
+  getExecutionTraces(executionId: string): Promise<CommunicationTrace[]>;
 }
 
 class OrchestratorStorage implements IOrchestratorStorage {
@@ -55,6 +69,50 @@ class OrchestratorStorage implements IOrchestratorStorage {
       .from(communicationTraces)
       .orderBy(desc(communicationTraces.requestedAt))
       .limit(limit);
+  }
+
+  async createExecution(execution: InsertWorkflowExecution): Promise<WorkflowExecution> {
+    const [created] = await db.insert(workflowExecutions).values(execution).returning();
+    return created;
+  }
+
+  async updateExecution(id: string, updates: Partial<InsertWorkflowExecution>): Promise<WorkflowExecution | undefined> {
+    const [updated] = await db
+      .update(workflowExecutions)
+      .set(updates)
+      .where(eq(workflowExecutions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getExecution(id: string): Promise<WorkflowExecution | undefined> {
+    const [execution] = await db.select().from(workflowExecutions).where(eq(workflowExecutions.id, id));
+    return execution;
+  }
+
+  async getExecutionByTriggerTrace(traceId: string): Promise<WorkflowExecution | undefined> {
+    const [execution] = await db
+      .select()
+      .from(workflowExecutions)
+      .where(eq(workflowExecutions.triggerTraceId, traceId));
+    return execution;
+  }
+
+  async getWorkflowExecutions(workflowId: string, limit: number = 20): Promise<WorkflowExecution[]> {
+    return db
+      .select()
+      .from(workflowExecutions)
+      .where(eq(workflowExecutions.workflowId, workflowId))
+      .orderBy(desc(workflowExecutions.startedAt))
+      .limit(limit);
+  }
+
+  async getExecutionTraces(executionId: string): Promise<CommunicationTrace[]> {
+    return db
+      .select()
+      .from(communicationTraces)
+      .where(eq(communicationTraces.executionId, executionId))
+      .orderBy(communicationTraces.attemptNumber);
   }
 }
 

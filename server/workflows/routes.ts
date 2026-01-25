@@ -36,8 +36,22 @@ export function registerWorkflowRoutes(app: Express): void {
 
       const { workflowId, step, stepIndex, traceId, output, executionId, status } = parsed.data;
       
+      let execution = await orchestratorStorage.getExecutionByTriggerTrace(traceId);
+      
+      if (!execution) {
+        execution = await orchestratorStorage.createExecution({
+          workflowId,
+          triggerTraceId: traceId,
+          externalExecutionId: executionId || null,
+          status: "running",
+          userId: "system",
+        });
+        console.log(`[callback] Created execution ${execution.id} for trace ${traceId}`);
+      }
+
       const trace = await orchestratorStorage.createTrace({
         traceId,
+        executionId: execution.id,
         attemptNumber: stepIndex,
         sourceService: "n8n",
         destinationService: "bilko",
@@ -53,11 +67,21 @@ export function registerWorkflowRoutes(app: Express): void {
         n8nExecutionId: executionId || null
       });
 
+      if (step === "final-output") {
+        await orchestratorStorage.updateExecution(execution.id, {
+          status: status === "success" ? "completed" : "failed",
+          completedAt: new Date(),
+          finalOutput: output as Record<string, unknown> | undefined,
+        });
+        console.log(`[callback] Execution ${execution.id} completed with final output`);
+      }
+
       console.log(`[callback] ${workflowId}/${step}: Received (trace: ${traceId}, step: ${stepIndex})`);
 
       res.json({ 
         success: true, 
         traceId,
+        executionId: execution.id,
         traceRecordId: trace.id 
       });
     } catch (error) {
@@ -168,6 +192,41 @@ export function registerWorkflowRoutes(app: Express): void {
       return res.status(404).json({ error: "Workflow not found" });
     }
     res.json(workflow);
+  });
+
+  app.get("/api/workflows/:id/executions", async (req: Request, res: Response) => {
+    try {
+      const workflowId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const limit = parseInt(req.query.limit as string) || 20;
+      
+      const executions = await orchestratorStorage.getWorkflowExecutions(workflowId, limit);
+      res.json({ executions });
+    } catch (error) {
+      console.error("[executions] Error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Internal error" 
+      });
+    }
+  });
+
+  app.get("/api/executions/:id", async (req: Request, res: Response) => {
+    try {
+      const executionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      
+      const execution = await orchestratorStorage.getExecution(executionId);
+      if (!execution) {
+        return res.status(404).json({ error: "Execution not found" });
+      }
+
+      const traces = await orchestratorStorage.getExecutionTraces(executionId);
+      
+      res.json({ execution, traces });
+    } catch (error) {
+      console.error("[execution] Error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Internal error" 
+      });
+    }
   });
 
   app.post("/api/workflows/:id/execute", async (req: Request, res: Response) => {
