@@ -2,7 +2,7 @@
 
 Rule ID: INT-002
 Priority: HIGH
-Version: 1.7.0
+Version: 1.8.0
 
 ## Context
 These rules apply when integrating with n8n via API, whether using n8n cloud or self-hosted. The Replit coding agent should follow these practices for consistent, reliable integration.
@@ -400,6 +400,50 @@ Keys sent via webhook body are at `$('Webhook').first().json.body.keyName`, NOT 
 - [ ] HTTP Request header uses correct expression: `={{ $input.first().json.geminiApiKey }}`
 - [ ] Webhook body access uses `.body.` prefix: `$('Webhook').first().json.body.geminiApiKey`
 - [ ] Test workflow execution shows API key flowing through all stages
+
+### D14: Gemini JSON Response Parsing (CRITICAL)
+Google Gemini API returns JSON wrapped in markdown code fences. Parsing this raw response with `JSON.parse()` will fail.
+
+**Problem Pattern**: Gemini response text looks like:
+```
+```json
+{
+  "key": "value"
+}
+```
+```
+
+Directly calling `JSON.parse(text)` fails with "Unexpected token '\`'" error.
+
+**Required Pattern** (Code node implementation):
+```javascript
+let text = response?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+
+// 1. Strip markdown code fences
+text = text.trim();
+text = text.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```\s*$/, '');
+
+// 2. Extract JSON object
+const jsonMatch = text.match(/\{[\s\S]*\}/);
+let parsed = { fallbackKey: null };
+if (jsonMatch) {
+  try {
+    // 3. Parse directly - NO sanitization of newlines
+    parsed = JSON.parse(jsonMatch[0]);
+  } catch (e) {
+    console.log('JSON parse error:', e.message);
+  }
+}
+return [{ json: parsed }];
+```
+
+**CRITICAL**: Do NOT sanitize structural newlines (replacing `\n` with `\\n`). JSON.parse() handles newlines in the raw text correctly. Sanitizing newlines breaks the JSON structure.
+
+**Verification Checklist**:
+- [ ] All Parse nodes for Gemini responses include markdown fence stripping
+- [ ] Regex patterns: `/^```[a-zA-Z]*\n?/` (opening), `/\n?```\s*$/` (closing)
+- [ ] JSON.parse() called directly without newline sanitization
+- [ ] Tested with real Gemini response containing code fences
 
 ## n8n Workflow Design Guidelines
 

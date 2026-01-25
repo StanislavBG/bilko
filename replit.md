@@ -9,13 +9,14 @@ Preferences: Move slowly, rules-first, no over-building
 
 ### European Football Daily Workflow - WORKING
 - **Status**: Fully operational - end-to-end workflow completing successfully
-- **Root Cause Fixed**: Google was blocking n8n's default user-agent (403 Forbidden)
-- **Solution**: Added custom User-Agent header to all Gemini HTTP Request nodes
-- **Additional Fixes**:
-  - Fixed Aggregate Articles to use `$('Webhook').first().json.body.geminiApiKey`
-  - Fixed Parse Sentiment/Post/ImagePrompt to pass geminiApiKey through data flow
-  - Added JSON sanitization for Gemini responses with control characters
-- **Rules Updated**: INT-002 v1.7.0 - Added D12 (User-Agent) and D13 (API Key Data Flow)
+- **Root Cause Fixed**: Gemini wraps JSON in markdown code fences (```json ... ```), causing parse failures
+- **Solution**: Strip markdown fences before parsing, parse JSON directly without sanitization
+- **Key Fixes Applied**:
+  1. Custom User-Agent header on all Gemini HTTP Request nodes (Google blocks n8n default)
+  2. Fixed webhook body access: `$('Webhook').first().json.body.geminiApiKey`
+  3. Strip markdown fences: `/^```[a-zA-Z]*\n?/` and `/\n?```\s*$/`
+  4. Parse JSON directly - JSON.parse() handles newlines fine, no sanitization needed
+- **Rules Updated**: INT-002 v1.8.0 - Added D14 (Gemini Markdown Fences)
 
 ### Execution Tracking System (January 2026) - VERIFIED
 - **workflow_executions table**: Tracks execution runs with status, timestamps, and finalOutput (JSONB)
@@ -31,3 +32,5 @@ Preferences: Move slowly, rules-first, no over-building
 2. **Webhook Body Structure**: Data sent to webhook is at `.json.body.keyName`, not `.json.keyName`
 3. **Data Flow**: API keys must be explicitly passed through all Code nodes in n8n workflows
 4. **Execution Grouping**: Executions are grouped by triggerTraceId - the traceId from the initial webhook call
+5. **Gemini JSON Parsing**: Gemini wraps JSON responses in markdown fences - strip with regex before parsing
+6. **No JSON Sanitization Needed**: Don't sanitize structural newlines - JSON.parse() handles them correctly
