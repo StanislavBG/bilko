@@ -27,6 +27,15 @@
       "instructions": "This workflow is executed via agent reasoning. Ask the agent: 'Run a code audit' or specify which rules to audit. The agent will analyze the code following the AGENT-002-CODE protocol and report any violations or gaps.",
       "handler": "codeAudit",
       "category": "audit"
+    },
+    {
+      "id": "european-football-daily",
+      "name": "European Football Daily",
+      "mode": "n8n",
+      "description": "Daily automated European football news aggregation workflow. Runs at 00:00 to search the last 24 hours of European football news, identifies the most positive/cheerful event using sentiment analysis, gathers fan opinions from Reddit, generates an infographic, and publishes a congratulatory Facebook post.",
+      "instructions": "This workflow runs automatically at 00:00 daily via n8n Schedule Trigger. It searches Google News RSS for European football events, uses Gemini for sentiment analysis and content generation, fetches fan opinions from Reddit, creates an infographic with Gemini Imagen, and posts to Facebook. Manual execution can be triggered for testing. Schedule: 0 0 * * * (daily at midnight).",
+      "endpoint": "N8N_WEBHOOK_FOOTBALL_DAILY",
+      "category": "content"
     }
   ]
 }
