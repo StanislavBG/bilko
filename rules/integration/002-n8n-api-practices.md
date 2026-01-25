@@ -27,11 +27,15 @@ AI training data becomes stale. n8n v2.0 (December 2024) introduced breaking cha
 ## Known Issues Registry
 
 ### ISSUE-001: Webhook Registration Bug (CRITICAL)
-- **Status**: UNRESOLVED (as of January 2026)
-- **GitHub Issues**: #21614, #14646
-- **Description**: Workflows created or activated via API do not properly register webhooks. The webhook returns 404 "not registered" even when the workflow shows `active: true`.
-- **Workaround**: One-time manual action required - open workflow in n8n UI and save/toggle it to trigger internal webhook registration.
-- **Impact on D8**: This is an **exception** to the "API-only" rule. Document when manual intervention was required.
+- **Status**: UNRESOLVED - n8n Cloud infrastructure bug (as of January 2026)
+- **GitHub Issues**: #21614, #22782, #23498, #16858
+- **Description**: Workflows activated via API do not register webhooks with n8n's routing layer. The webhook returns 404 "not registered" even when API shows `active: true`. This affects n8n Cloud especially - it's a tenant routing table sync issue.
+- **Root Cause**: API activation doesn't call n8n's internal `/rest/webhooks/find` endpoint that properly registers webhooks with the routing layer.
+- **Workaround Options**:
+  1. **Toggle off/on**: In n8n UI, toggle workflow OFF, wait 5 seconds, toggle ON
+  2. **Edit and save**: Make any minor change in workflow editor and press Ctrl+S
+  3. **Contact n8n support**: For persistent issues, reference GitHub #22782 and request "webhook routing table resync"
+- **Impact on headless**: This is an **exception** to ARCH-000-B (Headless Operation). Initial manual intervention required, but subsequent syncs should work once webhook is registered.
 
 ### ISSUE-002: Respond to Webhook Configuration
 - **Status**: RESOLVED (configuration issue)
