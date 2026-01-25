@@ -453,8 +453,8 @@
       "title": "Documentation Brevity",
       "path": "rules/architecture/011-documentation-brevity.md",
       "partition": "architecture",
-      "priority": "HIGH",
-      "version": "1.0.0",
+      "priority": "CRITICAL",
+      "version": "1.1.0",
       "triggers": ["replit.md", "documentation", "readme", "brevity", "grounding"],
       "dependencies": ["ARCH-000"],
       "crossReferences": [],
@@ -533,6 +533,6 @@
       { "pattern": "audit|agentic|rule audit|code audit", "partitions": ["agent"] },
       { "pattern": "headless|auto-sync|programmatic|api-first", "partitions": ["architecture", "integration"] }
     ],
-    "alwaysInclude": ["ARCH-000", "ARCH-000-A", "ARCH-000-B", "ARCH-006"]
+    "alwaysInclude": ["ARCH-000", "ARCH-000-A", "ARCH-000-B", "ARCH-006", "ARCH-011"]
   }
 }

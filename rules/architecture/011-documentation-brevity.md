@@ -1,8 +1,8 @@
 # Documentation Brevity
 
 Rule ID: ARCH-011
-Priority: HIGH
-Version: 1.0.0
+Priority: CRITICAL
+Version: 1.1.0
 
 ## Context
 
@@ -51,6 +51,13 @@ Implementation belongs in code and rules, not in `replit.md`.
 
 ### D5: Update Discipline
 When adding to `replit.md`, ask: "Can this be a rule instead?" If yes, create or update the rule and link to it.
+
+### D6: No End-of-Cycle Expansion (CRITICAL)
+Agents MUST NOT expand `replit.md` at the end of a task cycle. This is a recurring anti-pattern.
+
+**PROHIBITED**: Adding "helpful context", implementation notes, or summaries to `replit.md` before completing a task.
+
+**REQUIRED**: If information needs preservation, create or update a rule instead.
 
 ## Anti-Patterns
 
