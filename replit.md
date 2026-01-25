@@ -107,6 +107,19 @@ Current workflows:
 
 Workflow specs are in `rules/agent/` following AGENT-003 contract. n8n workflows are created headlessly via REST API.
 
+### n8n API Client
+
+The n8n client (`server/n8n/client.ts`) provides headless workflow management:
+
+- **Sync**: `POST /api/workflows/n8n/sync` - Push registry definitions to n8n (admin only)
+- **Status**: `GET /api/workflows/n8n/status` - Check which workflows exist in n8n
+
+Environment variables:
+- `N8N_API_BASE_URL` - n8n instance API URL (e.g., `https://bilkobibitkov.app.n8n.cloud/api/v1`)
+- `N8N_API_KEY` - n8n API key (secret)
+
+Known issue: Webhooks may require manual save in n8n UI after API creation (INT-002 ISSUE-001).
+
 ## User Preferences
 
 - Move slowly and incrementally

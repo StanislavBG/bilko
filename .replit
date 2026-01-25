@@ -45,3 +45,4 @@ integrations = ["javascript_log_in_with_replit:2.0.0", "javascript_database:1.0.
 
 [userenv.shared]
 ADMIN_USER_ID = "45353844"
+N8N_API_BASE_URL = "https://bilkobibitkov.app.n8n.cloud/api/v1"

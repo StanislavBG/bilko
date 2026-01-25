@@ -13,6 +13,7 @@ export interface SyncResult {
     n8nId?: string;
     webhookUrl?: string;
     error?: string;
+    activationNote?: string;
   }>;
   errors: string[];
 }
@@ -93,6 +94,15 @@ async function syncWorkflow(
       connections
     });
 
+    if (!updated.active) {
+      try {
+        await client.activateWorkflow(updated.id);
+        console.log(`[n8n] Activated workflow: ${workflow.name}`);
+      } catch (activateError) {
+        console.warn(`[n8n] Failed to activate ${workflow.name}:`, activateError);
+      }
+    }
+
     const webhookUrl = extractWebhookUrl(updated);
 
     return {
@@ -100,7 +110,8 @@ async function syncWorkflow(
       name: workflow.name,
       action: "updated",
       n8nId: updated.id,
-      webhookUrl
+      webhookUrl,
+      activationNote: "Note: Webhook may require manual save in n8n UI due to known bug (INT-002 ISSUE-001)"
     };
   }
 
@@ -113,6 +124,13 @@ async function syncWorkflow(
     }
   });
 
+  try {
+    await client.activateWorkflow(created.id);
+    console.log(`[n8n] Activated new workflow: ${workflow.name}`);
+  } catch (activateError) {
+    console.warn(`[n8n] Failed to activate ${workflow.name}:`, activateError);
+  }
+
   const webhookUrl = extractWebhookUrl(created);
 
   return {
@@ -120,7 +138,8 @@ async function syncWorkflow(
     name: workflow.name,
     action: "created",
     n8nId: created.id,
-    webhookUrl
+    webhookUrl,
+    activationNote: "Note: Webhook may require manual save in n8n UI due to known bug (INT-002 ISSUE-001)"
   };
 }
 

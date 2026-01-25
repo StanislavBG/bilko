@@ -42,11 +42,50 @@ export interface N8nApiError {
   hint?: string;
 }
 
+export class N8nClientError extends Error {
+  code: string;
+  retryable: boolean;
+
+  constructor(code: string, message: string, retryable: boolean) {
+    super(message);
+    this.name = "N8nClientError";
+    this.code = code;
+    this.retryable = retryable;
+  }
+}
+
+function generateRequestId(): string {
+  return `n8n_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+function mapN8nError(status: number, rawMessage: string): { code: string; message: string; retryable: boolean } {
+  const statusMap: Record<number, { code: string; message: string; retryable: boolean }> = {
+    400: { code: "N8N_BAD_REQUEST", message: "Invalid request to n8n", retryable: false },
+    401: { code: "N8N_UNAUTHORIZED", message: "n8n authentication failed", retryable: false },
+    403: { code: "N8N_FORBIDDEN", message: "n8n access denied", retryable: false },
+    404: { code: "N8N_NOT_FOUND", message: "Workflow not found in n8n", retryable: false },
+    429: { code: "N8N_RATE_LIMITED", message: "n8n rate limit exceeded", retryable: true },
+    500: { code: "N8N_SERVER_ERROR", message: "n8n server error", retryable: true },
+    502: { code: "N8N_BAD_GATEWAY", message: "n8n service unavailable", retryable: true },
+    503: { code: "N8N_UNAVAILABLE", message: "n8n service unavailable", retryable: true },
+  };
+
+  const mapped = statusMap[status] || { 
+    code: "N8N_ERROR", 
+    message: "n8n operation failed", 
+    retryable: status >= 500 
+  };
+
+  console.error(`[n8n] API error: ${status} - ${rawMessage}`);
+  return mapped;
+}
+
 export class N8nClient {
   private baseUrl: string;
   private apiKey: string;
+  private timeoutMs: number;
 
-  constructor() {
+  constructor(timeoutMs = 10000) {
     const baseUrl = process.env.N8N_API_BASE_URL;
     const apiKey = process.env.N8N_API_KEY;
 
@@ -59,6 +98,7 @@ export class N8nClient {
 
     this.baseUrl = baseUrl.replace(/\/$/, "");
     this.apiKey = apiKey;
+    this.timeoutMs = timeoutMs;
   }
 
   private async request<T>(
@@ -67,34 +107,64 @@ export class N8nClient {
     body?: unknown
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
+    const requestId = generateRequestId();
     
     const headers: Record<string, string> = {
       "X-N8N-API-KEY": this.apiKey,
       "Accept": "application/json",
+      "X-Bilko-Request-Id": requestId,
     };
 
     if (body) {
       headers["Content-Type"] = "application/json";
     }
 
-    const response = await fetch(url, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
-    if (!response.ok) {
-      let errorMessage = `n8n API error: ${response.status}`;
-      try {
-        const errorData = await response.json() as N8nApiError;
-        errorMessage = errorData.message || errorMessage;
-      } catch {
-        errorMessage = await response.text() || errorMessage;
+    console.log(`[n8n] ${method} ${path} (request: ${requestId})`);
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        let rawMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json() as N8nApiError;
+          rawMessage = errorData.message || rawMessage;
+        } catch {
+          rawMessage = await response.text() || rawMessage;
+        }
+        
+        const mapped = mapN8nError(response.status, rawMessage);
+        throw new N8nClientError(mapped.code, mapped.message, mapped.retryable);
       }
-      throw new Error(errorMessage);
-    }
 
-    return response.json() as Promise<T>;
+      return response.json() as Promise<T>;
+    } catch (error) {
+      clearTimeout(timeout);
+      
+      if (error instanceof N8nClientError) {
+        throw error;
+      }
+      
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new N8nClientError("N8N_TIMEOUT", "n8n request timed out", true);
+      }
+      
+      throw new N8nClientError(
+        "N8N_NETWORK_ERROR",
+        "Failed to connect to n8n",
+        true
+      );
+    }
   }
 
   async listWorkflows(): Promise<N8nWorkflow[]> {
