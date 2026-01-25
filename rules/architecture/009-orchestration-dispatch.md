@@ -1,20 +1,23 @@
-# AGENT-001: Orchestration Protocol
+# Orchestration Dispatch Protocol
 
-**Version:** 3.0.0  
-**Priority:** HIGH  
-**Partition:** agent  
-**Dependencies:** ARCH-000, ARCH-003, INT-003
+Rule ID: ARCH-009
+Priority: HIGH
+Version: 1.0.0
+
+## Context
+
+This rule defines how application code dispatches requests through the Orchestration Layer. While ARCH-003 defines what the Orchestration Layer IS, this rule specifies how to CALL it correctly.
 
 ## Purpose
 
-Defines how AI agents coordinate app-to-app communication through the Orchestration Layer. This protocol governs all external service dispatch, particularly n8n workflow triggers.
+Ensure consistent, traceable communication with external services (primarily n8n) by standardizing the dispatch protocol across all application code paths.
 
 ## Activation
 
-This protocol is activated when:
-- An agent needs to call an external service (n8n workflow)
-- App-to-app communication is required
-- A workflow dispatch is triggered programmatically
+This protocol applies when:
+- Making calls to external services (n8n workflows)
+- Triggering app-to-app communication
+- Dispatching workflow operations programmatically
 
 ## Core Responsibilities
 
@@ -89,6 +92,6 @@ Known workflows and their IDs:
 
 ## Cross-References
 
-- ARCH-003: Orchestration Layer architecture
+- ARCH-003: Orchestration Layer (infrastructure definition)
 - INT-003: Orchestrator Communication Contract
 - INT-001: n8n Integration overview

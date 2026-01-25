@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "1.0.0",
-  "lastUpdated": "2026-01-25T00:15:00Z",
+  "lastUpdated": "2026-01-25T01:00:00Z",
   "primaryDirective": "ARCH-000",
   "rules": {
     "ARCH-000": {
@@ -328,17 +328,17 @@
       "crossReferences": [],
       "description": "How AI developers should bootstrap and use the rule system."
     },
-    "AGENT-001": {
-      "id": "AGENT-001",
-      "title": "Orchestration Protocol",
-      "path": "rules/agent/001-orchestration-protocol.md",
-      "partition": "agent",
+    "ARCH-009": {
+      "id": "ARCH-009",
+      "title": "Orchestration Dispatch Protocol",
+      "path": "rules/architecture/009-orchestration-dispatch.md",
+      "partition": "architecture",
       "priority": "HIGH",
-      "version": "3.0.0",
+      "version": "1.0.0",
       "triggers": ["orchestrate", "dispatch", "n8n call", "external call", "app-to-app"],
       "dependencies": ["ARCH-000", "ARCH-003", "INT-003"],
       "crossReferences": ["ARCH-003", "INT-003"],
-      "description": "Protocol for AI agents coordinating app-to-app communication through the Orchestration Layer."
+      "description": "How application code dispatches requests through the Orchestration Layer."
     },
     "AGENT-002": {
       "id": "AGENT-002",
