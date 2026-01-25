@@ -35,6 +35,7 @@ export interface WorkflowDefinition {
   mode: WorkflowMode;
   description: string;
   instructions: string;
+  webhookPath?: string;
   endpoint?: string;
   handler?: string;
   category: string;

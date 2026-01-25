@@ -1,13 +1,13 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "workflows": [
     {
       "id": "echo-test",
       "name": "Bilko Echo Test",
       "mode": "n8n",
+      "webhookPath": "bilko-echo-test",
       "description": "Verifies end-to-end connectivity between Bilko and n8n. Sends a test payload to the n8n webhook and confirms the round-trip response is received correctly. Use this to validate that the n8n integration is properly configured and responding.",
       "instructions": "Click 'Execute' to send a test message to n8n. The workflow will echo back your message with a timestamp, confirming the connection is working.",
-      "endpoint": "N8N_WEBHOOK_ECHO_TEST",
       "category": "system"
     },
     {
@@ -32,9 +32,9 @@
       "id": "european-football-daily",
       "name": "European Football Daily",
       "mode": "n8n",
+      "webhookPath": "european-football-daily",
       "description": "Daily automated European football news aggregation workflow. Runs at 00:00 to search the last 24 hours of European football news, identifies the most positive/cheerful event using sentiment analysis, gathers fan opinions from Reddit, generates an infographic, and publishes a congratulatory Facebook post.",
       "instructions": "This workflow runs automatically at 00:00 daily via n8n Schedule Trigger. It searches Google News RSS for European football events, uses Gemini for sentiment analysis and content generation, fetches fan opinions from Reddit, creates an infographic with Gemini Imagen, and posts to Facebook. Manual execution can be triggered for testing. Schedule: 0 0 * * * (daily at midnight).",
-      "endpoint": "N8N_WEBHOOK_FOOTBALL_DAILY",
       "category": "content"
     }
   ]
