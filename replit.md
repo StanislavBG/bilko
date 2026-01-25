@@ -123,6 +123,14 @@ n8n workflows send step-by-step outputs back to Bilko via `/api/workflows/callba
 - Results stored in `communication_traces` with traceId for chaining
 - View in Memory Explorer to see full workflow reasoning
 
+### Workflow Output Preview
+
+The Agentic Workflows page shows output preview for content-generating workflows:
+- `GET /api/workflows/:id/output` - Fetch latest workflow output from communication_traces
+- For european-football-daily: Shows infographic (image or prompt) and Facebook post text
+- Refresh button to reload latest outputs
+- Only displays when workflow has produced output
+
 Environment variables:
 - `N8N_API_BASE_URL` - n8n instance API URL (e.g., `https://bilkobibitkov.app.n8n.cloud/api/v1`)
 - `N8N_API_KEY` - n8n API key (secret)
