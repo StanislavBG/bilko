@@ -105,12 +105,7 @@ Current workflows:
 - `code-audit` (local) - Placeholder for automated code auditing
 - `european-football-daily` (n8n) - Daily European football news aggregation with sentiment analysis
 
-## n8n Workflow Files
-
-Importable n8n workflow JSON files are in `n8n-workflows/`:
-- `european-football-daily.json` - Daily football news aggregation workflow
-
-Setup instructions in `n8n-workflows/README.md`. Documentation at `docs/workflows/`.
+Workflow specs are in `rules/agent/` following AGENT-003 contract. n8n workflows are created headlessly via REST API.
 
 ## User Preferences
 

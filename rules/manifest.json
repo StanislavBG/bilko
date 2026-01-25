@@ -400,6 +400,18 @@
       "crossReferences": ["ARCH-003", "INT-003", "DATA-002", "AGENT-002"],
       "description": "Standard interface for agentic workflows that can run locally or on n8n."
     },
+    "AGENT-003-FOOTBALL": {
+      "id": "AGENT-003-FOOTBALL",
+      "title": "European Football Daily Workflow",
+      "path": "rules/agent/003-european-football-daily.md",
+      "partition": "agent",
+      "priority": "MEDIUM",
+      "version": "1.0.0",
+      "triggers": ["football", "european football", "daily news", "sentiment analysis", "facebook post"],
+      "dependencies": ["AGENT-003", "INT-003"],
+      "crossReferences": ["AGENT-003", "INT-003", "DATA-002"],
+      "description": "Daily automated European football news aggregation with sentiment analysis and Facebook posting."
+    },
     "ARCH-010": {
       "id": "ARCH-010",
       "title": "Exit Directive",
