@@ -6,6 +6,8 @@ interface ActionBarProps {
   actions?: ReactNode;
   titleExtra?: ReactNode;
   testId?: string;
+  variant?: "page" | "section";
+  icon?: ReactNode;
 }
 
 export function ActionBar({ 
@@ -13,19 +15,29 @@ export function ActionBar({
   description, 
   actions,
   titleExtra,
-  testId = "action-bar"
+  testId = "action-bar",
+  variant = "page",
+  icon
 }: ActionBarProps) {
+  const titleClass = variant === "page" 
+    ? "text-2xl font-semibold tracking-tight" 
+    : "text-lg font-semibold";
+  const descClass = variant === "page"
+    ? "text-muted-foreground"
+    : "text-sm text-muted-foreground";
+
   return (
     <div className="flex items-start justify-between gap-4 flex-wrap" data-testid={testId}>
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-page-title">
+          {icon}
+          <h2 className={titleClass} data-testid="text-section-title">
             {title}
-          </h1>
+          </h2>
           {titleExtra}
         </div>
         {description && (
-          <p className="text-muted-foreground">{description}</p>
+          <p className={descClass}>{description}</p>
         )}
       </div>
       {actions && (

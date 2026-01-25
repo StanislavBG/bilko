@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { PageContent } from "@/components/page-content";
+import { ActionBar } from "@/components/action-bar";
 
 interface RuleMetadata {
   id: string;
@@ -748,27 +749,25 @@ function AuditView({
         {showNewAuditForm ? (
           <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-new-view">
             <div className="max-w-3xl">
-              <div className="flex items-start justify-between gap-4 mb-6">
-                <div>
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Plus className="h-5 w-5" />
-                    Save Audit Report
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Paste the audit report from the agent below
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowNewAuditForm(false)}
-                  data-testid="button-cancel-new-audit"
-                >
-                  Cancel
-                </Button>
-              </div>
+              <ActionBar
+                variant="section"
+                icon={<Plus className="h-5 w-5" />}
+                title="Save Audit Report"
+                description="Paste the audit report from the agent below"
+                testId="action-bar-new-audit"
+                actions={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowNewAuditForm(false)}
+                    data-testid="button-cancel-new-audit"
+                  >
+                    Cancel
+                  </Button>
+                }
+              />
 
-              <div className="mb-4">
+              <div className="mb-4 mt-4">
                 <label className="text-sm font-medium mb-2 block">Audit Type</label>
                 <div className="flex gap-2">
                   <Button
@@ -818,27 +817,25 @@ function AuditView({
         ) : activeCategory === "protocol" ? (
           <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-protocol-view">
             <div className="max-w-3xl">
-              <div className="flex items-start justify-between gap-4 mb-4">
-                <div>
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <ScrollText className="h-5 w-5" />
-                    Auditor Base Protocol
-                  </h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Instructions for performing agentic audits (AGENT-002)
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => setShowNewAuditForm(true)}
-                  data-testid="button-new-audit"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Audit
-                </Button>
-              </div>
+              <ActionBar
+                variant="section"
+                icon={<ScrollText className="h-5 w-5" />}
+                title="Auditor Base Protocol"
+                description="Instructions for performing agentic audits (AGENT-002)"
+                testId="action-bar-protocol"
+                actions={
+                  <Button
+                    size="sm"
+                    onClick={() => setShowNewAuditForm(true)}
+                    data-testid="button-new-audit"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Audit
+                  </Button>
+                }
+              />
               
-              <Card className="p-4 bg-muted/30 mb-4">
+              <Card className="p-4 bg-muted/30 mt-4 mb-4">
                 <h3 className="text-sm font-medium mb-2">How to Run an Audit</h3>
                 <ol className="text-sm text-muted-foreground space-y-2">
                   <li>1. Ask the agent: <code className="bg-muted px-1 rounded">"Run a rule audit"</code> or <code className="bg-muted px-1 rounded">"Run a code audit"</code></li>
@@ -865,35 +862,29 @@ function AuditView({
           <div className="flex-1 overflow-auto flex flex-col bg-background" data-testid="audit-history-view">
             {selectedAudit ? (
               <div className="p-4">
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-2">
-                    <History className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <h2 className="text-lg font-semibold flex items-center gap-2">
-                        {selectedAudit.auditType === "code" ? "Code" : "Rules"} Audit Report
-                        <span className="text-xs font-normal text-muted-foreground">
-                          ({selectedAudit.auditType === "code" ? "AGENT-002-CODE" : "AGENT-002-RULES"})
-                        </span>
-                      </h2>
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatTimestamp(selectedAudit.createdAt)}
-                        {selectedAudit.createdBy && (
-                          <span className="ml-2">by {selectedAudit.createdBy}</span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => setShowNewAuditForm(true)}
-                    data-testid="button-new-audit"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Audit
-                  </Button>
-                </div>
-                <Card className="p-4">
+                <ActionBar
+                  variant="section"
+                  icon={<History className="h-5 w-5 text-muted-foreground" />}
+                  title={`${selectedAudit.auditType === "code" ? "Code" : "Rules"} Audit Report`}
+                  titleExtra={
+                    <span className="text-xs font-normal text-muted-foreground">
+                      ({selectedAudit.auditType === "code" ? "AGENT-002-CODE" : "AGENT-002-RULES"})
+                    </span>
+                  }
+                  description={`${formatTimestamp(selectedAudit.createdAt)}${selectedAudit.createdBy ? ` by ${selectedAudit.createdBy}` : ""}`}
+                  testId="action-bar-history-detail"
+                  actions={
+                    <Button
+                      size="sm"
+                      onClick={() => setShowNewAuditForm(true)}
+                      data-testid="button-new-audit"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Audit
+                    </Button>
+                  }
+                />
+                <Card className="p-4 mt-4">
                   <pre className="text-sm whitespace-pre-wrap font-mono overflow-auto">
                     {selectedAudit.content}
                   </pre>
@@ -901,25 +892,23 @@ function AuditView({
               </div>
             ) : (
               <div className="flex-1 flex flex-col p-4">
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div>
-                    <h2 className="text-lg font-semibold flex items-center gap-2">
-                      <History className="h-5 w-5" />
-                      Audit History
-                    </h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Select an audit from the list to view details
-                    </p>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => setShowNewAuditForm(true)}
-                    data-testid="button-new-audit"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Audit
-                  </Button>
-                </div>
+                <ActionBar
+                  variant="section"
+                  icon={<History className="h-5 w-5" />}
+                  title="Audit History"
+                  description="Select an audit from the list to view details"
+                  testId="action-bar-history"
+                  actions={
+                    <Button
+                      size="sm"
+                      onClick={() => setShowNewAuditForm(true)}
+                      data-testid="button-new-audit"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Audit
+                    </Button>
+                  }
+                />
                 <div className="flex-1 flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
                     <History className="h-8 w-8 mx-auto opacity-50 mb-2" />
