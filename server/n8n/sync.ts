@@ -1,4 +1,5 @@
-import { createN8nClient, buildWorkflowNodes, type N8nWorkflow } from "./client";
+import { createN8nClient, buildWorkflowNodes, type N8nWorkflow, type N8nNode } from "./client";
+import { setWebhookUrl } from "./webhook-cache";
 import registry from "../workflows/registry.json";
 import type { WorkflowDefinition, WorkflowRegistry } from "../workflows/types";
 
@@ -91,7 +92,8 @@ async function syncWorkflow(
     const updated = await client.updateWorkflow(existing.id, {
       name: workflow.name,
       nodes,
-      connections
+      connections,
+      settings: { executionOrder: "v1" }
     });
 
     if (!updated.active) {
@@ -103,7 +105,11 @@ async function syncWorkflow(
       }
     }
 
-    const webhookUrl = extractWebhookUrl(updated);
+    const webhookUrl = extractWebhookUrl(updated, nodes);
+    
+    if (webhookUrl) {
+      setWebhookUrl(workflow.id, webhookUrl);
+    }
 
     return {
       id: workflow.id,
@@ -131,7 +137,11 @@ async function syncWorkflow(
     console.warn(`[n8n] Failed to activate ${workflow.name}:`, activateError);
   }
 
-  const webhookUrl = extractWebhookUrl(created);
+  const webhookUrl = extractWebhookUrl(created, nodes);
+  
+  if (webhookUrl) {
+    setWebhookUrl(workflow.id, webhookUrl);
+  }
 
   return {
     id: workflow.id,
@@ -143,8 +153,9 @@ async function syncWorkflow(
   };
 }
 
-function extractWebhookUrl(workflow: N8nWorkflow): string | undefined {
-  const webhookNode = workflow.nodes?.find(n => 
+function extractWebhookUrl(workflow: N8nWorkflow, localNodes?: N8nNode[]): string | undefined {
+  const allNodes = workflow.nodes || localNodes || [];
+  const webhookNode = allNodes.find(n => 
     n.type === "n8n-nodes-base.webhook"
   );
   

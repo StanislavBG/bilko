@@ -1,6 +1,7 @@
 import type { WorkflowInput, WorkflowOutput, WorkflowDefinition, WorkflowRegistry } from "./types";
 import { executeLocal } from "./local-executor";
 import { orchestratorStorage } from "../orchestrator/storage";
+import { getWebhookUrl } from "../n8n/webhook-cache";
 import registry from "./registry.json";
 
 const workflowRegistry = registry as WorkflowRegistry;
@@ -118,14 +119,16 @@ async function executeN8nWorkflow(
   workflow: WorkflowDefinition,
   input: WorkflowInput
 ): Promise<WorkflowOutput> {
-  const webhookUrl = process.env[workflow.endpoint || ""];
+  const cachedUrl = getWebhookUrl(workflow.id);
+  const envUrl = workflow.endpoint ? process.env[workflow.endpoint] : undefined;
+  const webhookUrl = cachedUrl || envUrl;
   
   if (!webhookUrl) {
     return {
       success: false,
       error: {
         code: "WEBHOOK_NOT_CONFIGURED",
-        message: `Environment variable '${workflow.endpoint}' is not set`,
+        message: `Webhook URL not found for '${workflow.id}'. Ensure n8n sync completed successfully.`,
         retryable: false,
       },
       metadata: {
