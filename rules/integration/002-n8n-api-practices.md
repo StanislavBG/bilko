@@ -2,7 +2,7 @@
 
 Rule ID: INT-002
 Priority: HIGH
-Version: 1.3.0
+Version: 1.4.0
 
 ## Context
 These rules apply when integrating with n8n via API, whether using n8n cloud or self-hosted. The Replit coding agent should follow these practices for consistent, reliable integration.
@@ -70,6 +70,23 @@ AI training data becomes stale. n8n v2.0 (December 2024) introduced breaking cha
 - **Root Cause**: `syncWorkflow()` called `updateWorkflow()` on existing workflows, pushing local node definitions.
 - **Fix**: Changed sync to skip updates for existing workflows - only create new workflows and cache webhook URLs.
 - **Impact**: Existing n8n workflows are now preserved. To push local changes to n8n, delete the workflow in n8n first, then restart the server to re-create it.
+
+### ISSUE-007: Webhook Path Mismatch Between n8n and Bilko
+- **Status**: RESOLVED (January 2026)
+- **Description**: Webhook calls returned 404 despite n8n workflow being active. Investigation revealed Bilko was calling `/webhook/echo-test` while n8n workflow was configured with path `bilko-echo-test` (or other variants like `bilko-echo-1769334020`).
+- **Root Cause**: Webhook paths were defined in multiple places with no single source of truth:
+  1. `client.ts buildWorkflowNodes()` - hardcoded in function
+  2. n8n workflow (editable in UI, potentially divergent)
+  3. Registry endpoint env var (e.g., `N8N_WEBHOOK_ECHO_TEST`)
+- **Symptoms**:
+  - API reports `active: true` but webhook returns 404
+  - After manual UI save, webhook works but path differs from Bilko's expectation
+  - Debug logs show mismatched paths between cached URL and actual call
+- **Fix**: Establish single source of truth via D9 directive (see below). Webhook paths defined in `registry.json`, read by `buildWorkflowNodes()`, cached during sync.
+- **Prevention**: Always verify the exact webhook path in the production URL before testing. Compare:
+  1. n8n UI → Webhook node → Path field
+  2. Bilko logs → `[webhook-cache] Cached URL for...`
+  3. Actual curl call URL
 
 ## Documentation References
 
@@ -192,6 +209,39 @@ The N8N_API_KEY secret enables all management operations programmatically.
 2. Note the date and reason
 3. Track in communication_traces if applicable
 4. Update the Known Issues Registry when bug is resolved
+
+### D9: Single Source of Truth for Workflow Definitions
+All n8n workflow configuration MUST be defined in a single authoritative location: `server/workflows/registry.json`.
+
+**Mandatory Fields for n8n Workflows**:
+```json
+{
+  "id": "workflow-id",
+  "name": "Human Readable Name",
+  "mode": "n8n",
+  "webhookPath": "unique-webhook-path",
+  "description": "...",
+  "instructions": "...",
+  "category": "..."
+}
+```
+
+**Rules**:
+1. **webhookPath is authoritative**: The `webhookPath` field in registry.json is the single source of truth for webhook URLs
+2. **buildWorkflowNodes reads from registry**: `client.ts buildWorkflowNodes()` MUST read webhook paths from registry, never hardcode
+3. **No duplicate definitions**: Webhook paths must not be defined in:
+   - Hardcoded strings in `client.ts`
+   - Environment variables (deprecated pattern)
+   - Multiple registry entries
+4. **Sync caches from registry**: `sync.ts` uses registry's `webhookPath` to build cached webhook URLs
+
+**Verification Checklist** (before any webhook testing):
+- [ ] `registry.json` has `webhookPath` field for the workflow
+- [ ] `buildWorkflowNodes()` reads from registry (not hardcoded)
+- [ ] n8n workflow's Webhook node has matching path
+- [ ] Server logs show correct cached URL on startup
+
+**Rationale**: ISSUE-007 occurred because webhook paths existed in multiple places. A single source eliminates drift between Bilko's expectation and n8n's configuration.
 
 ## n8n Workflow Design Guidelines
 
