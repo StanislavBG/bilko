@@ -176,6 +176,13 @@ export function registerWorkflowRoutes(app: Express): void {
       return res.status(401).json({ error: "Authentication required" });
     }
 
+    // Ensure user.id exists - Replit Auth uses 'id' field
+    const userId = user.id || user.claims?.sub;
+    if (!userId) {
+      console.error("[execute] User object missing id:", JSON.stringify(user));
+      return res.status(400).json({ error: "User ID not found in authentication" });
+    }
+
     const workflowId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const { action = "execute", payload = {} } = req.body;
 
@@ -187,7 +194,7 @@ export function registerWorkflowRoutes(app: Express): void {
         action,
         payload,
         sourceService,
-        user.id
+        String(userId)
       );
       
       if (result.success) {
