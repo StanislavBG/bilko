@@ -581,8 +581,9 @@ function AuditView({
   setSelectedAuditId: (id: string | null) => void;
 }) {
   const { toast } = useToast();
-  const [isAuditNavCollapsed, setIsAuditNavCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<"protocol" | "new" | "history">("protocol");
+  const [isCategoryNavCollapsed, setIsCategoryNavCollapsed] = useState(false);
+  const [isAuditListCollapsed, setIsAuditListCollapsed] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<"protocol" | "new" | "history">("protocol");
   const [newAuditContent, setNewAuditContent] = useState("");
   const [newAuditType, setNewAuditType] = useState<"rules" | "code">("rules");
 
@@ -602,7 +603,7 @@ function AuditView({
       toast({ title: "Audit saved", description: "Your audit report has been saved." });
       setNewAuditContent("");
       setNewAuditType("rules");
-      setActiveTab("history");
+      setActiveCategory("history");
       queryClient.invalidateQueries({ queryKey: ["/api/audits"] });
     },
     onError: (err: Error) => {
@@ -622,30 +623,31 @@ function AuditView({
 
   return (
     <>
+      {/* Level 3: Category Navigation (Protocol, New, History) */}
       <div className={`shrink-0 border-r bg-muted/20 flex flex-col transition-all duration-200 ${
-        isAuditNavCollapsed ? "min-w-12 max-w-12" : "min-w-[8rem] max-w-[10rem] flex-1"
-      }`} data-testid="audit-nav">
+        isCategoryNavCollapsed ? "min-w-12 max-w-12" : "min-w-[8rem] max-w-[10rem] flex-1"
+      }`} data-testid="audit-category-nav">
         <div className="border-b px-2 h-8 flex items-center shrink-0">
-          {isAuditNavCollapsed ? (
+          {isCategoryNavCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-xs font-medium text-muted-foreground block w-full text-center cursor-default">A</span>
+                <span className="text-xs font-medium text-muted-foreground block w-full text-center cursor-default">C</span>
               </TooltipTrigger>
-              <TooltipContent side="right">Audits</TooltipContent>
+              <TooltipContent side="right">Categories</TooltipContent>
             </Tooltip>
           ) : (
-            <span className="text-xs font-medium text-muted-foreground">Audits</span>
+            <span className="text-xs font-medium text-muted-foreground">Categories</span>
           )}
         </div>
         <div className="p-1 space-y-0.5 flex-1 overflow-auto">
-          {isAuditNavCollapsed ? (
+          {isCategoryNavCollapsed ? (
             <>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    className={`w-full justify-center h-8 ${activeTab === "protocol" ? "bg-accent text-accent-foreground" : ""}`}
-                    onClick={() => setActiveTab("protocol")}
+                    className={`w-full justify-center h-8 ${activeCategory === "protocol" ? "bg-accent text-accent-foreground" : ""}`}
+                    onClick={() => { setActiveCategory("protocol"); setSelectedAuditId(null); }}
                     data-testid="nav-audit-protocol"
                   >
                     <span className="text-sm">P</span>
@@ -657,8 +659,8 @@ function AuditView({
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    className={`w-full justify-center h-8 ${activeTab === "new" ? "bg-accent text-accent-foreground" : ""}`}
-                    onClick={() => setActiveTab("new")}
+                    className={`w-full justify-center h-8 ${activeCategory === "new" ? "bg-accent text-accent-foreground" : ""}`}
+                    onClick={() => { setActiveCategory("new"); setSelectedAuditId(null); }}
                     data-testid="nav-audit-new"
                   >
                     <span className="text-sm">N</span>
@@ -670,8 +672,8 @@ function AuditView({
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    className={`w-full justify-center h-8 ${activeTab === "history" ? "bg-accent text-accent-foreground" : ""}`}
-                    onClick={() => setActiveTab("history")}
+                    className={`w-full justify-center h-8 ${activeCategory === "history" ? "bg-accent text-accent-foreground" : ""}`}
+                    onClick={() => setActiveCategory("history")}
                     data-testid="nav-audit-history"
                   >
                     <span className="text-sm">H</span>
@@ -684,24 +686,24 @@ function AuditView({
             <>
               <Button
                 variant="ghost"
-                className={`w-full justify-start h-8 ${activeTab === "protocol" ? "bg-accent text-accent-foreground" : ""}`}
-                onClick={() => setActiveTab("protocol")}
+                className={`w-full justify-start h-8 ${activeCategory === "protocol" ? "bg-accent text-accent-foreground" : ""}`}
+                onClick={() => { setActiveCategory("protocol"); setSelectedAuditId(null); }}
                 data-testid="nav-audit-protocol"
               >
                 <span className="text-sm">Protocol</span>
               </Button>
               <Button
                 variant="ghost"
-                className={`w-full justify-start h-8 ${activeTab === "new" ? "bg-accent text-accent-foreground" : ""}`}
-                onClick={() => setActiveTab("new")}
+                className={`w-full justify-start h-8 ${activeCategory === "new" ? "bg-accent text-accent-foreground" : ""}`}
+                onClick={() => { setActiveCategory("new"); setSelectedAuditId(null); }}
                 data-testid="nav-audit-new"
               >
                 <span className="text-sm">New Audit</span>
               </Button>
               <Button
                 variant="ghost"
-                className={`w-full justify-start h-8 ${activeTab === "history" ? "bg-accent text-accent-foreground" : ""}`}
-                onClick={() => setActiveTab("history")}
+                className={`w-full justify-start h-8 ${activeCategory === "history" ? "bg-accent text-accent-foreground" : ""}`}
+                onClick={() => setActiveCategory("history")}
                 data-testid="nav-audit-history"
               >
                 <span className="text-sm">History</span>
@@ -709,29 +711,6 @@ function AuditView({
             </>
           )}
         </div>
-
-        {activeTab === "history" && (
-          <div className="flex-1 overflow-auto p-1 space-y-0.5 border-t mt-1 pt-1">
-            {auditsLoading ? (
-              <>
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </>
-            ) : audits && audits.length > 0 ? (
-              audits.map((audit) => (
-                <AuditNavItem
-                  key={audit.id}
-                  audit={audit}
-                  isSelected={selectedAuditId === audit.id}
-                  onSelect={() => setSelectedAuditId(audit.id)}
-                  isCollapsed={isAuditNavCollapsed}
-                />
-              ))
-            ) : !isAuditNavCollapsed && (
-              <p className="text-xs text-muted-foreground p-2 text-center">No audits yet</p>
-            )}
-          </div>
-        )}
         
         <div className="border-t h-11 flex items-center justify-center shrink-0">
           <Tooltip>
@@ -739,40 +718,72 @@ function AuditView({
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => setIsAuditNavCollapsed(!isAuditNavCollapsed)}
-                data-testid="button-toggle-audit-nav"
+                onClick={() => setIsCategoryNavCollapsed(!isCategoryNavCollapsed)}
+                data-testid="button-toggle-category-nav"
               >
                 <PanelLeft className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right">
-              {isAuditNavCollapsed ? "Expand" : "Collapse"}
+              {isCategoryNavCollapsed ? "Expand" : "Collapse"}
             </TooltipContent>
           </Tooltip>
         </div>
       </div>
 
+      {/* Level 4: Audit List (only shown when History is selected) */}
+      {activeCategory === "history" && (
+        <TertiaryNavPanel
+          isCollapsed={isAuditListCollapsed}
+          onToggleCollapse={() => setIsAuditListCollapsed(!isAuditListCollapsed)}
+          className={`transition-all duration-200 ${
+            isAuditListCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
+          }`}
+          testId="audit-list-nav"
+          header="Audits"
+        >
+          {auditsLoading ? (
+            <>
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </>
+          ) : audits && audits.length > 0 ? (
+            audits.map((audit) => (
+              <AuditNavItem
+                key={audit.id}
+                audit={audit}
+                isSelected={selectedAuditId === audit.id}
+                onSelect={() => setSelectedAuditId(audit.id)}
+                isCollapsed={isAuditListCollapsed}
+              />
+            ))
+          ) : !isAuditListCollapsed && (
+            <p className="text-xs text-muted-foreground p-2 text-center">No audits yet</p>
+          )}
+        </TertiaryNavPanel>
+      )}
+
       <PageContent>
-        {activeTab === "protocol" && (
+        {activeCategory === "protocol" && (
           <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-protocol-view">
             <div className="max-w-3xl">
               <div className="mb-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <ScrollText className="h-5 w-5" />
-                  Rule Architect Protocol
+                  Auditor Base Protocol
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Instructions for performing agentic rule audits (AGENT-001)
+                  Instructions for performing agentic audits (AGENT-002)
                 </p>
               </div>
               
               <Card className="p-4 bg-muted/30 mb-4">
                 <h3 className="text-sm font-medium mb-2">How to Run an Audit</h3>
                 <ol className="text-sm text-muted-foreground space-y-2">
-                  <li>1. Ask the agent: <code className="bg-muted px-1 rounded">"Run a rule audit"</code> or <code className="bg-muted px-1 rounded">"Act as Rule Architect"</code></li>
-                  <li>2. The agent will analyze all rules and code following this protocol</li>
+                  <li>1. Ask the agent: <code className="bg-muted px-1 rounded">"Run a rule audit"</code> or <code className="bg-muted px-1 rounded">"Run a code audit"</code></li>
+                  <li>2. The agent will analyze following the AGENT-002 protocol</li>
                   <li>3. Copy the audit report the agent provides</li>
-                  <li>4. Go to "New Audit" tab and paste the report to save it</li>
+                  <li>4. Go to "New Audit" and paste the report to save it</li>
                 </ol>
               </Card>
 
@@ -791,7 +802,7 @@ function AuditView({
           </div>
         )}
 
-        {activeTab === "new" && (
+        {activeCategory === "new" && (
           <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-new-view">
             <div className="max-w-3xl">
               <div className="mb-4">
@@ -853,7 +864,7 @@ function AuditView({
           </div>
         )}
 
-        {activeTab === "history" && (
+        {activeCategory === "history" && (
           <div className="flex-1 overflow-auto flex flex-col bg-background" data-testid="audit-history-view">
             {selectedAudit ? (
               <div className="p-4">
