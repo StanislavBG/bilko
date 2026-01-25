@@ -14,17 +14,20 @@ Preferences: Move slowly, rules-first, no over-building
 
 ## Recent Changes (January 2026)
 
-### European Football Daily Workflow - WORKING WITH IMAGE GENERATION
-- **Status**: Fully operational with AI-generated images via Imagen API
-- **Image Generation Flow**: Parse Image Prompt → Call Imagen API → Parse Response → Build Final Output
-- **Key Fixes Applied**:
+### European Football Daily Workflow - FULLY COMPLIANT WITH IMAGE GENERATION
+- **Status**: Fully operational with AI-generated images via Imagen API + compliance filtering
+- **Compliance Features**:
+  1. Generate Image prompt instructs Gemini to avoid real person names
+  2. Compliance Sanitizer node rewrites prompts to remove celebrity references
+  3. Two-post output: Main content + AI Transparency disclosure
+  4. Graceful fallback when Imagen filters content
+- **Image Generation Flow**: Generate Image → Parse Image Prompt → **Compliance Sanitizer** → Parse Compliance → Call Imagen API → Parse Response → Build Final Output
+- **Key Technical Details**:
   1. Custom User-Agent header on all Google API calls (Google blocks n8n default)
-  2. Fixed webhook body access: `$('Webhook').first().json.body.geminiApiKey`
-  3. Strip Gemini markdown fences: `/^```[a-zA-Z]*\n?/` and `/\n?```\s*$/`
-  4. Parse JSON directly - JSON.parse() handles newlines correctly
-  5. Imagen model: `imagen-4.0-fast-generate-001` (6s response, 1.7MB images)
-  6. Express body-parser limit increased to 10mb for base64 image payloads
-- **Workflow Nodes**: 23 total (production, debug nodes removed)
+  2. Imagen model: `imagen-4.0-fast-generate-001` (6s response, 1.5-1.7MB images)
+  3. Express body-parser limit: 10mb for base64 image payloads
+  4. Strip Gemini markdown fences before JSON parsing
+- **Workflow Nodes**: 25 total
 
 ### Execution Tracking System (January 2026) - VERIFIED
 - **workflow_executions table**: Tracks execution runs with status, timestamps, and finalOutput (JSONB)

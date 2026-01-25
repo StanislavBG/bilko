@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle, XCircle, Clock, Image, FileText, Activity } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Image, FileText, Activity, Shield } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,7 +42,13 @@ interface ExecutionDetailProps {
   executionId: string;
 }
 
-function extractFinalOutput(execution: WorkflowExecution): { postContent?: string; imagePrompt?: string; imageUrl?: string } | null {
+function extractFinalOutput(execution: WorkflowExecution): { 
+  postContent?: string; 
+  imagePrompt?: string; 
+  imageUrl?: string;
+  transparencyPost?: string;
+  contentFiltered?: boolean;
+} | null {
   if (!execution.finalOutput) return null;
   
   const data = execution.finalOutput.data as Record<string, unknown> | undefined;
@@ -52,6 +58,8 @@ function extractFinalOutput(execution: WorkflowExecution): { postContent?: strin
     postContent: data.postContent as string | undefined,
     imagePrompt: data.imagePrompt as string | undefined,
     imageUrl: data.imageUrl as string | undefined,
+    transparencyPost: data.transparencyPost as string | undefined,
+    contentFiltered: data.contentFiltered as boolean | undefined,
   };
 }
 
@@ -193,14 +201,50 @@ export function ExecutionDetail({ executionId }: ExecutionDetailProps) {
           {output.postContent && (
             <Card data-testid="card-execution-post">
               <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-sm">Facebook Post</CardTitle>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm">Post 1: Main Content</CardTitle>
+                  </div>
+                  <Badge variant="outline" className="text-xs">Primary</Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="bg-muted rounded-md p-4">
                   <p className="text-sm whitespace-pre-wrap" data-testid="text-execution-post-content">{output.postContent}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {output.transparencyPost && (
+            <Card data-testid="card-execution-transparency">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm">Post 2: AI Transparency</CardTitle>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">Follow-up</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-muted rounded-md p-4 border-l-2 border-primary/30">
+                  <p className="text-sm whitespace-pre-wrap text-muted-foreground" data-testid="text-execution-transparency">{output.transparencyPost}</p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Post this after the main content to maintain transparency with your audience.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {output.contentFiltered && (
+            <Card className="border-amber-200 dark:border-amber-800" data-testid="card-execution-filtered">
+              <CardContent className="py-3">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <Shield className="h-4 w-4" />
+                  <p className="text-sm">Image was filtered by safety guidelines. The image prompt is shown above for reference.</p>
                 </div>
               </CardContent>
             </Card>
