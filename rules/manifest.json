@@ -70,10 +70,10 @@
       "path": "rules/architecture/003-orchestration-layer.md",
       "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "triggers": ["orchestrat", "proxy", "external", "n8n", "api call", "trace", "logging"],
-      "dependencies": ["ARCH-000", "INT-003"],
-      "crossReferences": ["DATA-002", "INT-001"],
+      "dependencies": ["ARCH-000"],
+      "crossReferences": ["DATA-002", "INT-001", "INT-003"],
       "description": "The intelligent proxy between web app and external services."
     },
     "ARCH-004": {
@@ -483,6 +483,30 @@
       "dependencies": ["DATA-001", "AGENT-002"],
       "crossReferences": ["AGENT-002", "APP-RULES-001"],
       "description": "Schema and practices for storing rule audit reports."
+    },
+    "AGT-001": {
+      "id": "AGT-001",
+      "title": "n8n Development Workflow",
+      "path": "rules/agent/001-n8n-development-workflow.md",
+      "partition": "agent",
+      "priority": "CRITICAL",
+      "version": "1.0.0",
+      "triggers": ["n8n workflow", "develop workflow", "modify workflow", "workflow development", "FETCH", "ANALYZE", "MODIFY", "PUSH", "BACKUP", "VERIFY"],
+      "dependencies": ["ARCH-000", "INT-002"],
+      "crossReferences": ["INT-003", "INT-004", "AGENT-003"],
+      "description": "Executable 6-phase protocol for n8n workflow development: FETCH → ANALYZE → MODIFY → PUSH → BACKUP → VERIFY."
+    },
+    "INT-005": {
+      "id": "INT-005",
+      "title": "Callback Persistence Contract",
+      "path": "rules/integration/005-callback-persistence.md",
+      "partition": "integration",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["callback", "persistence", "final output", "execution result", "workflow callback"],
+      "dependencies": ["INT-003", "AGENT-003", "DATA-002"],
+      "crossReferences": ["DATA-002", "AGENT-003-FOOTBALL"],
+      "description": "Defines how n8n workflow callbacks persist execution results for distribution workflows."
     }
   },
   "partitions": {
