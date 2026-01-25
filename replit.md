@@ -111,12 +111,22 @@ Workflow specs are in `rules/agent/` following AGENT-003 contract. n8n workflows
 
 The n8n client (`server/n8n/client.ts`) provides headless workflow management:
 
-- **Sync**: `POST /api/workflows/n8n/sync` - Push registry definitions to n8n (admin only)
+- **Auto-Sync**: Workflows automatically sync to n8n on server startup (`server/n8n/startup.ts`)
+- **Manual Sync**: `POST /api/workflows/n8n/sync` - Push registry definitions to n8n (admin only)
 - **Status**: `GET /api/workflows/n8n/status` - Check which workflows exist in n8n
+- **Callback**: `POST /api/workflows/callback` - Receive step outputs from n8n workflows
+
+### Workflow Callbacks
+
+n8n workflows send step-by-step outputs back to Bilko via `/api/workflows/callback`:
+- Each agentic step (articles, sentiment, content) POSTs results to Bilko
+- Results stored in `communication_traces` with traceId for chaining
+- View in Memory Explorer to see full workflow reasoning
 
 Environment variables:
 - `N8N_API_BASE_URL` - n8n instance API URL (e.g., `https://bilkobibitkov.app.n8n.cloud/api/v1`)
 - `N8N_API_KEY` - n8n API key (secret)
+- `BILKO_CALLBACK_URL` - Callback URL for n8n to reach Bilko
 
 Known issue: Webhooks may require manual save in n8n UI after API creation (INT-002 ISSUE-001).
 
