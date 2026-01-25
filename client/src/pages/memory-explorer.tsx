@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { PageContent } from "@/components/page-content";
@@ -7,9 +7,8 @@ import { ActionPanel } from "@/components/action-panel";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Zap, Loader2, ArrowRight, Copy, Check, Database } from "lucide-react";
+import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Loader2, ArrowRight, Copy, Check, Database } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import type { CommunicationTrace } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 
@@ -190,28 +189,6 @@ export default function MemoryExplorer() {
     queryKey: ["/api/traces"],
   });
 
-  const testConnection = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/test-connection");
-      return res.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: data.success ? "Connection Successful" : "Connection Failed",
-        description: data.success 
-          ? `Trace ID: ${data.traceId}` 
-          : "Check n8n configuration",
-      });
-      refetch();
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Test Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   if (!effectiveIsAdmin) {
     return (
@@ -364,17 +341,6 @@ export default function MemoryExplorer() {
         onToggleCollapse={() => setIsActionPanelCollapsed(!isActionPanelCollapsed)}
         testId="memory-action-panel"
         actions={[
-          {
-            id: "test-connection",
-            label: testConnection.isPending ? "Testing..." : "Test Connection",
-            icon: <Zap className={`h-4 w-4 ${testConnection.isPending ? "animate-pulse" : ""}`} />,
-            endpoint: "/api/test-connection",
-            method: "POST",
-            description: "Send test request to n8n",
-            onClick: () => testConnection.mutate(),
-            disabled: testConnection.isPending,
-            variant: "outline"
-          },
           {
             id: "refresh",
             label: "Refresh",

@@ -1,4 +1,4 @@
-import { Home, Activity, BookOpen, PanelLeft } from "lucide-react";
+import { Home, Activity, BookOpen, Workflow, PanelLeft } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,12 @@ const navItems = [
     url: "/",
     icon: Home,
     adminOnly: false,
+  },
+  {
+    title: "Agentic Workflows",
+    url: "/workflows",
+    icon: Workflow,
+    adminOnly: true,
   },
   {
     title: "Memory Explorer",

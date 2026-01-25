@@ -34,6 +34,7 @@ export interface WorkflowDefinition {
   name: string;
   mode: WorkflowMode;
   description: string;
+  instructions: string;
   endpoint?: string;
   handler?: string;
   category: string;

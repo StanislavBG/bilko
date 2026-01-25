@@ -5,7 +5,8 @@
       "id": "echo-test",
       "name": "Bilko Echo Test",
       "mode": "n8n",
-      "description": "Test connectivity to n8n",
+      "description": "Verifies end-to-end connectivity between Bilko and n8n. Sends a test payload to the n8n webhook and confirms the round-trip response is received correctly. Use this to validate that the n8n integration is properly configured and responding.",
+      "instructions": "Click 'Execute' to send a test message to n8n. The workflow will echo back your message with a timestamp, confirming the connection is working.",
       "endpoint": "N8N_WEBHOOK_ECHO_TEST",
       "category": "system"
     },
@@ -13,7 +14,8 @@
       "id": "rules-audit",
       "name": "Rules Audit",
       "mode": "local",
-      "description": "Validate rule structure, conflicts, and coverage (AGENT-002-RULES)",
+      "description": "Analyzes the rule framework for structural integrity, cross-references, and coverage gaps. Validates that all rules are properly formatted, have valid dependencies, and follow the partitioning scheme defined in ARCH-006.",
+      "instructions": "This workflow is executed via agent reasoning. Ask the agent: 'Run a rule audit' or 'Act as Rule Architect'. The agent will analyze all rules following the AGENT-002-RULES protocol and provide a comprehensive audit report.",
       "handler": "rulesAudit",
       "category": "audit"
     },
@@ -21,7 +23,8 @@
       "id": "code-audit",
       "name": "Code Audit",
       "mode": "local",
-      "description": "Validate code implements rules correctly (AGENT-002-CODE)",
+      "description": "Validates that the codebase correctly implements the rules defined in /rules/. Checks for rule violations, missing implementations, and alignment between code behavior and rule specifications.",
+      "instructions": "This workflow is executed via agent reasoning. Ask the agent: 'Run a code audit' or specify which rules to audit. The agent will analyze the code following the AGENT-002-CODE protocol and report any violations or gaps.",
       "handler": "codeAudit",
       "category": "audit"
     }
