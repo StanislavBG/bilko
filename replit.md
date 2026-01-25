@@ -17,12 +17,14 @@ Preferences: Move slowly, rules-first, no over-building
   - Added JSON sanitization for Gemini responses with control characters
 - **Rules Updated**: INT-002 v1.7.0 - Added D12 (User-Agent) and D13 (API Key Data Flow)
 
-### Execution Tracking System (January 2026)
+### Execution Tracking System (January 2026) - VERIFIED
 - **workflow_executions table**: Tracks execution runs with status, timestamps, and finalOutput (JSONB)
 - **Traces linked by executionId**: Communication traces reference parent execution for grouping
 - **Callback logic**: First callback creates execution record; final-output callback marks completion and persists output
 - **API endpoints**: GET /api/workflows/:id/executions, GET /api/executions/:id
 - **UI components**: ExecutionsList, ExecutionDetail with Latest/History view toggle on workflow detail page
+- **Rule added**: INT-005 Callback Persistence Contract - documents API payload schemas and data flow
+- **E2E Verified**: History view displays execution results with post content and image prompts correctly
 
 ### Key n8n Learnings
 1. **User-Agent Required**: Google APIs block n8n's default user-agent. Always add custom User-Agent header.
