@@ -65,13 +65,21 @@ Saved audits are stored in the database with timestamps for historical tracking.
 - Black/white/gray color palette
 - Application actions separate from navigation (UI-007)
 
+## ActionPanel Component
+
+Use `ActionPanel` from `@/components/action-panel` for right-nav actions (UI-007):
+- Collapsible right-hand navigation panel for actions
+- Each action shows HTTP method and API endpoint for transparency
+- Context-sensitive: shows different actions based on current view state
+- Monochrome styling to match black/white design philosophy
+
 ## ActionBar Component
 
-Use `ActionBar` from `@/components/action-bar` for consistent section headers with actions:
+Use `ActionBar` from `@/components/action-bar` for section headers (no actions):
 - `variant="page"` - Large title (text-2xl) for page headers
 - `variant="section"` - Smaller title (text-lg) for nested sections
 - `icon` - Optional leading icon
-- `actions` - Buttons on right side (use size="sm")
+- Actions moved to ActionPanel (right navigation)
 
 ## User Preferences
 
