@@ -55,6 +55,7 @@ interface RuleContent {
 
 interface RuleAudit {
   id: string;
+  auditType: "rules" | "code";
   content: string;
   createdAt: string;
   createdBy: string | null;
@@ -534,6 +535,8 @@ function AuditNavItem({
 }) {
   const dateStr = new Date(audit.createdAt).toLocaleDateString();
   const shortDate = new Date(audit.createdAt).getDate().toString();
+  const typeLabel = audit.auditType === "code" ? "C" : "R";
+  const typeFull = audit.auditType === "code" ? "Code" : "Rules";
   
   if (isCollapsed) {
     return (
@@ -547,10 +550,10 @@ function AuditNavItem({
             onClick={onSelect}
             data-testid={`nav-audit-${audit.id}`}
           >
-            <span className="text-xs">{shortDate}</span>
+            <span className="text-xs">{typeLabel}{shortDate}</span>
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="right">{dateStr}</TooltipContent>
+        <TooltipContent side="right">{typeFull} - {dateStr}</TooltipContent>
       </Tooltip>
     );
   }
@@ -558,12 +561,13 @@ function AuditNavItem({
   return (
     <Button
       variant="ghost"
-      className={`w-full justify-start h-8 ${
+      className={`w-full justify-start h-8 gap-1 ${
         isSelected ? "bg-accent text-accent-foreground" : ""
       }`}
       onClick={onSelect}
       data-testid={`nav-audit-${audit.id}`}
     >
+      <span className="text-xs font-medium w-4">{typeLabel}</span>
       <span className="text-xs">{dateStr}</span>
     </Button>
   );
@@ -580,6 +584,7 @@ function AuditView({
   const [isAuditNavCollapsed, setIsAuditNavCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState<"protocol" | "new" | "history">("protocol");
   const [newAuditContent, setNewAuditContent] = useState("");
+  const [newAuditType, setNewAuditType] = useState<"rules" | "code">("rules");
 
   const { data: protocol, isLoading: protocolLoading } = useQuery<{ content: string }>({
     queryKey: ["/api/audit/protocol"],
@@ -590,12 +595,13 @@ function AuditView({
   });
 
   const saveAuditMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return await apiRequest("POST", "/api/audits", { content });
+    mutationFn: async ({ content, auditType }: { content: string; auditType: "rules" | "code" }) => {
+      return await apiRequest("POST", "/api/audits", { content, auditType });
     },
     onSuccess: () => {
       toast({ title: "Audit saved", description: "Your audit report has been saved." });
       setNewAuditContent("");
+      setNewAuditType("rules");
       setActiveTab("history");
       queryClient.invalidateQueries({ queryKey: ["/api/audits"] });
     },
@@ -609,7 +615,7 @@ function AuditView({
       toast({ title: "Empty content", description: "Please paste an audit report first.", variant: "destructive" });
       return;
     }
-    saveAuditMutation.mutate(newAuditContent);
+    saveAuditMutation.mutate({ content: newAuditContent, auditType: newAuditType });
   };
 
   const selectedAudit = audits?.find(a => a.id === selectedAuditId);
@@ -798,6 +804,33 @@ function AuditView({
                 </p>
               </div>
 
+              <div className="mb-4">
+                <label className="text-sm font-medium mb-2 block">Audit Type</label>
+                <div className="flex gap-2">
+                  <Button
+                    variant={newAuditType === "rules" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setNewAuditType("rules")}
+                    data-testid="button-audit-type-rules"
+                  >
+                    Rules
+                  </Button>
+                  <Button
+                    variant={newAuditType === "code" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setNewAuditType("code")}
+                    data-testid="button-audit-type-code"
+                  >
+                    Code
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {newAuditType === "rules" 
+                    ? "AGENT-002-RULES: Validates rule structure, conflicts, and coverage" 
+                    : "AGENT-002-CODE: Validates code implements rules correctly"}
+                </p>
+              </div>
+
               <Textarea
                 placeholder="Paste your audit report here..."
                 value={newAuditContent}
@@ -827,7 +860,12 @@ function AuditView({
                 <div className="flex items-center gap-2 mb-4">
                   <History className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <h2 className="text-lg font-semibold">Audit Report</h2>
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                      {selectedAudit.auditType === "code" ? "Code" : "Rules"} Audit Report
+                      <span className="text-xs font-normal text-muted-foreground">
+                        ({selectedAudit.auditType === "code" ? "AGENT-002-CODE" : "AGENT-002-RULES"})
+                      </span>
+                    </h2>
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <Clock className="h-3 w-3" />
                       {formatTimestamp(selectedAudit.createdAt)}
