@@ -2,9 +2,9 @@
 // 
 // Previous pattern-matching checks have been removed.
 // Rule audits are now performed by an AI agent using the 
-// Rule Architect Protocol (AGENT-001).
+// Auditor Base Protocol (AGENT-002).
 //
-// See: rules/agent/001-rule-architect-protocol.md
+// See: rules/agent/002-auditor-base.md
 
 import { AuditCheck } from "./types";
 
