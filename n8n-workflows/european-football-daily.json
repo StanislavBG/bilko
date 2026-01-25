@@ -1,0 +1,609 @@
+{
+  "name": "European Football Daily",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "european-football-daily",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 500],
+      "webhookId": "european-football-daily"
+    },
+    {
+      "parameters": {
+        "url": "https://news.google.com/rss/search?q=european+football+when:1d&hl=en-US&gl=US&ceid=US:en",
+        "options": {}
+      },
+      "id": "rss-fetch",
+      "name": "Google News RSS Fetch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 400]
+    },
+    {
+      "parameters": {
+        "mode": "xmlToJson",
+        "options": {}
+      },
+      "id": "parse-xml",
+      "name": "Parse XML",
+      "type": "n8n-nodes-base.xml",
+      "typeVersion": 1,
+      "position": [700, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const feed = $input.first().json;\n\n// Handle n8n XML parser which may wrap elements in arrays\nconst channel = feed?.rss?.channel;\nconst channelData = Array.isArray(channel) ? channel[0] : channel;\nlet items = channelData?.item || [];\nitems = Array.isArray(items) ? items : [items];\n\nconst articles = items.slice(0, 10).map((item, index) => {\n  // Handle array-wrapped fields from XML parser\n  const getField = (field) => Array.isArray(field) ? field[0] : field;\n  const title = getField(item.title) || '';\n  const link = getField(item.link) || '';\n  const source = item.source?._ || getField(item.source) || 'Unknown';\n  const pubDate = getField(item.pubDate) || '';\n  const desc = getField(item.description) || '';\n  \n  return {\n    id: index + 1,\n    title: String(title),\n    link: String(link),\n    source: String(source),\n    pubDate: String(pubDate),\n    description: String(desc).replace(/<[^>]*>/g, '').substring(0, 200)\n  };\n});\n\nreturn [{ json: { articles } }];"
+      },
+      "id": "extract-articles",
+      "name": "Extract Articles",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst articles = data.articles || [];\n\nconst aggregated = {\n  articles: articles,\n  articleCount: articles.length,\n  fetchedAt: new Date().toISOString()\n};\n\nreturn [{ json: aggregated }];"
+      },
+      "id": "aggregate-articles",
+      "name": "Aggregate Articles",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [{\n      text: `Analyze the sentiment of these European football news headlines and identify the MOST positive/cheerful event. Return ONLY valid JSON with no markdown:\n\n${JSON.stringify($json.articles)}\n\nRespond with this exact structure:\n{\"results\": [{\"id\": 1, \"score\": 0.8, \"sentiment\": \"positive\"}, ...], \"winner\": {\"id\": 1, \"score\": 0.95, \"reason\": \"why this is the most positive\"}}`\n    }]\n  }]\n}) }}",
+        "options": {}
+      },
+      "id": "gemini-sentiment",
+      "name": "Gemini Sentiment Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst text = response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\n\nlet parsed;\ntry {\n  const cleaned = text.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  parsed = { results: [], winner: { id: 1, score: 0.5, reason: 'Parse error - defaulting' } };\n}\n\nconst articles = $('Aggregate Articles').first().json.articles || [];\nconst winnerId = parsed.winner?.id || 1;\nconst winnerArticle = articles.find(a => a.id === winnerId) || articles[0] || {};\n\nreturn [{\n  json: {\n    articles,\n    sentimentResults: parsed.results || [],\n    winner: {\n      id: winnerId,\n      title: winnerArticle.title || '',\n      source: winnerArticle.source || '',\n      link: winnerArticle.link || '',\n      score: parsed.winner?.score || 0.5,\n      reason: parsed.winner?.reason || 'Most positive event'\n    }\n  }\n}];"
+      },
+      "id": "select-winner",
+      "name": "Select Winner",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1500, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst title = data.winner?.title || '';\n\nconst words = title.toLowerCase()\n  .replace(/[^a-z0-9\\s]/g, '')\n  .split(/\\s+/)\n  .filter(w => w.length > 3 && !['the', 'and', 'for', 'with', 'from', 'that', 'this', 'have', 'been'].includes(w));\n\nconst keywords = [...new Set(words)].slice(0, 3);\nconst searchQuery = keywords.join(' ');\n\nreturn [{\n  json: {\n    ...data,\n    keywords,\n    redditQuery: searchQuery\n  }\n}];"
+      },
+      "id": "extract-keywords",
+      "name": "Extract Keywords",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1700, 400]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.reddit.com/r/soccer/search.json?q={{ encodeURIComponent($json.redditQuery) }}&restrict_sr=1&sort=relevance&t=day&limit=10",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "reddit-search",
+      "name": "Reddit Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const redditResponse = $input.first().json;\nconst previousData = $('Extract Keywords').first().json;\n\nconst posts = redditResponse?.data?.children || [];\nconst comments = posts.slice(0, 5).map(post => ({\n  title: post.data?.title || '',\n  score: post.data?.score || 0,\n  numComments: post.data?.num_comments || 0,\n  selftext: (post.data?.selftext || '').substring(0, 300),\n  url: `https://reddit.com${post.data?.permalink || ''}`\n}));\n\nreturn [{\n  json: {\n    ...previousData,\n    redditPosts: comments,\n    topComments: comments.map(c => c.title).join('\\n')\n  }\n}];"
+      },
+      "id": "extract-reddit-comments",
+      "name": "Extract Reddit Comments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2100, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [{\n      text: `Summarize fan reactions to this football event in 2-3 sentences. Be enthusiastic and capture the excitement.\n\nEvent: ${$json.winner?.title}\nFan discussions from Reddit:\n${$json.topComments}\n\nProvide a brief, engaging summary of the fan sentiment.`\n    }]\n  }]\n}) }}",
+        "options": {}
+      },
+      "id": "generate-fan-summary",
+      "name": "Generate Fan Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2300, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst fanSummary = response.candidates?.[0]?.content?.parts?.[0]?.text || 'Fans are buzzing with excitement!';\n\nconst previousData = $('Extract Reddit Comments').first().json;\n\nreturn [{\n  json: {\n    ...previousData,\n    fanSummary\n  }\n}];"
+      },
+      "id": "parse-fan-summary",
+      "name": "Parse Fan Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2500, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [{\n      text: `Generate a celebratory infographic image for this football event:\n\nEvent: ${$json.winner?.title}\nSource: ${$json.winner?.source}\n\nCreate a vibrant, modern sports infographic with:\n- Bold headline text featuring the event\n- Football/soccer visual elements\n- Celebratory colors (team colors if identifiable)\n- Clean, professional sports media style`\n    }]\n  }],\n  generationConfig: {\n    responseModalities: [\"TEXT\", \"IMAGE\"]\n  }\n}) }}",
+        "options": {}
+      },
+      "id": "generate-infographic",
+      "name": "Generate Infographic",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2700, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst parts = response.candidates?.[0]?.content?.parts || [];\n\nlet imageUrl = null;\nlet imageBase64 = null;\n\nfor (const part of parts) {\n  if (part.inlineData?.mimeType?.startsWith('image/')) {\n    imageBase64 = part.inlineData.data;\n    imageUrl = `data:${part.inlineData.mimeType};base64,${imageBase64}`;\n    break;\n  }\n}\n\nconst previousData = $('Parse Fan Summary').first().json;\n\nreturn [{\n  json: {\n    ...previousData,\n    imageUrl,\n    imageBase64\n  }\n}];"
+      },
+      "id": "parse-infographic-response",
+      "name": "Parse Infographic Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2900, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{ $env.GEMINI_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [{\n      text: `Write an engaging Facebook post (max 250 characters) celebrating this football event:\n\nEvent: ${$json.winner?.title}\nFan sentiment: ${$json.fanSummary}\n\nMake it enthusiastic, include 1-2 relevant hashtags, and end with a call to action. Return ONLY the post text, no quotes.`\n    }]\n  }]\n}) }}",
+        "options": {}
+      },
+      "id": "compose-fb-post",
+      "name": "Compose Facebook Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3100, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst postText = response.candidates?.[0]?.content?.parts?.[0]?.text || '';\n\nconst previousData = $('Parse Infographic Response').first().json;\n\nreturn [{\n  json: {\n    ...previousData,\n    postText: postText.trim()\n  }\n}];"
+      },
+      "id": "parse-post-text",
+      "name": "Parse Post Text",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3300, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $env.FACEBOOK_PAGE_ID }}/photos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $env.FACEBOOK_PAGE_TOKEN }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.postText }}"
+            },
+            {
+              "name": "url",
+              "value": "={{ $json.imageUrl || 'https://via.placeholder.com/1200x630.png?text=European+Football+Daily' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "upload-to-facebook",
+      "name": "Upload Image to Facebook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3500, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const postData = $('Parse Post Text').first().json;\nconst facebookResponse = $input.first().json;\n\nlet startTime;\ntry {\n  startTime = $('Schedule Trigger').first().json.timestamp;\n} catch (e) {\n  try {\n    startTime = $('Webhook').first().json.context?.requestedAt || new Date().toISOString();\n  } catch (e2) {\n    startTime = new Date().toISOString();\n  }\n}\n\nconst durationMs = Date.now() - new Date(startTime).getTime();\n\nreturn [{\n  json: {\n    success: true,\n    data: {\n      winningEvent: {\n        title: postData.winner?.title || '',\n        source: postData.winner?.source || '',\n        sentimentScore: postData.winner?.score || 0,\n        reason: postData.winner?.reason || '',\n        link: postData.winner?.link || ''\n      },\n      fanSummary: postData.fanSummary || '',\n      imageUrl: postData.imageUrl || null,\n      facebookPostId: facebookResponse?.id || facebookResponse?.post_id || null\n    },\n    metadata: {\n      workflowId: 'european-football-daily',\n      executionId: $execution.id,\n      executedAt: new Date().toISOString(),\n      durationMs: durationMs > 0 ? durationMs : 0\n    }\n  }\n}];"
+      },
+      "id": "build-agent-response",
+      "name": "Build AGENT-003 Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3700, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-to-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [3900, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BILKO_CALLBACK_URL || 'http://localhost:5000/api/workflows/callback' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Workflow-Secret",
+              "value": "={{ $env.WORKFLOW_CALLBACK_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "callback-to-bilko",
+      "name": "Callback to Bilko",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3900, 300]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Google News RSS Fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Google News RSS Fetch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google News RSS Fetch": {
+      "main": [
+        [
+          {
+            "node": "Parse XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse XML": {
+      "main": [
+        [
+          {
+            "node": "Extract Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Articles": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Articles": {
+      "main": [
+        [
+          {
+            "node": "Gemini Sentiment Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Sentiment Analysis": {
+      "main": [
+        [
+          {
+            "node": "Select Winner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Winner": {
+      "main": [
+        [
+          {
+            "node": "Extract Keywords",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Keywords": {
+      "main": [
+        [
+          {
+            "node": "Reddit Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reddit Search": {
+      "main": [
+        [
+          {
+            "node": "Extract Reddit Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Reddit Comments": {
+      "main": [
+        [
+          {
+            "node": "Generate Fan Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Fan Summary": {
+      "main": [
+        [
+          {
+            "node": "Parse Fan Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Fan Summary": {
+      "main": [
+        [
+          {
+            "node": "Generate Infographic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Infographic": {
+      "main": [
+        [
+          {
+            "node": "Parse Infographic Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Infographic Response": {
+      "main": [
+        [
+          {
+            "node": "Compose Facebook Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compose Facebook Post": {
+      "main": [
+        [
+          {
+            "node": "Parse Post Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Post Text": {
+      "main": [
+        [
+          {
+            "node": "Upload Image to Facebook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Image to Facebook": {
+      "main": [
+        [
+          {
+            "node": "Build AGENT-003 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AGENT-003 Response": {
+      "main": [
+        [
+          {
+            "node": "Callback to Bilko",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateId": "european-football-daily",
+    "templateCredsSetupCompleted": false,
+    "instanceId": "bilko-bibitkov"
+  },
+  "tags": [
+    {
+      "name": "football",
+      "id": "1"
+    },
+    {
+      "name": "content",
+      "id": "2"
+    },
+    {
+      "name": "social-media",
+      "id": "3"
+    },
+    {
+      "name": "AGENT-003",
+      "id": "4"
+    }
+  ]
+}

@@ -103,6 +103,14 @@ Current workflows:
 - `echo-test` (n8n) - Round-trip test for external execution
 - `rules-audit` (local) - Placeholder for automated rules auditing
 - `code-audit` (local) - Placeholder for automated code auditing
+- `european-football-daily` (n8n) - Daily European football news aggregation with sentiment analysis
+
+## n8n Workflow Files
+
+Importable n8n workflow JSON files are in `n8n-workflows/`:
+- `european-football-daily.json` - Daily football news aggregation workflow
+
+Setup instructions in `n8n-workflows/README.md`. Documentation at `docs/workflows/`.
 
 ## User Preferences
 

@@ -921,8 +921,20 @@ For the JavaScript code steps that reference other nodes via `$('Node Name')`, u
 
 ---
 
+## n8n Workflow File
+
+The importable n8n workflow JSON is located at:
+```
+n8n-workflows/european-football-daily.json
+```
+
+See `n8n-workflows/README.md` for setup instructions.
+
+---
+
 ## Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0.0 | 2026-01-26 | Initial design |
+| 1.1.0 | 2026-01-26 | Added n8n workflow JSON file |
