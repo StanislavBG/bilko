@@ -388,6 +388,18 @@
       "crossReferences": ["UI-004", "UI-005", "HUB-001", "HUB-003"],
       "description": "Validates that the codebase correctly implements documented rules."
     },
+    "AGENT-003": {
+      "id": "AGENT-003",
+      "title": "Workflow Contract",
+      "path": "rules/agent/003-workflow-contract.md",
+      "partition": "agent",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["workflow", "workflow contract", "local workflow", "n8n workflow", "execute workflow"],
+      "dependencies": ["ARCH-000", "ARCH-003", "INT-003"],
+      "crossReferences": ["ARCH-003", "INT-003", "DATA-002", "AGENT-002"],
+      "description": "Standard interface for agentic workflows that can run locally or on n8n."
+    },
     "ARCH-010": {
       "id": "ARCH-010",
       "title": "Exit Directive",

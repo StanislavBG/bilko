@@ -90,7 +90,7 @@ export function registerOrchestratorRoutes(app: Express) {
         const trace = await orchestratorStorage.createTrace({
           traceId,
           attemptNumber: 1,
-          sourceService: "bilko-hub",
+          sourceService: "bilko",
           destinationService: "n8n",
           workflowId,
           action: action || null,
@@ -186,7 +186,7 @@ export function registerOrchestratorRoutes(app: Express) {
       trace = await orchestratorStorage.createTrace({
         traceId,
         attemptNumber: 1,
-        sourceService: "bilko-hub",
+        sourceService: "bilko",
         destinationService: "n8n",
         workflowId: "echo-test",
         action: "test",

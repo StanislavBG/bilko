@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "workflows": [
+    {
+      "id": "echo-test",
+      "name": "Bilko Echo Test",
+      "mode": "n8n",
+      "description": "Test connectivity to n8n",
+      "endpoint": "N8N_WEBHOOK_ECHO_TEST",
+      "category": "system"
+    },
+    {
+      "id": "rules-audit",
+      "name": "Rules Audit",
+      "mode": "local",
+      "description": "Validate rule structure, conflicts, and coverage (AGENT-002-RULES)",
+      "handler": "rulesAudit",
+      "category": "audit"
+    },
+    {
+      "id": "code-audit",
+      "name": "Code Audit",
+      "mode": "local",
+      "description": "Validate code implements rules correctly (AGENT-002-CODE)",
+      "handler": "codeAudit",
+      "category": "audit"
+    }
+  ]
+}

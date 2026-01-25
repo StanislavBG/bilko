@@ -1,0 +1,199 @@
+import type { WorkflowInput, WorkflowOutput, WorkflowDefinition, WorkflowRegistry } from "./types";
+import { executeLocal } from "./local-executor";
+import { orchestratorStorage } from "../orchestrator/storage";
+import registry from "./registry.json";
+
+const workflowRegistry = registry as WorkflowRegistry;
+
+function generateTraceId(): string {
+  return `trace_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+export function getWorkflow(workflowId: string): WorkflowDefinition | undefined {
+  return workflowRegistry.workflows.find(w => w.id === workflowId);
+}
+
+export function listWorkflows(): WorkflowDefinition[] {
+  return workflowRegistry.workflows;
+}
+
+export async function routeWorkflow(
+  workflowId: string,
+  action: string,
+  payload: Record<string, unknown>,
+  sourceService: "bilko" | "replit:shell" | "n8n",
+  userId: string
+): Promise<WorkflowOutput> {
+  const workflow = getWorkflow(workflowId);
+  
+  if (!workflow) {
+    return {
+      success: false,
+      error: {
+        code: "WORKFLOW_NOT_FOUND",
+        message: `Workflow '${workflowId}' not found in registry`,
+        retryable: false,
+      },
+      metadata: {
+        workflowId,
+        executedAt: new Date().toISOString(),
+        durationMs: 0,
+      },
+    };
+  }
+
+  const traceId = generateTraceId();
+  const startTime = Date.now();
+  const requestedAt = new Date();
+
+  const input: WorkflowInput = {
+    action,
+    payload,
+    context: {
+      userId,
+      traceId,
+      requestedAt: requestedAt.toISOString(),
+      sourceService,
+      attempt: 1,
+    },
+  };
+
+  const destinationService = workflow.mode === "local" ? "local" : "n8n";
+
+  const trace = await orchestratorStorage.createTrace({
+    traceId,
+    attemptNumber: 1,
+    sourceService,
+    destinationService,
+    workflowId,
+    action,
+    userId,
+    requestedAt,
+    requestPayload: input,
+    overallStatus: "in_progress",
+  });
+
+  let output: WorkflowOutput;
+
+  try {
+    if (workflow.mode === "local") {
+      if (!workflow.handler) {
+        throw new Error(`Local workflow '${workflowId}' has no handler defined`);
+      }
+      output = await executeLocal(workflow.handler, input);
+    } else {
+      output = await executeN8nWorkflow(workflow, input);
+    }
+  } catch (error) {
+    output = {
+      success: false,
+      error: {
+        code: "EXECUTION_ERROR",
+        message: error instanceof Error ? error.message : String(error),
+        retryable: false,
+      },
+      metadata: {
+        workflowId,
+        executedAt: new Date().toISOString(),
+        durationMs: Date.now() - startTime,
+      },
+    };
+  }
+
+  const endTime = Date.now();
+
+  await orchestratorStorage.updateTrace(trace.id, {
+    respondedAt: new Date(),
+    durationMs: endTime - startTime,
+    responsePayload: output,
+    overallStatus: output.success ? "success" : "failed",
+    errorCode: output.error?.code || null,
+    errorDetail: output.error?.message || null,
+  });
+
+  return output;
+}
+
+async function executeN8nWorkflow(
+  workflow: WorkflowDefinition,
+  input: WorkflowInput
+): Promise<WorkflowOutput> {
+  const webhookUrl = process.env[workflow.endpoint || ""];
+  
+  if (!webhookUrl) {
+    return {
+      success: false,
+      error: {
+        code: "WEBHOOK_NOT_CONFIGURED",
+        message: `Environment variable '${workflow.endpoint}' is not set`,
+        retryable: false,
+      },
+      metadata: {
+        workflowId: workflow.id,
+        executedAt: new Date().toISOString(),
+        durationMs: 0,
+      },
+    };
+  }
+
+  const startTime = Date.now();
+
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Bilko-User-Id": input.context.userId,
+        "X-Bilko-Request-Id": requestId,
+        "X-Bilko-Trace-Id": input.context.traceId,
+        "X-Bilko-Timestamp": input.context.requestedAt,
+        "X-Bilko-Attempt": String(input.context.attempt),
+      },
+      body: JSON.stringify(input),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    const data = await response.json();
+    const isSuccess = response.ok && data.success !== false;
+
+    return {
+      success: isSuccess,
+      data: isSuccess ? (data.data || data) : undefined,
+      error: !isSuccess ? {
+        code: data.error?.code || "N8N_ERROR",
+        message: data.error?.message || "Workflow execution failed",
+        retryable: data.error?.retryable ?? true,
+        details: data.error?.details,
+      } : undefined,
+      metadata: {
+        workflowId: workflow.id,
+        executionId: data.metadata?.executionId,
+        executedAt: new Date().toISOString(),
+        durationMs: Date.now() - startTime,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: {
+        code: error instanceof Error && error.name === "AbortError" 
+          ? "TIMEOUT" 
+          : "N8N_ERROR",
+        message: error instanceof Error ? error.message : String(error),
+        retryable: true,
+      },
+      metadata: {
+        workflowId: workflow.id,
+        executedAt: new Date().toISOString(),
+        durationMs: Date.now() - startTime,
+      },
+    };
+  }
+}

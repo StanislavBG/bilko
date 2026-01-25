@@ -4,6 +4,7 @@ import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { registerOrchestratorRoutes } from "./orchestrator";
 import { registerAuditorRoutes } from "./auditor";
 import { registerRulesRoutes } from "./rules/routes";
+import { registerWorkflowRoutes } from "./workflows/routes";
 import { getAllEndpoints } from "./endpoint-registry";
 
 export async function registerRoutes(
@@ -22,6 +23,9 @@ export async function registerRoutes(
   
   // Rules catalog and preview routes
   registerRulesRoutes(app);
+  
+  // Workflow router for unified workflow execution
+  registerWorkflowRoutes(app);
   
   // Endpoint registry for UI info icons
   app.get("/api/endpoints", (_req, res) => {
