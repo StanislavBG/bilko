@@ -2,7 +2,7 @@
 
 Rule ID: INT-002
 Priority: HIGH
-Version: 1.6.0
+Version: 1.7.0
 
 ## Context
 These rules apply when integrating with n8n via API, whether using n8n cloud or self-hosted. The Replit coding agent should follow these practices for consistent, reliable integration.
@@ -331,6 +331,75 @@ When n8n workflows call external APIs with rate limits (especially AI/LLM APIs),
 - [ ] Wait nodes exist between sequential LLM API calls
 - [ ] Connection chain verified via API (all Wait nodes properly wired)
 - [ ] Workflow tested with rate limit simulation
+
+### D12: Custom User-Agent for External API Calls (CRITICAL)
+When n8n workflows call external APIs (especially Google APIs), a custom User-Agent header MUST be included to prevent requests being blocked.
+
+**Root Cause**: Google and other API providers may block requests from n8n cloud's default user-agent. Requests fail with 403 Forbidden even with valid API keys.
+
+**Required Pattern**:
+```
+Headers:
+  User-Agent: Mozilla/5.0 (compatible; BilkoBibitkov/1.0; +https://bilkobibitkov.replit.app)
+  Content-Type: application/json
+  x-goog-api-key: {api_key}  (for Gemini)
+```
+
+**Implementation in n8n HTTP Request Node**:
+Add to `headerParameters.parameters`:
+```json
+{
+  "name": "User-Agent",
+  "value": "Mozilla/5.0 (compatible; BilkoBibitkov/1.0; +https://bilkobibitkov.replit.app)"
+}
+```
+
+**APIs Known to Block n8n Default User-Agent**:
+| Service | Symptom | Solution |
+|---------|---------|----------|
+| Google Gemini | 403 Forbidden (valid key) | Add custom User-Agent |
+| Google AI Studio | 403 Forbidden | Add custom User-Agent |
+
+**Debugging Tip**: If API key works from curl/Replit but fails from n8n, User-Agent blocking is likely the cause.
+
+**Verification**:
+- [ ] All HTTP Request nodes to external APIs include custom User-Agent header
+- [ ] User-Agent format: `Mozilla/5.0 (compatible; {AppName}/1.0; +{AppURL})`
+- [ ] Test confirms no 403 errors with valid credentials
+
+### D13: API Key Data Flow in n8n Workflows (CRITICAL)
+When API keys are passed via webhook payload (not stored in n8n), they MUST be explicitly propagated through the entire workflow data flow.
+
+**Problem Pattern**: Webhook receives API key, but downstream nodes can't access it because:
+1. Code nodes don't pass it through in their output
+2. HTTP Request nodes use `$input.first().json.apiKey` but input doesn't contain it
+3. Intermediate nodes (Parse*, Aggregate*) only return processed data, not the key
+
+**Required Pattern**:
+```javascript
+// In ALL Code nodes that process data:
+const geminiApiKey = $('Webhook').first().json.body.geminiApiKey;
+// ... processing logic ...
+return [{ json: { ...processedData, geminiApiKey } }];
+```
+
+**Data Flow Architecture**:
+```
+Webhook (receives key) 
+  → Code nodes (MUST pass key through)
+    → HTTP Request nodes (use $input.first().json.geminiApiKey)
+      → Parse nodes (MUST pass key through)
+        → Next HTTP Request node...
+```
+
+**Webhook Body Structure**:
+Keys sent via webhook body are at `$('Webhook').first().json.body.keyName`, NOT `$('Webhook').first().json.keyName`.
+
+**Verification Checklist**:
+- [ ] Every Code node includes API key in its return value
+- [ ] HTTP Request header uses correct expression: `={{ $input.first().json.geminiApiKey }}`
+- [ ] Webhook body access uses `.body.` prefix: `$('Webhook').first().json.body.geminiApiKey`
+- [ ] Test workflow execution shows API key flowing through all stages
 
 ## n8n Workflow Design Guidelines
 
