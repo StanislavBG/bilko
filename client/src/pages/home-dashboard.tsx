@@ -62,8 +62,8 @@ export default function HomeDashboard({ user }: HomeDashboardProps) {
           <div className="rounded-lg border bg-card p-6">
             <div className="flex flex-col gap-4 text-center py-8">
               <div className="text-4xl">
-                <span className="inline-block h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                  <span className="text-primary text-2xl font-bold">B</span>
+                <span className="inline-block h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto">
+                  <span className="text-foreground text-2xl font-bold">B</span>
                 </span>
               </div>
               <h2 className="text-xl font-medium" data-testid="text-coming-soon">

@@ -11,8 +11,8 @@ export default function Landing() {
       <main className="flex-1 flex items-center justify-center">
         <div className="flex flex-col items-center gap-6 text-center">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">B</span>
+            <div className="h-12 w-12 rounded-md bg-foreground flex items-center justify-center">
+              <span className="text-background font-bold text-xl">B</span>
             </div>
             <span className="font-semibold text-2xl">Bilko Bibitkov</span>
           </div>
