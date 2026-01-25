@@ -765,17 +765,19 @@ function AuditView({
                   <label className="text-sm font-medium mb-2 block">Audit Type</label>
                   <div className="flex gap-2">
                     <Button
-                      variant={newAuditType === "rules" ? "default" : "outline"}
+                      variant="outline"
                       size="sm"
                       onClick={() => setNewAuditType("rules")}
+                      className={newAuditType === "rules" ? "bg-foreground text-background" : ""}
                       data-testid="button-audit-type-rules"
                     >
                       Rules
                     </Button>
                     <Button
-                      variant={newAuditType === "code" ? "default" : "outline"}
+                      variant="outline"
                       size="sm"
                       onClick={() => setNewAuditType("code")}
+                      className={newAuditType === "code" ? "bg-foreground text-background" : ""}
                       data-testid="button-audit-type-code"
                     >
                       Code
@@ -892,7 +894,7 @@ function AuditView({
                     description: "Save the audit report to history",
                     onClick: handleSaveAudit,
                     disabled: saveAuditMutation.isPending || !newAuditContent.trim(),
-                    variant: "default"
+                    variant: "outline"
                   },
                   {
                     id: "cancel",
@@ -914,7 +916,7 @@ function AuditView({
                     method: "POST",
                     description: "Create a new audit report",
                     onClick: () => setShowNewAuditForm(true),
-                    variant: "default"
+                    variant: "outline"
                   }
                 ]
           }

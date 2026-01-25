@@ -373,7 +373,7 @@ export default function MemoryExplorer() {
             description: "Send test request to n8n",
             onClick: () => testConnection.mutate(),
             disabled: testConnection.isPending,
-            variant: "default"
+            variant: "outline"
           },
           {
             id: "refresh",
