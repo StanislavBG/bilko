@@ -8,36 +8,51 @@ Define a consistent pattern for application-level actions that are distinct from
 
 **Actions are not navigation.** Navigation controls which content is displayed. Actions trigger operations or open forms. These must be visually and structurally separated.
 
+**Actions are transparent.** Each action displays the HTTP method and API endpoint it will call, making the system behavior predictable.
+
 ## Requirements
 
-### 1. Separation from Navigation
+### 1. Action Panel (Level 4 Right Navigation)
 
-- Actions MUST NOT appear in navigation columns (Levels 1-4)
+Actions appear in a dedicated **Action Panel** - a collapsible right-hand column:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                           GlobalHeader                          │
+├─────────┬──────────────────┬────────────────────────┬───────────┤
+│  Level  │     Level 2      │                        │  Action   │
+│    1    │                  │     Content Area       │   Panel   │
+│         │                  │                        │           │
+│  (nav)  │    (sub-nav)     │                        │ [POST]    │
+│         │                  │                        │ New Audit │
+│         │                  │                        │ /api/audits│
+└─────────┴──────────────────┴────────────────────────┴───────────┘
+```
+
+### 2. Separation from Navigation
+
+- Actions MUST NOT appear in navigation columns (Levels 1-3)
 - Actions MUST NOT appear in GlobalHeader
-- Actions belong within the application's content area
+- Action Panel operates as Level 4 but for actions, not navigation
+- Action Panel is collapsible like other navigation levels
 
-### 2. Action Bar Pattern
+### 3. API Transparency
 
-Each application may have an **Action Bar** - a consistent area for action buttons:
+Each action button displays:
+- **Label**: Clear action name (e.g., "New Audit", "Save")
+- **HTTP Method**: Color-coded badge (POST=blue, GET=green, DELETE=red)
+- **Endpoint**: The API path that will be called (e.g., `/api/audits`)
 
-```
-┌─────────────────────────────────────────────────┐
-│ [Page Title]                    [Action] [Action] │  ← Action Bar (in content header)
-├─────────────────────────────────────────────────┤
-│                                                   │
-│              Content Area                         │
-│                                                   │
-└─────────────────────────────────────────────────┘
-```
+This transparency helps users and developers understand what each action does.
 
-### 3. Placement
+### 4. Context Sensitivity
 
-- Action Bar appears at the **top of the content area**
-- Positioned in the page header row, right-aligned
-- Left side: Page title + description
-- Right side: Action buttons
+Actions change based on current view state:
+- **View mode**: Shows actions for the current context (e.g., "New Audit")
+- **Form mode**: Shows form actions (e.g., "Save", "Cancel")
+- **Selection mode**: Shows actions for selected item (e.g., "Delete", "Edit")
 
-### 4. Styling
+### 5. Styling
 
 Following UI-005 (Minimal Design):
 - Use standard Button component
@@ -45,21 +60,54 @@ Following UI-005 (Minimal Design):
 - Secondary actions: `variant="outline"`
 - Size: `size="sm"` for consistency
 - Icons permitted for action buttons (action affordance, not decoration)
+- HTTP method and endpoint shown in monochrome (muted-foreground)
 
-### 5. Examples
+### 6. ActionPanel Component
 
-**Memory Explorer:**
-- Primary: "Test Connection"
-- Secondary: "Refresh"
+Use the `ActionPanel` component from `@/components/action-panel`:
 
-**Rules Explorer > Audit:**
-- Primary: "New Audit" (opens form in content area)
+```tsx
+<ActionPanel
+  title="Actions"
+  isCollapsed={isCollapsed}
+  onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+  actions={[
+    {
+      id: "new-audit",
+      label: "New Audit",
+      icon: <Plus className="h-4 w-4" />,
+      endpoint: "/api/audits",
+      method: "POST",
+      description: "Create a new audit report",
+      onClick: handleNewAudit,
+      variant: "default"
+    }
+  ]}
+/>
+```
+
+## Action Bar Component (Section Headers)
+
+For section headers without actions, use `ActionBar` from `@/components/action-bar`:
+
+```tsx
+<ActionBar
+  variant="section"
+  icon={<History className="h-5 w-5" />}
+  title="Audit History"
+  description="View past audit reports"
+/>
+```
+
+The ActionBar is now a lightweight header component. Actions have moved to the ActionPanel.
 
 ## Anti-Patterns
 
-- ❌ Putting "New X" in navigation columns
+- ❌ Putting actions in navigation columns (Levels 1-3)
 - ❌ Adding actions to GlobalHeader
 - ❌ Inconsistent action placement between applications
+- ❌ Hidden API endpoints (actions should show what they do)
+- ❌ Inline action buttons in section headers
 
 ## Cross-References
 

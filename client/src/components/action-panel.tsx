@@ -89,13 +89,6 @@ interface ActionButtonProps {
 }
 
 function ActionButton({ action, isCollapsed }: ActionButtonProps) {
-  const methodColors: Record<string, string> = {
-    GET: "text-emerald-600 dark:text-emerald-400",
-    POST: "text-blue-600 dark:text-blue-400",
-    PUT: "text-amber-600 dark:text-amber-400",
-    PATCH: "text-orange-600 dark:text-orange-400",
-    DELETE: "text-red-600 dark:text-red-400",
-  };
 
   if (isCollapsed) {
     return (
@@ -114,7 +107,7 @@ function ActionButton({ action, isCollapsed }: ActionButtonProps) {
         <TooltipContent side="left" className="max-w-[200px]">
           <div className="space-y-1">
             <div className="font-medium">{action.label}</div>
-            <code className={`text-xs ${methodColors[action.method]}`}>
+            <code className="text-xs text-muted-foreground">
               {action.method} {action.endpoint}
             </code>
           </div>
@@ -136,7 +129,7 @@ function ActionButton({ action, isCollapsed }: ActionButtonProps) {
         {action.icon && <span className="mr-2">{action.icon}</span>}
         {action.label}
       </Button>
-      <code className={`text-xs px-2 ${methodColors[action.method]}`}>
+      <code className="text-xs px-2 text-muted-foreground">
         {action.method} {action.endpoint}
       </code>
       {action.description && (
