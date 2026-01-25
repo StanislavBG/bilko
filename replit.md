@@ -14,20 +14,32 @@ Preferences: Move slowly, rules-first, no over-building
 
 ## Recent Changes (January 2026)
 
-### European Football Daily Workflow - FULLY COMPLIANT WITH IMAGE GENERATION
-- **Status**: Fully operational with AI-generated images via Imagen API + compliance filtering
+### European Football Daily Workflow - RESTRUCTURED FOR RELIABLE IMAGE GENERATION
+- **Status**: Fully operational with granular, compliance-first architecture (22 nodes)
+- **Architecture Philosophy**: Check compliance BEFORE topic selection, not after content creation
+- **New Granular Flow** (January 25, 2026):
+  1. **News Scout**: RSS → Extract Articles (fetches 5 headlines)
+  2. **Topic Analyst**: Gemini extracts entities per article (people, teams, events, imageability)
+  3. **Compliance Checker**: Gemini validates each topic for image safety (flags real people)
+  4. **Topic Selector**: Aggregates all topics, picks BEST COMPLIANT topic
+  5. **Post Writer**: Creates post for the selected, pre-validated topic
+  6. **Image Prompt Writer**: Generates enhanced prompt from safe concept
+  7. **Call Imagen API**: Generates image (Gemini endpoint: generativelanguage.googleapis.com)
+  8. **Build Final Output**: Combines post + image + transparency disclosure
 - **Compliance Features**:
-  1. Generate Image prompt instructs Gemini to avoid real person names
-  2. Compliance Sanitizer node rewrites prompts to remove celebrity references
-  3. Two-post output: Main content + AI Transparency disclosure
-  4. Graceful fallback when Imagen filters content
-- **Image Generation Flow**: Generate Image → Parse Image Prompt → **Compliance Sanitizer** → Parse Compliance → Call Imagen API → Parse Response → Build Final Output
+  1. Per-article entity extraction identifies problematic subjects EARLY
+  2. Compliance validation happens BEFORE topic commitment
+  3. Topic Selector only considers pre-validated compliant topics
+  4. Two-post output: Main content + AI Transparency disclosure
+  5. Graceful fallback when Imagen filters content
 - **Key Technical Details**:
   1. Custom User-Agent header on all Google API calls (Google blocks n8n default)
   2. Imagen model: `imagen-4.0-fast-generate-001` (6s response, 1.5-1.7MB images)
-  3. Express body-parser limit: 10mb for base64 image payloads
-  4. Strip Gemini markdown fences before JSON parsing
-- **Workflow Nodes**: 25 total
+  3. **CRITICAL**: Use Gemini endpoint (generativelanguage.googleapis.com), NOT Vertex AI endpoint
+  4. Express body-parser limit: 10mb for base64 image payloads
+  5. Strip Gemini markdown fences before JSON parsing
+  6. Data path: `$json.geminiApiKey` flows through all Code nodes
+- **Workflow Nodes**: 22 total
 
 ### Execution Tracking System (January 2026) - VERIFIED
 - **workflow_executions table**: Tracks execution runs with status, timestamps, and finalOutput (JSONB)
