@@ -2,163 +2,45 @@
 
 ## Founding Principles
 
-Three immutable principles form the foundation of all Bilko Bibitkov development:
+Three immutable principles (ABSOLUTE priority):
 
-1. **ARCH-000: Rules-First** - NO CODE SHALL BE WRITTEN WITHOUT FIRST CONSULTING THE RULES
-2. **ARCH-000-A: Orchestrator Pattern** - ALL EXTERNAL COMMUNICATION MUST FLOW THROUGH THE ORCHESTRATION LAYER
-3. **ARCH-000-B: Headless Operation** - ALL EXTERNAL SERVICE CONFIGURATION MUST BE AUTOMATED AND PROGRAMMATIC
-
-These principles have ABSOLUTE priority and cannot be overridden by any other rule.
+1. **ARCH-000: Rules-First** - NO CODE WITHOUT CONSULTING RULES
+2. **ARCH-000-A: Orchestrator Pattern** - ALL EXTERNAL COMMUNICATION THROUGH ORCHESTRATION LAYER
+3. **ARCH-000-B: Headless Operation** - ALL EXTERNAL CONFIG AUTOMATED AND PROGRAMMATIC
 
 ## Rules Location
 
-All development rules are in `/rules/`. The Rules Service validates at startup - the application will not start if rules are invalid.
+All rules in `/rules/`. Read `ARCH-006` (Agent Bootstrap) before any task.
 
-**Before any task**: Read `ARCH-006` (Agent Bootstrap Protocol) for how the rule system works.
+- **Manifest**: `rules/manifest.json`
+- **Service**: `/server/rules/`
 
-## Quick Reference
+## Stack
 
-- **Rules Index**: `rules/manifest.json`
-- **Bootstrap Protocol**: `rules/architecture/006-agent-bootstrap.md`
-- **Rules Service**: `/server/rules/`
-- **Founding Principles**: `rules/architecture/000-*.md`
+React + Tailwind + Shadcn | Express + Node | PostgreSQL + Drizzle | Replit Auth
 
-## Project Overview
+## Admin
 
-Bilko Bibitkov is a rule-driven web application serving as the "face" for n8n-hosted AI agents.
+Bilko (user ID 45353844)
 
-## Technology Stack
+## Design
 
-- **Frontend**: React, Tailwind CSS, Shadcn UI
-- **Backend**: Express.js, Node.js
-- **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: Replit Auth (OpenID Connect)
+Minimal text-only (UI-005). Black/white monochrome. No decorative icons.
 
-## Current State
+## Key Patterns
 
-- Phase 2: Application Hub with Memory Explorer and Agentic Workflows
-- Auth: Replit Auth configured with admin role
-- Database: PostgreSQL with users, communication_traces, and rule_audits tables
-- Admin: Bilko (user ID 45353844)
+- **ActionPanel**: Right-nav for actions (UI-007)
+- **ActionBar**: Section headers (`variant="page"` | `variant="section"`)
+- **Workflows**: Registry at `server/workflows/registry.json`, dispatched via router
 
-## Applications
+## n8n Integration
 
-- **Home**: Dashboard overview
-- **Agentic Workflows**: View and execute workflows (n8n remote + local agent reasoning)
-- **Memory Explorer**: View communication traces
-- **Rules Explorer**: Browse and audit the rule framework
-
-## Rule Audits
-
-Rule audits are performed via agentic reasoning (AGENT-001). To run an audit:
-
-1. Ask the agent: "Run a rule audit" or "Act as Rule Architect"
-2. The agent will analyze all rules and code following the protocol in AGENT-001
-3. Copy the audit report the agent provides
-4. Go to Rules Explorer > Audit > New Audit and paste the report to save it
-
-Saved audits are stored in the database with timestamps for historical tracking.
-
-## Rule Partitions
-
-- **architecture** - System-wide rules and principles
-- **hub** - Application shell and access control
-- **ui** - User interface patterns
-- **data** - Data models and persistence
-- **apps** - Per-application rules
-- **integration** - External service contracts
-- **agent** - Agentic workflow protocols (audits, reasoning)
-
-## Design Philosophy
-
-- Minimal, text-only aesthetic (UI-005)
-- No decorative icons in navigation - text labels only
-- Action icons (close, toggle) are permitted
-- Plain text for priority/status (no colored badges)
-- Relative sizing with rem-based min/max constraints
-- Black/white/gray color palette
-- Application actions separate from navigation (UI-007)
-
-## ActionPanel Component
-
-Use `ActionPanel` from `@/components/action-panel` for right-nav actions (UI-007):
-- Collapsible right-hand navigation panel for actions
-- Each action shows HTTP method and API endpoint for transparency
-- Context-sensitive: shows different actions based on current view state
-- Monochrome styling to match black/white design philosophy
-
-## ActionBar Component
-
-Use `ActionBar` from `@/components/action-bar` for section headers (no actions):
-- `variant="page"` - Large title (text-2xl) for page headers
-- `variant="section"` - Smaller title (text-lg) for nested sections
-- `icon` - Optional leading icon
-- Actions moved to ActionPanel (right navigation)
-
-## Workflow System
-
-Unified workflow architecture (AGENT-003) with portable execution:
-
-- **Registry**: `server/workflows/registry.json` - workflow definitions
-- **Router**: Dispatches to local executor or n8n based on mode
-- **Local Executor**: Handler registration pattern for in-app workflows
-- **Tracing**: All invocations recorded to communication_traces
-
-Source services: "replit:shell" (user trigger), "bilko" (AI orchestrator), "n8n" (callback)
-
-Current workflows:
-- `echo-test` (n8n) - Round-trip test for external execution
-- `rules-audit` (local) - Placeholder for automated rules auditing
-- `code-audit` (local) - Placeholder for automated code auditing
-- `european-football-daily` (n8n) - Daily European football news aggregation with sentiment analysis
-
-Workflow specs are in `rules/agent/` following AGENT-003 contract. n8n workflows are created headlessly via REST API.
-
-### n8n API Client
-
-The n8n client (`server/n8n/client.ts`) provides headless workflow management:
-
-- **Auto-Sync**: Workflows automatically sync to n8n on server startup (`server/n8n/startup.ts`)
-- **Manual Sync**: `POST /api/workflows/n8n/sync` - Push registry definitions to n8n (admin only)
-- **Status**: `GET /api/workflows/n8n/status` - Check which workflows exist in n8n
-- **Callback**: `POST /api/workflows/callback` - Receive step outputs from n8n workflows
-
-### Workflow Callbacks
-
-n8n workflows send step-by-step outputs back to Bilko via `/api/workflows/callback`:
-- Each agentic step (articles, sentiment, content) POSTs results to Bilko
-- Results stored in `communication_traces` with traceId for chaining
-- View in Memory Explorer to see full workflow reasoning
-
-### Workflow Output Preview
-
-The Agentic Workflows page shows output preview for content-generating workflows:
-- `GET /api/workflows/:id/output` - Fetch latest workflow output from communication_traces
-- For european-football-daily: Shows infographic (image or prompt) and Facebook post text
-- Refresh button to reload latest outputs
-- Only displays when workflow has produced output
-
-### Webhook URL Auto-Caching (Headless)
-
-Webhook URLs are automatically cached on server startup (ARCH-000-B compliant):
-- `server/n8n/webhook-cache.ts` - In-memory URL cache
-- `server/n8n/sync.ts` - Populates cache during startup sync
-- No manual `N8N_WEBHOOK_*` environment variables required
-
-Environment variables:
-- `N8N_API_BASE_URL` - n8n instance API URL (e.g., `https://bilkobibitkov.app.n8n.cloud/api/v1`)
-- `N8N_API_KEY` - n8n API key (secret)
-- `BILKO_CALLBACK_URL` - Callback URL for n8n to reach Bilko
-
-### n8n Known Issues (INT-002)
-
-- **ISSUE-001**: Webhooks may require manual save in n8n UI after API creation
-- **ISSUE-003**: PUT workflow requires `settings` property in request body
-- **ISSUE-004**: API response omits node definitions (webhook URLs derived from local definitions)
+- Auto-sync on startup
+- Webhook URLs auto-cached (ARCH-000-B compliant)
+- Known issues in INT-002 (ISSUE-001: manual save required for webhook registration)
 
 ## User Preferences
 
 - Move slowly and incrementally
-- No over-building or hallucinations
-- Rules are the heart of the project - first-class citizen
-- Super admin: Bilko
+- Rules are first-class citizens
+- No over-building

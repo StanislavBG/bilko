@@ -448,6 +448,18 @@
       "crossReferences": ["ARCH-000", "AGENT-002"],
       "description": "Validate rule compliance and propose rule updates before completing any task."
     },
+    "ARCH-011": {
+      "id": "ARCH-011",
+      "title": "Documentation Brevity",
+      "path": "rules/architecture/011-documentation-brevity.md",
+      "partition": "architecture",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["replit.md", "documentation", "readme", "brevity", "grounding"],
+      "dependencies": ["ARCH-000"],
+      "crossReferences": [],
+      "description": "Project documentation provides grounding, not replication of rules."
+    },
     "APP-RULES-001": {
       "id": "APP-RULES-001",
       "title": "Rules Explorer",
