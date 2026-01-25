@@ -2,7 +2,7 @@
 
 Rule ID: INT-002
 Priority: HIGH
-Version: 1.5.0
+Version: 1.6.0
 
 ## Context
 These rules apply when integrating with n8n via API, whether using n8n cloud or self-hosted. The Replit coding agent should follow these practices for consistent, reliable integration.
@@ -281,6 +281,56 @@ Headers:
 - [ ] No secrets appear in URL fields
 - [ ] API key is in headers, not query parameters
 - [ ] n8n execution logs don't show the secret in the URL
+
+### D11: External API Rate Limit Compliance
+When n8n workflows call external APIs with rate limits (especially AI/LLM APIs), implement protective measures to avoid quota exhaustion and `429` errors.
+
+**Official Documentation**: https://ai.google.dev/gemini-api/docs/rate-limits (always consult for current limits)
+
+**Required for AI/LLM API Calls**:
+
+1. **Retry Configuration on HTTP Request Nodes**:
+   ```
+   retryOnFail: true
+   maxTries: 5
+   waitBetweenTries: 5000 (5 seconds, fixed delay)
+   ```
+   **CRITICAL**: For retry to work, "On Error" must be set to "Stop Workflow" (default), not "Continue". Verify each HTTP Request node has this setting.
+   
+   Note: n8n's built-in retry uses fixed delay, not exponential backoff. For exponential backoff, implement a custom retry subflow using error output + Wait nodes with incremental delays.
+
+2. **Wait Nodes Between Sequential API Calls**:
+   Add 3-5 second delays between consecutive calls to the same API to respect RPM limits.
+   ```
+   [API Call 1] -> [Wait 3s] -> [API Call 2] -> [Wait 3s] -> [API Call 3]
+   ```
+
+3. **Token Budget Awareness**:
+   - Monitor input/output token counts
+   - Consider batching multiple prompts into single requests where possible
+   - Use lighter models (e.g., Flash-Lite vs Pro) for simple tasks
+
+**Gemini API Limits (Illustrative Examples - Check Official Docs for Current Values)**:
+| Model | RPM | TPM | RPD |
+|-------|-----|-----|-----|
+| Gemini 2.5 Pro | ~5 | ~250K | ~25 |
+| Gemini 2.5 Flash | ~15 | ~250K | ~1,000 |
+| Gemini 2.5 Flash-Lite | ~15 | ~250K | ~1,000 |
+
+*Limits change frequently. Always verify at: https://ai.google.dev/gemini-api/docs/rate-limits*
+
+**Implementation in n8n**:
+- Set node-level retry settings (not in parameters.options)
+- Verify each HTTP Request node has `On Error: Stop Workflow`
+- Use Wait nodes (n8n-nodes-base.wait) with `unit: "seconds"` and `amount: 3-5`
+- Position Wait nodes between consecutive API calls to same service
+
+**Verification Checklist**:
+- [ ] HTTP Request nodes have retryOnFail: true
+- [ ] HTTP Request nodes have On Error: Stop Workflow
+- [ ] Wait nodes exist between sequential LLM API calls
+- [ ] Connection chain verified via API (all Wait nodes properly wired)
+- [ ] Workflow tested with rate limit simulation
 
 ## n8n Workflow Design Guidelines
 
