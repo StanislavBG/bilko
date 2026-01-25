@@ -16,6 +16,7 @@ import {
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { PageContent } from "@/components/page-content";
 import { ActionBar } from "@/components/action-bar";
+import { ActionPanel } from "@/components/action-panel";
 
 interface RuleMetadata {
   id: string;
@@ -584,6 +585,7 @@ function AuditView({
   const { toast } = useToast();
   const [isCategoryNavCollapsed, setIsCategoryNavCollapsed] = useState(false);
   const [isAuditListCollapsed, setIsAuditListCollapsed] = useState(false);
+  const [isActionPanelCollapsed, setIsActionPanelCollapsed] = useState(false);
   const [activeCategory, setActiveCategory] = useState<"protocol" | "history">("protocol");
   const [showNewAuditForm, setShowNewAuditForm] = useState(false);
   const [newAuditContent, setNewAuditContent] = useState("");
@@ -745,180 +747,178 @@ function AuditView({
         </TertiaryNavPanel>
       )}
 
-      <PageContent>
-        {showNewAuditForm ? (
-          <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-new-view">
-            <div className="max-w-3xl">
-              <ActionBar
-                variant="section"
-                icon={<Plus className="h-5 w-5" />}
-                title="Save Audit Report"
-                description="Paste the audit report from the agent below"
-                testId="action-bar-new-audit"
-                actions={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowNewAuditForm(false)}
-                    data-testid="button-cancel-new-audit"
-                  >
-                    Cancel
-                  </Button>
-                }
-              />
+      <PageContent className="flex-row">
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {showNewAuditForm ? (
+            <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-new-view">
+              <div className="max-w-3xl">
+                <ActionBar
+                  variant="section"
+                  icon={<Plus className="h-5 w-5" />}
+                  title="Save Audit Report"
+                  description="Paste the audit report from the agent below"
+                  testId="action-bar-new-audit"
+                />
 
-              <div className="mb-4 mt-4">
-                <label className="text-sm font-medium mb-2 block">Audit Type</label>
-                <div className="flex gap-2">
-                  <Button
-                    variant={newAuditType === "rules" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setNewAuditType("rules")}
-                    data-testid="button-audit-type-rules"
-                  >
-                    Rules
-                  </Button>
-                  <Button
-                    variant={newAuditType === "code" ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setNewAuditType("code")}
-                    data-testid="button-audit-type-code"
-                  >
-                    Code
-                  </Button>
+                <div className="mb-4 mt-4">
+                  <label className="text-sm font-medium mb-2 block">Audit Type</label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={newAuditType === "rules" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setNewAuditType("rules")}
+                      data-testid="button-audit-type-rules"
+                    >
+                      Rules
+                    </Button>
+                    <Button
+                      variant={newAuditType === "code" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setNewAuditType("code")}
+                      data-testid="button-audit-type-code"
+                    >
+                      Code
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {newAuditType === "rules" 
+                      ? "AGENT-002-RULES: Validates rule structure, conflicts, and coverage" 
+                      : "AGENT-002-CODE: Validates code implements rules correctly"}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {newAuditType === "rules" 
-                    ? "AGENT-002-RULES: Validates rule structure, conflicts, and coverage" 
-                    : "AGENT-002-CODE: Validates code implements rules correctly"}
-                </p>
-              </div>
 
-              <Textarea
-                placeholder="Paste your audit report here..."
-                value={newAuditContent}
-                onChange={(e) => setNewAuditContent(e.target.value)}
-                className="min-h-[400px] font-mono text-sm"
-                data-testid="input-audit-content"
-              />
-
-              <div className="mt-4 flex justify-end">
-                <Button
-                  onClick={handleSaveAudit}
-                  disabled={saveAuditMutation.isPending || !newAuditContent.trim()}
-                  data-testid="button-save-audit"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {saveAuditMutation.isPending ? "Saving..." : "Save Audit"}
-                </Button>
+                <Textarea
+                  placeholder="Paste your audit report here..."
+                  value={newAuditContent}
+                  onChange={(e) => setNewAuditContent(e.target.value)}
+                  className="min-h-[400px] font-mono text-sm"
+                  data-testid="input-audit-content"
+                />
               </div>
             </div>
-          </div>
-        ) : activeCategory === "protocol" ? (
-          <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-protocol-view">
-            <div className="max-w-3xl">
-              <ActionBar
-                variant="section"
-                icon={<ScrollText className="h-5 w-5" />}
-                title="Auditor Base Protocol"
-                description="Instructions for performing agentic audits (AGENT-002)"
-                testId="action-bar-protocol"
-                actions={
-                  <Button
-                    size="sm"
-                    onClick={() => setShowNewAuditForm(true)}
-                    data-testid="button-new-audit"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Audit
-                  </Button>
-                }
-              />
-              
-              <Card className="p-4 bg-muted/30 mt-4 mb-4">
-                <h3 className="text-sm font-medium mb-2">How to Run an Audit</h3>
-                <ol className="text-sm text-muted-foreground space-y-2">
-                  <li>1. Ask the agent: <code className="bg-muted px-1 rounded">"Run a rule audit"</code> or <code className="bg-muted px-1 rounded">"Run a code audit"</code></li>
-                  <li>2. The agent will analyze following the AGENT-002 protocol</li>
-                  <li>3. Copy the audit report the agent provides</li>
-                  <li>4. Click "New Audit" and paste the report to save it</li>
-                </ol>
-              </Card>
+          ) : activeCategory === "protocol" ? (
+            <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-protocol-view">
+              <div className="max-w-3xl">
+                <ActionBar
+                  variant="section"
+                  icon={<ScrollText className="h-5 w-5" />}
+                  title="Auditor Base Protocol"
+                  description="Instructions for performing agentic audits (AGENT-002)"
+                  testId="action-bar-protocol"
+                />
+                
+                <Card className="p-4 bg-muted/30 mt-4 mb-4">
+                  <h3 className="text-sm font-medium mb-2">How to Run an Audit</h3>
+                  <ol className="text-sm text-muted-foreground space-y-2">
+                    <li>1. Ask the agent: <code className="bg-muted px-1 rounded">"Run a rule audit"</code> or <code className="bg-muted px-1 rounded">"Run a code audit"</code></li>
+                    <li>2. The agent will analyze following the AGENT-002 protocol</li>
+                    <li>3. Copy the audit report the agent provides</li>
+                    <li>4. Click "New Audit" in the Actions panel and paste the report to save it</li>
+                  </ol>
+                </Card>
 
-              {protocolLoading ? (
-                <Skeleton className="h-96 w-full" />
-              ) : protocol ? (
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {protocol.content}
-                  </ReactMarkdown>
+                {protocolLoading ? (
+                  <Skeleton className="h-96 w-full" />
+                ) : protocol ? (
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {protocol.content}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Failed to load protocol</p>
+                )}
+              </div>
+            </div>
+          ) : activeCategory === "history" ? (
+            <div className="flex-1 overflow-auto flex flex-col bg-background" data-testid="audit-history-view">
+              {selectedAudit ? (
+                <div className="p-4">
+                  <ActionBar
+                    variant="section"
+                    icon={<History className="h-5 w-5 text-muted-foreground" />}
+                    title={`${selectedAudit.auditType === "code" ? "Code" : "Rules"} Audit Report`}
+                    titleExtra={
+                      <span className="text-xs font-normal text-muted-foreground">
+                        ({selectedAudit.auditType === "code" ? "AGENT-002-CODE" : "AGENT-002-RULES"})
+                      </span>
+                    }
+                    description={`${formatTimestamp(selectedAudit.createdAt)}${selectedAudit.createdBy ? ` by ${selectedAudit.createdBy}` : ""}`}
+                    testId="action-bar-history-detail"
+                  />
+                  <Card className="p-4 mt-4">
+                    <pre className="text-sm whitespace-pre-wrap font-mono overflow-auto">
+                      {selectedAudit.content}
+                    </pre>
+                  </Card>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">Failed to load protocol</p>
-              )}
-            </div>
-          </div>
-        ) : activeCategory === "history" ? (
-          <div className="flex-1 overflow-auto flex flex-col bg-background" data-testid="audit-history-view">
-            {selectedAudit ? (
-              <div className="p-4">
-                <ActionBar
-                  variant="section"
-                  icon={<History className="h-5 w-5 text-muted-foreground" />}
-                  title={`${selectedAudit.auditType === "code" ? "Code" : "Rules"} Audit Report`}
-                  titleExtra={
-                    <span className="text-xs font-normal text-muted-foreground">
-                      ({selectedAudit.auditType === "code" ? "AGENT-002-CODE" : "AGENT-002-RULES"})
-                    </span>
-                  }
-                  description={`${formatTimestamp(selectedAudit.createdAt)}${selectedAudit.createdBy ? ` by ${selectedAudit.createdBy}` : ""}`}
-                  testId="action-bar-history-detail"
-                  actions={
-                    <Button
-                      size="sm"
-                      onClick={() => setShowNewAuditForm(true)}
-                      data-testid="button-new-audit"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Audit
-                    </Button>
-                  }
-                />
-                <Card className="p-4 mt-4">
-                  <pre className="text-sm whitespace-pre-wrap font-mono overflow-auto">
-                    {selectedAudit.content}
-                  </pre>
-                </Card>
-              </div>
-            ) : (
-              <div className="flex-1 flex flex-col p-4">
-                <ActionBar
-                  variant="section"
-                  icon={<History className="h-5 w-5" />}
-                  title="Audit History"
-                  description="Select an audit from the list to view details"
-                  testId="action-bar-history"
-                  actions={
-                    <Button
-                      size="sm"
-                      onClick={() => setShowNewAuditForm(true)}
-                      data-testid="button-new-audit"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Audit
-                    </Button>
-                  }
-                />
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <History className="h-8 w-8 mx-auto opacity-50 mb-2" />
-                    <p className="text-sm">Select an audit to view details</p>
+                <div className="flex-1 flex flex-col p-4">
+                  <ActionBar
+                    variant="section"
+                    icon={<History className="h-5 w-5" />}
+                    title="Audit History"
+                    description="Select an audit from the list to view details"
+                    testId="action-bar-history"
+                  />
+                  <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                    <div className="text-center">
+                      <History className="h-8 w-8 mx-auto opacity-50 mb-2" />
+                      <p className="text-sm">Select an audit to view details</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        ) : null}
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        {/* Right Action Panel */}
+        <ActionPanel
+          title="Actions"
+          isCollapsed={isActionPanelCollapsed}
+          onToggleCollapse={() => setIsActionPanelCollapsed(!isActionPanelCollapsed)}
+          testId="audit-action-panel"
+          actions={
+            showNewAuditForm
+              ? [
+                  {
+                    id: "save-audit",
+                    label: "Save Audit",
+                    icon: <Save className="h-4 w-4" />,
+                    endpoint: "/api/audits",
+                    method: "POST",
+                    description: "Save the audit report to history",
+                    onClick: handleSaveAudit,
+                    disabled: saveAuditMutation.isPending || !newAuditContent.trim(),
+                    variant: "default"
+                  },
+                  {
+                    id: "cancel",
+                    label: "Cancel",
+                    icon: <X className="h-4 w-4" />,
+                    endpoint: "",
+                    method: "GET",
+                    description: "Return to previous view",
+                    onClick: () => setShowNewAuditForm(false),
+                    variant: "outline"
+                  }
+                ]
+              : [
+                  {
+                    id: "new-audit",
+                    label: "New Audit",
+                    icon: <Plus className="h-4 w-4" />,
+                    endpoint: "/api/audits",
+                    method: "POST",
+                    description: "Create a new audit report",
+                    onClick: () => setShowNewAuditForm(true),
+                    variant: "default"
+                  }
+                ]
+          }
+        />
       </PageContent>
     </>
   );
