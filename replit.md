@@ -81,6 +81,22 @@ Use `ActionBar` from `@/components/action-bar` for section headers (no actions):
 - `icon` - Optional leading icon
 - Actions moved to ActionPanel (right navigation)
 
+## Workflow System
+
+Unified workflow architecture (AGENT-003) with portable execution:
+
+- **Registry**: `server/workflows/registry.json` - workflow definitions
+- **Router**: Dispatches to local executor or n8n based on mode
+- **Local Executor**: Handler registration pattern for in-app workflows
+- **Tracing**: All invocations recorded to communication_traces
+
+Source services: "replit:shell" (user trigger), "bilko" (AI orchestrator), "n8n" (callback)
+
+Current workflows:
+- `echo-test` (n8n) - Round-trip test for external execution
+- `rules-audit` (local) - Placeholder for automated rules auditing
+- `code-audit` (local) - Placeholder for automated code auditing
+
 ## User Preferences
 
 - Move slowly and incrementally
