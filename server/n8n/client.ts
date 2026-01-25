@@ -238,7 +238,7 @@ function buildEchoTestNodes(): {
       typeVersion: 1,
       position: [0, 0],
       parameters: {
-        path: "echo-test",
+        path: "bilko-echo-test",
         httpMethod: "POST",
         responseMode: "responseNode"
       }
