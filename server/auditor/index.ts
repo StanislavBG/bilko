@@ -4,10 +4,10 @@ import { storage } from "../storage";
 import { insertRuleAuditSchema } from "@shared/schema";
 
 export function registerAuditorRoutes(app: Express) {
-  // Get the Rule Architect Protocol markdown
+  // Get the Auditor Base Protocol markdown
   app.get("/api/audit/protocol", async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const content = await readFile("rules/architecture/009-rule-architect-protocol.md", "utf-8");
+      const content = await readFile("rules/agent/002-auditor-base.md", "utf-8");
       res.json({ content });
     } catch (err) {
       next(err);
