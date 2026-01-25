@@ -224,6 +224,7 @@ export default function AgenticWorkflows() {
       queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
       if (selectedWorkflow) {
         queryClient.invalidateQueries({ queryKey: ["/api/workflows", selectedWorkflow.id, "output"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/workflows", selectedWorkflow.id, "executions"] });
       }
     },
     onError: (error: Error) => {
