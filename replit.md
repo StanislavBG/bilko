@@ -51,6 +51,14 @@ Preferences: Move slowly, rules-first, no over-building
 - **Rule added**: INT-005 Callback Persistence Contract - documents API payload schemas and data flow
 - **E2E Verified**: History view displays execution results with post content and image prompts correctly
 
+### Production Deployment (January 2026)
+- **Production Workflow File**: `server/workflows/backups/oV6WGX5uBeTZ9tRa_PROD.json`
+- **Workflow Name**: `[PROD] European Football Daily`
+- **Production Callbacks**: All callbacks point to `bilkobibitkov.replit.app` (not dev .worf.replit.dev)
+- **Admin Push Action**: POST `/api/workflows/n8n/push-prod` updates n8n with production config
+- **UI**: "Push to n8n" button in ActionPanel (admin-only, european-football-daily workflow only)
+- **Resilient Lookup**: Endpoint searches for both `[PROD] European Football Daily` and `European Football Daily` for reliability
+
 ### Key n8n Learnings
 1. **User-Agent Required**: Google APIs block n8n's default user-agent. Always add custom User-Agent header.
 2. **Webhook Body Structure**: Data sent to webhook is at `.json.body.keyName`, not `.json.keyName`
