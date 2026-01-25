@@ -507,6 +507,42 @@
       "dependencies": ["INT-003", "AGENT-003", "DATA-002"],
       "crossReferences": ["DATA-002", "AGENT-003-FOOTBALL"],
       "description": "Defines how n8n workflow callbacks persist execution results for distribution workflows."
+    },
+    "ENV-001": {
+      "id": "ENV-001",
+      "title": "Environments",
+      "path": "rules/env/001-environments.md",
+      "partition": "env",
+      "priority": "CRITICAL",
+      "version": "1.0.0",
+      "triggers": ["environment", "dev url", "prod url", "callback url", "replit url", "n8n url", "workflow tag"],
+      "dependencies": ["ARCH-000"],
+      "crossReferences": ["ENV-002", "INT-003", "AGT-001"],
+      "description": "Single source of truth for deployment environments, URLs, and naming conventions."
+    },
+    "ENV-002": {
+      "id": "ENV-002",
+      "title": "Workflow Registry",
+      "path": "rules/env/002-workflow-registry.md",
+      "partition": "env",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["workflow registry", "workflow artifact", "dev workflow", "prod workflow"],
+      "dependencies": ["ENV-001", "AGENT-003"],
+      "crossReferences": ["ENV-001", "AGT-001", "AGENT-003"],
+      "description": "Central registry of all n8n workflows with environment-specific artifact paths."
+    },
+    "ENV-003": {
+      "id": "ENV-003",
+      "title": "Channels",
+      "path": "rules/env/003-channels.md",
+      "partition": "env",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["channel", "facebook page", "social media", "distribution", "public interface"],
+      "dependencies": ["ENV-001"],
+      "crossReferences": ["ENV-002", "AGENT-003-FOOTBALL"],
+      "description": "Registry of all public-facing channels and distribution endpoints."
     }
   },
   "partitions": {
@@ -544,6 +580,11 @@
       "path": "rules/agent/",
       "description": "Agentic workflow protocols for audits and automated reasoning",
       "readOrder": 6
+    },
+    "env": {
+      "path": "rules/env/",
+      "description": "Environment configuration, workflow artifacts, and channel registry",
+      "readOrder": 7
     }
   },
   "routing": {
@@ -555,7 +596,8 @@
       { "pattern": "endpoint|api route|authentication", "partitions": ["architecture"] },
       { "pattern": "new app|new feature", "partitions": ["apps", "architecture"] },
       { "pattern": "audit|agentic|rule audit|code audit", "partitions": ["agent"] },
-      { "pattern": "headless|auto-sync|programmatic|api-first", "partitions": ["architecture", "integration"] }
+      { "pattern": "headless|auto-sync|programmatic|api-first", "partitions": ["architecture", "integration"] },
+      { "pattern": "environment|dev url|prod url|callback url|workflow artifact|channel|facebook page", "partitions": ["env"] }
     ],
     "alwaysInclude": ["ARCH-000", "ARCH-000-A", "ARCH-000-B", "ARCH-006", "ARCH-011"]
   }
