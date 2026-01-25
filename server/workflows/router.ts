@@ -147,6 +147,13 @@ async function executeN8nWorkflow(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
 
+    // Include secrets needed by n8n workflows (passed via payload per ARCH-000-B)
+    const n8nPayload = {
+      ...input,
+      geminiApiKey: process.env.GEMINI_API_KEY,
+      traceId: input.context.traceId,
+    };
+
     const response = await fetch(webhookUrl, {
       method: "POST",
       headers: {
@@ -157,7 +164,7 @@ async function executeN8nWorkflow(
         "X-Bilko-Timestamp": input.context.requestedAt,
         "X-Bilko-Attempt": String(input.context.attempt),
       },
-      body: JSON.stringify(input),
+      body: JSON.stringify(n8nPayload),
       signal: controller.signal,
     });
 
