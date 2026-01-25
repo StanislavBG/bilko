@@ -52,7 +52,9 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="h-11 flex items-center justify-center border-b shrink-0 px-2">
-        {!isCollapsed && (
+        {isCollapsed ? (
+          <span className="font-bold text-base" data-testid="sidebar-logo-collapsed">B</span>
+        ) : (
           <span className="font-semibold text-xs whitespace-nowrap" data-testid="sidebar-logo-expanded">
             Bilko Bibitkov AI Academy
           </span>

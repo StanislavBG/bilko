@@ -13,9 +13,11 @@ export function GlobalHeader() {
   return (
     <header className="h-11 shrink-0 border-b bg-sidebar flex items-center gap-2 px-2" data-testid="global-header">
       <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
-      <span className="font-semibold text-sm shrink-0" data-testid="logo-text">
-        {isCollapsed ? "B" : "Bilko Bibitkov"}
-      </span>
+      {!isCollapsed && (
+        <span className="font-semibold text-sm shrink-0" data-testid="logo-text">
+          Bilko Bibitkov
+        </span>
+      )}
       <div className="flex-1" />
       <div className="flex items-center gap-1">
       {canToggleViewMode && (
