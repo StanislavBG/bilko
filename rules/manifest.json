@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "1.0.0",
-  "lastUpdated": "2026-01-24T23:30:00Z",
+  "lastUpdated": "2026-01-25T00:15:00Z",
   "primaryDirective": "ARCH-000",
   "rules": {
     "ARCH-000": {
@@ -330,39 +330,51 @@
     },
     "AGENT-001": {
       "id": "AGENT-001",
-      "title": "Rule Architect Protocol",
-      "path": "rules/agent/001-rule-architect-protocol.md",
+      "title": "Orchestration Protocol",
+      "path": "rules/agent/001-orchestration-protocol.md",
       "partition": "agent",
       "priority": "HIGH",
-      "version": "2.0.0",
-      "triggers": ["audit", "rule audit", "rule architect", "evaluate rules", "check rules", "full audit"],
-      "dependencies": ["ARCH-000", "ARCH-002", "ARCH-006"],
-      "crossReferences": ["ARCH-010", "AGENT-002", "AGENT-003"],
-      "description": "Master protocol orchestrating rule audits (AGENT-002) and code audits (AGENT-003)."
+      "version": "3.0.0",
+      "triggers": ["orchestrate", "dispatch", "n8n call", "external call", "app-to-app"],
+      "dependencies": ["ARCH-000", "ARCH-003", "INT-003"],
+      "crossReferences": ["ARCH-003", "INT-003"],
+      "description": "Protocol for AI agents coordinating app-to-app communication through the Orchestration Layer."
     },
     "AGENT-002": {
       "id": "AGENT-002",
-      "title": "Rule Audit Agent Protocol",
-      "path": "rules/agent/002-rule-audit-agent.md",
+      "title": "Auditor Base Protocol",
+      "path": "rules/agent/002-auditor-base.md",
       "partition": "agent",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["rule audit", "validate rules", "structural integrity", "routing coverage"],
-      "dependencies": ["ARCH-000", "ARCH-002", "AGENT-001"],
-      "crossReferences": ["AGENT-003"],
-      "description": "Agentic protocol for validating rule structure, consistency, and coverage."
+      "triggers": ["audit", "auditor"],
+      "dependencies": ["ARCH-000", "ARCH-010"],
+      "crossReferences": ["AGENT-002-RULES", "AGENT-002-CODE"],
+      "description": "Common persona, behavior, and output standards for all audit agents."
     },
-    "AGENT-003": {
-      "id": "AGENT-003",
-      "title": "Code Audit Agent Protocol",
-      "path": "rules/agent/003-code-audit-agent.md",
+    "AGENT-002-RULES": {
+      "id": "AGENT-002-RULES",
+      "title": "Rule Audit Sub-Agent",
+      "path": "rules/agent/002-rules-audit.md",
+      "partition": "agent",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["rule audit", "validate rules", "check rules", "structural integrity"],
+      "dependencies": ["AGENT-002", "ARCH-000", "ARCH-002"],
+      "crossReferences": ["APP-RULES-001"],
+      "description": "Validates rule files for structural integrity, consistency, and coverage."
+    },
+    "AGENT-002-CODE": {
+      "id": "AGENT-002-CODE",
+      "title": "Code Audit Sub-Agent",
+      "path": "rules/agent/002-code-audit.md",
       "partition": "agent",
       "priority": "HIGH",
       "version": "1.0.0",
       "triggers": ["code audit", "code compliance", "verify code", "anti-pattern"],
-      "dependencies": ["ARCH-000", "AGENT-001", "AGENT-002"],
-      "crossReferences": ["AGENT-002"],
-      "description": "Agentic protocol for validating code implements documented rules correctly."
+      "dependencies": ["AGENT-002", "ARCH-000", "ARCH-001"],
+      "crossReferences": ["UI-004", "UI-005", "HUB-001", "HUB-003"],
+      "description": "Validates that the codebase correctly implements documented rules."
     },
     "ARCH-010": {
       "id": "ARCH-010",
@@ -373,7 +385,7 @@
       "version": "2.0.0",
       "triggers": ["exit", "complete", "finish", "done", "validate rules", "update rules", "before completing"],
       "dependencies": ["ARCH-000", "ARCH-002"],
-      "crossReferences": ["ARCH-000", "AGENT-001"],
+      "crossReferences": ["ARCH-000", "AGENT-002"],
       "description": "Validate rule compliance and propose rule updates before completing any task."
     },
     "APP-RULES-001": {
@@ -384,8 +396,8 @@
       "priority": "HIGH",
       "version": "1.0.0",
       "triggers": ["rules explorer", "rule catalog", "rule viewer", "browse rules"],
-      "dependencies": ["HUB-001", "HUB-002", "HUB-003", "AGENT-001"],
-      "crossReferences": ["AGENT-001", "DATA-003"],
+      "dependencies": ["HUB-001", "HUB-002", "HUB-003", "AGENT-002"],
+      "crossReferences": ["AGENT-002", "DATA-003"],
       "description": "Admin-only app for browsing, reading, and auditing the rule system."
     },
     "DATA-003": {
@@ -396,8 +408,8 @@
       "priority": "HIGH",
       "version": "1.0.0",
       "triggers": ["rule audit", "audit storage", "audit table", "audit schema"],
-      "dependencies": ["DATA-001", "AGENT-001"],
-      "crossReferences": ["AGENT-001", "APP-RULES-001"],
+      "dependencies": ["DATA-001", "AGENT-002"],
+      "crossReferences": ["AGENT-002", "APP-RULES-001"],
       "description": "Schema and practices for storing rule audit reports."
     }
   },
