@@ -63,6 +63,15 @@ Saved audits are stored in the database with timestamps for historical tracking.
 - Plain text for priority/status (no colored badges)
 - Relative sizing with rem-based min/max constraints
 - Black/white/gray color palette
+- Application actions separate from navigation (UI-007)
+
+## ActionBar Component
+
+Use `ActionBar` from `@/components/action-bar` for consistent section headers with actions:
+- `variant="page"` - Large title (text-2xl) for page headers
+- `variant="section"` - Smaller title (text-lg) for nested sections
+- `icon` - Optional leading icon
+- `actions` - Buttons on right side (use size="sm")
 
 ## User Preferences
 
