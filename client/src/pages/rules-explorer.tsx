@@ -583,7 +583,8 @@ function AuditView({
   const { toast } = useToast();
   const [isCategoryNavCollapsed, setIsCategoryNavCollapsed] = useState(false);
   const [isAuditListCollapsed, setIsAuditListCollapsed] = useState(false);
-  const [activeCategory, setActiveCategory] = useState<"protocol" | "new" | "history">("protocol");
+  const [activeCategory, setActiveCategory] = useState<"protocol" | "history">("protocol");
+  const [showNewAuditForm, setShowNewAuditForm] = useState(false);
   const [newAuditContent, setNewAuditContent] = useState("");
   const [newAuditType, setNewAuditType] = useState<"rules" | "code">("rules");
 
@@ -603,6 +604,7 @@ function AuditView({
       toast({ title: "Audit saved", description: "Your audit report has been saved." });
       setNewAuditContent("");
       setNewAuditType("rules");
+      setShowNewAuditForm(false);
       setActiveCategory("history");
       queryClient.invalidateQueries({ queryKey: ["/api/audits"] });
     },
@@ -646,8 +648,8 @@ function AuditView({
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    className={`w-full justify-center h-8 ${activeCategory === "protocol" ? "bg-accent text-accent-foreground" : ""}`}
-                    onClick={() => { setActiveCategory("protocol"); setSelectedAuditId(null); }}
+                    className={`w-full justify-center h-8 ${activeCategory === "protocol" && !showNewAuditForm ? "bg-accent text-accent-foreground" : ""}`}
+                    onClick={() => { setActiveCategory("protocol"); setSelectedAuditId(null); setShowNewAuditForm(false); }}
                     data-testid="nav-audit-protocol"
                   >
                     <span className="text-sm">P</span>
@@ -659,21 +661,8 @@ function AuditView({
                 <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
-                    className={`w-full justify-center h-8 ${activeCategory === "new" ? "bg-accent text-accent-foreground" : ""}`}
-                    onClick={() => { setActiveCategory("new"); setSelectedAuditId(null); }}
-                    data-testid="nav-audit-new"
-                  >
-                    <span className="text-sm">N</span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="right">New Audit</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className={`w-full justify-center h-8 ${activeCategory === "history" ? "bg-accent text-accent-foreground" : ""}`}
-                    onClick={() => setActiveCategory("history")}
+                    className={`w-full justify-center h-8 ${activeCategory === "history" && !showNewAuditForm ? "bg-accent text-accent-foreground" : ""}`}
+                    onClick={() => { setActiveCategory("history"); setShowNewAuditForm(false); }}
                     data-testid="nav-audit-history"
                   >
                     <span className="text-sm">H</span>
@@ -686,24 +675,16 @@ function AuditView({
             <>
               <Button
                 variant="ghost"
-                className={`w-full justify-start h-8 ${activeCategory === "protocol" ? "bg-accent text-accent-foreground" : ""}`}
-                onClick={() => { setActiveCategory("protocol"); setSelectedAuditId(null); }}
+                className={`w-full justify-start h-8 ${activeCategory === "protocol" && !showNewAuditForm ? "bg-accent text-accent-foreground" : ""}`}
+                onClick={() => { setActiveCategory("protocol"); setSelectedAuditId(null); setShowNewAuditForm(false); }}
                 data-testid="nav-audit-protocol"
               >
                 <span className="text-sm">Protocol</span>
               </Button>
               <Button
                 variant="ghost"
-                className={`w-full justify-start h-8 ${activeCategory === "new" ? "bg-accent text-accent-foreground" : ""}`}
-                onClick={() => { setActiveCategory("new"); setSelectedAuditId(null); }}
-                data-testid="nav-audit-new"
-              >
-                <span className="text-sm">New Audit</span>
-              </Button>
-              <Button
-                variant="ghost"
-                className={`w-full justify-start h-8 ${activeCategory === "history" ? "bg-accent text-accent-foreground" : ""}`}
-                onClick={() => setActiveCategory("history")}
+                className={`w-full justify-start h-8 ${activeCategory === "history" && !showNewAuditForm ? "bg-accent text-accent-foreground" : ""}`}
+                onClick={() => { setActiveCategory("history"); setShowNewAuditForm(false); }}
                 data-testid="nav-audit-history"
               >
                 <span className="text-sm">History</span>
@@ -764,55 +745,27 @@ function AuditView({
       )}
 
       <PageContent>
-        {activeCategory === "protocol" && (
-          <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-protocol-view">
-            <div className="max-w-3xl">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <ScrollText className="h-5 w-5" />
-                  Auditor Base Protocol
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Instructions for performing agentic audits (AGENT-002)
-                </p>
-              </div>
-              
-              <Card className="p-4 bg-muted/30 mb-4">
-                <h3 className="text-sm font-medium mb-2">How to Run an Audit</h3>
-                <ol className="text-sm text-muted-foreground space-y-2">
-                  <li>1. Ask the agent: <code className="bg-muted px-1 rounded">"Run a rule audit"</code> or <code className="bg-muted px-1 rounded">"Run a code audit"</code></li>
-                  <li>2. The agent will analyze following the AGENT-002 protocol</li>
-                  <li>3. Copy the audit report the agent provides</li>
-                  <li>4. Go to "New Audit" and paste the report to save it</li>
-                </ol>
-              </Card>
-
-              {protocolLoading ? (
-                <Skeleton className="h-96 w-full" />
-              ) : protocol ? (
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {protocol.content}
-                  </ReactMarkdown>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Failed to load protocol</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {activeCategory === "new" && (
+        {showNewAuditForm ? (
           <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-new-view">
             <div className="max-w-3xl">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Plus className="h-5 w-5" />
-                  Save Audit Report
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Paste the audit report from the agent below
-                </p>
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div>
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Plus className="h-5 w-5" />
+                    Save Audit Report
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Paste the audit report from the agent below
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowNewAuditForm(false)}
+                  data-testid="button-cancel-new-audit"
+                >
+                  Cancel
+                </Button>
               </div>
 
               <div className="mb-4">
@@ -862,29 +815,83 @@ function AuditView({
               </div>
             </div>
           </div>
-        )}
+        ) : activeCategory === "protocol" ? (
+          <div className="flex-1 overflow-auto p-4 bg-background" data-testid="audit-protocol-view">
+            <div className="max-w-3xl">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <ScrollText className="h-5 w-5" />
+                    Auditor Base Protocol
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Instructions for performing agentic audits (AGENT-002)
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setShowNewAuditForm(true)}
+                  data-testid="button-new-audit"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Audit
+                </Button>
+              </div>
+              
+              <Card className="p-4 bg-muted/30 mb-4">
+                <h3 className="text-sm font-medium mb-2">How to Run an Audit</h3>
+                <ol className="text-sm text-muted-foreground space-y-2">
+                  <li>1. Ask the agent: <code className="bg-muted px-1 rounded">"Run a rule audit"</code> or <code className="bg-muted px-1 rounded">"Run a code audit"</code></li>
+                  <li>2. The agent will analyze following the AGENT-002 protocol</li>
+                  <li>3. Copy the audit report the agent provides</li>
+                  <li>4. Click "New Audit" and paste the report to save it</li>
+                </ol>
+              </Card>
 
-        {activeCategory === "history" && (
+              {protocolLoading ? (
+                <Skeleton className="h-96 w-full" />
+              ) : protocol ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {protocol.content}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Failed to load protocol</p>
+              )}
+            </div>
+          </div>
+        ) : activeCategory === "history" ? (
           <div className="flex-1 overflow-auto flex flex-col bg-background" data-testid="audit-history-view">
             {selectedAudit ? (
               <div className="p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <History className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <h2 className="text-lg font-semibold flex items-center gap-2">
-                      {selectedAudit.auditType === "code" ? "Code" : "Rules"} Audit Report
-                      <span className="text-xs font-normal text-muted-foreground">
-                        ({selectedAudit.auditType === "code" ? "AGENT-002-CODE" : "AGENT-002-RULES"})
-                      </span>
-                    </h2>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatTimestamp(selectedAudit.createdAt)}
-                      {selectedAudit.createdBy && (
-                        <span className="ml-2">by {selectedAudit.createdBy}</span>
-                      )}
-                    </p>
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <History className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <h2 className="text-lg font-semibold flex items-center gap-2">
+                        {selectedAudit.auditType === "code" ? "Code" : "Rules"} Audit Report
+                        <span className="text-xs font-normal text-muted-foreground">
+                          ({selectedAudit.auditType === "code" ? "AGENT-002-CODE" : "AGENT-002-RULES"})
+                        </span>
+                      </h2>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatTimestamp(selectedAudit.createdAt)}
+                        {selectedAudit.createdBy && (
+                          <span className="ml-2">by {selectedAudit.createdBy}</span>
+                        )}
+                      </p>
+                    </div>
                   </div>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowNewAuditForm(true)}
+                    data-testid="button-new-audit"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Audit
+                  </Button>
                 </div>
                 <Card className="p-4">
                   <pre className="text-sm whitespace-pre-wrap font-mono overflow-auto">
@@ -893,15 +900,36 @@ function AuditView({
                 </Card>
               </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <History className="h-8 w-8 mx-auto opacity-50 mb-2" />
-                  <p className="text-sm">Select an audit to view details</p>
+              <div className="flex-1 flex flex-col p-4">
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div>
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                      <History className="h-5 w-5" />
+                      Audit History
+                    </h2>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Select an audit from the list to view details
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowNewAuditForm(true)}
+                    data-testid="button-new-audit"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Audit
+                  </Button>
+                </div>
+                <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <History className="h-8 w-8 mx-auto opacity-50 mb-2" />
+                    <p className="text-sm">Select an audit to view details</p>
+                  </div>
                 </div>
               </div>
             )}
           </div>
-        )}
+        ) : null}
       </PageContent>
     </>
   );

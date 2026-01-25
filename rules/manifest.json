@@ -292,6 +292,18 @@
       "crossReferences": ["UI-004", "UI-005", "HUB-003"],
       "description": "Mobile-responsive layout with user-controlled collapsible navigation columns."
     },
+    "UI-007": {
+      "id": "UI-007",
+      "title": "Application Actions",
+      "path": "rules/ui/007-application-actions.md",
+      "partition": "ui",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["action", "action bar", "new button", "actions", "toolbar"],
+      "dependencies": ["UI-001", "UI-005"],
+      "crossReferences": ["HUB-003"],
+      "description": "Consistent pattern for application-level actions separate from navigation."
+    },
     "INT-001": {
       "id": "INT-001",
       "title": "n8n Integration Rules",
