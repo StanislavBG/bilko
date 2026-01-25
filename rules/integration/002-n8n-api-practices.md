@@ -64,6 +64,13 @@ AI training data becomes stale. n8n v2.0 (December 2024) introduced breaking cha
 - **Fix**: Updated `server/workflows/router.ts` to extract error details from both formats: `data.error?.code || data.code` and `data.error?.message || data.message`, plus capture `data.hint`.
 - **Impact**: Traces now correctly show actual n8n error messages like "The workflow must be active for a production URL to run successfully."
 
+### ISSUE-006: Sync Overwrites User Changes
+- **Status**: RESOLVED (January 2026)
+- **Description**: The startup sync was overwriting existing n8n workflows with local registry.json definitions, deleting user changes (sticky notes, manual edits) and resetting webhook registration.
+- **Root Cause**: `syncWorkflow()` called `updateWorkflow()` on existing workflows, pushing local node definitions.
+- **Fix**: Changed sync to skip updates for existing workflows - only create new workflows and cache webhook URLs.
+- **Impact**: Existing n8n workflows are now preserved. To push local changes to n8n, delete the workflow in n8n first, then restart the server to re-create it.
+
 ## Documentation References
 
 ### Primary Sources (ALWAYS Consult Live)

@@ -89,23 +89,13 @@ async function syncWorkflow(
   const existing = await client.findWorkflowByName(workflow.name);
 
   if (existing) {
-    const updated = await client.updateWorkflow(existing.id, {
-      name: workflow.name,
-      nodes,
-      connections,
-      settings: { executionOrder: "v1" }
-    });
-
-    if (!updated.active) {
-      try {
-        await client.activateWorkflow(updated.id);
-        console.log(`[n8n] Activated workflow: ${workflow.name}`);
-      } catch (activateError) {
-        console.warn(`[n8n] Failed to activate ${workflow.name}:`, activateError);
-      }
-    }
-
-    const webhookUrl = extractWebhookUrl(updated, nodes);
+    // IMPORTANT: Do NOT overwrite existing workflows!
+    // This preserves user changes (sticky notes, etc.) and webhook registration.
+    // See INT-002 ISSUE-001: API updates reset webhook registration.
+    // See INT-002 ISSUE-004: n8n API doesn't return node definitions.
+    
+    // Cache webhook URL from LOCAL definition (n8n API omits nodes - ISSUE-004)
+    const webhookUrl = extractWebhookUrl({ nodes } as N8nWorkflow, nodes);
     
     if (webhookUrl) {
       setWebhookUrl(workflow.id, webhookUrl);
@@ -114,10 +104,10 @@ async function syncWorkflow(
     return {
       id: workflow.id,
       name: workflow.name,
-      action: "updated",
-      n8nId: updated.id,
+      action: "skipped",
+      n8nId: existing.id,
       webhookUrl,
-      activationNote: "Note: Webhook may require manual save in n8n UI due to known bug (INT-002 ISSUE-001)"
+      activationNote: "Existing workflow preserved (not overwritten)"
     };
   }
 
