@@ -15,17 +15,18 @@ Preferences: Move slowly, rules-first, no over-building
 ## Recent Changes (January 2026)
 
 ### European Football Daily Workflow - RESTRUCTURED FOR RELIABLE IMAGE GENERATION
-- **Status**: Fully operational with granular, compliance-first architecture (22 nodes)
+- **Status**: Fully operational with granular, compliance-first architecture (24 nodes)
 - **Architecture Philosophy**: Check compliance BEFORE topic selection, not after content creation
 - **New Granular Flow** (January 25, 2026):
   1. **News Scout**: RSS → Extract Articles (fetches 5 headlines)
   2. **Topic Analyst**: Gemini extracts entities per article (people, teams, events, imageability)
   3. **Compliance Checker**: Gemini validates each topic for image safety (flags real people)
   4. **Topic Selector**: Aggregates all topics, picks BEST COMPLIANT topic
-  5. **Post Writer**: Creates post for the selected, pre-validated topic
-  6. **Image Prompt Writer**: Generates enhanced prompt from safe concept
-  7. **Call Imagen API**: Generates image (Gemini endpoint: generativelanguage.googleapis.com)
-  8. **Build Final Output**: Combines post + image + transparency disclosure
+  5. **Hashtag Researcher**: Gemini finds 3 relevant, high-reach hashtags for the specific topic
+  6. **Post Writer**: Creates post with the researched hashtags
+  7. **Image Prompt Writer**: Generates enhanced prompt from safe concept
+  8. **Call Imagen API**: Generates image (Gemini endpoint: generativelanguage.googleapis.com)
+  9. **Build Final Output**: Combines post + image + transparency disclosure
 - **Compliance Features**:
   1. Per-article entity extraction identifies problematic subjects EARLY
   2. Compliance validation happens BEFORE topic commitment
@@ -38,8 +39,8 @@ Preferences: Move slowly, rules-first, no over-building
   3. **CRITICAL**: Use Gemini endpoint (generativelanguage.googleapis.com), NOT Vertex AI endpoint
   4. Express body-parser limit: 10mb for base64 image payloads
   5. Strip Gemini markdown fences before JSON parsing
-  6. Data path: `$json.geminiApiKey` flows through all Code nodes
-- **Workflow Nodes**: 22 total
+  6. Data path: `$json.geminiApiKey` flows through all Code nodes; use `$('NodeName').first().json` to reference previous nodes after HTTP calls
+- **Workflow Nodes**: 24 total
 
 ### Execution Tracking System (January 2026) - VERIFIED
 - **workflow_executions table**: Tracks execution runs with status, timestamps, and finalOutput (JSONB)
