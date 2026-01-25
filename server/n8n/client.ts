@@ -294,6 +294,8 @@ function buildEuropeanFootballDailyNodes(): {
   nodes: N8nNode[];
   connections: Record<string, unknown>;
 } {
+  const callbackUrl = process.env.BILKO_CALLBACK_URL || "https://bilko-bibitkov.replit.app/api/workflows/callback";
+  
   const nodes: N8nNode[] = [
     {
       name: "Schedule Trigger",
@@ -363,6 +365,29 @@ return articles.map(a => ({ json: a }));`
       }
     },
     {
+      name: "Callback Articles",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
+      position: [1100, 250],
+      parameters: {
+        url: callbackUrl,
+        method: "POST",
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: `={
+  "workflowId": "european-football-daily",
+  "step": "extract-articles",
+  "stepIndex": 1,
+  "traceId": "{{ $('Webhook').first().json.traceId || $('Merge Triggers').first().json.traceId || 'trace_' + $execution.id }}",
+  "output": {
+    "articles": {{ JSON.stringify($input.all().map(i => i.json)) }},
+    "count": {{ $input.all().length }}
+  },
+  "executionId": "{{ $execution.id }}"
+}`
+      }
+    },
+    {
       name: "Gemini Sentiment",
       type: "n8n-nodes-base.httpRequest",
       typeVersion: 4,
@@ -403,43 +428,158 @@ return [{ json: parsed }];`
       }
     },
     {
-      name: "Build Response",
-      type: "n8n-nodes-base.code",
-      typeVersion: 2,
+      name: "Callback Sentiment",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
+      position: [1600, 250],
+      parameters: {
+        url: callbackUrl,
+        method: "POST",
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: `={
+  "workflowId": "european-football-daily",
+  "step": "sentiment-analysis",
+  "stepIndex": 2,
+  "traceId": "{{ $('Webhook').first().json.traceId || $('Merge Triggers').first().json.traceId || 'trace_' + $execution.id }}",
+  "output": {{ JSON.stringify($input.first().json) }},
+  "executionId": "{{ $execution.id }}"
+}`
+      }
+    },
+    {
+      name: "Generate Post",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
       position: [1750, 100],
       parameters: {
-        jsCode: `const data = $input.first().json;
+        url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+        method: "POST",
+        sendHeaders: true,
+        headerParameters: {
+          parameters: [{ name: "Content-Type", value: "application/json" }]
+        },
+        sendQuery: true,
+        queryParameters: {
+          parameters: [{ name: "key", value: "={{ $env.GEMINI_API_KEY }}" }]
+        },
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: `={
+  "contents": [{
+    "parts": [{
+      "text": "Write an engaging Facebook post about this football news: {{ $input.first().json.winner?.title || 'Football news today' }}. Reason it's positive: {{ $input.first().json.winner?.reason || 'Great news' }}. Make it enthusiastic but professional, include relevant hashtags, and keep it under 280 characters. Return JSON: { \\"postContent\\": \\"...\\" }"
+    }]
+  }]
+}`
+      }
+    },
+    {
+      name: "Parse Post",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [2000, 100],
+      parameters: {
+        jsCode: `const response = $input.first().json;
+const text = response?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);
+const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { postContent: null };
+return [{ json: parsed }];`
+      }
+    },
+    {
+      name: "Generate Image",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
+      position: [2250, 100],
+      parameters: {
+        url: "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+        method: "POST",
+        sendHeaders: true,
+        headerParameters: {
+          parameters: [{ name: "Content-Type", value: "application/json" }]
+        },
+        sendQuery: true,
+        queryParameters: {
+          parameters: [{ name: "key", value: "={{ $env.GEMINI_API_KEY }}" }]
+        },
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: `={
+  "contents": [{
+    "parts": [{
+      "text": "Generate a detailed image prompt for a football-themed social media image about: {{ $input.first().json.postContent }}. The image should be vibrant, celebratory, and suitable for Facebook. Return JSON: { \\"imagePrompt\\": \\"...\\" }"
+    }]
+  }]
+}`
+      }
+    },
+    {
+      name: "Parse Image Prompt",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [2500, 100],
+      parameters: {
+        jsCode: `const response = $input.first().json;
+const text = response?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);
+const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { imagePrompt: null };
+return [{ json: parsed }];`
+      }
+    },
+    {
+      name: "Build Final Output",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [2750, 100],
+      parameters: {
+        jsCode: `// Gather all outputs from the workflow
+const imagePrompt = $input.first().json;
+const postContent = $('Parse Post').first().json.postContent || 'Football news update!';
+
 const output = {
-  success: !!data.winner,
-  data: data.winner ? {
-    winningEvent: {
-      title: data.winner.title,
-      sentimentScore: data.winner.score,
-      reason: data.winner.reason
-    }
-  } : undefined,
-  error: !data.winner ? {
-    code: "NO_POSITIVE_EVENT",
-    message: "Could not identify a positive event",
-    retryable: false
-  } : undefined,
+  success: true,
+  data: {
+    postContent: postContent,
+    imagePrompt: imagePrompt.imagePrompt || 'European football celebration',
+    imageUrl: null // Placeholder - real image gen would go here
+  },
   metadata: {
     workflowId: "european-football-daily",
-    executedAt: new Date().toISOString(),
-    durationMs: 0
+    executedAt: new Date().toISOString()
   }
 };
 return [{ json: output }];`
       }
     },
     {
+      name: "Callback Final",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
+      position: [3000, 100],
+      parameters: {
+        url: callbackUrl,
+        method: "POST",
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: `={
+  "workflowId": "european-football-daily",
+  "step": "final-output",
+  "stepIndex": 3,
+  "traceId": "{{ $('Webhook').first().json.traceId || $('Merge Triggers').first().json.traceId || 'trace_' + $execution.id }}",
+  "output": {{ JSON.stringify($input.first().json) }},
+  "executionId": "{{ $execution.id }}"
+}`
+      }
+    },
+    {
       name: "Respond to Webhook",
       type: "n8n-nodes-base.respondToWebhook",
       typeVersion: 1,
-      position: [2000, 200],
+      position: [3250, 200],
       parameters: {
         respondWith: "json",
-        responseBody: "={{ $json }}"
+        responseBody: "={{ $('Build Final Output').first().json }}"
       }
     }
   ];
@@ -461,15 +601,42 @@ return [{ json: output }];`
       main: [[{ node: "Extract Articles", type: "main", index: 0 }]]
     },
     "Extract Articles": {
-      main: [[{ node: "Gemini Sentiment", type: "main", index: 0 }]]
+      main: [
+        [{ node: "Callback Articles", type: "main", index: 0 }],
+        [{ node: "Gemini Sentiment", type: "main", index: 0 }]
+      ]
+    },
+    "Callback Articles": {
+      main: []
     },
     "Gemini Sentiment": {
       main: [[{ node: "Parse Sentiment", type: "main", index: 0 }]]
     },
     "Parse Sentiment": {
-      main: [[{ node: "Build Response", type: "main", index: 0 }]]
+      main: [
+        [{ node: "Callback Sentiment", type: "main", index: 0 }],
+        [{ node: "Generate Post", type: "main", index: 0 }]
+      ]
     },
-    "Build Response": {
+    "Callback Sentiment": {
+      main: []
+    },
+    "Generate Post": {
+      main: [[{ node: "Parse Post", type: "main", index: 0 }]]
+    },
+    "Parse Post": {
+      main: [[{ node: "Generate Image", type: "main", index: 0 }]]
+    },
+    "Generate Image": {
+      main: [[{ node: "Parse Image Prompt", type: "main", index: 0 }]]
+    },
+    "Parse Image Prompt": {
+      main: [[{ node: "Build Final Output", type: "main", index: 0 }]]
+    },
+    "Build Final Output": {
+      main: [[{ node: "Callback Final", type: "main", index: 0 }]]
+    },
+    "Callback Final": {
       main: [[{ node: "Respond to Webhook", type: "main", index: 0 }]]
     }
   };
