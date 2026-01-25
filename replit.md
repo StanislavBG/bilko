@@ -14,16 +14,17 @@ Preferences: Move slowly, rules-first, no over-building
 
 ## Recent Changes (January 2026)
 
-### European Football Daily Workflow - WORKING
-- **Status**: Fully operational - end-to-end workflow completing successfully
-- **Root Cause Fixed**: Gemini wraps JSON in markdown code fences (```json ... ```), causing parse failures
-- **Solution**: Strip markdown fences before parsing, parse JSON directly without sanitization
+### European Football Daily Workflow - WORKING WITH IMAGE GENERATION
+- **Status**: Fully operational with AI-generated images via Imagen API
+- **Image Generation Flow**: Parse Image Prompt → Call Imagen API → Parse Response → Build Final Output
 - **Key Fixes Applied**:
-  1. Custom User-Agent header on all Gemini HTTP Request nodes (Google blocks n8n default)
+  1. Custom User-Agent header on all Google API calls (Google blocks n8n default)
   2. Fixed webhook body access: `$('Webhook').first().json.body.geminiApiKey`
-  3. Strip markdown fences: `/^```[a-zA-Z]*\n?/` and `/\n?```\s*$/`
-  4. Parse JSON directly - JSON.parse() handles newlines fine, no sanitization needed
-- **Rules Updated**: INT-002 v1.8.0 - Added D14 (Gemini Markdown Fences)
+  3. Strip Gemini markdown fences: `/^```[a-zA-Z]*\n?/` and `/\n?```\s*$/`
+  4. Parse JSON directly - JSON.parse() handles newlines correctly
+  5. Imagen model: `imagen-4.0-fast-generate-001` (6s response, 1.7MB images)
+  6. Express body-parser limit increased to 10mb for base64 image payloads
+- **Workflow Nodes**: 23 total (production, debug nodes removed)
 
 ### Execution Tracking System (January 2026) - VERIFIED
 - **workflow_executions table**: Tracks execution runs with status, timestamps, and finalOutput (JSONB)
@@ -41,3 +42,4 @@ Preferences: Move slowly, rules-first, no over-building
 4. **Execution Grouping**: Executions are grouped by triggerTraceId - the traceId from the initial webhook call
 5. **Gemini JSON Parsing**: Gemini wraps JSON responses in markdown fences - strip with regex before parsing
 6. **No JSON Sanitization Needed**: Don't sanitize structural newlines - JSON.parse() handles them correctly
+7. **Imagen Safety Filters**: Imagen silently returns empty predictions (not errors) when prompts mention specific celebrities or real people - workflow should handle gracefully
