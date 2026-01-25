@@ -5,6 +5,13 @@ Rules: `/rules/` — read ARCH-006 before any task
 Stack: React + Tailwind + Shadcn | Express | PostgreSQL + Drizzle | Replit Auth
 Preferences: Move slowly, rules-first, no over-building
 
+## Agentic Workflows
+
+**For n8n development**: Follow AGT-001 (`rules/agent/001-n8n-development-workflow.md`)
+- 6-phase cycle: FETCH → ANALYZE → MODIFY → PUSH → BACKUP → VERIFY
+- Single change per cycle, checkpoint gates between phases
+- Backups saved to `server/workflows/backups/`
+
 ## Recent Changes (January 2026)
 
 ### European Football Daily Workflow - WORKING
