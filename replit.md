@@ -29,10 +29,17 @@ Bilko Bibitkov is a rule-driven web application serving as the "face" for n8n-ho
 
 ## Current State
 
-- Phase 2: Application Hub with Memory Explorer
+- Phase 2: Application Hub with Memory Explorer and Agentic Workflows
 - Auth: Replit Auth configured with admin role
 - Database: PostgreSQL with users, communication_traces, and rule_audits tables
 - Admin: Bilko (user ID 45353844)
+
+## Applications
+
+- **Home**: Dashboard overview
+- **Agentic Workflows**: View and execute workflows (n8n remote + local agent reasoning)
+- **Memory Explorer**: View communication traces
+- **Rules Explorer**: Browse and audit the rule framework
 
 ## Rule Audits
 
