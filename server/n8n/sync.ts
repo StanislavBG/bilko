@@ -1,0 +1,193 @@
+import { createN8nClient, buildWorkflowNodes, type N8nWorkflow } from "./client";
+import registry from "../workflows/registry.json";
+import type { WorkflowDefinition, WorkflowRegistry } from "../workflows/types";
+
+const workflowRegistry = registry as WorkflowRegistry;
+
+export interface SyncResult {
+  success: boolean;
+  synced: Array<{
+    id: string;
+    name: string;
+    action: "created" | "updated" | "skipped";
+    n8nId?: string;
+    webhookUrl?: string;
+    error?: string;
+  }>;
+  errors: string[];
+}
+
+export async function syncWorkflowsToN8n(): Promise<SyncResult> {
+  const client = createN8nClient();
+  
+  if (!client) {
+    return {
+      success: false,
+      synced: [],
+      errors: ["n8n client not configured. Set N8N_API_BASE_URL and N8N_API_KEY."]
+    };
+  }
+
+  const result: SyncResult = {
+    success: true,
+    synced: [],
+    errors: []
+  };
+
+  const n8nWorkflows = workflowRegistry.workflows.filter(w => w.mode === "n8n");
+
+  for (const workflow of n8nWorkflows) {
+    try {
+      const syncStatus = await syncWorkflow(client, workflow);
+      result.synced.push(syncStatus);
+      
+      if (syncStatus.error) {
+        result.errors.push(`${workflow.id}: ${syncStatus.error}`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      result.synced.push({
+        id: workflow.id,
+        name: workflow.name,
+        action: "skipped",
+        error: errorMessage
+      });
+      result.errors.push(`${workflow.id}: ${errorMessage}`);
+    }
+  }
+
+  result.success = result.errors.length === 0;
+  return result;
+}
+
+async function syncWorkflow(
+  client: ReturnType<typeof createN8nClient>,
+  workflow: WorkflowDefinition
+): Promise<SyncResult["synced"][0]> {
+  if (!client) {
+    return {
+      id: workflow.id,
+      name: workflow.name,
+      action: "skipped",
+      error: "Client not initialized"
+    };
+  }
+
+  const { nodes, connections } = buildWorkflowNodes(workflow);
+
+  if (nodes.length === 0) {
+    return {
+      id: workflow.id,
+      name: workflow.name,
+      action: "skipped",
+      error: "No node definition available for this workflow"
+    };
+  }
+
+  const existing = await client.findWorkflowByName(workflow.name);
+
+  if (existing) {
+    const updated = await client.updateWorkflow(existing.id, {
+      name: workflow.name,
+      nodes,
+      connections
+    });
+
+    const webhookUrl = extractWebhookUrl(updated);
+
+    return {
+      id: workflow.id,
+      name: workflow.name,
+      action: "updated",
+      n8nId: updated.id,
+      webhookUrl
+    };
+  }
+
+  const created = await client.createWorkflow({
+    name: workflow.name,
+    nodes,
+    connections,
+    settings: {
+      executionOrder: "v1"
+    }
+  });
+
+  const webhookUrl = extractWebhookUrl(created);
+
+  return {
+    id: workflow.id,
+    name: workflow.name,
+    action: "created",
+    n8nId: created.id,
+    webhookUrl
+  };
+}
+
+function extractWebhookUrl(workflow: N8nWorkflow): string | undefined {
+  const webhookNode = workflow.nodes?.find(n => 
+    n.type === "n8n-nodes-base.webhook"
+  );
+  
+  if (!webhookNode?.parameters) {
+    return undefined;
+  }
+
+  const path = webhookNode.parameters.path as string | undefined;
+  if (!path) {
+    return undefined;
+  }
+
+  const baseUrl = process.env.N8N_API_BASE_URL?.replace("/api/v1", "") || "";
+  return `${baseUrl}/webhook/${path}`;
+}
+
+export async function getN8nWorkflowStatus(): Promise<{
+  configured: boolean;
+  workflows: Array<{
+    id: string;
+    name: string;
+    registeredInBilko: boolean;
+    existsInN8n: boolean;
+    active: boolean;
+    n8nId?: string;
+  }>;
+}> {
+  const client = createN8nClient();
+  
+  if (!client) {
+    return { configured: false, workflows: [] };
+  }
+
+  const n8nWorkflows = await client.listWorkflows();
+  const bilkoWorkflows = workflowRegistry.workflows.filter(w => w.mode === "n8n");
+
+  const status = bilkoWorkflows.map(bw => {
+    const n8nMatch = n8nWorkflows.find(nw => nw.name === bw.name);
+    return {
+      id: bw.id,
+      name: bw.name,
+      registeredInBilko: true,
+      existsInN8n: !!n8nMatch,
+      active: n8nMatch?.active || false,
+      n8nId: n8nMatch?.id
+    };
+  });
+
+  const unmatchedN8n = n8nWorkflows.filter(
+    nw => !bilkoWorkflows.some(bw => bw.name === nw.name)
+  );
+
+  for (const nw of unmatchedN8n) {
+    status.push({
+      id: nw.id,
+      name: nw.name,
+      registeredInBilko: false,
+      existsInN8n: true,
+      active: nw.active,
+      n8nId: nw.id
+    });
+  }
+
+  return { configured: true, workflows: status };
+}

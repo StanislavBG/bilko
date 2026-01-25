@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { routeWorkflow, listWorkflows, getWorkflow } from "./router";
 import { initializeHandlers } from "./handlers";
+import { syncWorkflowsToN8n, getN8nWorkflowStatus } from "../n8n/sync";
 
 export function registerWorkflowRoutes(app: Express): void {
   initializeHandlers();
@@ -8,6 +9,44 @@ export function registerWorkflowRoutes(app: Express): void {
   app.get("/api/workflows", (_req: Request, res: Response) => {
     const workflows = listWorkflows();
     res.json({ workflows });
+  });
+
+  app.get("/api/workflows/n8n/status", async (_req: Request, res: Response) => {
+    try {
+      const status = await getN8nWorkflowStatus();
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.post("/api/workflows/n8n/sync", async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    if (!user) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const adminId = process.env.ADMIN_USER_ID;
+    if (user.id !== adminId) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    try {
+      const result = await syncWorkflowsToN8n();
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
   });
 
   app.get("/api/workflows/:id", (req: Request, res: Response) => {
