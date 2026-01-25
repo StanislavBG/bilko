@@ -218,16 +218,16 @@ export function buildWorkflowNodes(
   definition: WorkflowDefinition
 ): { nodes: N8nNode[]; connections: Record<string, unknown> } {
   if (definition.id === "echo-test") {
-    return buildEchoTestNodes();
+    return buildEchoTestNodes(definition.webhookPath || "bilko-echo-test");
   }
   if (definition.id === "european-football-daily") {
-    return buildEuropeanFootballDailyNodes();
+    return buildEuropeanFootballDailyNodes(definition.webhookPath || "european-football-daily");
   }
   
   return { nodes: [], connections: {} };
 }
 
-function buildEchoTestNodes(): {
+function buildEchoTestNodes(webhookPath: string): {
   nodes: N8nNode[];
   connections: Record<string, unknown>;
 } {
@@ -238,7 +238,7 @@ function buildEchoTestNodes(): {
       typeVersion: 1,
       position: [0, 0],
       parameters: {
-        path: "bilko-echo-test",
+        path: webhookPath,
         httpMethod: "POST",
         responseMode: "responseNode"
       }
@@ -290,7 +290,7 @@ return [{ json: output }];`
   return { nodes, connections };
 }
 
-function buildEuropeanFootballDailyNodes(): {
+function buildEuropeanFootballDailyNodes(webhookPath: string): {
   nodes: N8nNode[];
   connections: Record<string, unknown>;
 } {
@@ -314,7 +314,7 @@ function buildEuropeanFootballDailyNodes(): {
       typeVersion: 1,
       position: [0, 200],
       parameters: {
-        path: "european-football-daily",
+        path: webhookPath,
         httpMethod: "POST",
         responseMode: "responseNode"
       }

@@ -346,11 +346,11 @@
       "path": "rules/integration/002-n8n-api-practices.md",
       "partition": "integration",
       "priority": "HIGH",
-      "version": "1.3.0",
-      "triggers": ["n8n api", "api key", "n8n cloud", "recency", "known issues", "webhook bug", "headless"],
+      "version": "1.4.0",
+      "triggers": ["n8n api", "api key", "n8n cloud", "recency", "known issues", "webhook bug", "headless", "webhook path", "single source of truth"],
       "dependencies": ["INT-001", "ARCH-003"],
       "crossReferences": ["ARCH-003"],
-      "description": "API practices, recency protocol, and known issues registry."
+      "description": "API practices, recency protocol, known issues registry, and D9 single source of truth for workflow definitions."
     },
     "ARCH-006": {
       "id": "ARCH-006",
