@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { initializeRulesService } from "./rules";
 import { validateOnStartup as runAuditOnStartup } from "./auditor";
+import { syncWorkflowsOnStartup } from "./n8n/startup";
 
 const app = express();
 const httpServer = createServer(app);
@@ -77,6 +78,8 @@ app.use((req, res, next) => {
   } else {
     log("Audit checks passed", "auditor");
   }
+
+  await syncWorkflowsOnStartup();
 
   await registerRoutes(httpServer, app);
 

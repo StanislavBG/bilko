@@ -184,7 +184,7 @@ export class N8nClient {
     id: string,
     workflow: Partial<N8nCreateWorkflowRequest>
   ): Promise<N8nWorkflow> {
-    return this.request<N8nWorkflow>("PATCH", `/workflows/${id}`, workflow);
+    return this.request<N8nWorkflow>("PUT", `/workflows/${id}`, workflow);
   }
 
   async deleteWorkflow(id: string): Promise<void> {
@@ -217,11 +217,77 @@ export function createN8nClient(): N8nClient | null {
 export function buildWorkflowNodes(
   definition: WorkflowDefinition
 ): { nodes: N8nNode[]; connections: Record<string, unknown> } {
+  if (definition.id === "echo-test") {
+    return buildEchoTestNodes();
+  }
   if (definition.id === "european-football-daily") {
     return buildEuropeanFootballDailyNodes();
   }
   
   return { nodes: [], connections: {} };
+}
+
+function buildEchoTestNodes(): {
+  nodes: N8nNode[];
+  connections: Record<string, unknown>;
+} {
+  const nodes: N8nNode[] = [
+    {
+      name: "Webhook",
+      type: "n8n-nodes-base.webhook",
+      typeVersion: 1,
+      position: [0, 0],
+      parameters: {
+        path: "echo-test",
+        httpMethod: "POST",
+        responseMode: "responseNode"
+      }
+    },
+    {
+      name: "Build Response",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [250, 0],
+      parameters: {
+        jsCode: `const input = $input.first().json;
+const output = {
+  success: true,
+  data: {
+    echo: input,
+    receivedAt: new Date().toISOString(),
+    message: "Hello from n8n! Your message was received."
+  },
+  metadata: {
+    workflowId: "echo-test",
+    executedAt: new Date().toISOString(),
+    durationMs: 0
+  }
+};
+return [{ json: output }];`
+      }
+    },
+    {
+      name: "Respond to Webhook",
+      type: "n8n-nodes-base.respondToWebhook",
+      typeVersion: 1,
+      position: [500, 0],
+      parameters: {
+        respondWith: "json",
+        responseBody: "={{ $json }}"
+      }
+    }
+  ];
+
+  const connections: Record<string, unknown> = {
+    "Webhook": {
+      main: [[{ node: "Build Response", type: "main", index: 0 }]]
+    },
+    "Build Response": {
+      main: [[{ node: "Respond to Webhook", type: "main", index: 0 }]]
+    }
+  };
+
+  return { nodes, connections };
 }
 
 function buildEuropeanFootballDailyNodes(): {
