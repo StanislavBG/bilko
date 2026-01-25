@@ -2,7 +2,7 @@
 
 Rule ID: INT-002
 Priority: HIGH
-Version: 1.4.0
+Version: 1.5.0
 
 ## Context
 These rules apply when integrating with n8n via API, whether using n8n cloud or self-hosted. The Replit coding agent should follow these practices for consistent, reliable integration.
@@ -242,6 +242,45 @@ All n8n workflow configuration MUST be defined in a single authoritative locatio
 - [ ] Server logs show correct cached URL on startup
 
 **Rationale**: ISSUE-007 occurred because webhook paths existed in multiple places. A single source eliminates drift between Bilko's expectation and n8n's configuration.
+
+### D10: Header-Based API Key Authentication (SECURITY)
+When n8n workflows call external APIs that require authentication, API keys MUST be passed in HTTP headers, NOT in URL query parameters.
+
+**Prohibited Pattern** (exposes secrets in logs/URLs):
+```
+URL: https://api.example.com/endpoint?api_key=SECRET_VALUE
+```
+
+**Required Pattern** (secrets in headers, not logged):
+```
+URL: https://api.example.com/endpoint
+Headers:
+  Content-Type: application/json
+  x-api-key: SECRET_VALUE (or Authorization: Bearer SECRET_VALUE)
+```
+
+**Rationale**:
+- URL query parameters appear in web server logs, proxy logs, and browser history
+- Headers are not logged by default in most systems
+- Industry security best practice (OWASP recommendation)
+
+**Service-Specific Headers**:
+| Service | Header Name |
+|---------|-------------|
+| Google Gemini | `x-goog-api-key` |
+| OpenAI | `Authorization: Bearer {key}` |
+| Anthropic | `x-api-key` |
+| Generic | `Authorization: Bearer {key}` or `X-API-Key` |
+
+**Implementation in n8n HTTP Request Node**:
+1. Set `sendQuery: false` (disable query parameters for auth)
+2. Add API key to `headerParameters` array
+3. Never include secrets in URL or query parameter fields
+
+**Verification**: Before deploying any workflow with external API calls, verify:
+- [ ] No secrets appear in URL fields
+- [ ] API key is in headers, not query parameters
+- [ ] n8n execution logs don't show the secret in the URL
 
 ## n8n Workflow Design Guidelines
 
