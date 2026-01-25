@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Play, RefreshCw, Workflow, Image, FileText, History, Shield, Upload } from "lucide-react";
+import { Play, RefreshCw, Workflow, Image, FileText, History, Shield } from "lucide-react";
 import { ActionBar } from "@/components/action-bar";
 import { ActionPanel } from "@/components/action-panel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -265,26 +265,6 @@ export default function AgenticWorkflows() {
 
   const workflows = data?.workflows || [];
 
-  const pushProdMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/workflows/n8n/push-prod", {});
-      return response.json();
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Production workflow pushed",
-        description: `Successfully updated n8n workflow to: ${data.newName}`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Push failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const actions = selectedWorkflow?.mode === "n8n"
     ? [
         {
@@ -298,17 +278,6 @@ export default function AgenticWorkflows() {
           disabled: executeMutation.isPending,
           variant: "outline" as const,
         },
-        ...(selectedWorkflow.id === "european-football-daily" ? [{
-          id: "push-prod",
-          label: pushProdMutation.isPending ? "Pushing..." : "Push to n8n",
-          icon: <Upload className={`h-4 w-4 ${pushProdMutation.isPending ? "animate-pulse" : ""}`} />,
-          method: "POST" as const,
-          endpoint: "/api/workflows/n8n/push-prod",
-          description: "Update n8n with [PROD] config",
-          onClick: () => pushProdMutation.mutate(),
-          disabled: pushProdMutation.isPending,
-          variant: "default" as const,
-        }] : []),
       ]
     : [];
 
