@@ -2,7 +2,7 @@
 
 Rule ID: INT-002
 Priority: HIGH
-Version: 1.2.0
+Version: 1.3.0
 
 ## Context
 These rules apply when integrating with n8n via API, whether using n8n cloud or self-hosted. The Replit coding agent should follow these practices for consistent, reliable integration.
@@ -38,6 +38,20 @@ AI training data becomes stale. n8n v2.0 (December 2024) introduced breaking cha
 - **Description**: Error "Unused Respond to Webhook node found in workflow"
 - **Root Cause**: Webhook node `responseMode` must be set to `"responseNode"` (not `"lastNode"`) when using a Respond to Webhook node.
 - **Fix**: Set `parameters.responseMode: "responseNode"` in Webhook node configuration.
+
+### ISSUE-003: PUT Workflow Requires Settings Property (CRITICAL)
+- **Status**: DOCUMENTED (January 2026)
+- **Description**: `PUT /workflows/{id}` returns 400 "request/body must have required property 'settings'" even when only updating nodes/connections.
+- **Root Cause**: n8n API validation requires the `settings` property in the request body, even for updates that don't modify settings.
+- **Fix**: Always include `settings: { executionOrder: "v1" }` (or copy existing settings) in update payloads.
+- **Impact on headless**: This is undocumented behavior; sync code must include settings.
+
+### ISSUE-004: API Response Omits Node Definitions
+- **Status**: DOCUMENTED (January 2026)
+- **Description**: `GET /workflows` and `GET /workflows/{id}` responses include workflow metadata but NOT the `nodes` array. This makes it impossible to extract webhook URLs from API responses.
+- **Root Cause**: n8n API design decision - node definitions are only available when creating/updating workflows.
+- **Workaround**: Derive webhook URLs from LOCAL workflow definitions (registry.json), not from n8n API responses. Cache these URLs during sync.
+- **Impact on headless**: Webhook URL auto-caching must use source definitions, not API responses.
 
 ## Documentation References
 
@@ -75,14 +89,23 @@ n8n webhooks use unique URLs as authentication:
 
 ## Directives
 
-### D1: Webhook URL Management
-Store n8n webhook URLs in environment variables:
+### D1: Webhook URL Management (Auto-Cached)
+Webhook URLs are automatically cached on server startup during workflow sync:
+
+1. **Auto-Cache (Preferred)**: The sync process extracts webhook paths from local node definitions in `registry.json` and caches them in memory. No manual configuration required.
+
+2. **Fallback (Legacy)**: Environment variables are supported as fallback:
 ```
 N8N_WEBHOOK_CHAT_AGENT=https://your-n8n.cloud/webhook/abc123
-N8N_WEBHOOK_SUPPORT_AGENT=https://your-n8n.cloud/webhook/def456
 ```
-
 Pattern: `N8N_WEBHOOK_<WORKFLOW_NAME>` in SCREAMING_SNAKE_CASE
+
+**Implementation**:
+- `server/n8n/webhook-cache.ts` - In-memory URL cache
+- `server/n8n/sync.ts` - Populates cache during startup sync
+- `server/workflows/router.ts` - Uses cached URL, falls back to env var
+
+**Why auto-cache**: Aligns with ARCH-000-B (Headless Operation) - no manual env var setup required.
 
 ### D2: API Base URL
 For n8n cloud:

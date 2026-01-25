@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "1.0.0",
-  "lastUpdated": "2026-01-25T01:00:00Z",
+  "lastUpdated": "2026-01-25T08:45:00Z",
   "primaryDirective": "ARCH-000",
   "rules": {
     "ARCH-000": {
@@ -13,8 +13,32 @@
       "version": "2.0.0",
       "triggers": ["*"],
       "dependencies": [],
-      "crossReferences": ["ARCH-010"],
+      "crossReferences": ["ARCH-000-A", "ARCH-000-B", "ARCH-010"],
       "description": "NO CODE SHALL BE WRITTEN WITHOUT FIRST CONSULTING THE RULES."
+    },
+    "ARCH-000-A": {
+      "id": "ARCH-000-A",
+      "title": "Founding Principle: Orchestrator Pattern",
+      "path": "rules/architecture/000-A-orchestrator-pattern.md",
+      "partition": "architecture",
+      "priority": "ABSOLUTE",
+      "version": "1.0.0",
+      "triggers": ["orchestrat", "external", "proxy", "trace"],
+      "dependencies": ["ARCH-000"],
+      "crossReferences": ["ARCH-003"],
+      "description": "ALL EXTERNAL COMMUNICATION MUST FLOW THROUGH THE ORCHESTRATION LAYER."
+    },
+    "ARCH-000-B": {
+      "id": "ARCH-000-B",
+      "title": "Founding Principle: Headless Operation",
+      "path": "rules/architecture/000-B-headless-operation.md",
+      "partition": "architecture",
+      "priority": "ABSOLUTE",
+      "version": "1.0.0",
+      "triggers": ["headless", "api-first", "programmatic", "auto-sync", "automation"],
+      "dependencies": ["ARCH-000"],
+      "crossReferences": ["INT-002"],
+      "description": "ALL EXTERNAL SERVICE CONFIGURATION MUST BE AUTOMATED AND PROGRAMMATIC."
     },
     "ARCH-001": {
       "id": "ARCH-001",
@@ -322,8 +346,8 @@
       "path": "rules/integration/002-n8n-api-practices.md",
       "partition": "integration",
       "priority": "HIGH",
-      "version": "1.2.0",
-      "triggers": ["n8n api", "api key", "n8n cloud", "recency", "known issues", "webhook bug"],
+      "version": "1.3.0",
+      "triggers": ["n8n api", "api key", "n8n cloud", "recency", "known issues", "webhook bug", "headless"],
       "dependencies": ["INT-001", "ARCH-003"],
       "crossReferences": ["ARCH-003"],
       "description": "API practices, recency protocol, and known issues registry."
@@ -494,8 +518,9 @@
       { "pattern": "hub|sidebar|navigation|access control", "partitions": ["hub"] },
       { "pattern": "endpoint|api route|authentication", "partitions": ["architecture"] },
       { "pattern": "new app|new feature", "partitions": ["apps", "architecture"] },
-      { "pattern": "audit|agentic|rule audit|code audit", "partitions": ["agent"] }
+      { "pattern": "audit|agentic|rule audit|code audit", "partitions": ["agent"] },
+      { "pattern": "headless|auto-sync|programmatic|api-first", "partitions": ["architecture", "integration"] }
     ],
-    "alwaysInclude": ["ARCH-000", "ARCH-006"]
+    "alwaysInclude": ["ARCH-000", "ARCH-000-A", "ARCH-000-B", "ARCH-006"]
   }
 }

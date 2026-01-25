@@ -1,8 +1,14 @@
 # Bilko Bibitkov
 
-## Primary Directive
+## Founding Principles
 
-**NO CODE SHALL BE WRITTEN WITHOUT FIRST CONSULTING THE RULES.**
+Three immutable principles form the foundation of all Bilko Bibitkov development:
+
+1. **ARCH-000: Rules-First** - NO CODE SHALL BE WRITTEN WITHOUT FIRST CONSULTING THE RULES
+2. **ARCH-000-A: Orchestrator Pattern** - ALL EXTERNAL COMMUNICATION MUST FLOW THROUGH THE ORCHESTRATION LAYER
+3. **ARCH-000-B: Headless Operation** - ALL EXTERNAL SERVICE CONFIGURATION MUST BE AUTOMATED AND PROGRAMMATIC
+
+These principles have ABSOLUTE priority and cannot be overridden by any other rule.
 
 ## Rules Location
 
@@ -15,6 +21,7 @@ All development rules are in `/rules/`. The Rules Service validates at startup -
 - **Rules Index**: `rules/manifest.json`
 - **Bootstrap Protocol**: `rules/architecture/006-agent-bootstrap.md`
 - **Rules Service**: `/server/rules/`
+- **Founding Principles**: `rules/architecture/000-*.md`
 
 ## Project Overview
 
@@ -131,12 +138,23 @@ The Agentic Workflows page shows output preview for content-generating workflows
 - Refresh button to reload latest outputs
 - Only displays when workflow has produced output
 
+### Webhook URL Auto-Caching (Headless)
+
+Webhook URLs are automatically cached on server startup (ARCH-000-B compliant):
+- `server/n8n/webhook-cache.ts` - In-memory URL cache
+- `server/n8n/sync.ts` - Populates cache during startup sync
+- No manual `N8N_WEBHOOK_*` environment variables required
+
 Environment variables:
 - `N8N_API_BASE_URL` - n8n instance API URL (e.g., `https://bilkobibitkov.app.n8n.cloud/api/v1`)
 - `N8N_API_KEY` - n8n API key (secret)
 - `BILKO_CALLBACK_URL` - Callback URL for n8n to reach Bilko
 
-Known issue: Webhooks may require manual save in n8n UI after API creation (INT-002 ISSUE-001).
+### n8n Known Issues (INT-002)
+
+- **ISSUE-001**: Webhooks may require manual save in n8n UI after API creation
+- **ISSUE-003**: PUT workflow requires `settings` property in request body
+- **ISSUE-004**: API response omits node definitions (webhook URLs derived from local definitions)
 
 ## User Preferences
 
