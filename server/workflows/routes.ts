@@ -74,6 +74,55 @@ export function registerWorkflowRoutes(app: Express): void {
     res.json({ workflows });
   });
 
+  app.get("/api/workflows/:id/output", async (req: Request, res: Response) => {
+    try {
+      const workflowId = req.params.id;
+      const traces = await orchestratorStorage.getRecentTraces(50);
+      
+      const workflowTraces = traces
+        .filter(t => t.workflowId === workflowId && t.sourceService === "n8n")
+        .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+
+      const finalOutput = workflowTraces.find(t => t.action === "final-output");
+      const sentimentOutput = workflowTraces.find(t => t.action === "sentiment-analysis");
+      const articlesOutput = workflowTraces.find(t => t.action === "extract-articles");
+
+      if (!finalOutput && !sentimentOutput && !articlesOutput) {
+        return res.json({ 
+          hasOutput: false,
+          message: "No workflow output found. Execute the workflow to see results."
+        });
+      }
+
+      res.json({
+        hasOutput: true,
+        outputs: {
+          final: finalOutput ? {
+            traceId: finalOutput.traceId,
+            timestamp: finalOutput.requestedAt,
+            data: finalOutput.responsePayload
+          } : null,
+          sentiment: sentimentOutput ? {
+            traceId: sentimentOutput.traceId,
+            timestamp: sentimentOutput.requestedAt,
+            data: sentimentOutput.responsePayload
+          } : null,
+          articles: articlesOutput ? {
+            traceId: articlesOutput.traceId,
+            timestamp: articlesOutput.requestedAt,
+            data: articlesOutput.responsePayload
+          } : null
+        }
+      });
+    } catch (error) {
+      console.error("[output] Error:", error);
+      res.status(500).json({ 
+        hasOutput: false,
+        error: error instanceof Error ? error.message : "Internal error" 
+      });
+    }
+  });
+
   app.get("/api/workflows/n8n/status", async (_req: Request, res: Response) => {
     try {
       const status = await getN8nWorkflowStatus();
