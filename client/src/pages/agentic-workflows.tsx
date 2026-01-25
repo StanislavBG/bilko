@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Play, RefreshCw, Workflow, Image, FileText, History } from "lucide-react";
+import { Play, RefreshCw, Workflow, Image, FileText, History, Shield, Upload } from "lucide-react";
 import { ActionBar } from "@/components/action-bar";
 import { ActionPanel } from "@/components/action-panel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +52,7 @@ interface WorkflowOutput {
           postContent?: string;
           imagePrompt?: string;
           imageUrl?: string | null;
+          transparencyPost?: string;
         };
       };
     } | null;
@@ -104,6 +105,7 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
   const finalData = data.outputs?.final?.data?.data;
   const postContent = finalData?.postContent;
   const imagePrompt = finalData?.imagePrompt;
+  const transparencyPost = finalData?.transparencyPost;
 
   return (
     <div className="space-y-4">
@@ -155,9 +157,12 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
       {postContent && (
         <Card data-testid="card-facebook-post">
           <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm">Facebook Post</CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm">Post 1: Main Content</CardTitle>
+              </div>
+              <Badge variant="outline" className="text-xs">Primary</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -166,6 +171,28 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Generated {data.outputs?.final?.timestamp ? new Date(data.outputs.final.timestamp).toLocaleString() : ""}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {transparencyPost && (
+        <Card data-testid="card-transparency-post">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm">Post 2: AI Transparency</CardTitle>
+              </div>
+              <Badge variant="outline" className="text-xs">Follow-up</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="bg-muted/50 rounded-md p-4">
+              <p className="text-sm whitespace-pre-wrap text-muted-foreground" data-testid="text-transparency-content">{transparencyPost}</p>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Post this after the main content to maintain transparency with your audience.
             </p>
           </CardContent>
         </Card>
@@ -238,6 +265,26 @@ export default function AgenticWorkflows() {
 
   const workflows = data?.workflows || [];
 
+  const pushProdMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/workflows/n8n/push-prod", {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Production workflow pushed",
+        description: `Successfully updated n8n workflow to: ${data.newName}`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Push failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const actions = selectedWorkflow?.mode === "n8n"
     ? [
         {
@@ -251,6 +298,17 @@ export default function AgenticWorkflows() {
           disabled: executeMutation.isPending,
           variant: "outline" as const,
         },
+        ...(selectedWorkflow.id === "european-football-daily" ? [{
+          id: "push-prod",
+          label: pushProdMutation.isPending ? "Pushing..." : "Push to n8n",
+          icon: <Upload className={`h-4 w-4 ${pushProdMutation.isPending ? "animate-pulse" : ""}`} />,
+          method: "POST" as const,
+          endpoint: "/api/workflows/n8n/push-prod",
+          description: "Update n8n with [PROD] config",
+          onClick: () => pushProdMutation.mutate(),
+          disabled: pushProdMutation.isPending,
+          variant: "default" as const,
+        }] : []),
       ]
     : [];
 

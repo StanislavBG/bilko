@@ -2,8 +2,11 @@ import type { Express, Request, Response } from "express";
 import { routeWorkflow, listWorkflows, getWorkflow } from "./router";
 import { initializeHandlers } from "./handlers";
 import { syncWorkflowsToN8n, getN8nWorkflowStatus } from "../n8n/sync";
+import { createN8nClient } from "../n8n/client";
 import { orchestratorStorage } from "../orchestrator/storage";
 import { z } from "zod";
+import * as fs from "fs";
+import * as path from "path";
 
 const jsonValue: z.ZodType<unknown> = z.lazy(() =>
   z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(jsonValue), z.record(jsonValue)])
@@ -178,6 +181,66 @@ export function registerWorkflowRoutes(app: Express): void {
         res.status(400).json(result);
       }
     } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.post("/api/workflows/n8n/push-prod", async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    if (!user) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const adminId = process.env.ADMIN_USER_ID;
+    if (user.id !== adminId) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    try {
+      const client = createN8nClient();
+      if (!client) {
+        return res.status(500).json({ error: "n8n client not configured" });
+      }
+
+      const prodFilePath = path.join(__dirname, "backups", "oV6WGX5uBeTZ9tRa_PROD.json");
+      if (!fs.existsSync(prodFilePath)) {
+        return res.status(404).json({ error: "Production workflow file not found" });
+      }
+
+      const prodWorkflow = JSON.parse(fs.readFileSync(prodFilePath, "utf-8"));
+      
+      // Search by both new and old names for resilience across runs
+      let existingWorkflow = await client.findWorkflowByName("[PROD] European Football Daily");
+      if (!existingWorkflow) {
+        existingWorkflow = await client.findWorkflowByName("European Football Daily");
+      }
+
+      if (!existingWorkflow) {
+        return res.status(404).json({ error: "Workflow 'European Football Daily' or '[PROD] European Football Daily' not found in n8n" });
+      }
+
+      await client.deactivateWorkflow(existingWorkflow.id);
+      
+      await client.updateWorkflow(existingWorkflow.id, {
+        name: prodWorkflow.name,
+        nodes: prodWorkflow.nodes,
+        connections: prodWorkflow.connections,
+        settings: prodWorkflow.settings,
+      });
+
+      await client.activateWorkflow(existingWorkflow.id);
+
+      res.json({
+        success: true,
+        message: "Production workflow pushed to n8n successfully",
+        workflowId: existingWorkflow.id,
+        newName: prodWorkflow.name
+      });
+    } catch (error) {
+      console.error("[push-prod] Error:", error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : String(error)
