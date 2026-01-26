@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-01-26T01:32:27.862Z",
+  "updatedAt": "2026-01-26T01:30:00.586Z",
   "createdAt": "2026-01-25T09:36:24.234Z",
   "id": "oV6WGX5uBeTZ9tRa",
   "name": "[PROD] European Football Daily",
@@ -288,7 +288,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key={{ $(\"Parse Tagline\").first().json.geminiApiKey }}",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict",
         "sendQuery": false,
         "sendHeaders": true,
         "headerParameters": {
@@ -309,7 +309,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"{{ $json.imagePrompt }}. Include bold stylized text overlay on the image saying: {{ $json.tagline }}\"\n    }]\n  }],\n  \"generation_config\": {\n    \"response_modalities\": [\"IMAGE\"],\n    \"image_config\": {\n      \"aspect_ratio\": \"1:1\"\n    }\n  }\n}",
+        "jsonBody": "={\n  \"instances\": [{\n    \"prompt\": \"{{ $json.imagePrompt }}. Include bold text overlay on image saying: {{ $json.tagline }}\"\n  }],\n  \"parameters\": {\n    \"sampleCount\": 1,\n    \"aspectRatio\": \"1:1\",\n    \"outputMimeType\": \"image/png\"\n  }\n}",
         "options": {}
       },
       "retryOnFail": true,
@@ -326,7 +326,7 @@
         112
       ],
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst prevData = $('Parse Tagline').first().json;\n\n// Get image from new Nano Banana Pro response format\nconst parts = input?.candidates?.[0]?.content?.parts || [];\nconst imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));\n\nif (imagePart && imagePart.inlineData?.data) {\n  const mimeType = imagePart.inlineData.mimeType;\n  const base64Data = imagePart.inlineData.data;\n  const imageDataUri = 'data:' + mimeType + ';base64,' + base64Data;\n  \n  return [{\n    json: {\n      imageDataUri: imageDataUri,\n      imagePrompt: prevData.imagePrompt,\n      tagline: prevData.tagline,\n      postContent: prevData.postContent,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} else {\n  // Fallback when image generation fails\n  return [{\n    json: {\n      imageDataUri: null,\n      imagePrompt: prevData.imagePrompt,\n      tagline: prevData.tagline,\n      postContent: prevData.postContent,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      imagenError: 'No image data in response'\n    }\n  }];\n}"
+        "jsCode": "const input = $input.first().json;\nconst prevData = $('Parse Image Prompt').first().json;\n\n// Check for predictions\nconst predictions = input?.predictions || [];\n\nif (predictions.length > 0 && predictions[0]?.bytesBase64Encoded) {\n  const base64Image = predictions[0].bytesBase64Encoded;\n  return [{\n    json: {\n      imageDataUri: 'data:image/png;base64,' + base64Image,\n      imagePrompt: prevData.imagePrompt,\n      postContent: prevData.postContent,\n      contentFiltered: false,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} else {\n  // Content was filtered or no image returned\n  return [{\n    json: {\n      imageDataUri: null,\n      imagePrompt: prevData.imagePrompt,\n      postContent: prevData.postContent,\n      contentFiltered: true,\n      filterReason: 'Imagen returned empty predictions',\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n}"
       }
     },
     {
@@ -522,7 +522,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Image Prompt\").first().json;\n\n// Get Gemini response\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const taglineData = JSON.parse(cleaned);\n  return [{\n    json: {\n      tagline: taglineData.tagline || \"Game On!\",\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      tagline: \"Game On!\",\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
+        "jsCode": "const input = $input.first().json;\nconst prevData = $('Parse Image Prompt').first().json;\n\n// Get Gemini response\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\nconst cleaned = text.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```s*$/, '');\n\ntry {\n  const taglineData = JSON.parse(cleaned);\n  return [{\n    json: {\n      tagline: taglineData.tagline || 'Game On!',\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      tagline: 'Game On!',\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
       },
       "name": "Parse Tagline",
       "type": "n8n-nodes-base.code",
@@ -806,15 +806,15 @@
   },
   "meta": null,
   "pinData": {},
-  "versionId": "828f085d-bda6-469e-940e-d819c613c2de",
-  "activeVersionId": "828f085d-bda6-469e-940e-d819c613c2de",
-  "versionCounter": 218,
+  "versionId": "e8feee84-75bb-43dd-851e-533b8464e16b",
+  "activeVersionId": "e8feee84-75bb-43dd-851e-533b8464e16b",
+  "versionCounter": 209,
   "triggerCount": 2,
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-01-26T01:32:27.863Z",
-    "createdAt": "2026-01-26T01:32:27.863Z",
-    "versionId": "828f085d-bda6-469e-940e-d819c613c2de",
+    "updatedAt": "2026-01-26T01:30:00.587Z",
+    "createdAt": "2026-01-26T01:30:00.587Z",
+    "versionId": "e8feee84-75bb-43dd-851e-533b8464e16b",
     "workflowId": "oV6WGX5uBeTZ9tRa",
     "nodes": [
       {
@@ -1098,7 +1098,7 @@
         ],
         "parameters": {
           "method": "POST",
-          "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key={{ $(\"Parse Tagline\").first().json.geminiApiKey }}",
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict",
           "sendQuery": false,
           "sendHeaders": true,
           "headerParameters": {
@@ -1119,7 +1119,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"{{ $json.imagePrompt }}. Include bold stylized text overlay on the image saying: {{ $json.tagline }}\"\n    }]\n  }],\n  \"generation_config\": {\n    \"response_modalities\": [\"IMAGE\"],\n    \"image_config\": {\n      \"aspect_ratio\": \"1:1\"\n    }\n  }\n}",
+          "jsonBody": "={\n  \"instances\": [{\n    \"prompt\": \"{{ $json.imagePrompt }}. Include bold text overlay on image saying: {{ $json.tagline }}\"\n  }],\n  \"parameters\": {\n    \"sampleCount\": 1,\n    \"aspectRatio\": \"1:1\",\n    \"outputMimeType\": \"image/png\"\n  }\n}",
           "options": {}
         },
         "retryOnFail": true,
@@ -1136,7 +1136,7 @@
           112
         ],
         "parameters": {
-          "jsCode": "const input = $input.first().json;\nconst prevData = $('Parse Tagline').first().json;\n\n// Get image from new Nano Banana Pro response format\nconst parts = input?.candidates?.[0]?.content?.parts || [];\nconst imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));\n\nif (imagePart && imagePart.inlineData?.data) {\n  const mimeType = imagePart.inlineData.mimeType;\n  const base64Data = imagePart.inlineData.data;\n  const imageDataUri = 'data:' + mimeType + ';base64,' + base64Data;\n  \n  return [{\n    json: {\n      imageDataUri: imageDataUri,\n      imagePrompt: prevData.imagePrompt,\n      tagline: prevData.tagline,\n      postContent: prevData.postContent,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} else {\n  // Fallback when image generation fails\n  return [{\n    json: {\n      imageDataUri: null,\n      imagePrompt: prevData.imagePrompt,\n      tagline: prevData.tagline,\n      postContent: prevData.postContent,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      imagenError: 'No image data in response'\n    }\n  }];\n}"
+          "jsCode": "const input = $input.first().json;\nconst prevData = $('Parse Image Prompt').first().json;\n\n// Check for predictions\nconst predictions = input?.predictions || [];\n\nif (predictions.length > 0 && predictions[0]?.bytesBase64Encoded) {\n  const base64Image = predictions[0].bytesBase64Encoded;\n  return [{\n    json: {\n      imageDataUri: 'data:image/png;base64,' + base64Image,\n      imagePrompt: prevData.imagePrompt,\n      postContent: prevData.postContent,\n      contentFiltered: false,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} else {\n  // Content was filtered or no image returned\n  return [{\n    json: {\n      imageDataUri: null,\n      imagePrompt: prevData.imagePrompt,\n      postContent: prevData.postContent,\n      contentFiltered: true,\n      filterReason: 'Imagen returned empty predictions',\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n}"
         }
       },
       {
@@ -1332,7 +1332,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Image Prompt\").first().json;\n\n// Get Gemini response\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const taglineData = JSON.parse(cleaned);\n  return [{\n    json: {\n      tagline: taglineData.tagline || \"Game On!\",\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      tagline: \"Game On!\",\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
+          "jsCode": "const input = $input.first().json;\nconst prevData = $('Parse Image Prompt').first().json;\n\n// Get Gemini response\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\nconst cleaned = text.replace(/^```[a-zA-Z]*\n?/, '').replace(/\n?```s*$/, '');\n\ntry {\n  const taglineData = JSON.parse(cleaned);\n  return [{\n    json: {\n      tagline: taglineData.tagline || 'Game On!',\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      tagline: 'Game On!',\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
         },
         "name": "Parse Tagline",
         "type": "n8n-nodes-base.code",
