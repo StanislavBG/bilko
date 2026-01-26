@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { Card } from "@/components/ui/card";
@@ -17,6 +17,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { PageContent } from "@/components/page-content";
 import { ActionBar } from "@/components/action-bar";
 import { ActionPanel } from "@/components/action-panel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface RuleMetadata {
   id: string;
@@ -392,8 +393,17 @@ function CatalogView({
   selectedRuleId: string | null;
   setSelectedRuleId: (id: string | null) => void;
 }) {
+  const isMobile = useIsMobile();
   const [isPartitionCollapsed, setIsPartitionCollapsed] = useState(false);
   const [isTertiaryCollapsed, setIsTertiaryCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (isMobile) {
+      setIsPartitionCollapsed(true);
+      setIsTertiaryCollapsed(true);
+    }
+  }, [isMobile]);
+
   const { data: catalog, isLoading } = useQuery<RulesCatalog>({
     queryKey: ["/api/rules"],
   });
@@ -583,6 +593,7 @@ function AuditView({
   setSelectedAuditId: (id: string | null) => void;
 }) {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [isCategoryNavCollapsed, setIsCategoryNavCollapsed] = useState(false);
   const [isAuditListCollapsed, setIsAuditListCollapsed] = useState(false);
   const [isActionPanelCollapsed, setIsActionPanelCollapsed] = useState(false);
@@ -590,6 +601,14 @@ function AuditView({
   const [showNewAuditForm, setShowNewAuditForm] = useState(false);
   const [newAuditContent, setNewAuditContent] = useState("");
   const [newAuditType, setNewAuditType] = useState<"rules" | "code">("rules");
+
+  useEffect(() => {
+    if (isMobile) {
+      setIsCategoryNavCollapsed(true);
+      setIsAuditListCollapsed(true);
+      setIsActionPanelCollapsed(true);
+    }
+  }, [isMobile]);
 
   const { data: protocol, isLoading: protocolLoading } = useQuery<{ content: string }>({
     queryKey: ["/api/audit/protocol"],

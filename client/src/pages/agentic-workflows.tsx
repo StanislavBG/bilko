@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
-import { Play, RefreshCw, Workflow, Image, FileText, History, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Play, RefreshCw, Workflow, Image, FileText, History, Shield, PanelLeft, Menu } from "lucide-react";
 import { ActionBar } from "@/components/action-bar";
 import { ActionPanel } from "@/components/action-panel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,9 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { ExecutionsList } from "@/components/executions-list";
 import { ExecutionDetail } from "@/components/execution-detail";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface WorkflowDefinition {
   id: string;
@@ -218,10 +221,16 @@ interface SelectedExecution {
 
 export default function AgenticWorkflows() {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowDefinition | null>(null);
   const [selectedExecution, setSelectedExecution] = useState<SelectedExecution | null>(null);
   const [isActionPanelCollapsed, setIsActionPanelCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<"latest" | "history">("latest");
+  const [isWorkflowNavOpen, setIsWorkflowNavOpen] = useState(false);
+
+  useEffect(() => {
+    setIsActionPanelCollapsed(isMobile);
+  }, [isMobile]);
 
   const { data, isLoading } = useQuery<WorkflowsResponse>({
     queryKey: ["/api/workflows"],
@@ -281,42 +290,96 @@ export default function AgenticWorkflows() {
       ]
     : [];
 
+  const handleWorkflowSelect = (workflow: WorkflowDefinition) => {
+    setSelectedWorkflow(workflow);
+    setSelectedExecution(null);
+    setViewMode("latest");
+    if (isMobile) {
+      setIsWorkflowNavOpen(false);
+    }
+  };
+
+  const WorkflowNavContent = () => (
+    <>
+      <div className="p-3 border-b">
+        <h2 className="text-sm font-medium">Workflows</h2>
+      </div>
+      <div className="flex-1 overflow-auto p-2 space-y-1">
+        {isLoading ? (
+          <div className="space-y-2" data-testid="status-loading-workflows">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : (
+          workflows.map((workflow) => (
+            <button
+              key={workflow.id}
+              onClick={() => handleWorkflowSelect(workflow)}
+              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                selectedWorkflow?.id === workflow.id
+                  ? "bg-foreground text-background"
+                  : "hover-elevate"
+              }`}
+              data-testid={`nav-workflow-${workflow.id}`}
+            >
+              <div className="font-medium truncate">{workflow.name}</div>
+              <div className="text-xs opacity-70 truncate">{workflow.mode}</div>
+            </button>
+          ))
+        )}
+      </div>
+    </>
+  );
+
   return (
     <div className="flex flex-1 overflow-hidden">
-      {/* Left Nav - Workflow List */}
-      <div className="w-64 border-r bg-muted/30 flex flex-col overflow-hidden">
-        <div className="p-3 border-b">
-          <h2 className="text-sm font-medium">Workflows</h2>
-        </div>
-        <div className="flex-1 overflow-auto p-2 space-y-1">
-          {isLoading ? (
-            <div className="space-y-2" data-testid="status-loading-workflows">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+      {/* Mobile Workflow Nav Sheet */}
+      {isMobile && (
+        <Sheet open={isWorkflowNavOpen} onOpenChange={setIsWorkflowNavOpen}>
+          <SheetContent side="left" className="w-64 p-0">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Workflows</SheetTitle>
+              <SheetDescription>Select a workflow to view</SheetDescription>
+            </SheetHeader>
+            <div className="flex flex-col h-full">
+              <WorkflowNavContent />
             </div>
-          ) : (
-            workflows.map((workflow) => (
-              <button
-                key={workflow.id}
-                onClick={() => { setSelectedWorkflow(workflow); setSelectedExecution(null); setViewMode("latest"); }}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                  selectedWorkflow?.id === workflow.id
-                    ? "bg-foreground text-background"
-                    : "hover-elevate"
-                }`}
-                data-testid={`nav-workflow-${workflow.id}`}
-              >
-                <div className="font-medium truncate">{workflow.name}</div>
-                <div className="text-xs opacity-70 truncate">{workflow.mode}</div>
-              </button>
-            ))
-          )}
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Desktop Left Nav - Workflow List */}
+      {!isMobile && (
+        <div className="w-64 border-r bg-muted/30 flex flex-col overflow-hidden">
+          <WorkflowNavContent />
         </div>
-      </div>
+      )}
 
       {/* Main Content - Workflow Detail */}
       <div className="flex-1 overflow-auto p-4">
+        {/* Mobile nav toggle */}
+        {isMobile && (
+          <div className="flex items-center gap-2 mb-4">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setIsWorkflowNavOpen(true)}
+                  data-testid="button-open-workflow-nav"
+                >
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Open workflows</TooltipContent>
+            </Tooltip>
+            {selectedWorkflow && (
+              <span className="text-sm font-medium truncate">{selectedWorkflow.name}</span>
+            )}
+          </div>
+        )}
+
         {selectedWorkflow ? (
           <div className="space-y-6">
             <ActionBar 
