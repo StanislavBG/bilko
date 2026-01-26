@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-01-26T01:21:45.834Z",
+  "updatedAt": "2026-01-26T00:36:58.777Z",
   "createdAt": "2026-01-25T09:36:24.234Z",
   "id": "oV6WGX5uBeTZ9tRa",
   "name": "[PROD] European Football Daily",
@@ -734,9 +734,9 @@
   },
   "meta": null,
   "pinData": {},
-  "versionId": "e25a060b-df58-4fef-ac38-284a53cf6739",
-  "activeVersionId": "e25a060b-df58-4fef-ac38-284a53cf6739",
-  "versionCounter": 208,
+  "versionId": "5b6274a0-8c77-4b55-ad16-213067d2bade",
+  "activeVersionId": "5b6274a0-8c77-4b55-ad16-213067d2bade",
+  "versionCounter": 205,
   "triggerCount": 2,
   "shared": [
     {
@@ -787,9 +787,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-01-26T01:21:45.835Z",
-    "createdAt": "2026-01-26T01:21:45.835Z",
-    "versionId": "e25a060b-df58-4fef-ac38-284a53cf6739",
+    "updatedAt": "2026-01-26T00:36:58.779Z",
+    "createdAt": "2026-01-26T00:36:58.779Z",
+    "versionId": "5b6274a0-8c77-4b55-ad16-213067d2bade",
     "workflowId": "oV6WGX5uBeTZ9tRa",
     "nodes": [
       {
@@ -1007,7 +1007,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const input = $input.first().json;\nconst postContent = input.postContent || 'Football news update!';\nconst imagePrompt = input.imagePrompt || 'European football celebration';\nconst imageDataUri = input.imageDataUri || null;\n\n// Create transparency/disclosure post - flowing sentences, no hashtags\nconst transparencyPost = \"Why am I doing this? Let me be transparent. I love European football but don't have time to search for news, so I built a system where the news comes to me - if you're into football too, follow along and give me feedback so we can vibe together! Want to learn how to create content like this? I can help, check the link in bio. I'm learning to thrive in the AI age (it's already here, in case you haven't noticed), and this is my playground and my proof of work. Full transparency, trust, and compliance matter to me. I'm Bilko Bibitkov - human in the loop, always.\";\n\nconst output = {\n  success: true,\n  data: {\n    postContent: postContent,\n    imagePrompt: imagePrompt,\n    imageUrl: imageDataUri,\n    transparencyPost: transparencyPost,\n    contentFiltered: !imageDataUri\n  },\n  metadata: {\n    workflowId: \"european-football-daily\",\n    executedAt: new Date().toISOString(),\n    aiGenerated: true\n  }\n};\nreturn [{ json: output }];"
+          "jsCode": "const input = $input.first().json;\nconst postContent = input.postContent || 'Football news update!';\nconst imagePrompt = input.imagePrompt || 'European football celebration';\nconst imageDataUri = input.imageDataUri || null;\n\n// Create transparency/disclosure post\nconst transparencyPost = \"Why am I doing this? Let me be transparent:\\n\\n1. I love European football but don't have time to search for news - so I built a system where the news comes to me. If you're into football too, follow along and give me feedback so we can vibe together!\\n\\n2. Want to learn how to create content like this? I can help. Check the link in bio.\\n\\n3. I'm learning to thrive in the AI age (it's already here, in case you haven't noticed). This is my playground and my proof of work.\\n\\n4. Full transparency, trust, and compliance matter to me. I'm Bilko Bibitkov - human in the loop, always.\\n\\n#football #soccer #uefa #championsleague\";\n\nconst output = {\n  success: true,\n  data: {\n    postContent: postContent,\n    imagePrompt: imagePrompt,\n    imageUrl: imageDataUri,\n    transparencyPost: transparencyPost,\n    contentFiltered: !imageDataUri\n  },\n  metadata: {\n    workflowId: \"european-football-daily\",\n    executedAt: new Date().toISOString(),\n    aiGenerated: true\n  }\n};\nreturn [{ json: output }];"
         },
         "name": "Build Final Output",
         "type": "n8n-nodes-base.code",
@@ -1513,10 +1513,10 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-01-26T01:21:46.054Z",
-        "id": 89,
+        "createdAt": "2026-01-26T00:36:59.011Z",
+        "id": 87,
         "workflowId": "oV6WGX5uBeTZ9tRa",
-        "versionId": "e25a060b-df58-4fef-ac38-284a53cf6739",
+        "versionId": "5b6274a0-8c77-4b55-ad16-213067d2bade",
         "event": "activated",
         "userId": "80f5768f-36e3-4197-9886-2f8e29df41d7"
       }
