@@ -46,4 +46,9 @@ integrations = ["javascript_log_in_with_replit:2.0.0", "javascript_database:1.0.
 [userenv.shared]
 ADMIN_USER_ID = "45353844"
 N8N_API_BASE_URL = "https://bilkobibitkov.app.n8n.cloud/api/v1"
-BILKO_CALLBACK_URL = "https://91ed71cb-7291-48f5-a070-a3f5b7f27ed4-00-1krg253x2da17.worf.replit.dev/api/workflows/callback"
+
+[userenv.development]
+BILKO_CALLBACK_URL = "https://bilko-bibitkov.worf.replit.dev/api/workflows/callback"
+
+[userenv.production]
+BILKO_CALLBACK_URL = "https://bilkobibitkov.replit.app/api/workflows/callback"
