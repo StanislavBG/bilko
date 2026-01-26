@@ -51,6 +51,13 @@ Preferences: Move slowly, rules-first, no over-building
 - **Rule added**: INT-005 Callback Persistence Contract - documents API payload schemas and data flow
 - **E2E Verified**: History view displays execution results with post content and image prompts correctly
 
+### Mobile-Responsive Layout (January 2026)
+- **useIsMobile hook**: Detects viewport < 768px for mobile-specific layouts
+- **Agentic Workflows**: Left nav becomes Sheet overlay on mobile, triggered by menu button
+- **Memory Explorer**: ActionPanel auto-collapses on mobile
+- **Rules Explorer**: Partition nav, tertiary nav, and ActionPanel auto-collapse on mobile
+- **Pattern**: Use useEffect to detect mobile state change and collapse panels, preserve desktop interactivity
+
 ### Key n8n Learnings
 1. **User-Agent Required**: Google APIs block n8n's default user-agent. Always add custom User-Agent header.
 2. **Webhook Body Structure**: Data sent to webhook is at `.json.body.keyName`, not `.json.keyName`
