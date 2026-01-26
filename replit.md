@@ -70,7 +70,11 @@ Preferences: Move slowly, rules-first, no over-building
 - **Pattern**: Use useEffect to detect mobile state change and collapse panels, preserve desktop interactivity
 
 ### Dev/Prod Workflow Architecture (January 26, 2026) - SYNCED
-- **Two Physical Workflows**: `[PROD] European Football Daily` (oV6WGX5uBeTZ9tRa) and `European Football Daily` (vHafUnYAAtDX3TRO)
+- **Two Physical Workflows**: `[PROD] European Football Daily` (oV6WGX5uBeTZ9tRa) and `[DEV] European Football Daily` (vHafUnYAAtDX3TRO)
+- **Separate Webhook Paths** (v1.3.0):
+  - PROD: `/webhook/european-football-daily`
+  - DEV: `/webhook/dev-european-football-daily`
+  - Both can be active simultaneously - no conflicts!
 - **DEV Synced from PROD** (January 26, 2026):
   - DEV now has full 24-node pipeline matching PROD structure
   - Schedule Trigger and Merge Triggers REMOVED (manual-only execution)
@@ -79,8 +83,7 @@ Preferences: Move slowly, rules-first, no over-building
 - **Callback URL Strategy**:
   - PROD workflow: Hardcoded to `https://bilkobibitkov.replit.app/api/workflows/callback`
   - DEV workflow: Dynamic URL from webhook payload (works with any dev domain)
-- **Webhook Conflict**: Both workflows share path `european-football-daily` - only ONE can be active at a time
-- **Testing Procedure**: Deactivate PROD → Activate DEV → Save DEV in n8n UI (registers webhook) → Test
+- **Testing Procedure**: Simply trigger DEV workflow - no need to deactivate PROD
 
 ### Key n8n Learnings
 1. **User-Agent Required**: Google APIs block n8n's default user-agent. Always add custom User-Agent header.
