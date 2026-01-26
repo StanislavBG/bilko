@@ -294,7 +294,7 @@ function buildEuropeanFootballDailyNodes(webhookPath: string): {
   nodes: N8nNode[];
   connections: Record<string, unknown>;
 } {
-  const callbackUrl = process.env.BILKO_CALLBACK_URL || "https://bilko-bibitkov.replit.app/api/workflows/callback";
+  const callbackUrl = process.env.BILKO_CALLBACK_URL || "https://bilkobibitkov.replit.app/api/workflows/callback";
   
   const nodes: N8nNode[] = [
     {
