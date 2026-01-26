@@ -147,11 +147,28 @@ async function executeN8nWorkflow(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
 
+    // Construct callback URL
+    // REPLIT_DOMAINS is set in dev and changes on container restart
+    // In prod deployment, REPLIT_DOMAINS is not set, so we use stable prod URL
+    let callbackUrl: string;
+    
+    if (process.env.REPLIT_DOMAINS) {
+      // Dev environment: use current Replit domain (handles domain changes)
+      const currentDomain = process.env.REPLIT_DOMAINS.split(',')[0];
+      callbackUrl = `https://${currentDomain}/api/workflows/callback`;
+      console.log(`[n8n] Using dev callback URL: ${callbackUrl}`);
+    } else {
+      // Production or no REPLIT_DOMAINS: use stable prod URL
+      callbackUrl = 'https://bilkobibitkov.replit.app/api/workflows/callback';
+      console.log(`[n8n] Using prod callback URL: ${callbackUrl}`);
+    }
+
     // Include secrets needed by n8n workflows (passed via payload per ARCH-000-B)
     const n8nPayload = {
       ...input,
       geminiApiKey: process.env.GEMINI_API_KEY,
       traceId: input.context.traceId,
+      callbackUrl, // Dynamic callback URL for n8n to use
     };
 
     const response = await fetch(webhookUrl, {
