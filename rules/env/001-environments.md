@@ -10,19 +10,28 @@ Defines all deployment environments and their configuration. This is the single 
 
 ## Environments
 
-| Environment | Replit URL | n8n Webhook Base | Workflow Tag |
-|-------------|-----------|------------------|--------------|
-| Development | Dynamic (from `REPLIT_DOMAINS`) | `https://bilkobibitkov.app.n8n.cloud/webhook` | None (dev workflow) |
-| Production | `https://bilkobibitkov.replit.app` | `https://bilkobibitkov.app.n8n.cloud/webhook` | `[PROD]` |
+| Environment | Replit URL | n8n Webhook Path | Workflow n8n ID |
+|-------------|-----------|------------------|-----------------|
+| Development | Dynamic (from `REPLIT_DOMAINS`) | `european-football-daily-dev` | `vHafUnYAAtDX3TRO` |
+| Production | `https://bilkobibitkov.replit.app` | `european-football-daily` | `oV6WGX5uBeTZ9tRa` |
 
 ### Development Domain Behavior
 Development domains are **dynamic** and change on container restart. The current dev domain is available via the `REPLIT_DOMAINS` environment variable. Example: `91ed71cb-7291-48f5-a070-a3f5b7f27ed4-00-1krg253x2da17.worf.replit.dev`
 
+### n8n Workflow Separation
+**CRITICAL**: Dev and prod workflows MUST have different webhook paths to avoid n8n routing conflicts.
+- Dev webhook path: `european-football-daily-dev`
+- Prod webhook path: `european-football-daily`
+
+The Replit app (`server/workflows/router.ts`) automatically selects the correct webhook path based on environment:
+- When `REPLIT_DOMAINS` is set → uses `-dev` suffix
+- When `REPLIT_DOMAINS` is absent (production) → uses standard path
+
 ## Naming Conventions
 
 ### Workflow Names
-- Development: `European Football Daily` (no prefix, separate workflow)
-- Production: `[PROD] European Football Daily`
+- Development: `European Football Daily` (ID: `vHafUnYAAtDX3TRO`)
+- Production: `[PROD] European Football Daily` (ID: `oV6WGX5uBeTZ9tRa`)
 
 ### Callback URLs
 
