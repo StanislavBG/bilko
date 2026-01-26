@@ -69,6 +69,13 @@ Preferences: Move slowly, rules-first, no over-building
 - **Rules Explorer**: Partition nav, tertiary nav, and ActionPanel auto-collapse on mobile
 - **Pattern**: Use useEffect to detect mobile state change and collapse panels, preserve desktop interactivity
 
+### Dev/Prod Workflow Architecture (January 26, 2026)
+- **Two Physical Workflows**: `[PROD] European Football Daily` (oV6WGX5uBeTZ9tRa) and `European Football Daily` (vHafUnYAAtDX3TRO)
+- **Callback URL Strategy**:
+  - PROD workflow: Hardcoded to `https://bilkobibitkov.replit.app/api/workflows/callback`
+  - DEV workflow: Uses dynamic `={{ $('Webhook').first().json.body.callbackUrl }}` to work with any dev domain
+- **Why Dynamic for Dev**: Replit dev domains change on container restart. Dynamic URL ensures callbacks always reach the active dev app.
+
 ### Key n8n Learnings
 1. **User-Agent Required**: Google APIs block n8n's default user-agent. Always add custom User-Agent header.
 2. **Webhook Body Structure**: Data sent to webhook is at `.json.body.keyName`, not `.json.keyName`
@@ -77,3 +84,4 @@ Preferences: Move slowly, rules-first, no over-building
 5. **Gemini JSON Parsing**: Gemini wraps JSON responses in markdown fences - strip with regex before parsing
 6. **No JSON Sanitization Needed**: Don't sanitize structural newlines - JSON.parse() handles them correctly
 7. **Imagen Safety Filters**: Imagen silently returns empty predictions (not errors) when prompts mention specific celebrities or real people - workflow should handle gracefully
+8. **Dynamic Callback URLs**: For dev workflows, use `={{ $('Webhook').first().json.body.callbackUrl }}` instead of hardcoded URLs to handle changing dev domains
