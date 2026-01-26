@@ -69,12 +69,18 @@ Preferences: Move slowly, rules-first, no over-building
 - **Rules Explorer**: Partition nav, tertiary nav, and ActionPanel auto-collapse on mobile
 - **Pattern**: Use useEffect to detect mobile state change and collapse panels, preserve desktop interactivity
 
-### Dev/Prod Workflow Architecture (January 26, 2026)
+### Dev/Prod Workflow Architecture (January 26, 2026) - SYNCED
 - **Two Physical Workflows**: `[PROD] European Football Daily` (oV6WGX5uBeTZ9tRa) and `European Football Daily` (vHafUnYAAtDX3TRO)
+- **DEV Synced from PROD** (January 26, 2026):
+  - DEV now has full 24-node pipeline matching PROD structure
+  - Schedule Trigger and Merge Triggers REMOVED (manual-only execution)
+  - All callback nodes use dynamic URLs: `={{ $('Webhook').first().json.body.callbackUrl }}`
+  - All traceId references use correct path: `json.body.traceId`
 - **Callback URL Strategy**:
   - PROD workflow: Hardcoded to `https://bilkobibitkov.replit.app/api/workflows/callback`
-  - DEV workflow: Uses dynamic `={{ $('Webhook').first().json.body.callbackUrl }}` to work with any dev domain
-- **Why Dynamic for Dev**: Replit dev domains change on container restart. Dynamic URL ensures callbacks always reach the active dev app.
+  - DEV workflow: Dynamic URL from webhook payload (works with any dev domain)
+- **Webhook Conflict**: Both workflows share path `european-football-daily` - only ONE can be active at a time
+- **Testing Procedure**: Deactivate PROD → Activate DEV → Save DEV in n8n UI (registers webhook) → Test
 
 ### Key n8n Learnings
 1. **User-Agent Required**: Google APIs block n8n's default user-agent. Always add custom User-Agent header.
