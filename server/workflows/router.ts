@@ -147,19 +147,23 @@ async function executeN8nWorkflow(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
 
-    // Construct callback URL
-    // REPLIT_DOMAINS is set in dev and changes on container restart
-    // In prod deployment, REPLIT_DOMAINS is not set, so we use stable prod URL
+    // Construct callback URL per ENV-001
+    // Priority: Explicit env var > Dynamic domain detection > Prod fallback
     let callbackUrl: string;
+    const PROD_CALLBACK_URL = 'https://bilkobibitkov.replit.app/api/workflows/callback';
     
-    if (process.env.REPLIT_DOMAINS) {
-      // Dev environment: use current Replit domain (handles domain changes)
+    if (process.env.CALLBACK_URL_OVERRIDE) {
+      // Explicit override (for testing or custom deployments)
+      callbackUrl = process.env.CALLBACK_URL_OVERRIDE;
+      console.log(`[n8n] Using override callback URL: ${callbackUrl}`);
+    } else if (process.env.REPLIT_DOMAINS) {
+      // Dev environment: use current Replit domain (dynamic, changes on restart)
       const currentDomain = process.env.REPLIT_DOMAINS.split(',')[0];
       callbackUrl = `https://${currentDomain}/api/workflows/callback`;
       console.log(`[n8n] Using dev callback URL: ${callbackUrl}`);
     } else {
-      // Production or no REPLIT_DOMAINS: use stable prod URL
-      callbackUrl = 'https://bilkobibitkov.replit.app/api/workflows/callback';
+      // Production: use stable prod URL per ENV-001
+      callbackUrl = PROD_CALLBACK_URL;
       console.log(`[n8n] Using prod callback URL: ${callbackUrl}`);
     }
 
