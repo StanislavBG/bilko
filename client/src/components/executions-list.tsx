@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +65,14 @@ export function ExecutionsList({ workflowId, selectedExecutionId, onSelectExecut
     refetchInterval: 10000,
   });
 
+  const executions = data?.executions || [];
+
+  useEffect(() => {
+    if (!selectedExecutionId && executions.length > 0) {
+      onSelectExecution(executions[0]);
+    }
+  }, [executions, selectedExecutionId, onSelectExecution]);
+
   if (isLoading) {
     return (
       <Card>
@@ -78,8 +87,6 @@ export function ExecutionsList({ workflowId, selectedExecutionId, onSelectExecut
       </Card>
     );
   }
-
-  const executions = data?.executions || [];
 
   if (executions.length === 0) {
     return (

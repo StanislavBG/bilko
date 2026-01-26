@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { Play, RefreshCw, Workflow, Image, FileText, History, Shield, PanelLeft, Menu } from "lucide-react";
+import { Play, RefreshCw, Workflow, Image, FileText, History, Shield, Menu, Copy, Download, Check, ChevronDown, ChevronRight, Info } from "lucide-react";
 import { ActionBar } from "@/components/action-bar";
 import { ActionPanel } from "@/components/action-panel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,47 @@ import { ExecutionDetail } from "@/components/execution-detail";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+function useCopyToClipboard() {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { toast } = useToast();
+  
+  const copy = async (text: string, id: string, label?: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      toast({ title: "Copied!", description: label || "Text copied to clipboard" });
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      toast({ title: "Failed to copy", variant: "destructive" });
+    }
+  };
+  
+  return { copy, isCopied: (id: string) => copiedId === id };
+}
+
+async function copyImageToClipboard(imageUrl: string, toast: ReturnType<typeof useToast>["toast"]) {
+  try {
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+    await navigator.clipboard.write([
+      new ClipboardItem({ [blob.type]: blob })
+    ]);
+    toast({ title: "Copied!", description: "Image copied to clipboard" });
+  } catch {
+    toast({ title: "Failed to copy image", description: "Your browser may not support this feature", variant: "destructive" });
+  }
+}
+
+function downloadImage(imageUrl: string, filename: string = "infographic.png") {
+  const link = document.createElement("a");
+  link.href = imageUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 
 interface WorkflowDefinition {
   id: string;
@@ -76,6 +117,8 @@ interface WorkflowOutput {
 }
 
 function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
+  const { toast } = useToast();
+  const { copy, isCopied } = useCopyToClipboard();
   const { data, isLoading, refetch, isRefetching } = useQuery<WorkflowOutput>({
     queryKey: ["/api/workflows", workflowId, "output"],
     queryFn: async () => {
@@ -108,6 +151,7 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
   const finalData = data.outputs?.final?.data?.data;
   const postContent = finalData?.postContent;
   const imagePrompt = finalData?.imagePrompt;
+  const imageUrl = finalData?.imageUrl;
   const transparencyPost = finalData?.transparencyPost;
 
   return (
@@ -126,19 +170,51 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
         </Button>
       </div>
 
-      {(finalData?.imageUrl || imagePrompt) && (
+      {(imageUrl || imagePrompt) && (
         <Card data-testid="card-infographic">
           <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <Image className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm">Infographic</CardTitle>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Image className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm">Infographic</CardTitle>
+              </div>
+              {imageUrl && (
+                <div className="flex items-center gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => downloadImage(imageUrl, `infographic-${workflowId}.png`)}
+                        data-testid="button-download-image"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Download image</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => copyImageToClipboard(imageUrl, toast)}
+                        data-testid="button-copy-image"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Copy image to clipboard</TooltipContent>
+                  </Tooltip>
+                </div>
+              )}
             </div>
           </CardHeader>
           <CardContent>
-            {finalData?.imageUrl ? (
+            {imageUrl ? (
               <div className="rounded-md overflow-hidden">
                 <img 
-                  src={finalData.imageUrl} 
+                  src={imageUrl} 
                   alt="Generated infographic" 
                   className="w-full h-auto"
                   data-testid="img-infographic"
@@ -165,7 +241,22 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
                 <FileText className="h-4 w-4 text-muted-foreground" />
                 <CardTitle className="text-sm">Post 1: Main Content</CardTitle>
               </div>
-              <Badge variant="outline" className="text-xs">Primary</Badge>
+              <div className="flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => copy(postContent, "post-content", "Post content copied")}
+                      data-testid="button-copy-post"
+                    >
+                      {isCopied("post-content") ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Copy post to clipboard</TooltipContent>
+                </Tooltip>
+                <Badge variant="outline" className="text-xs">Primary</Badge>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -187,7 +278,22 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
                 <Shield className="h-4 w-4 text-muted-foreground" />
                 <CardTitle className="text-sm">Post 2: AI Transparency</CardTitle>
               </div>
-              <Badge variant="outline" className="text-xs">Follow-up</Badge>
+              <div className="flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => copy(transparencyPost, "transparency-post", "Transparency post copied")}
+                      data-testid="button-copy-transparency"
+                    >
+                      {isCopied("transparency-post") ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Copy post to clipboard</TooltipContent>
+                </Tooltip>
+                <Badge variant="outline" className="text-xs">Follow-up</Badge>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -227,6 +333,7 @@ export default function AgenticWorkflows() {
   const [isActionPanelCollapsed, setIsActionPanelCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<"latest" | "history">("latest");
   const [isWorkflowNavOpen, setIsWorkflowNavOpen] = useState(false);
+  const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
 
   useEffect(() => {
     setIsActionPanelCollapsed(isMobile);
@@ -381,36 +488,13 @@ export default function AgenticWorkflows() {
         )}
 
         {selectedWorkflow ? (
-          <div className="space-y-6">
-            <ActionBar 
-              variant="page" 
-              title={selectedWorkflow.name} 
-              description={selectedWorkflow.category}
-              testId="actionbar-workflow-detail" 
-            />
-
-            <Card data-testid="card-workflow-detail">
-              <CardHeader>
-                <div className="flex items-center justify-between gap-2">
-                  <CardTitle className="text-lg">{selectedWorkflow.name}</CardTitle>
-                  <Badge variant="outline">{selectedWorkflow.mode}</Badge>
-                </div>
-                <CardDescription>{selectedWorkflow.category}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-medium mb-1">Description</h4>
-                  <p className="text-sm text-muted-foreground">{selectedWorkflow.description}</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium mb-1">How to Execute</h4>
-                  <p className="text-sm text-muted-foreground">{selectedWorkflow.instructions}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {selectedWorkflow.mode === "n8n" && (
-              <div className="space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold" data-testid="text-workflow-name">{selectedWorkflow.name}</h2>
+                <Badge variant="outline">{selectedWorkflow.mode}</Badge>
+              </div>
+              {selectedWorkflow.mode === "n8n" && (
                 <div className="flex items-center gap-2">
                   <Button
                     variant={viewMode === "latest" ? "default" : "outline"}
@@ -431,21 +515,58 @@ export default function AgenticWorkflows() {
                     History
                   </Button>
                 </div>
+              )}
+            </div>
 
-                {viewMode === "latest" ? (
-                  <WorkflowOutputPreview workflowId={selectedWorkflow.id} />
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ExecutionsList
-                      workflowId={selectedWorkflow.id}
-                      selectedExecutionId={selectedExecution?.id || null}
-                      onSelectExecution={(exec) => setSelectedExecution({ id: exec.id, workflowId: exec.workflowId, status: exec.status })}
-                    />
-                    {selectedExecution && (
-                      <ExecutionDetail executionId={selectedExecution.id} />
-                    )}
-                  </div>
-                )}
+            <Collapsible open={isDescriptionOpen} onOpenChange={setIsDescriptionOpen}>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full justify-start gap-2 text-muted-foreground" data-testid="button-toggle-description">
+                  {isDescriptionOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  <Info className="h-4 w-4" />
+                  <span>Workflow Info</span>
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <Card className="mt-2" data-testid="card-workflow-detail">
+                  <CardContent className="pt-4 space-y-4">
+                    <div>
+                      <h4 className="text-sm font-medium mb-1">Description</h4>
+                      <p className="text-sm text-muted-foreground">{selectedWorkflow.description}</p>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium mb-1">How to Execute</h4>
+                      <p className="text-sm text-muted-foreground">{selectedWorkflow.instructions}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </CollapsibleContent>
+            </Collapsible>
+
+            {selectedWorkflow.mode === "n8n" && viewMode === "latest" && (
+              <WorkflowOutputPreview workflowId={selectedWorkflow.id} />
+            )}
+
+            {selectedWorkflow.mode === "n8n" && viewMode === "history" && (
+              <div className="flex gap-4 min-h-[400px] max-h-[calc(100vh-200px)]">
+                <div className="w-64 flex-shrink-0 overflow-auto">
+                  <ExecutionsList
+                    workflowId={selectedWorkflow.id}
+                    selectedExecutionId={selectedExecution?.id || null}
+                    onSelectExecution={(exec) => setSelectedExecution({ id: exec.id, workflowId: exec.workflowId, status: exec.status })}
+                  />
+                </div>
+                <div className="flex-1 overflow-auto">
+                  {selectedExecution ? (
+                    <ExecutionDetail executionId={selectedExecution.id} />
+                  ) : (
+                    <Card className="border-dashed h-full flex items-center justify-center">
+                      <CardContent className="text-center text-muted-foreground">
+                        <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p>Select an execution to view details</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </div>
             )}
           </div>

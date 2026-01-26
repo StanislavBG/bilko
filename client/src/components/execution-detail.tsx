@@ -1,8 +1,52 @@
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle, XCircle, Clock, Image, FileText, Activity, Shield } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle, XCircle, Clock, Image, FileText, Activity, Shield, Copy, Download, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
+
+function useCopyToClipboard() {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { toast } = useToast();
+  
+  const copy = async (text: string, id: string, label?: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      toast({ title: "Copied!", description: label || "Text copied to clipboard" });
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      toast({ title: "Failed to copy", variant: "destructive" });
+    }
+  };
+  
+  return { copy, isCopied: (id: string) => copiedId === id };
+}
+
+async function copyImageToClipboard(imageUrl: string, toast: ReturnType<typeof useToast>["toast"]) {
+  try {
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+    await navigator.clipboard.write([
+      new ClipboardItem({ [blob.type]: blob })
+    ]);
+    toast({ title: "Copied!", description: "Image copied to clipboard" });
+  } catch {
+    toast({ title: "Failed to copy image", description: "Your browser may not support this feature", variant: "destructive" });
+  }
+}
+
+function downloadImage(imageUrl: string, filename: string = "infographic.png") {
+  const link = document.createElement("a");
+  link.href = imageUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 
 interface CommunicationTrace {
   id: string;
@@ -94,6 +138,8 @@ function TraceItem({ trace }: { trace: CommunicationTrace }) {
 }
 
 export function ExecutionDetail({ executionId }: ExecutionDetailProps) {
+  const { toast } = useToast();
+  const { copy, isCopied } = useCopyToClipboard();
   const { data, isLoading } = useQuery<ExecutionDetailResponse>({
     queryKey: ["/api/executions", executionId],
     queryFn: async () => {
@@ -170,9 +216,41 @@ export function ExecutionDetail({ executionId }: ExecutionDetailProps) {
           {(output.imageUrl || output.imagePrompt) && (
             <Card data-testid="card-execution-infographic">
               <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <Image className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-sm">Infographic</CardTitle>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Image className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm">Infographic</CardTitle>
+                  </div>
+                  {output.imageUrl && (
+                    <div className="flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => downloadImage(output.imageUrl!, `infographic-${executionId}.png`)}
+                            data-testid="button-download-exec-image"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download image</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyImageToClipboard(output.imageUrl!, toast)}
+                            data-testid="button-copy-exec-image"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copy image to clipboard</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -206,7 +284,22 @@ export function ExecutionDetail({ executionId }: ExecutionDetailProps) {
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <CardTitle className="text-sm">Post 1: Main Content</CardTitle>
                   </div>
-                  <Badge variant="outline" className="text-xs">Primary</Badge>
+                  <div className="flex items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copy(output.postContent!, `exec-post-${executionId}`, "Post content copied")}
+                          data-testid="button-copy-exec-post"
+                        >
+                          {isCopied(`exec-post-${executionId}`) ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy post to clipboard</TooltipContent>
+                    </Tooltip>
+                    <Badge variant="outline" className="text-xs">Primary</Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -225,7 +318,22 @@ export function ExecutionDetail({ executionId }: ExecutionDetailProps) {
                     <Shield className="h-4 w-4 text-muted-foreground" />
                     <CardTitle className="text-sm">Post 2: AI Transparency</CardTitle>
                   </div>
-                  <Badge variant="secondary" className="text-xs">Follow-up</Badge>
+                  <div className="flex items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => copy(output.transparencyPost!, `exec-transparency-${executionId}`, "Transparency post copied")}
+                          data-testid="button-copy-exec-transparency"
+                        >
+                          {isCopied(`exec-transparency-${executionId}`) ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy post to clipboard</TooltipContent>
+                    </Tooltip>
+                    <Badge variant="secondary" className="text-xs">Follow-up</Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
