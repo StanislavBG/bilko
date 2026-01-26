@@ -121,7 +121,14 @@ async function executeN8nWorkflow(
 ): Promise<WorkflowOutput> {
   const cachedUrl = getWebhookUrl(workflow.id);
   const envUrl = workflow.endpoint ? process.env[workflow.endpoint] : undefined;
-  const webhookUrl = cachedUrl || envUrl;
+  let webhookUrl = cachedUrl || envUrl;
+  
+  // ENV-001: In dev environment (REPLIT_DOMAINS set), use dev workflow webhook path
+  // Dev workflows have "-dev" suffix on their webhook paths
+  if (process.env.REPLIT_DOMAINS && webhookUrl && workflow.id === 'european-football-daily') {
+    webhookUrl = webhookUrl.replace('/webhook/european-football-daily', '/webhook/european-football-daily-dev');
+    console.log(`[n8n] Using dev webhook URL: ${webhookUrl}`);
+  }
   
   if (!webhookUrl) {
     return {
