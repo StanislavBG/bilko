@@ -1,8 +1,8 @@
 # ENV-001: Environments
 
 **Priority**: CRITICAL  
-**Version**: 1.0.0  
-**Last Updated**: 2026-01-25
+**Version**: 1.1.0  
+**Last Updated**: 2026-01-26
 
 ## Purpose
 
@@ -12,20 +12,29 @@ Defines all deployment environments and their configuration. This is the single 
 
 | Environment | Replit URL | n8n Webhook Base | Workflow Tag |
 |-------------|-----------|------------------|--------------|
-| Development | `https://bilko-bibitkov.worf.replit.dev` | `https://bilkobibitkov.app.n8n.cloud/webhook` | `[DEV]` |
+| Development | Dynamic (from `REPLIT_DOMAINS`) | `https://bilkobibitkov.app.n8n.cloud/webhook` | None (dev workflow) |
 | Production | `https://bilkobibitkov.replit.app` | `https://bilkobibitkov.app.n8n.cloud/webhook` | `[PROD]` |
+
+### Development Domain Behavior
+Development domains are **dynamic** and change on container restart. The current dev domain is available via the `REPLIT_DOMAINS` environment variable. Example: `91ed71cb-7291-48f5-a070-a3f5b7f27ed4-00-1krg253x2da17.worf.replit.dev`
 
 ## Naming Conventions
 
 ### Workflow Names
-All workflow names MUST be prefixed with environment tag:
-- Development: `[DEV] Workflow Name`
-- Production: `[PROD] Workflow Name`
+- Development: `European Football Daily` (no prefix, separate workflow)
+- Production: `[PROD] European Football Daily`
 
 ### Callback URLs
-Callbacks in workflow artifacts MUST point to the correct Replit URL for their environment:
-- Development workflows → `bilko-bibitkov.worf.replit.dev`
-- Production workflows → `bilkobibitkov.replit.app`
+
+**In Replit App Code** (`server/workflows/router.ts`):
+- The app dynamically constructs callbackUrl based on environment
+- Dev: Uses `REPLIT_DOMAINS` env var (dynamic, changes on restart)
+- Prod: Uses stable `https://bilkobibitkov.replit.app/api/workflows/callback`
+- The callbackUrl is passed to n8n via webhook payload
+
+**In n8n Workflow Nodes**:
+- Development workflows: Use dynamic expression `={{ $('Webhook').first().json.body.callbackUrl }}`
+- Production workflows: Use hardcoded `https://bilkobibitkov.replit.app/api/workflows/callback`
 
 ## Usage
 
