@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-01-26T02:57:11.580Z",
+  "updatedAt": "2026-01-26T02:51:55.310Z",
   "createdAt": "2026-01-25T09:36:24.234Z",
   "id": "oV6WGX5uBeTZ9tRa",
   "name": "[PROD] European Football Daily",
@@ -222,7 +222,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst postContent = input.postContent || \"Football news update!\";\nconst imagePrompt = input.imagePrompt || \"European football celebration\";\nconst imageDataUri = input.imageDataUri || null;\nconst sourceLink = input.sourceLink || \"\";\n\n// Create transparency/disclosure post - flowing sentences, no hashtags, includes source link\nlet transparencyPost = \"Why am I doing this? Let me be transparent. I love European football but don't have time to search for news, so I built a system where the news comes to me - if you're into football too, follow along and give me feedback so we can vibe together! Want to learn how to create content like this? I can help, check the link in bio. I'm learning to thrive in the AI age (it's already here, in case you haven't noticed), and this is my playground and my proof of work. Full transparency, trust, and compliance matter to me. I'm Bilko Bibitkov - human in the loop, always.\";\n\n// Add source attribution if we have a link\nif (sourceLink) {\n  transparencyPost += \"\\n\\nSource: \" + sourceLink;\n}\n\nconst output = {\n  success: true,\n  data: {\n    postContent: postContent,\n    imagePrompt: imagePrompt,\n    imageUrl: imageDataUri,\n    transparencyPost: transparencyPost,\n    sourceLink: sourceLink,\n    contentFiltered: !imageDataUri\n  },\n  metadata: {\n    workflowId: \"european-football-daily\",\n    executedAt: new Date().toISOString(),\n    aiGenerated: true\n  }\n};\nreturn [{ json: output }];"
+        "jsCode": "const input = $input.first().json;\nconst postContent = input.postContent || 'Football news update!';\nconst imagePrompt = input.imagePrompt || 'European football celebration';\nconst imageDataUri = input.imageDataUri || null;\nconst sourceLink = input.sourceLink || '';\n\n// Create transparency/disclosure post - flowing sentences, no hashtags, includes source link\nlet transparencyPost = \"Why am I doing this? Let me be transparent. I love European football but don't have time to search for news, so I built a system where the news comes to me - if you're into football too, follow along and give me feedback so we can vibe together! Want to learn how to create content like this? I can help, check the link in bio. I'm learning to thrive in the AI age (it's already here, in case you haven't noticed), and this is my playground and my proof of work. Full transparency, trust, and compliance matter to me. I'm Bilko Bibitkov - human in the loop, always.\";\n\n// Add source attribution if we have a link\nif (sourceLink) {\n  transparencyPost += \"\n\nSource: \" + sourceLink;\n}\n\nconst output = {\n  success: true,\n  data: {\n    postContent: postContent,\n    imagePrompt: imagePrompt,\n    imageUrl: imageDataUri,\n    transparencyPost: transparencyPost,\n    sourceLink: sourceLink,\n    contentFiltered: !imageDataUri\n  },\n  metadata: {\n    workflowId: \"european-football-daily\",\n    executedAt: new Date().toISOString(),\n    aiGenerated: true\n  }\n};\nreturn [{ json: output }];"
       },
       "name": "Build Final Output",
       "type": "n8n-nodes-base.code",
@@ -502,7 +502,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create a short, punchy tagline for a European football social media image.\\n\\nTOPIC: {{ $json.selectedTopic }}\\nPOST PREVIEW: {{ $json.postContent ? $json.postContent.substring(0, 100) : \"Football update\" }}\\n\\nRules:\\n- Maximum 4-5 words\\n- Catchy and memorable\\n- No hashtags\\n- Use action words or emotions\\n- Should work overlaid on a football image\\n\\nReturn ONLY a JSON object: {\\\"tagline\\\": \\\"your tagline here\\\"}\"\n    }]\n  }]\n}",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create a short, punchy tagline for a European football social media image.\n\nTOPIC: {{ $json.selectedTopic }}\nPOST PREVIEW: {{ $json.postContent ? $json.postContent.substring(0, 100) : 'Football update' }}\n\nRules:\n- Maximum 4-5 words\n- Catchy and memorable\n- No hashtags\n- Use action words or emotions\n- Should work overlaid on a football image\n\nReturn ONLY a JSON object: {\"tagline\": \"your tagline here\"}\"\n    }]\n  }]\n}",
         "options": {
           "response": {
             "response": {
@@ -806,15 +806,15 @@
   },
   "meta": null,
   "pinData": {},
-  "versionId": "b4e6922f-d4d7-44f9-9415-7c6960d62663",
-  "activeVersionId": "b4e6922f-d4d7-44f9-9415-7c6960d62663",
-  "versionCounter": 236,
+  "versionId": "38a3fedc-e300-4be6-a4bb-67953431a9d8",
+  "activeVersionId": "38a3fedc-e300-4be6-a4bb-67953431a9d8",
+  "versionCounter": 230,
   "triggerCount": 2,
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-01-26T02:57:11.581Z",
-    "createdAt": "2026-01-26T02:57:11.581Z",
-    "versionId": "b4e6922f-d4d7-44f9-9415-7c6960d62663",
+    "updatedAt": "2026-01-26T02:51:55.311Z",
+    "createdAt": "2026-01-26T02:51:55.311Z",
+    "versionId": "38a3fedc-e300-4be6-a4bb-67953431a9d8",
     "workflowId": "oV6WGX5uBeTZ9tRa",
     "nodes": [
       {
@@ -1032,7 +1032,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const input = $input.first().json;\nconst postContent = input.postContent || \"Football news update!\";\nconst imagePrompt = input.imagePrompt || \"European football celebration\";\nconst imageDataUri = input.imageDataUri || null;\nconst sourceLink = input.sourceLink || \"\";\n\n// Create transparency/disclosure post - flowing sentences, no hashtags, includes source link\nlet transparencyPost = \"Why am I doing this? Let me be transparent. I love European football but don't have time to search for news, so I built a system where the news comes to me - if you're into football too, follow along and give me feedback so we can vibe together! Want to learn how to create content like this? I can help, check the link in bio. I'm learning to thrive in the AI age (it's already here, in case you haven't noticed), and this is my playground and my proof of work. Full transparency, trust, and compliance matter to me. I'm Bilko Bibitkov - human in the loop, always.\";\n\n// Add source attribution if we have a link\nif (sourceLink) {\n  transparencyPost += \"\\n\\nSource: \" + sourceLink;\n}\n\nconst output = {\n  success: true,\n  data: {\n    postContent: postContent,\n    imagePrompt: imagePrompt,\n    imageUrl: imageDataUri,\n    transparencyPost: transparencyPost,\n    sourceLink: sourceLink,\n    contentFiltered: !imageDataUri\n  },\n  metadata: {\n    workflowId: \"european-football-daily\",\n    executedAt: new Date().toISOString(),\n    aiGenerated: true\n  }\n};\nreturn [{ json: output }];"
+          "jsCode": "const input = $input.first().json;\nconst postContent = input.postContent || 'Football news update!';\nconst imagePrompt = input.imagePrompt || 'European football celebration';\nconst imageDataUri = input.imageDataUri || null;\nconst sourceLink = input.sourceLink || '';\n\n// Create transparency/disclosure post - flowing sentences, no hashtags, includes source link\nlet transparencyPost = \"Why am I doing this? Let me be transparent. I love European football but don't have time to search for news, so I built a system where the news comes to me - if you're into football too, follow along and give me feedback so we can vibe together! Want to learn how to create content like this? I can help, check the link in bio. I'm learning to thrive in the AI age (it's already here, in case you haven't noticed), and this is my playground and my proof of work. Full transparency, trust, and compliance matter to me. I'm Bilko Bibitkov - human in the loop, always.\";\n\n// Add source attribution if we have a link\nif (sourceLink) {\n  transparencyPost += \"\n\nSource: \" + sourceLink;\n}\n\nconst output = {\n  success: true,\n  data: {\n    postContent: postContent,\n    imagePrompt: imagePrompt,\n    imageUrl: imageDataUri,\n    transparencyPost: transparencyPost,\n    sourceLink: sourceLink,\n    contentFiltered: !imageDataUri\n  },\n  metadata: {\n    workflowId: \"european-football-daily\",\n    executedAt: new Date().toISOString(),\n    aiGenerated: true\n  }\n};\nreturn [{ json: output }];"
         },
         "name": "Build Final Output",
         "type": "n8n-nodes-base.code",
@@ -1312,7 +1312,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create a short, punchy tagline for a European football social media image.\\n\\nTOPIC: {{ $json.selectedTopic }}\\nPOST PREVIEW: {{ $json.postContent ? $json.postContent.substring(0, 100) : \"Football update\" }}\\n\\nRules:\\n- Maximum 4-5 words\\n- Catchy and memorable\\n- No hashtags\\n- Use action words or emotions\\n- Should work overlaid on a football image\\n\\nReturn ONLY a JSON object: {\\\"tagline\\\": \\\"your tagline here\\\"}\"\n    }]\n  }]\n}",
+          "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create a short, punchy tagline for a European football social media image.\n\nTOPIC: {{ $json.selectedTopic }}\nPOST PREVIEW: {{ $json.postContent ? $json.postContent.substring(0, 100) : 'Football update' }}\n\nRules:\n- Maximum 4-5 words\n- Catchy and memorable\n- No hashtags\n- Use action words or emotions\n- Should work overlaid on a football image\n\nReturn ONLY a JSON object: {\"tagline\": \"your tagline here\"}\"\n    }]\n  }]\n}",
           "options": {
             "response": {
               "response": {
