@@ -123,9 +123,9 @@ async function executeN8nWorkflow(
   const envUrl = workflow.endpoint ? process.env[workflow.endpoint] : undefined;
   let webhookUrl = cachedUrl || envUrl;
   
-  // Note: Both DEV and PROD workflows use the same webhook path (per ENV-001 v1.2.0)
-  // When testing in dev, PROD workflow must be deactivated in n8n
-  // The DEV workflow must be saved in n8n UI at least once to register its webhook
+  // Note: DEV and PROD workflows have SEPARATE webhook paths (per ENV-001 v1.3.0)
+  // PROD: european-football-daily | DEV: dev-european-football-daily
+  // Both can be active simultaneously - no need to deactivate one to test the other
   
   if (!webhookUrl) {
     return {

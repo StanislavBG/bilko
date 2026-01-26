@@ -30,11 +30,20 @@
     },
     {
       "id": "european-football-daily",
-      "name": "European Football Daily",
+      "name": "[PROD] European Football Daily",
       "mode": "n8n",
       "webhookPath": "european-football-daily",
-      "description": "Daily automated European football news aggregation workflow. Runs at 00:00 to search the last 24 hours of European football news, identifies the most positive/cheerful event using sentiment analysis, gathers fan opinions from Reddit, generates an infographic, and publishes a congratulatory Facebook post.",
-      "instructions": "This workflow runs automatically at 00:00 daily via n8n Schedule Trigger. It searches Google News RSS for European football events, uses Gemini for sentiment analysis and content generation, fetches fan opinions from Reddit, creates an infographic with Gemini Imagen, and posts to Facebook. Manual execution can be triggered for testing. Schedule: 0 0 * * * (daily at midnight).",
+      "description": "PRODUCTION workflow. Daily automated European football news aggregation. Runs at 00:00 to search the last 24 hours of European football news, identifies the most positive/cheerful event using sentiment analysis, generates an AI image, and publishes a congratulatory post with AI transparency disclosure.",
+      "instructions": "This is the PRODUCTION workflow. It runs automatically at 00:00 daily via n8n Schedule Trigger. Uses fixed callback URL to bilkobibitkov.replit.app. For testing, use the DEV workflow instead.",
+      "category": "content"
+    },
+    {
+      "id": "dev-european-football-daily",
+      "name": "[DEV] European Football Daily",
+      "mode": "n8n",
+      "webhookPath": "dev-european-football-daily",
+      "description": "DEVELOPMENT workflow. Same pipeline as PROD but with dynamic callback URLs and manual trigger only. Use this for testing new features before promoting to PROD.",
+      "instructions": "Manual execution only. Uses dynamic callback URLs so it works with any Replit dev domain. Both DEV and PROD can be active simultaneously (different webhook paths).",
       "category": "content"
     }
   ]
