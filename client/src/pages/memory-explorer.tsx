@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { PageContent } from "@/components/page-content";
 import { ActionBar } from "@/components/action-bar";
@@ -11,6 +11,7 @@ import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Loader2, ArrowRight, 
 import { useToast } from "@/hooks/use-toast";
 import type { CommunicationTrace } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 function formatDuration(ms: number | null): string {
   if (ms === null) return "-";
@@ -181,9 +182,14 @@ function TraceDetailModal({
 
 export default function MemoryExplorer() {
   const { effectiveIsAdmin } = useViewMode();
+  const isMobile = useIsMobile();
   const [selectedTrace, setSelectedTrace] = useState<CommunicationTrace | null>(null);
   const [isActionPanelCollapsed, setIsActionPanelCollapsed] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    setIsActionPanelCollapsed(isMobile);
+  }, [isMobile]);
 
   const { data: traces, isLoading, refetch, isRefetching } = useQuery<CommunicationTrace[]>({
     queryKey: ["/api/traces"],
