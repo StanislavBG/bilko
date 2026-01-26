@@ -76,17 +76,19 @@ async function syncWorkflow(
   }
 
   const { nodes, connections } = buildWorkflowNodes(workflow);
+  
+  // Check if workflow exists in n8n FIRST (before failing on missing local nodes)
+  const existing = await client.findWorkflowByName(workflow.name);
 
-  if (nodes.length === 0) {
+  // For n8n-hosted workflows without local definitions, we just cache the webhook
+  if (nodes.length === 0 && !existing) {
     return {
       id: workflow.id,
       name: workflow.name,
       action: "skipped",
-      error: "No node definition available for this workflow"
+      error: "No node definition available and workflow not found in n8n"
     };
   }
-
-  const existing = await client.findWorkflowByName(workflow.name);
 
   if (existing) {
     // IMPORTANT: Do NOT overwrite existing workflows!
@@ -94,8 +96,14 @@ async function syncWorkflow(
     // See INT-002 ISSUE-001: API updates reset webhook registration.
     // See INT-002 ISSUE-004: n8n API doesn't return node definitions.
     
-    // Cache webhook URL from LOCAL definition (n8n API omits nodes - ISSUE-004)
-    const webhookUrl = extractWebhookUrl({ nodes } as N8nWorkflow, nodes);
+    // Cache webhook URL: prefer LOCAL nodes, fallback to registry webhookPath (for n8n-hosted workflows)
+    let webhookUrl = extractWebhookUrl({ nodes } as N8nWorkflow, nodes);
+    
+    if (!webhookUrl && workflow.webhookPath) {
+      // Fallback for n8n-hosted workflows without local node definitions
+      const baseUrl = process.env.N8N_API_BASE_URL?.replace("/api/v1", "") || "";
+      webhookUrl = `${baseUrl}/webhook/${workflow.webhookPath}`;
+    }
     
     if (webhookUrl) {
       setWebhookUrl(workflow.id, webhookUrl);
