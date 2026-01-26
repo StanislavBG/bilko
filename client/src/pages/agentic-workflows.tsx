@@ -155,7 +155,7 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
   const transparencyPost = finalData?.transparencyPost;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">Latest Output</h3>
         <Button
@@ -170,142 +170,147 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
         </Button>
       </div>
 
-      {(imageUrl || imagePrompt) && (
-        <Card data-testid="card-infographic">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Image className="h-4 w-4 text-muted-foreground" />
-                <CardTitle className="text-sm">Infographic</CardTitle>
-              </div>
-              {imageUrl && (
-                <div className="flex items-center gap-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => downloadImage(imageUrl, `infographic-${workflowId}.png`)}
-                        data-testid="button-download-image"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Download image</TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => copyImageToClipboard(imageUrl, toast)}
-                        data-testid="button-copy-image"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Copy image to clipboard</TooltipContent>
-                  </Tooltip>
+      <div className="flex gap-4">
+        {/* Left: Image */}
+        <div className="w-[280px] flex-shrink-0">
+          {(imageUrl || imagePrompt) && (
+            <Card data-testid="card-infographic" className="h-full">
+              <CardHeader className="py-2 px-3">
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1">
+                    <Image className="h-3 w-3 text-muted-foreground" />
+                    <CardTitle className="text-xs">Infographic</CardTitle>
+                  </div>
+                  {imageUrl && (
+                    <div className="flex items-center">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => downloadImage(imageUrl, `infographic-${workflowId}.png`)}
+                            data-testid="button-download-image"
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => copyImageToClipboard(imageUrl, toast)}
+                            data-testid="button-copy-image"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Copy</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {imageUrl ? (
-              <div className="rounded-md overflow-hidden">
-                <img 
-                  src={imageUrl} 
-                  alt="Generated infographic" 
-                  className="w-full h-auto"
-                  data-testid="img-infographic"
-                />
-              </div>
-            ) : (
-              <div className="bg-muted rounded-md p-4 min-h-32 flex items-center justify-center border-2 border-dashed">
-                <div className="text-center text-sm text-muted-foreground">
-                  <Image className="h-12 w-12 mx-auto mb-2 opacity-30" />
-                  <p className="font-medium mb-2">Image Prompt</p>
-                  <p className="text-xs max-w-md" data-testid="text-image-prompt">{imagePrompt}</p>
+              </CardHeader>
+              <CardContent className="p-2 pt-0">
+                {imageUrl ? (
+                  <div className="rounded overflow-hidden">
+                    <img 
+                      src={imageUrl} 
+                      alt="Generated infographic" 
+                      className="w-full h-auto"
+                      data-testid="img-infographic"
+                    />
+                  </div>
+                ) : (
+                  <div className="bg-muted rounded p-3 flex items-center justify-center border border-dashed h-32">
+                    <div className="text-center text-xs text-muted-foreground">
+                      <Image className="h-6 w-6 mx-auto mb-1 opacity-30" />
+                      <p className="font-medium">Prompt only</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        {/* Right: Posts */}
+        <div className="flex-1 space-y-3 min-w-0">
+          {postContent && (
+            <Card data-testid="card-facebook-post">
+              <CardHeader className="py-2 px-3">
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1">
+                    <FileText className="h-3 w-3 text-muted-foreground" />
+                    <CardTitle className="text-xs">Post 1: Main</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => copy(postContent, "post-content", "Post copied")}
+                          data-testid="button-copy-post"
+                        >
+                          {isCopied("post-content") ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy post</TooltipContent>
+                    </Tooltip>
+                    <Badge variant="outline" className="text-[10px] px-1">Primary</Badge>
+                  </div>
                 </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              </CardHeader>
+              <CardContent className="p-2 pt-0">
+                <div className="bg-muted rounded p-2">
+                  <p className="text-xs line-clamp-4" data-testid="text-post-content">{postContent}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-      {postContent && (
-        <Card data-testid="card-facebook-post">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <CardTitle className="text-sm">Post 1: Main Content</CardTitle>
-              </div>
-              <div className="flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => copy(postContent, "post-content", "Post content copied")}
-                      data-testid="button-copy-post"
-                    >
-                      {isCopied("post-content") ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Copy post to clipboard</TooltipContent>
-                </Tooltip>
-                <Badge variant="outline" className="text-xs">Primary</Badge>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-muted rounded-md p-4">
-              <p className="text-sm whitespace-pre-wrap" data-testid="text-post-content">{postContent}</p>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Generated {data.outputs?.final?.timestamp ? new Date(data.outputs.final.timestamp).toLocaleString() : ""}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {transparencyPost && (
-        <Card data-testid="card-transparency-post">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4 text-muted-foreground" />
-                <CardTitle className="text-sm">Post 2: AI Transparency</CardTitle>
-              </div>
-              <div className="flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => copy(transparencyPost, "transparency-post", "Transparency post copied")}
-                      data-testid="button-copy-transparency"
-                    >
-                      {isCopied("transparency-post") ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Copy post to clipboard</TooltipContent>
-                </Tooltip>
-                <Badge variant="outline" className="text-xs">Follow-up</Badge>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-muted/50 rounded-md p-4">
-              <p className="text-sm whitespace-pre-wrap text-muted-foreground" data-testid="text-transparency-content">{transparencyPost}</p>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Post this after the main content to maintain transparency with your audience.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+          {transparencyPost && (
+            <Card data-testid="card-transparency-post">
+              <CardHeader className="py-2 px-3">
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1">
+                    <Shield className="h-3 w-3 text-muted-foreground" />
+                    <CardTitle className="text-xs">Post 2: Transparency</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => copy(transparencyPost, "transparency-post", "Post copied")}
+                          data-testid="button-copy-transparency"
+                        >
+                          {isCopied("transparency-post") ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy post</TooltipContent>
+                    </Tooltip>
+                    <Badge variant="secondary" className="text-[10px] px-1">Follow-up</Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-2 pt-0">
+                <div className="bg-muted/50 rounded p-2">
+                  <p className="text-xs text-muted-foreground line-clamp-3" data-testid="text-transparency-content">{transparencyPost}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
 
       {!postContent && !imagePrompt && (
         <Card className="border-dashed">
