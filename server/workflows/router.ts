@@ -123,12 +123,9 @@ async function executeN8nWorkflow(
   const envUrl = workflow.endpoint ? process.env[workflow.endpoint] : undefined;
   let webhookUrl = cachedUrl || envUrl;
   
-  // ENV-001: In dev environment (REPLIT_DOMAINS set), use dev workflow webhook path
-  // Dev workflows have "-dev" suffix on their webhook paths
-  if (process.env.REPLIT_DOMAINS && webhookUrl && workflow.id === 'european-football-daily') {
-    webhookUrl = webhookUrl.replace('/webhook/european-football-daily', '/webhook/european-football-daily-dev');
-    console.log(`[n8n] Using dev webhook URL: ${webhookUrl}`);
-  }
+  // Note: Both DEV and PROD workflows use the same webhook path (per ENV-001 v1.2.0)
+  // When testing in dev, PROD workflow must be deactivated in n8n
+  // The DEV workflow must be saved in n8n UI at least once to register its webhook
   
   if (!webhookUrl) {
     return {
