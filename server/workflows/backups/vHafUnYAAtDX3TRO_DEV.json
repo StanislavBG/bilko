@@ -2,7 +2,7 @@
   "updatedAt": "2026-01-26T05:31:33.445Z",
   "createdAt": "2026-01-25T09:36:24.234Z",
   "id": "oV6WGX5uBeTZ9tRa",
-  "name": "European Football Daily",
+  "name": "[DEV] European Football Daily",
   "description": null,
   "active": false,
   "isArchived": false,
@@ -10,7 +10,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "european-football-daily",
+        "path": "dev-european-football-daily",
         "responseMode": "responseNode",
         "options": {}
       },
