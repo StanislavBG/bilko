@@ -133,7 +133,7 @@
       "version": "2.1.0",
       "triggers": ["contract", "webhook", "request", "response", "payload", "format"],
       "dependencies": ["ARCH-007", "ARCH-003"],
-      "crossReferences": ["ARCH-003", "INT-001"],
+      "crossReferences": ["ARCH-003", "INT-001", "ENV-001"],
       "description": "Technical contract for orchestrator communication."
     },
     "INT-004": {
@@ -493,7 +493,7 @@
       "version": "1.0.0",
       "triggers": ["n8n workflow", "develop workflow", "modify workflow", "workflow development", "FETCH", "ANALYZE", "MODIFY", "PUSH", "BACKUP", "VERIFY"],
       "dependencies": ["ARCH-000", "INT-002"],
-      "crossReferences": ["INT-003", "INT-004", "AGENT-003"],
+      "crossReferences": ["INT-003", "INT-004", "AGENT-003", "ENV-001"],
       "description": "Executable 6-phase protocol for n8n workflow development: FETCH → ANALYZE → MODIFY → PUSH → BACKUP → VERIFY."
     },
     "INT-005": {
@@ -505,7 +505,7 @@
       "version": "1.0.0",
       "triggers": ["callback", "persistence", "final output", "execution result", "workflow callback"],
       "dependencies": ["INT-003", "AGENT-003", "DATA-002"],
-      "crossReferences": ["DATA-002", "AGENT-003-FOOTBALL"],
+      "crossReferences": ["DATA-002", "AGENT-003-FOOTBALL", "ENV-001"],
       "description": "Defines how n8n workflow callbacks persist execution results for distribution workflows."
     },
     "ENV-001": {
