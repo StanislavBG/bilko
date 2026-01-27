@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { Play, RefreshCw, Workflow, Image, FileText, History, Shield, Menu, Copy, Download, Check, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { Play, RefreshCw, Workflow, Image, FileText, History, Shield, Menu, Copy, Download, Check, ChevronDown, ChevronRight, ChevronLeft, Info } from "lucide-react";
 import { ActionBar } from "@/components/action-bar";
 import { ActionPanel } from "@/components/action-panel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -339,10 +339,22 @@ export default function AgenticWorkflows() {
   const [viewMode, setViewMode] = useState<"latest" | "history">("latest");
   const [isWorkflowNavOpen, setIsWorkflowNavOpen] = useState(false);
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
+  
+  // Mobile drill-down navigation state
+  const [mobileNavLevel, setMobileNavLevel] = useState<"categories" | "workflows">("categories");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     setIsActionPanelCollapsed(isMobile);
   }, [isMobile]);
+  
+  // Reset mobile nav when sheet closes
+  useEffect(() => {
+    if (!isWorkflowNavOpen) {
+      setMobileNavLevel("categories");
+      setSelectedCategory(null);
+    }
+  }, [isWorkflowNavOpen]);
 
   const { data, isLoading } = useQuery<WorkflowsResponse>({
     queryKey: ["/api/workflows"],
@@ -385,6 +397,19 @@ export default function AgenticWorkflows() {
   });
 
   const workflows = data?.workflows || [];
+  
+  // Group workflows by category for mobile drill-down
+  const workflowsByCategory = workflows.reduce((acc, workflow) => {
+    const category = workflow.category || "Uncategorized";
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(workflow);
+    return acc;
+  }, {} as Record<string, WorkflowDefinition[]>);
+  
+  const categories = Object.keys(workflowsByCategory).sort();
+  const categoryWorkflows = selectedCategory ? workflowsByCategory[selectedCategory] || [] : [];
 
   const actions = selectedWorkflow?.mode === "n8n"
     ? [
@@ -402,6 +427,16 @@ export default function AgenticWorkflows() {
       ]
     : [];
 
+  const handleCategorySelect = (category: string) => {
+    setSelectedCategory(category);
+    setMobileNavLevel("workflows");
+  };
+  
+  const handleMobileBack = () => {
+    setMobileNavLevel("categories");
+    setSelectedCategory(null);
+  };
+
   const handleWorkflowSelect = (workflow: WorkflowDefinition) => {
     setSelectedWorkflow(workflow);
     setSelectedExecution(null);
@@ -411,7 +446,8 @@ export default function AgenticWorkflows() {
     }
   };
 
-  const WorkflowNavContent = () => (
+  // Desktop nav - shows all workflows flat
+  const DesktopNavContent = () => (
     <>
       <div className="p-3 border-b">
         <h2 className="text-sm font-medium">Workflows</h2>
@@ -444,6 +480,71 @@ export default function AgenticWorkflows() {
     </>
   );
 
+  // Mobile nav - drill-down with categories then workflows
+  const MobileNavContent = () => (
+    <>
+      <div className="p-3 border-b">
+        {mobileNavLevel === "categories" ? (
+          <h2 className="text-sm font-medium">Categories</h2>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleMobileBack}
+              data-testid="button-nav-back"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <h2 className="text-sm font-medium truncate">{selectedCategory}</h2>
+          </div>
+        )}
+      </div>
+      <div className="flex-1 overflow-auto p-2 space-y-1">
+        {isLoading ? (
+          <div className="space-y-2" data-testid="status-loading-workflows">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : mobileNavLevel === "categories" ? (
+          // Show categories
+          categories.map((category) => (
+            <button
+              key={category}
+              onClick={() => handleCategorySelect(category)}
+              className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors hover-elevate flex items-center justify-between gap-2"
+              data-testid={`nav-category-${category}`}
+            >
+              <div>
+                <div className="font-medium truncate">{category}</div>
+                <div className="text-xs opacity-70">{workflowsByCategory[category].length} workflow{workflowsByCategory[category].length !== 1 ? "s" : ""}</div>
+              </div>
+              <ChevronRight className="h-4 w-4 opacity-50" />
+            </button>
+          ))
+        ) : (
+          // Show workflows in selected category
+          categoryWorkflows.map((workflow) => (
+            <button
+              key={workflow.id}
+              onClick={() => handleWorkflowSelect(workflow)}
+              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                selectedWorkflow?.id === workflow.id
+                  ? "bg-foreground text-background"
+                  : "hover-elevate"
+              }`}
+              data-testid={`nav-workflow-${workflow.id}`}
+            >
+              <div className="font-medium truncate">{workflow.name}</div>
+              <div className="text-xs opacity-70 truncate">{workflow.mode}</div>
+            </button>
+          ))
+        )}
+      </div>
+    </>
+  );
+
   return (
     <div className="flex flex-1 overflow-hidden">
       {/* Mobile Workflow Nav Sheet */}
@@ -455,7 +556,7 @@ export default function AgenticWorkflows() {
               <SheetDescription>Select a workflow to view</SheetDescription>
             </SheetHeader>
             <div className="flex flex-col h-full">
-              <WorkflowNavContent />
+              <MobileNavContent />
             </div>
           </SheetContent>
         </Sheet>
@@ -464,7 +565,7 @@ export default function AgenticWorkflows() {
       {/* Desktop Left Nav - Workflow List */}
       {!isMobile && (
         <div className="w-64 border-r bg-muted/30 flex flex-col overflow-hidden">
-          <WorkflowNavContent />
+          <DesktopNavContent />
         </div>
       )}
 
