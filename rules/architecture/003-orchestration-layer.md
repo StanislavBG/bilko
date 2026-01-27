@@ -2,7 +2,7 @@
 
 Rule ID: ARCH-003
 Priority: CRITICAL
-Version: 1.0.0
+Version: 1.0.1
 
 ## Context
 The Orchestration Layer is the intelligent proxy that sits between the web application and external services (primarily n8n). This rule defines its responsibilities and behavior.
@@ -58,7 +58,7 @@ Every request chain MUST have a unique trace ID:
 ### D1: Single Entry Point
 All external service calls MUST go through the orchestrator:
 ```
-POST /api/orchestrate/:serviceId
+POST /api/orchestrate/:workflowId
 ```
 
 **DO**: Route all n8n calls through orchestrator

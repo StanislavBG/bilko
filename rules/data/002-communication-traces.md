@@ -2,10 +2,10 @@
 
 Rule ID: DATA-002
 Priority: HIGH
-Version: 1.0.0
+Version: 1.1.0
 
 ## Context
-This rule defines the schema and practices for storing communication traces. The orchestration layer logs all requests and responses to enable agent learning and debugging.
+This rule defines the schema and practices for storing communication traces. The orchestration layer logs all requests and responses to enable agent learning and debugging. Traces can be linked to workflow executions for grouping (see INT-005).
 
 ## Purpose
 
@@ -20,22 +20,21 @@ Communication traces serve multiple purposes:
 ### communication_traces Table
 ```typescript
 // shared/models/traces.ts
-import { pgTable, text, timestamp, jsonb, integer, boolean, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, integer, uuid } from "drizzle-orm/pg-core";
 
 export const communicationTraces = pgTable("communication_traces", {
   id: uuid("id").defaultRandom().primaryKey(),
   
   // Correlation
   traceId: text("trace_id").notNull(), // Groups related attempts
+  executionId: uuid("execution_id"), // FK to workflow_executions (nullable for standalone traces)
   attemptNumber: integer("attempt_number").notNull().default(1),
   
-  // Request info
-  service: text("service").notNull(), // e.g., "n8n"
-  workflowId: text("workflow_id").notNull(),
-  action: text("action"), // The action being performed
-  
-  // User context
-  userId: text("user_id").notNull(),
+  // Service routing
+  sourceService: text("source_service").notNull(), // e.g., "bilko-app", "n8n"
+  destinationService: text("destination_service").notNull(), // e.g., "n8n", "bilko-app"
+  workflowId: text("workflow_id"), // Workflow identifier (nullable for non-workflow traces)
+  action: text("action"), // The action/step being performed
   
   // Timing
   requestedAt: timestamp("requested_at").notNull(),
@@ -47,27 +46,24 @@ export const communicationTraces = pgTable("communication_traces", {
   responsePayload: jsonb("response_payload"),
   
   // Status
-  success: boolean("success"),
-  errorCode: text("error_code"),
-  errorMessage: text("error_message"),
-  
-  // Metadata
-  n8nExecutionId: text("n8n_execution_id"),
+  overallStatus: text("overall_status").notNull().default("pending"), // pending, success, failed
 });
 
 export type CommunicationTrace = typeof communicationTraces.$inferSelect;
 export type InsertCommunicationTrace = typeof communicationTraces.$inferInsert;
 ```
 
+**Note:** The `executionId` column links traces to workflow executions (see INT-005). This enables grouping all traces from a single workflow run.
+
 ## Indexes
 
 Create indexes for common query patterns:
 ```sql
 CREATE INDEX idx_traces_trace_id ON communication_traces(trace_id);
-CREATE INDEX idx_traces_user_id ON communication_traces(user_id);
+CREATE INDEX idx_traces_execution_id ON communication_traces(execution_id);
 CREATE INDEX idx_traces_workflow_id ON communication_traces(workflow_id);
 CREATE INDEX idx_traces_requested_at ON communication_traces(requested_at);
-CREATE INDEX idx_traces_success ON communication_traces(success);
+CREATE INDEX idx_traces_status ON communication_traces(overall_status);
 ```
 
 ## Directives
@@ -77,12 +73,14 @@ Create the trace record BEFORE sending the request:
 ```typescript
 const trace = await storage.createTrace({
   traceId: generateTraceId(),
-  service: "n8n",
+  sourceService: "bilko-app",
+  destinationService: "n8n",
   workflowId,
-  userId,
+  action: "trigger-workflow",
   requestedAt: new Date(),
   requestPayload: payload,
   attemptNumber: 1,
+  overallStatus: "pending",
 });
 ```
 
@@ -93,10 +91,7 @@ await storage.updateTrace(trace.id, {
   respondedAt: new Date(),
   durationMs: Date.now() - startTime,
   responsePayload: response,
-  success: response.success,
-  errorCode: response.error?.code,
-  errorMessage: response.error?.message,
-  n8nExecutionId: response.metadata?.executionId,
+  overallStatus: response.success ? "success" : "failed",
 });
 ```
 
@@ -167,3 +162,9 @@ Design queries with agent consumption in mind.
 
 ## Rationale
 Complete communication traces enable debugging, performance analysis, and future agent learning. The schema balances detail with query performance.
+
+## Cross-References
+
+- ARCH-003: Orchestration Layer (uses this schema)
+- INT-005: Callback Persistence Contract (execution-trace relationship)
+- APP-MEMORY-001: Memory Explorer (UI for viewing traces)
