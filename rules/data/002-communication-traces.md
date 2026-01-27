@@ -2,7 +2,7 @@
 
 Rule ID: DATA-002
 Priority: HIGH
-Version: 1.1.0
+Version: 1.2.0
 
 ## Context
 This rule defines the schema and practices for storing communication traces. The orchestration layer logs all requests and responses to enable agent learning and debugging. Traces can be linked to workflow executions for grouping (see INT-005).
@@ -33,8 +33,11 @@ export const communicationTraces = pgTable("communication_traces", {
   // Service routing
   sourceService: text("source_service").notNull(), // e.g., "bilko-app", "n8n"
   destinationService: text("destination_service").notNull(), // e.g., "n8n", "bilko-app"
-  workflowId: text("workflow_id"), // Workflow identifier (nullable for non-workflow traces)
+  workflowId: text("workflow_id").notNull(), // Workflow identifier
   action: text("action"), // The action/step being performed
+  
+  // User context
+  userId: text("user_id").notNull(), // User who triggered the trace
   
   // Timing
   requestedAt: timestamp("requested_at").notNull(),
@@ -46,7 +49,12 @@ export const communicationTraces = pgTable("communication_traces", {
   responsePayload: jsonb("response_payload"),
   
   // Status
-  overallStatus: text("overall_status").notNull().default("pending"), // pending, success, failed
+  overallStatus: text("overall_status").notNull().default("pending"), // pending, in_progress, success, failed
+  errorCode: text("error_code"), // Error classification code (e.g., "TIMEOUT", "AUTH_FAILED")
+  errorDetail: text("error_detail"), // Human-readable error description
+  
+  // External references
+  n8nExecutionId: text("n8n_execution_id"), // n8n's internal execution ID for correlation
 });
 
 export type CommunicationTrace = typeof communicationTraces.$inferSelect;
@@ -132,7 +140,7 @@ async getRecentFailures(workflowId: string, limit: number): Promise<Communicatio
     .from(communicationTraces)
     .where(and(
       eq(communicationTraces.workflowId, workflowId),
-      eq(communicationTraces.success, false)
+      eq(communicationTraces.overallStatus, "failed")
     ))
     .orderBy(desc(communicationTraces.requestedAt))
     .limit(limit);

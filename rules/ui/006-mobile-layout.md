@@ -1,6 +1,6 @@
 # UI-006: Mobile Layout
 
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **Priority**: HIGH  
 **Partition**: ui
 
@@ -102,9 +102,78 @@ const [isNavCollapsed, setIsNavCollapsed] = useState(false);
 | Content area | Remaining space | Remaining space |
 | Mobile header | Visible with SidebarTrigger | Hidden |
 
+### D6: Mobile Drill-Down Navigation
+
+For pages with deep hierarchy (e.g., Agentic Workflows), use Sheet-based drill-down:
+
+```tsx
+// Sheet with internal back navigation
+<Sheet>
+  <SheetContent side="left">
+    <SheetHeader>
+      {showSecondLevel && (
+        <Button onClick={() => setShowSecondLevel(false)}>
+          <ChevronLeft /> Back
+        </Button>
+      )}
+    </SheetHeader>
+    {showSecondLevel ? <SecondLevelNav /> : <FirstLevelNav />}
+  </SheetContent>
+</Sheet>
+```
+
+**Pattern:**
+- First level: Category/folder list
+- Second level: Items within selected category
+- Back button returns to previous level within Sheet
+- Selection closes Sheet and shows detail
+
+### D7: Mobile Swipeable Carousel
+
+For multi-part content on mobile (e.g., execution detail with image + posts), use CSS scroll-snap:
+
+```tsx
+// Container
+<div className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth gap-4 pb-4">
+  {slides.map((slide, i) => (
+    <div key={i} className="snap-center shrink-0 w-full">
+      {slide.content}
+    </div>
+  ))}
+</div>
+
+// Indicators
+<div className="flex justify-center gap-2 mt-2">
+  {slides.map((_, i) => (
+    <div className={`w-2 h-2 rounded-full ${
+      currentSlide === i ? "bg-foreground" : "bg-muted-foreground/30"
+    }`} />
+  ))}
+</div>
+```
+
+**Scroll Detection:**
+Use IntersectionObserver to detect current slide:
+```tsx
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setCurrentSlide(Number(entry.target.dataset.index));
+        }
+      });
+    },
+    { threshold: 0.5 }
+  );
+  // Observe each slide
+}, []);
+```
+
 ## Cross-References
 
 - HUB-003: Nested Navigation Pattern (desktop layout)
 - UI-004: Left-Nav Collapsible Behavior (collapse mechanics)
 - UI-005: Minimal Design Principles (sizing, aesthetics)
 - HUB-001: Hub Layout (primary sidebar)
+- APP-WORKFLOWS-001: Agentic Workflows (uses D6, D7 patterns)

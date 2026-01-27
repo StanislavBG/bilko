@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "1.0.0",
-  "lastUpdated": "2026-01-27T01:30:00Z",
+  "lastUpdated": "2026-01-27T02:00:00Z",
   "primaryDirective": "ARCH-000",
   "rules": {
     "ARCH-000": {
@@ -215,10 +215,22 @@
       "partition": "apps",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["memory", "explorer", "trace", "debug", "communication"],
-      "dependencies": ["HUB-001", "HUB-002", "DATA-002"],
-      "crossReferences": ["DATA-002", "ARCH-003"],
-      "description": "Admin-only app for viewing orchestration layer traces."
+      "triggers": ["memory", "trace", "explorer", "communication history"],
+      "dependencies": ["DATA-002", "UI-001"],
+      "crossReferences": ["DATA-002"],
+      "description": "UI for viewing and inspecting communication traces."
+    },
+    "APP-WORKFLOWS-001": {
+      "id": "APP-WORKFLOWS-001",
+      "title": "Agentic Workflows Page",
+      "path": "rules/apps/agentic-workflows/001-overview.md",
+      "partition": "apps",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": ["workflow", "agentic", "n8n", "execution", "carousel", "drill-down"],
+      "dependencies": ["HUB-001", "UI-006", "DATA-002", "INT-005"],
+      "crossReferences": ["UI-006", "INT-005", "DATA-002", "HUB-003"],
+      "description": "Agentic Workflows page with category/workflow navigation, execution history, and mobile carousel."
     },
     "DATA-001": {
       "id": "DATA-001",
@@ -238,11 +250,11 @@
       "path": "rules/data/002-communication-traces.md",
       "partition": "data",
       "priority": "HIGH",
-      "version": "1.1.0",
-      "triggers": ["trace", "communication", "log", "request", "response", "storage", "execution"],
+      "version": "1.2.0",
+      "triggers": ["trace", "communication", "log", "request", "response", "storage", "execution", "userId", "error"],
       "dependencies": ["DATA-001", "ARCH-003"],
       "crossReferences": ["ARCH-003", "APP-MEMORY-001", "INT-005"],
-      "description": "Schema and practices for storing communication traces with execution linkage."
+      "description": "Schema and practices for storing communication traces with execution linkage and error tracking."
     },
     "UI-001": {
       "id": "UI-001",
@@ -310,11 +322,11 @@
       "path": "rules/ui/006-mobile-layout.md",
       "partition": "ui",
       "priority": "HIGH",
-      "version": "1.1.0",
-      "triggers": ["mobile", "responsive", "collapse", "touch", "breakpoint", "on the go", "small screen"],
+      "version": "1.2.0",
+      "triggers": ["mobile", "responsive", "collapse", "touch", "breakpoint", "on the go", "small screen", "carousel", "swipe", "drill-down"],
       "dependencies": ["UI-001", "HUB-001", "HUB-003"],
-      "crossReferences": ["UI-004", "UI-005", "HUB-003"],
-      "description": "Mobile-responsive layout with user-controlled collapsible navigation columns."
+      "crossReferences": ["UI-004", "UI-005", "HUB-003", "APP-WORKFLOWS-001"],
+      "description": "Mobile-responsive layout with collapsible navigation, drill-down sheets, and swipeable carousels."
     },
     "UI-007": {
       "id": "UI-007",
