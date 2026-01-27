@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "1.0.0",
-  "lastUpdated": "2026-01-25T08:45:00Z",
+  "lastUpdated": "2026-01-27T01:30:00Z",
   "primaryDirective": "ARCH-000",
   "rules": {
     "ARCH-000": {
@@ -70,7 +70,7 @@
       "path": "rules/architecture/003-orchestration-layer.md",
       "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "triggers": ["orchestrat", "proxy", "external", "n8n", "api call", "trace", "logging"],
       "dependencies": ["ARCH-000"],
       "crossReferences": ["DATA-002", "INT-001", "INT-003"],
@@ -238,11 +238,11 @@
       "path": "rules/data/002-communication-traces.md",
       "partition": "data",
       "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": ["trace", "communication", "log", "request", "response", "storage"],
+      "version": "1.1.0",
+      "triggers": ["trace", "communication", "log", "request", "response", "storage", "execution"],
       "dependencies": ["DATA-001", "ARCH-003"],
-      "crossReferences": ["ARCH-003", "APP-MEMORY-001"],
-      "description": "Schema and practices for storing communication traces."
+      "crossReferences": ["ARCH-003", "APP-MEMORY-001", "INT-005"],
+      "description": "Schema and practices for storing communication traces with execution linkage."
     },
     "UI-001": {
       "id": "UI-001",
