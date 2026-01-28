@@ -281,7 +281,7 @@ export function registerWorkflowRoutes(app: Express): void {
         return res.status(404).json({ error: "Execution not found" });
       }
 
-      const traces = await orchestratorStorage.getExecutionTraces(executionId);
+      const traces = await orchestratorStorage.getExecutionTracesWithPayloads(executionId);
       
       res.json({ execution, traces });
     } catch (error) {

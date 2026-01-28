@@ -20,6 +20,9 @@ if (!process.env.DATABASE_URL) {
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool, { schema });
 
+export type ExecutionListItem = Omit<WorkflowExecution, 'finalOutput' | 'metadata'>;
+export type TraceListItem = Omit<CommunicationTrace, 'requestPayload' | 'responsePayload'>;
+
 export interface IOrchestratorStorage {
   createTrace(trace: InsertCommunicationTrace): Promise<CommunicationTrace>;
   updateTrace(id: string, updates: Partial<InsertCommunicationTrace>): Promise<CommunicationTrace | undefined>;
@@ -31,8 +34,9 @@ export interface IOrchestratorStorage {
   updateExecution(id: string, updates: Partial<InsertWorkflowExecution>): Promise<WorkflowExecution | undefined>;
   getExecution(id: string): Promise<WorkflowExecution | undefined>;
   getExecutionByTriggerTrace(traceId: string): Promise<WorkflowExecution | undefined>;
-  getWorkflowExecutions(workflowId: string, limit?: number): Promise<WorkflowExecution[]>;
-  getExecutionTraces(executionId: string): Promise<CommunicationTrace[]>;
+  getWorkflowExecutions(workflowId: string, limit?: number): Promise<ExecutionListItem[]>;
+  getExecutionTraces(executionId: string): Promise<TraceListItem[]>;
+  getExecutionTracesWithPayloads(executionId: string): Promise<CommunicationTrace[]>;
 }
 
 class OrchestratorStorage implements IOrchestratorStorage {
@@ -98,16 +102,50 @@ class OrchestratorStorage implements IOrchestratorStorage {
     return execution;
   }
 
-  async getWorkflowExecutions(workflowId: string, limit: number = 20): Promise<WorkflowExecution[]> {
+  async getWorkflowExecutions(workflowId: string, limit: number = 20): Promise<ExecutionListItem[]> {
     return db
-      .select()
+      .select({
+        id: workflowExecutions.id,
+        workflowId: workflowExecutions.workflowId,
+        externalExecutionId: workflowExecutions.externalExecutionId,
+        status: workflowExecutions.status,
+        startedAt: workflowExecutions.startedAt,
+        completedAt: workflowExecutions.completedAt,
+        triggerTraceId: workflowExecutions.triggerTraceId,
+        userId: workflowExecutions.userId,
+      })
       .from(workflowExecutions)
       .where(eq(workflowExecutions.workflowId, workflowId))
       .orderBy(desc(workflowExecutions.startedAt))
       .limit(limit);
   }
 
-  async getExecutionTraces(executionId: string): Promise<CommunicationTrace[]> {
+  async getExecutionTraces(executionId: string): Promise<TraceListItem[]> {
+    return db
+      .select({
+        id: communicationTraces.id,
+        executionId: communicationTraces.executionId,
+        traceId: communicationTraces.traceId,
+        attemptNumber: communicationTraces.attemptNumber,
+        sourceService: communicationTraces.sourceService,
+        destinationService: communicationTraces.destinationService,
+        workflowId: communicationTraces.workflowId,
+        action: communicationTraces.action,
+        userId: communicationTraces.userId,
+        requestedAt: communicationTraces.requestedAt,
+        respondedAt: communicationTraces.respondedAt,
+        durationMs: communicationTraces.durationMs,
+        overallStatus: communicationTraces.overallStatus,
+        errorCode: communicationTraces.errorCode,
+        errorDetail: communicationTraces.errorDetail,
+        n8nExecutionId: communicationTraces.n8nExecutionId,
+      })
+      .from(communicationTraces)
+      .where(eq(communicationTraces.executionId, executionId))
+      .orderBy(communicationTraces.attemptNumber);
+  }
+
+  async getExecutionTracesWithPayloads(executionId: string): Promise<CommunicationTrace[]> {
     return db
       .select()
       .from(communicationTraces)

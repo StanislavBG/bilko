@@ -5,29 +5,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
-interface WorkflowExecution {
+interface ExecutionListItem {
   id: string;
   workflowId: string;
-  triggerTraceId: string;
+  triggerTraceId: string | null;
   externalExecutionId: string | null;
   status: "pending" | "running" | "completed" | "failed";
   startedAt: string;
   completedAt: string | null;
-  finalOutput: Record<string, unknown> | null;
-  userId: string;
+  userId: string | null;
 }
 
 interface ExecutionsResponse {
-  executions: WorkflowExecution[];
+  executions: ExecutionListItem[];
 }
 
 interface ExecutionsListProps {
   workflowId: string;
   selectedExecutionId: string | null;
-  onSelectExecution: (execution: WorkflowExecution) => void;
+  onSelectExecution: (execution: ExecutionListItem) => void;
 }
 
-function StatusIcon({ status }: { status: WorkflowExecution["status"] }) {
+function StatusIcon({ status }: { status: ExecutionListItem["status"] }) {
   switch (status) {
     case "completed":
       return <CheckCircle className="h-3 w-3 text-green-600" />;
@@ -40,8 +39,8 @@ function StatusIcon({ status }: { status: WorkflowExecution["status"] }) {
   }
 }
 
-function StatusBadge({ status }: { status: WorkflowExecution["status"] }) {
-  const variants: Record<WorkflowExecution["status"], "default" | "secondary" | "outline" | "destructive"> = {
+function StatusBadge({ status }: { status: ExecutionListItem["status"] }) {
+  const variants: Record<ExecutionListItem["status"], "default" | "secondary" | "outline" | "destructive"> = {
     completed: "default",
     failed: "destructive",
     running: "secondary",
