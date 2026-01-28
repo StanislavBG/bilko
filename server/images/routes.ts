@@ -7,10 +7,25 @@ export function registerImageRoutes(app: Express): void {
       const { imageBase64, text = "Bilko AI Academy", position = "bottom" } = req.body;
 
       if (!imageBase64) {
-        return res.status(400).json({ error: "imageBase64 is required" });
+        return res.status(400).json({ error: "imageBase64 is required", success: false });
       }
 
-      const imageBuffer = Buffer.from(imageBase64, "base64");
+      if (typeof imageBase64 !== "string" || imageBase64.length < 100) {
+        return res.status(400).json({ 
+          error: "imageBase64 must be a valid base64-encoded image", 
+          success: false 
+        });
+      }
+
+      let imageBuffer: Buffer;
+      try {
+        imageBuffer = Buffer.from(imageBase64, "base64");
+      } catch (e) {
+        return res.status(400).json({ 
+          error: "Invalid base64 encoding", 
+          success: false 
+        });
+      }
       const image = sharp(imageBuffer);
       const metadata = await image.metadata();
       
@@ -60,6 +75,7 @@ export function registerImageRoutes(app: Express): void {
     } catch (error: any) {
       console.error("[images/brand] Error:", error.message);
       res.status(500).json({ 
+        success: false,
         error: "Failed to brand image", 
         details: error.message 
       });
