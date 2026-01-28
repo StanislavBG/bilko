@@ -51,6 +51,17 @@ Preferences: Move slowly, rules-first, no over-building
 - **Rule added**: INT-005 Callback Persistence Contract - documents API payload schemas and data flow
 - **E2E Verified**: History view displays execution results with post content and image prompts correctly
 
+### European Football Daily - DEV Enhancements (January 2026)
+- **Person Anonymization**: Instead of rejecting stories with real people, now generates anonymous visual descriptions
+  - Example: "Cristiano Ronaldo" → "tall athletic man with defined jawline and short dark hair"
+  - Anonymized descriptions flow through entire pipeline for image generation
+- **Bilko AI Academy Branding**: Server-side image branding via `/api/images/brand` endpoint
+  - 36px black bar at bottom with "Bilko AI Academy" text in white
+  - Uses Sharp library for reliable text overlay (not AI-generated text)
+  - Graceful fallback: if no image generated, branding is skipped
+  - New nodes: Brand Image (HTTP) + Parse Brand Response (Code)
+- **DEV Workflow Nodes**: 26 total (PROD still at 24)
+
 ### European Football Daily - Source Links + Tagline + Nano Banana Pro (January 26, 2026) - VERIFIED
 - **Status**: Fully operational - Execution 93 confirmed all features working
 - **New Nodes**: Generate Tagline + Parse Tagline (26 total nodes now)
