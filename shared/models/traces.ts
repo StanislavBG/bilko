@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, jsonb, integer, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, jsonb, integer, uuid, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { workflowExecutions } from "./executions";
@@ -41,7 +41,13 @@ export const communicationTraces = pgTable("communication_traces", {
   
   // Metadata
   n8nExecutionId: text("n8n_execution_id"),
-});
+}, (table) => ({
+  executionIdIdx: index("idx_traces_execution_id").on(table.executionId),
+  traceIdIdx: index("idx_traces_trace_id").on(table.traceId),
+  workflowIdIdx: index("idx_traces_workflow_id").on(table.workflowId),
+  requestedAtIdx: index("idx_traces_requested_at").on(table.requestedAt),
+  executionAttemptIdx: index("idx_traces_execution_attempt").on(table.executionId, table.attemptNumber),
+}));
 
 export const insertCommunicationTraceSchema = createInsertSchema(communicationTraces).omit({
   id: true,
