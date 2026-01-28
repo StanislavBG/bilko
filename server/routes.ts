@@ -5,6 +5,7 @@ import { registerOrchestratorRoutes } from "./orchestrator";
 import { registerAuditorRoutes } from "./auditor";
 import { registerRulesRoutes } from "./rules/routes";
 import { registerWorkflowRoutes } from "./workflows/routes";
+import { registerImageRoutes } from "./images/routes";
 import { getAllEndpoints } from "./endpoint-registry";
 
 export async function registerRoutes(
@@ -26,6 +27,9 @@ export async function registerRoutes(
   
   // Workflow router for unified workflow execution
   registerWorkflowRoutes(app);
+  
+  // Image processing routes (branding, etc.)
+  registerImageRoutes(app);
   
   // Endpoint registry for UI info icons
   app.get("/api/endpoints", (_req, res) => {
