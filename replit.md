@@ -101,6 +101,24 @@ Preferences: Move slowly, rules-first, no over-building
   - DEV workflow: Dynamic URL from webhook payload (works with any dev domain)
 - **Testing Procedure**: Simply trigger DEV workflow - no need to deactivate PROD
 
+### Bilko 101 Workflow (January 29, 2026) - WORKING
+- **Status**: Fully operational - reads Google Sheets, posts to Google Chat
+- **n8n Instance**: bilko.app.n8n.cloud (second instance, separate from PROD/DEV)
+- **Workflow ID**: XKKSpAz02RMd3Puo
+- **Webhook**: `https://bilko.app.n8n.cloud/webhook/bilko-101` (POST)
+- **Nodes** (5 total):
+  1. **Webhook**: Receives trigger request
+  2. **Read Sheet**: Reads Google Sheet (ID: 1nULmPk7J7TXbPJngdtT5w384aXhR-xS82nMegiHluZU)
+  3. **Format Message**: Formats sheet data into readable message
+  4. **Send to Google Chat**: Posts to Chat space via webhook
+  5. **Respond to Webhook**: Returns success response
+- **Authentication**:
+  - Google Sheets: Service account (`bilko-761@starlit-ship-485805-n9.iam.gserviceaccount.com`)
+  - Google Chat: Webhook URL (no auth needed)
+- **Credential**: Google Service Account (ID: yyckFQZZe9KzMDLU) with `inpersonate: false, httpNode: false`
+- **Key Learning**: n8n credential API requires explicit boolean fields to avoid allOf validation errors
+- **Backup**: `server/workflows/backups/XKKSpAz02RMd3Puo_bilko101_working.json`
+
 ### Key n8n Learnings
 **Full details in INT-002** (`rules/integration/002-n8n-api-practices.md`) - Known Issues Registry
 
@@ -112,3 +130,4 @@ Preferences: Move slowly, rules-first, no over-building
 6. **Imagen Silent Filters**: Empty predictions = content filtered, not error (INT-002 ISSUE-009)
 7. **Rate Limits**: Space out test runs during development (INT-002 ISSUE-010)
 8. **Dynamic Callback URLs**: Use `={{ $('Webhook').first().json.body.callbackUrl }}` for dev
+9. **n8n Credential API**: Requires explicit `inpersonate: false, httpNode: false` to pass allOf validation (INT-002 ISSUE-012)
