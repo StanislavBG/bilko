@@ -1,134 +1,14 @@
-# Bilko Bibitkov
+# Bilko Bibitkov AI Academy
 
-Founding Principles: ARCH-000, ARCH-000-A, ARCH-000-B (ABSOLUTE priority)
-Rules: `/rules/` — read ARCH-006 before any task
-Stack: React + Tailwind + Shadcn | Express | PostgreSQL + Drizzle | Replit Auth
-Preferences: Move slowly, rules-first, no over-building
+## STOP - READ THIS FIRST
 
-## Agentic Workflows
+This file is a **bootstrap pointer only**. All project knowledge lives in `/rules/`.
 
-**For n8n development**: Follow AGT-001 (`rules/agent/001-n8n-development-workflow.md`)
-- 6-phase cycle: FETCH → ANALYZE → MODIFY → PUSH → BACKUP → VERIFY
-- Single change per cycle, checkpoint gates between phases
-- Backups saved to `server/workflows/backups/`
+**DO NOT ADD CONTENT HERE.** See ARCH-011 for governance.
 
-## Recent Changes (January 2026)
+## Bootstrap
 
-### European Football Daily Workflow - RESTRUCTURED FOR RELIABLE IMAGE GENERATION
-- **Status**: Fully operational with granular, compliance-first architecture (24 nodes)
-- **Architecture Philosophy**: Check compliance BEFORE topic selection, not after content creation
-- **New Granular Flow** (January 25, 2026):
-  1. **News Scout**: RSS → Extract Articles (fetches 5 headlines)
-  2. **Topic Analyst**: Gemini extracts entities per article (people, teams, events, imageability)
-  3. **Compliance Checker**: Gemini validates each topic for image safety (flags real people)
-  4. **Topic Selector**: Aggregates all topics, picks BEST COMPLIANT topic
-  5. **Hashtag Researcher**: Gemini finds 3 relevant, high-reach hashtags for the specific topic
-  6. **Post Writer**: Creates post with the researched hashtags
-  7. **Image Prompt Writer**: Generates enhanced prompt from safe concept
-  8. **Call Imagen API**: Generates image (Gemini endpoint: generativelanguage.googleapis.com)
-  9. **Build Final Output**: Combines post + image + transparency disclosure
-- **Compliance Features**:
-  1. Per-article entity extraction identifies problematic subjects EARLY
-  2. Compliance validation happens BEFORE topic commitment
-  3. Topic Selector only considers pre-validated compliant topics
-  4. Two-post output: Main content + AI Transparency disclosure
-  5. Graceful fallback when Imagen filters content
-- **Key Technical Details**:
-  1. Custom User-Agent header on all Google API calls (Google blocks n8n default)
-  2. Imagen model: `imagen-4.0-fast-generate-001` (6s response, 1.5-1.7MB images)
-  3. **CRITICAL**: Use Gemini endpoint (generativelanguage.googleapis.com), NOT Vertex AI endpoint
-  4. Express body-parser limit: 10mb for base64 image payloads
-  5. Strip Gemini markdown fences before JSON parsing
-  6. Data path: `$json.geminiApiKey` flows through all Code nodes; use `$('NodeName').first().json` to reference previous nodes after HTTP calls
-- **Workflow Nodes**: 24 total
-
-### Execution Tracking System (January 2026) - VERIFIED
-- **workflow_executions table**: Tracks execution runs with status, timestamps, and finalOutput (JSONB)
-- **Traces linked by executionId**: Communication traces reference parent execution for grouping
-- **Callback logic**: First callback creates execution record; final-output callback marks completion and persists output
-- **API endpoints**: GET /api/workflows/:id/executions, GET /api/executions/:id
-- **UI components**: ExecutionsList, ExecutionDetail with Latest/History view toggle on workflow detail page
-- **Rule added**: INT-005 Callback Persistence Contract - documents API payload schemas and data flow
-- **E2E Verified**: History view displays execution results with post content and image prompts correctly
-
-### European Football Daily - DEV Enhancements (January 2026)
-- **Person Anonymization**: Instead of rejecting stories with real people, now generates anonymous visual descriptions
-  - Example: "Cristiano Ronaldo" → "tall athletic man with defined jawline and short dark hair"
-  - Anonymized descriptions flow through entire pipeline for image generation
-- **Bilko AI Academy Branding**: Server-side image branding via `/api/images/brand` endpoint
-  - 36px black bar at bottom with "Bilko AI Academy" text in white
-  - Uses Sharp library for reliable text overlay (not AI-generated text)
-  - Graceful fallback: if no image generated, branding is skipped
-  - New nodes: Brand Image (HTTP) + Parse Brand Response (Code)
-- **Code Node Pattern for Complex Prompts** (January 29, 2026):
-  - HTTP Request nodes with multiple `{{ }}` expressions in jsonBody fail with "JSON parameter needs to be valid JSON"
-  - **Solution**: Use Code node before HTTP Request to build the request body, then reference via `JSON.stringify($json.requestBody)`
-  - Added: "Build Compliance Request" + "Build Image Request" Code nodes
-  - See INT-002 ISSUE-011 for details
-- **DEV Workflow Nodes**: 28 total (PROD still at 24)
-
-### European Football Daily - Source Links + Tagline + Nano Banana Pro (January 26, 2026) - VERIFIED
-- **Status**: Fully operational - Execution 93 confirmed all features working
-- **New Nodes**: Generate Tagline + Parse Tagline (26 total nodes now)
-- **Flow**: Parse Image Prompt → Generate Tagline → Parse Tagline → Call Imagen API
-- **Image Model**: Upgraded from `imagen-4.0-fast-generate-001` to `gemini-3-pro-image-preview` (Nano Banana Pro)
-- **API Format**: Uses `:generateContent` endpoint with `generation_config`, `response_modalities`, `image_config` (snake_case)
-- **Tagline**: Generated by Gemini (4-5 word punchy tagline), included in image prompt as text overlay
-- **Source Links**: RSS source URLs now flow through entire pipeline, appended to 2nd message as "Source: [link]"
-- **Data Flow**: Extract Articles → Parse Topic Analysis (captures link via $runIndex) → all parse nodes → Build Final Output
-- **n8n Escaping Learnings**: When updating node code programmatically, newlines require multi-level escaping (\\n → \\\\n depending on nesting)
-
-### Mobile-Responsive Layout (January 2026)
-- **useIsMobile hook**: Detects viewport < 768px for mobile-specific layouts
-- **Agentic Workflows**: Left nav becomes Sheet overlay on mobile, triggered by menu button
-- **Memory Explorer**: ActionPanel auto-collapses on mobile
-- **Rules Explorer**: Partition nav, tertiary nav, and ActionPanel auto-collapse on mobile
-- **Pattern**: Use useEffect to detect mobile state change and collapse panels, preserve desktop interactivity
-
-### Dev/Prod Workflow Architecture (January 26, 2026) - SYNCED
-- **Two Physical Workflows**: `[PROD] European Football Daily` (oV6WGX5uBeTZ9tRa) and `[DEV] European Football Daily` (vHafUnYAAtDX3TRO)
-- **Separate Webhook Paths** (v1.3.0):
-  - PROD: `/webhook/european-football-daily`
-  - DEV: `/webhook/dev-european-football-daily`
-  - Both can be active simultaneously - no conflicts!
-- **DEV Synced from PROD** (January 26, 2026):
-  - DEV now has full 24-node pipeline matching PROD structure
-  - Schedule Trigger and Merge Triggers REMOVED (manual-only execution)
-  - All callback nodes use dynamic URLs: `={{ $('Webhook').first().json.body.callbackUrl }}`
-  - All traceId references use correct path: `json.body.traceId`
-- **Callback URL Strategy**:
-  - PROD workflow: Hardcoded to `https://bilkobibitkov.replit.app/api/workflows/callback`
-  - DEV workflow: Dynamic URL from webhook payload (works with any dev domain)
-- **Testing Procedure**: Simply trigger DEV workflow - no need to deactivate PROD
-
-### Bilko 101 Workflow (January 29, 2026) - WORKING
-- **Status**: Fully operational - reads Google Sheets, posts to Google Chat
-- **n8n Instance**: bilko.app.n8n.cloud (second instance, separate from PROD/DEV)
-- **Workflow ID**: XKKSpAz02RMd3Puo
-- **Webhook**: `https://bilko.app.n8n.cloud/webhook/bilko-101` (POST)
-- **Nodes** (5 total):
-  1. **Webhook**: Receives trigger request
-  2. **Read Sheet**: Reads Google Sheet (ID: 1nULmPk7J7TXbPJngdtT5w384aXhR-xS82nMegiHluZU)
-  3. **Format Message**: Formats sheet data into readable message
-  4. **Send to Google Chat**: Posts to Chat space via webhook
-  5. **Respond to Webhook**: Returns success response
-- **Authentication**:
-  - Google Sheets: Service account (`bilko-761@starlit-ship-485805-n9.iam.gserviceaccount.com`)
-  - Google Chat: Webhook URL (no auth needed)
-- **Credential**: Google Service Account (ID: yyckFQZZe9KzMDLU) with `inpersonate: false, httpNode: false`
-- **Key Learning**: n8n credential API requires explicit boolean fields to avoid allOf validation errors
-- **Backup**: `server/workflows/backups/XKKSpAz02RMd3Puo_bilko101_working.json`
-
-### Key n8n Learnings
-**Full details in INT-002** (`rules/integration/002-n8n-api-practices.md`) - Known Issues Registry
-
-1. **User-Agent Required**: Google APIs block n8n's default user-agent (INT-002 D12)
-2. **Webhook Body Structure**: Data at `.json.body.keyName`, not `.json.keyName` (INT-002 D13)
-3. **Data Flow**: API keys must flow through all Code nodes (INT-002 D13)
-4. **Gemini JSON Parsing**: Strip markdown fences before parsing (INT-002 D14)
-5. **Expression Escaping**: Avoid nested quotes in `{{ }}` - use JSON.stringify() (INT-002 ISSUE-008)
-6. **Imagen Silent Filters**: Empty predictions = content filtered, not error (INT-002 ISSUE-009)
-7. **Rate Limits**: Space out test runs during development (INT-002 ISSUE-010)
-8. **Dynamic Callback URLs**: Use `={{ $('Webhook').first().json.body.callbackUrl }}` for dev
-9. **n8n Credential API**: Requires explicit `inpersonate: false, httpNode: false` to pass allOf validation (INT-002 ISSUE-012)
-10. **Batching for Rate Limits**: Add `options.batching.batch` with `batchSize: 1, batchInterval: 2000` to HTTP nodes processing multiple items (INT-002 ISSUE-013)
+- **Rules**: `/rules/` (start with ARCH-000, ARCH-006)
+- **Stack**: React + Tailwind + Shadcn | Express | PostgreSQL + Drizzle | Replit Auth
+- **Manifest**: `rules/manifest.json`
+- **Preferences**: Move slowly, rules-first, no over-building
