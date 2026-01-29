@@ -140,6 +140,33 @@ AI training data becomes stale. n8n v2.0 (December 2024) introduced breaking cha
   3. Use DEV workflow with reduced API calls for testing
 - **Not a production concern**: Production workflows run once per day (scheduled), well within limits.
 
+### ISSUE-011: HTTP Request jsonBody with Embedded Expressions (CRITICAL)
+- **Status**: RESOLVED (January 2026)
+- **Description**: HTTP Request nodes with complex `jsonBody` expressions containing multiple `{{ }}` patterns fail with "JSON parameter needs to be valid JSON" even when the JSON structure is valid.
+- **Root Cause**: n8n's expression parser struggles with nested `{{ }}` patterns inside JSON string values, especially when combined with:
+  1. Embedded example JSON in prompt text
+  2. Multiple expression interpolations in the same string
+  3. Complex JavaScript within `{{ }}` blocks
+- **Failure Pattern**:
+  ```javascript
+  // FAILS: Multiple expressions + example JSON in text
+  jsonBody: '={"contents":[{"parts":[{"text":"Analyze: {{ $json.topic }}. Return JSON: {\"field\": \"value\"}"}]}]}'
+  ```
+- **Solution**: Use a Code node to build the request body, then reference it with simple `JSON.stringify()`:
+  ```javascript
+  // Step 1: Add Code node "Build Request Body" BEFORE HTTP Request
+  const prompt = `Analyze: ${$json.topic}. Return JSON with field and value.`;
+  return { json: { ...item, requestBody: { contents: [{ parts: [{ text: prompt }] }] } } };
+  
+  // Step 2: HTTP Request jsonBody uses simple reference
+  jsonBody: '={{ JSON.stringify($json.requestBody) }}'
+  ```
+- **When to use Code nodes**: Whenever the Gemini prompt includes:
+  1. Multiple dynamic values (`{{ $json.x }}`)
+  2. Example JSON in the prompt text
+  3. `JSON.stringify()` calls within the text
+- **DEV Workflow Impact**: Added "Build Compliance Request" and "Build Image Request" Code nodes to fix broken Compliance Checker and Generate Image nodes.
+
 ## Documentation References
 
 ### Primary Sources (ALWAYS Consult Live)

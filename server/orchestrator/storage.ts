@@ -138,6 +138,7 @@ class OrchestratorStorage implements IOrchestratorStorage {
         overallStatus: communicationTraces.overallStatus,
         errorCode: communicationTraces.errorCode,
         errorDetail: communicationTraces.errorDetail,
+        details: communicationTraces.details,
         n8nExecutionId: communicationTraces.n8nExecutionId,
       })
       .from(communicationTraces)
