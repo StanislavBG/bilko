@@ -167,6 +167,49 @@ AI training data becomes stale. n8n v2.0 (December 2024) introduced breaking cha
   3. `JSON.stringify()` calls within the text
 - **DEV Workflow Impact**: Added "Build Compliance Request" and "Build Image Request" Code nodes to fix broken Compliance Checker and Generate Image nodes.
 
+### ISSUE-012: n8n Credential API Requires Explicit Boolean Fields
+- **Status**: DOCUMENTED (January 2026)
+- **Description**: Creating credentials via n8n API fails with "allOf" validation errors even when required fields are present.
+- **Root Cause**: n8n's credential schema uses `allOf` validation that requires certain boolean fields to be explicitly set (not omitted or undefined).
+- **Failure Pattern**:
+  ```javascript
+  // FAILS: Missing boolean fields
+  { name: "My Credential", type: "googleServiceAccount", data: { email: "...", privateKey: "..." } }
+  ```
+- **Fix**: Always include explicit boolean fields for credential types:
+  ```javascript
+  // Google Service Account
+  { name: "My Credential", type: "googleServiceAccount", 
+    data: { email: "...", privateKey: "...", inpersonate: false, httpNode: false } }
+  ```
+- **n8n Instance**: bilko.app.n8n.cloud (Bilko 101 workflow)
+
+### ISSUE-013: Gemini API Rate Limiting in Multi-Item Workflows
+- **Status**: RESOLVED (January 2026)
+- **Description**: Workflows processing multiple items (e.g., 5 RSS articles) through Gemini API nodes hit rate limits (429 errors) because all items are processed simultaneously.
+- **Root Cause**: n8n HTTP Request nodes process all incoming items in rapid succession by default, causing 10+ API calls within seconds.
+- **Symptoms**: 
+  - "The service is receiving too many requests" error
+  - Works on first run, fails on subsequent runs
+  - Inconsistent failures (sometimes works, sometimes doesn't)
+- **Fix**: Add batching options to HTTP Request nodes that process multiple items:
+  ```javascript
+  // In HTTP Request node parameters
+  "options": {
+    "batching": {
+      "batch": {
+        "batchSize": 1,        // Process one item at a time
+        "batchInterval": 2000  // 2 second delay between items
+      }
+    }
+  }
+  ```
+- **DEV Workflow Impact**: Added batching to "Topic Analyst" and "Compliance Checker" nodes (both process 5 items each). Total execution time increased from ~20s to ~60s, but eliminates rate limiting.
+- **When to apply**: Any HTTP Request node in a workflow that:
+  1. Calls a rate-limited API (Gemini, OpenAI, etc.)
+  2. Receives multiple items from a previous node
+  3. Is not the final node in a branch (final nodes only process 1 item)
+
 ## Documentation References
 
 ### Primary Sources (ALWAYS Consult Live)
