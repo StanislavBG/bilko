@@ -131,3 +131,4 @@ Preferences: Move slowly, rules-first, no over-building
 7. **Rate Limits**: Space out test runs during development (INT-002 ISSUE-010)
 8. **Dynamic Callback URLs**: Use `={{ $('Webhook').first().json.body.callbackUrl }}` for dev
 9. **n8n Credential API**: Requires explicit `inpersonate: false, httpNode: false` to pass allOf validation (INT-002 ISSUE-012)
+10. **Batching for Rate Limits**: Add `options.batching.batch` with `batchSize: 1, batchInterval: 2000` to HTTP nodes processing multiple items (INT-002 ISSUE-013)
