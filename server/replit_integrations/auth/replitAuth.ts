@@ -51,13 +51,16 @@ function updateUserSession(
 }
 
 async function upsertUser(claims: any) {
+  const roles = claims["roles"] || [];
+  const hasAdminRole = Array.isArray(roles) && roles.includes("admin");
+  
   await authStorage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
-  });
+  }, hasAdminRole);
 }
 
 export async function setupAuth(app: Express) {

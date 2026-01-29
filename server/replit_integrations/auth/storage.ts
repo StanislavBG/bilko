@@ -19,7 +19,7 @@ const db = drizzle(pool, { schema });
 // (IMPORTANT) These user operations are mandatory for Replit Auth.
 export interface IAuthStorage {
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  upsertUser(user: UpsertUser, hasAdminRole?: boolean): Promise<User>;
 }
 
 class AuthStorage implements IAuthStorage {
@@ -28,20 +28,21 @@ class AuthStorage implements IAuthStorage {
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const isAdminUser = userData.id === process.env.ADMIN_USER_ID;
+  async upsertUser(userData: UpsertUser, hasAdminRole: boolean = false): Promise<User> {
+    const isAdminByEnv = userData.id === process.env.ADMIN_USER_ID;
+    const isAdmin = isAdminByEnv || hasAdminRole;
     
     const [user] = await db
       .insert(users)
       .values({
         ...userData,
-        isAdmin: isAdminUser ? true : false,
+        isAdmin: isAdmin,
       })
       .onConflictDoUpdate({
         target: users.id,
         set: {
           ...userData,
-          isAdmin: isAdminUser ? true : undefined,
+          isAdmin: isAdmin ? true : undefined,
           updatedAt: new Date(),
         },
       })
