@@ -21,7 +21,7 @@ export class RulesService {
     }
     
     console.log(`[RulesService] Loaded ${this.ruleCount} rules`);
-    console.log("[RulesService] Validation is agentic - see AGENT-002 (auditor protocols)");
+    console.log("[RulesService] Validation is agentic - see AGT-002-RULES (agents/002-rules-audit.md)");
     
     this.initialized = true;
   }

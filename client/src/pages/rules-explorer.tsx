@@ -804,8 +804,8 @@ function AuditView({
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {newAuditType === "rules" 
-                      ? "AGENT-002-RULES: Validates rule structure, conflicts, and coverage" 
-                      : "AGENT-002-CODE: Validates code implements rules correctly"}
+                      ? "AGT-002-RULES: Validates rule structure, conflicts, and coverage" 
+                      : "AGT-002-CODE: Validates code implements rules correctly"}
                   </p>
                 </div>
 
@@ -825,7 +825,7 @@ function AuditView({
                   variant="section"
                   icon={<ScrollText className="h-5 w-5" />}
                   title="Auditor Base Protocol"
-                  description="Instructions for performing agentic audits (AGENT-002)"
+                  description="Instructions for performing agentic audits (AGT-002)"
                   testId="action-bar-protocol"
                 />
                 
@@ -833,7 +833,7 @@ function AuditView({
                   <h3 className="text-sm font-medium mb-2">How to Run an Audit</h3>
                   <ol className="text-sm text-muted-foreground space-y-2">
                     <li>1. Ask the agent: <code className="bg-muted px-1 rounded">"Run a rule audit"</code> or <code className="bg-muted px-1 rounded">"Run a code audit"</code></li>
-                    <li>2. The agent will analyze following the AGENT-002 protocol</li>
+                    <li>2. The agent will analyze following the AGT-002 protocol</li>
                     <li>3. Copy the audit report the agent provides</li>
                     <li>4. Click "New Audit" in the Actions panel and paste the report to save it</li>
                   </ol>
@@ -862,7 +862,7 @@ function AuditView({
                     title={`${selectedAudit.auditType === "code" ? "Code" : "Rules"} Audit Report`}
                     titleExtra={
                       <span className="text-xs font-normal text-muted-foreground">
-                        ({selectedAudit.auditType === "code" ? "AGENT-002-CODE" : "AGENT-002-RULES"})
+                        ({selectedAudit.auditType === "code" ? "AGT-002-CODE" : "AGT-002-RULES"})
                       </span>
                     }
                     description={`${formatTimestamp(selectedAudit.createdAt)}${selectedAudit.createdBy ? ` by ${selectedAudit.createdBy}` : ""}`}

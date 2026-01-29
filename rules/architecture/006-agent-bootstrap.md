@@ -1,8 +1,8 @@
 # ARCH-006: Agent Bootstrap Protocol
 
 **Priority**: CRITICAL  
-**Version**: 1.0  
-**Last Updated**: 2026-01-23
+**Version**: 1.1.0  
+**Last Updated**: 2026-01-29
 
 ## Context
 
@@ -69,7 +69,15 @@ Primary Directive: Verified
 |----------|---------|----------------------|
 | `replit.md` | Bootstrap pointer only | Rule details, red flags, reading order |
 | `rules/manifest.json` | Machine index + routing | Human explanations |
-| Individual rules | Specific guidance | Content from other rules |
+| `rules/**/*.md` | Specific governance guidance | Content from other rules |
+| `agents/manifest.json` | Agent/persona registry | Rule governance |
+| `agents/*.md` | AI personas for tasks | Governance rules |
+
+### Rules vs Agents
+
+**Rules** (`/rules/`) - Governance documents that define how things should be built. These are constraints and requirements.
+
+**Agents** (`/agents/`) - AI personas/protocols (like Google Gems) used for specific tasks like audits, workflow development, and expert guidance. These are tools, not rules.
 
 ### D1: replit.md Boundaries
 

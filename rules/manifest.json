@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "1.0.0",
-  "lastUpdated": "2026-01-27T02:00:00Z",
+  "lastUpdated": "2026-01-29T00:00:00Z",
   "primaryDirective": "ARCH-000",
   "rules": {
     "ARCH-000": {
@@ -11,9 +11,15 @@
       "partition": "architecture",
       "priority": "ABSOLUTE",
       "version": "2.0.0",
-      "triggers": ["*"],
+      "triggers": [
+        "*"
+      ],
       "dependencies": [],
-      "crossReferences": ["ARCH-000-A", "ARCH-000-B", "ARCH-010"],
+      "crossReferences": [
+        "ARCH-000-A",
+        "ARCH-000-B",
+        "ARCH-010"
+      ],
       "description": "NO CODE SHALL BE WRITTEN WITHOUT FIRST CONSULTING THE RULES."
     },
     "ARCH-000-A": {
@@ -23,9 +29,18 @@
       "partition": "architecture",
       "priority": "ABSOLUTE",
       "version": "1.0.0",
-      "triggers": ["orchestrat", "external", "proxy", "trace"],
-      "dependencies": ["ARCH-000"],
-      "crossReferences": ["ARCH-003"],
+      "triggers": [
+        "orchestrat",
+        "external",
+        "proxy",
+        "trace"
+      ],
+      "dependencies": [
+        "ARCH-000"
+      ],
+      "crossReferences": [
+        "ARCH-003"
+      ],
       "description": "ALL EXTERNAL COMMUNICATION MUST FLOW THROUGH THE ORCHESTRATION LAYER."
     },
     "ARCH-000-B": {
@@ -35,9 +50,19 @@
       "partition": "architecture",
       "priority": "ABSOLUTE",
       "version": "1.0.0",
-      "triggers": ["headless", "api-first", "programmatic", "auto-sync", "automation"],
-      "dependencies": ["ARCH-000"],
-      "crossReferences": ["INT-002"],
+      "triggers": [
+        "headless",
+        "api-first",
+        "programmatic",
+        "auto-sync",
+        "automation"
+      ],
+      "dependencies": [
+        "ARCH-000"
+      ],
+      "crossReferences": [
+        "INT-002"
+      ],
       "description": "ALL EXTERNAL SERVICE CONFIGURATION MUST BE AUTOMATED AND PROGRAMMATIC."
     },
     "ARCH-001": {
@@ -47,8 +72,18 @@
       "partition": "architecture",
       "priority": "CRITICAL",
       "version": "2.0.0",
-      "triggers": ["architecture", "principle", "core", "express", "react", "tailwind", "dark mode"],
-      "dependencies": ["ARCH-000"],
+      "triggers": [
+        "architecture",
+        "principle",
+        "core",
+        "express",
+        "react",
+        "tailwind",
+        "dark mode"
+      ],
+      "dependencies": [
+        "ARCH-000"
+      ],
       "crossReferences": [],
       "description": "Foundational technology choices and architectural patterns."
     },
@@ -59,9 +94,20 @@
       "partition": "architecture",
       "priority": "CRITICAL",
       "version": "1.1.0",
-      "triggers": ["rule", "rules", "modify rule", "create rule", "new rule", "update rule"],
-      "dependencies": ["ARCH-000"],
-      "crossReferences": ["ARCH-010"],
+      "triggers": [
+        "rule",
+        "rules",
+        "modify rule",
+        "create rule",
+        "new rule",
+        "update rule"
+      ],
+      "dependencies": [
+        "ARCH-000"
+      ],
+      "crossReferences": [
+        "ARCH-010"
+      ],
       "description": "How to create, modify, and version rules."
     },
     "ARCH-003": {
@@ -71,9 +117,23 @@
       "partition": "architecture",
       "priority": "CRITICAL",
       "version": "1.0.2",
-      "triggers": ["orchestrat", "proxy", "external", "n8n", "api call", "trace", "logging"],
-      "dependencies": ["ARCH-000"],
-      "crossReferences": ["DATA-002", "INT-001", "INT-003"],
+      "triggers": [
+        "orchestrat",
+        "proxy",
+        "external",
+        "n8n",
+        "api call",
+        "trace",
+        "logging"
+      ],
+      "dependencies": [
+        "ARCH-000"
+      ],
+      "crossReferences": [
+        "DATA-002",
+        "INT-001",
+        "INT-003"
+      ],
       "description": "The intelligent proxy between web app and external services."
     },
     "ARCH-004": {
@@ -83,8 +143,18 @@
       "partition": "architecture",
       "priority": "CRITICAL",
       "version": "1.0.0",
-      "triggers": ["slow", "incremental", "verify", "consult", "explain", "go slow", "pacing"],
-      "dependencies": ["ARCH-000"],
+      "triggers": [
+        "slow",
+        "incremental",
+        "verify",
+        "consult",
+        "explain",
+        "go slow",
+        "pacing"
+      ],
+      "dependencies": [
+        "ARCH-000"
+      ],
       "crossReferences": [],
       "description": "Move slowly, build incrementally, verify before building."
     },
@@ -95,9 +165,22 @@
       "partition": "architecture",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["boundary", "replit", "n8n", "separation", "owns", "ownership"],
-      "dependencies": ["ARCH-000", "ARCH-008"],
-      "crossReferences": ["ARCH-007", "ARCH-008"],
+      "triggers": [
+        "boundary",
+        "replit",
+        "n8n",
+        "separation",
+        "owns",
+        "ownership"
+      ],
+      "dependencies": [
+        "ARCH-000",
+        "ARCH-008"
+      ],
+      "crossReferences": [
+        "ARCH-007",
+        "ARCH-008"
+      ],
       "description": "Defines boundaries between Replit app and external systems."
     },
     "ARCH-007": {
@@ -107,7 +190,13 @@
       "partition": "architecture",
       "priority": "CRITICAL",
       "version": "1.1.0",
-      "triggers": ["purpose", "mission", "overview", "system", "what is"],
+      "triggers": [
+        "purpose",
+        "mission",
+        "overview",
+        "system",
+        "what is"
+      ],
       "dependencies": [],
       "crossReferences": [],
       "description": "Defines the overall system purpose and mission."
@@ -119,9 +208,21 @@
       "partition": "architecture",
       "priority": "CRITICAL",
       "version": "2.1.0",
-      "triggers": ["agent", "coordination", "ownership", "project", "replit", "n8n"],
-      "dependencies": ["ARCH-007"],
-      "crossReferences": ["ARCH-003", "INT-003"],
+      "triggers": [
+        "agent",
+        "coordination",
+        "ownership",
+        "project",
+        "replit",
+        "n8n"
+      ],
+      "dependencies": [
+        "ARCH-007"
+      ],
+      "crossReferences": [
+        "ARCH-003",
+        "INT-003"
+      ],
       "description": "Defines ownership boundaries between Replit and n8n agents."
     },
     "INT-003": {
@@ -131,9 +232,23 @@
       "partition": "integration",
       "priority": "HIGH",
       "version": "2.1.0",
-      "triggers": ["contract", "webhook", "request", "response", "payload", "format"],
-      "dependencies": ["ARCH-007", "ARCH-003"],
-      "crossReferences": ["ARCH-003", "INT-001", "ENV-001"],
+      "triggers": [
+        "contract",
+        "webhook",
+        "request",
+        "response",
+        "payload",
+        "format"
+      ],
+      "dependencies": [
+        "ARCH-007",
+        "ARCH-003"
+      ],
+      "crossReferences": [
+        "ARCH-003",
+        "INT-001",
+        "ENV-001"
+      ],
       "description": "Technical contract for orchestrator communication."
     },
     "INT-004": {
@@ -143,9 +258,19 @@
       "partition": "integration",
       "priority": "HIGH",
       "version": "1.1.0",
-      "triggers": ["self-host", "n8n setup", "n8n project", "deploy n8n"],
-      "dependencies": ["ARCH-007"],
-      "crossReferences": ["INT-003", "ARCH-008"],
+      "triggers": [
+        "self-host",
+        "n8n setup",
+        "n8n project",
+        "deploy n8n"
+      ],
+      "dependencies": [
+        "ARCH-007"
+      ],
+      "crossReferences": [
+        "INT-003",
+        "ARCH-008"
+      ],
       "description": "Complete setup guide for self-hosting n8n on Replit."
     },
     "HUB-001": {
@@ -155,9 +280,21 @@
       "partition": "hub",
       "priority": "HIGH",
       "version": "1.3.0",
-      "triggers": ["hub", "layout", "sidebar", "navigation", "shell", "header"],
-      "dependencies": ["ARCH-001", "UI-001"],
-      "crossReferences": ["UI-001"],
+      "triggers": [
+        "hub",
+        "layout",
+        "sidebar",
+        "navigation",
+        "shell",
+        "header"
+      ],
+      "dependencies": [
+        "ARCH-001",
+        "UI-001"
+      ],
+      "crossReferences": [
+        "UI-001"
+      ],
       "description": "Defines the Application Hub shell layout structure."
     },
     "HUB-002": {
@@ -167,8 +304,18 @@
       "partition": "hub",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["access", "control", "role", "admin", "user", "permission", "auth"],
-      "dependencies": ["ARCH-001"],
+      "triggers": [
+        "access",
+        "control",
+        "role",
+        "admin",
+        "user",
+        "permission",
+        "auth"
+      ],
+      "dependencies": [
+        "ARCH-001"
+      ],
       "crossReferences": [],
       "description": "Defines how users are granted access to Hub applications."
     },
@@ -179,9 +326,22 @@
       "partition": "hub",
       "priority": "HIGH",
       "version": "2.0.0",
-      "triggers": ["nested nav", "secondary nav", "tertiary nav", "multi-level", "navigation levels"],
-      "dependencies": ["HUB-001", "UI-001"],
-      "crossReferences": ["UI-003", "UI-004", "UI-006"],
+      "triggers": [
+        "nested nav",
+        "secondary nav",
+        "tertiary nav",
+        "multi-level",
+        "navigation levels"
+      ],
+      "dependencies": [
+        "HUB-001",
+        "UI-001"
+      ],
+      "crossReferences": [
+        "UI-003",
+        "UI-004",
+        "UI-006"
+      ],
       "description": "Defines optional 2nd and 3rd level navigation within applications (max 3 levels). Includes header pinning, collapse button placement, and user-controlled mobile collapse."
     },
     "APP-LANDING-001": {
@@ -191,8 +351,16 @@
       "partition": "apps",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["landing", "public", "sign in", "login page", "unauthenticated"],
-      "dependencies": ["ARCH-001"],
+      "triggers": [
+        "landing",
+        "public",
+        "sign in",
+        "login page",
+        "unauthenticated"
+      ],
+      "dependencies": [
+        "ARCH-001"
+      ],
       "crossReferences": [],
       "description": "The public entry point for unauthenticated users."
     },
@@ -203,8 +371,15 @@
       "partition": "apps",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["home", "dashboard", "overview"],
-      "dependencies": ["HUB-001", "HUB-002"],
+      "triggers": [
+        "home",
+        "dashboard",
+        "overview"
+      ],
+      "dependencies": [
+        "HUB-001",
+        "HUB-002"
+      ],
       "crossReferences": [],
       "description": "The default application aggregating information from all apps."
     },
@@ -215,9 +390,19 @@
       "partition": "apps",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["memory", "trace", "explorer", "communication history"],
-      "dependencies": ["DATA-002", "UI-001"],
-      "crossReferences": ["DATA-002"],
+      "triggers": [
+        "memory",
+        "trace",
+        "explorer",
+        "communication history"
+      ],
+      "dependencies": [
+        "DATA-002",
+        "UI-001"
+      ],
+      "crossReferences": [
+        "DATA-002"
+      ],
       "description": "UI for viewing and inspecting communication traces."
     },
     "APP-WORKFLOWS-001": {
@@ -227,9 +412,26 @@
       "partition": "apps",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["workflow", "agentic", "n8n", "execution", "carousel", "drill-down"],
-      "dependencies": ["HUB-001", "UI-006", "DATA-002", "INT-005"],
-      "crossReferences": ["UI-006", "INT-005", "DATA-002", "HUB-003"],
+      "triggers": [
+        "workflow",
+        "agentic",
+        "n8n",
+        "execution",
+        "carousel",
+        "drill-down"
+      ],
+      "dependencies": [
+        "HUB-001",
+        "UI-006",
+        "DATA-002",
+        "INT-005"
+      ],
+      "crossReferences": [
+        "UI-006",
+        "INT-005",
+        "DATA-002",
+        "HUB-003"
+      ],
       "description": "Agentic Workflows page with category/workflow navigation, execution history, and mobile carousel."
     },
     "DATA-001": {
@@ -239,8 +441,18 @@
       "partition": "data",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["data", "database", "schema", "model", "drizzle", "postgres", "table"],
-      "dependencies": ["ARCH-001"],
+      "triggers": [
+        "data",
+        "database",
+        "schema",
+        "model",
+        "drizzle",
+        "postgres",
+        "table"
+      ],
+      "dependencies": [
+        "ARCH-001"
+      ],
       "crossReferences": [],
       "description": "Rules for data models, schemas, and persistence."
     },
@@ -251,9 +463,26 @@
       "partition": "data",
       "priority": "HIGH",
       "version": "1.2.0",
-      "triggers": ["trace", "communication", "log", "request", "response", "storage", "execution", "userId", "error"],
-      "dependencies": ["DATA-001", "ARCH-003"],
-      "crossReferences": ["ARCH-003", "APP-MEMORY-001", "INT-005"],
+      "triggers": [
+        "trace",
+        "communication",
+        "log",
+        "request",
+        "response",
+        "storage",
+        "execution",
+        "userId",
+        "error"
+      ],
+      "dependencies": [
+        "DATA-001",
+        "ARCH-003"
+      ],
+      "crossReferences": [
+        "ARCH-003",
+        "APP-MEMORY-001",
+        "INT-005"
+      ],
       "description": "Schema and practices for storing communication traces with execution linkage and error tracking."
     },
     "UI-001": {
@@ -263,9 +492,21 @@
       "partition": "ui",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["ui", "interface", "component", "styling", "page", "user sees", "layout"],
-      "dependencies": ["ARCH-001"],
-      "crossReferences": ["HUB-001"],
+      "triggers": [
+        "ui",
+        "interface",
+        "component",
+        "styling",
+        "page",
+        "user sees",
+        "layout"
+      ],
+      "dependencies": [
+        "ARCH-001"
+      ],
+      "crossReferences": [
+        "HUB-001"
+      ],
       "description": "Rules for building user interfaces."
     },
     "UI-002": {
@@ -275,8 +516,17 @@
       "partition": "ui",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["endpoint", "info icon", "api source", "data source", "endpoint info"],
-      "dependencies": ["UI-001", "ARCH-001"],
+      "triggers": [
+        "endpoint",
+        "info icon",
+        "api source",
+        "data source",
+        "endpoint info"
+      ],
+      "dependencies": [
+        "UI-001",
+        "ARCH-001"
+      ],
       "crossReferences": [],
       "description": "Pattern for displaying API endpoint metadata via info icons in UI sections."
     },
@@ -287,9 +537,21 @@
       "partition": "ui",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["secondary nav", "tabs", "master detail", "two column", "secondary sidebar", "complex layout"],
-      "dependencies": ["UI-001", "HUB-001"],
-      "crossReferences": ["HUB-001"],
+      "triggers": [
+        "secondary nav",
+        "tabs",
+        "master detail",
+        "two column",
+        "secondary sidebar",
+        "complex layout"
+      ],
+      "dependencies": [
+        "UI-001",
+        "HUB-001"
+      ],
+      "crossReferences": [
+        "HUB-001"
+      ],
       "description": "Defines when and how to implement secondary navigation within applications."
     },
     "UI-004": {
@@ -299,9 +561,25 @@
       "partition": "ui",
       "priority": "HIGH",
       "version": "1.4.0",
-      "triggers": ["collapse", "collapsible", "left nav", "sidebar collapse", "single letter", "minimize nav", "footer toggle"],
-      "dependencies": ["UI-001", "HUB-001"],
-      "crossReferences": ["UI-003", "HUB-003", "UI-005", "UI-006"],
+      "triggers": [
+        "collapse",
+        "collapsible",
+        "left nav",
+        "sidebar collapse",
+        "single letter",
+        "minimize nav",
+        "footer toggle"
+      ],
+      "dependencies": [
+        "UI-001",
+        "HUB-001"
+      ],
+      "crossReferences": [
+        "UI-003",
+        "HUB-003",
+        "UI-005",
+        "UI-006"
+      ],
       "description": "Consistent collapsible behavior for all left navigation panels with footer-based toggles."
     },
     "UI-005": {
@@ -311,9 +589,23 @@
       "partition": "ui",
       "priority": "HIGH",
       "version": "1.3.0",
-      "triggers": ["minimal", "design", "text-only", "no icons", "relative sizing", "black white", "clean"],
-      "dependencies": ["UI-001"],
-      "crossReferences": ["UI-004", "HUB-003", "UI-006"],
+      "triggers": [
+        "minimal",
+        "design",
+        "text-only",
+        "no icons",
+        "relative sizing",
+        "black white",
+        "clean"
+      ],
+      "dependencies": [
+        "UI-001"
+      ],
+      "crossReferences": [
+        "UI-004",
+        "HUB-003",
+        "UI-006"
+      ],
       "description": "Minimal text-only aesthetic with relative sizing and no colored accents."
     },
     "UI-006": {
@@ -323,9 +615,29 @@
       "partition": "ui",
       "priority": "HIGH",
       "version": "1.2.0",
-      "triggers": ["mobile", "responsive", "collapse", "touch", "breakpoint", "on the go", "small screen", "carousel", "swipe", "drill-down"],
-      "dependencies": ["UI-001", "HUB-001", "HUB-003"],
-      "crossReferences": ["UI-004", "UI-005", "HUB-003", "APP-WORKFLOWS-001"],
+      "triggers": [
+        "mobile",
+        "responsive",
+        "collapse",
+        "touch",
+        "breakpoint",
+        "on the go",
+        "small screen",
+        "carousel",
+        "swipe",
+        "drill-down"
+      ],
+      "dependencies": [
+        "UI-001",
+        "HUB-001",
+        "HUB-003"
+      ],
+      "crossReferences": [
+        "UI-004",
+        "UI-005",
+        "HUB-003",
+        "APP-WORKFLOWS-001"
+      ],
       "description": "Mobile-responsive layout with collapsible navigation, drill-down sheets, and swipeable carousels."
     },
     "UI-007": {
@@ -335,9 +647,20 @@
       "partition": "ui",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["action", "action bar", "new button", "actions", "toolbar"],
-      "dependencies": ["UI-001", "UI-005"],
-      "crossReferences": ["HUB-003"],
+      "triggers": [
+        "action",
+        "action bar",
+        "new button",
+        "actions",
+        "toolbar"
+      ],
+      "dependencies": [
+        "UI-001",
+        "UI-005"
+      ],
+      "crossReferences": [
+        "HUB-003"
+      ],
       "description": "Consistent pattern for application-level actions separate from navigation."
     },
     "INT-001": {
@@ -347,9 +670,23 @@
       "partition": "integration",
       "priority": "HIGH",
       "version": "2.0.0",
-      "triggers": ["n8n", "webhook", "integration", "workflow", "external"],
-      "dependencies": ["ARCH-003", "INT-003"],
-      "crossReferences": ["ARCH-003", "INT-003", "INT-002", "INT-004"],
+      "triggers": [
+        "n8n",
+        "webhook",
+        "integration",
+        "workflow",
+        "external"
+      ],
+      "dependencies": [
+        "ARCH-003",
+        "INT-003"
+      ],
+      "crossReferences": [
+        "ARCH-003",
+        "INT-003",
+        "INT-002",
+        "INT-004"
+      ],
       "description": "Rules for building integrations with n8n workflows."
     },
     "INT-002": {
@@ -359,9 +696,24 @@
       "partition": "integration",
       "priority": "HIGH",
       "version": "1.4.0",
-      "triggers": ["n8n api", "api key", "n8n cloud", "recency", "known issues", "webhook bug", "headless", "webhook path", "single source of truth"],
-      "dependencies": ["INT-001", "ARCH-003"],
-      "crossReferences": ["ARCH-003"],
+      "triggers": [
+        "n8n api",
+        "api key",
+        "n8n cloud",
+        "recency",
+        "known issues",
+        "webhook bug",
+        "headless",
+        "webhook path",
+        "single source of truth"
+      ],
+      "dependencies": [
+        "INT-001",
+        "ARCH-003"
+      ],
+      "crossReferences": [
+        "ARCH-003"
+      ],
       "description": "API practices, recency protocol, known issues registry, and D9 single source of truth for workflow definitions."
     },
     "ARCH-006": {
@@ -370,9 +722,16 @@
       "path": "rules/architecture/006-agent-bootstrap.md",
       "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "1.0.0",
-      "triggers": ["bootstrap", "session start", "new session", "how to use rules"],
-      "dependencies": ["ARCH-000"],
+      "version": "1.1.0",
+      "triggers": [
+        "bootstrap",
+        "session start",
+        "new session",
+        "how to use rules"
+      ],
+      "dependencies": [
+        "ARCH-000"
+      ],
       "crossReferences": [],
       "description": "How AI developers should bootstrap and use the rule system."
     },
@@ -383,58 +742,23 @@
       "partition": "architecture",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["orchestrate", "dispatch", "n8n call", "external call", "app-to-app"],
-      "dependencies": ["ARCH-000", "ARCH-003", "INT-003"],
-      "crossReferences": ["ARCH-003", "INT-003"],
+      "triggers": [
+        "orchestrate",
+        "dispatch",
+        "n8n call",
+        "external call",
+        "app-to-app"
+      ],
+      "dependencies": [
+        "ARCH-000",
+        "ARCH-003",
+        "INT-003"
+      ],
+      "crossReferences": [
+        "ARCH-003",
+        "INT-003"
+      ],
       "description": "How application code dispatches requests through the Orchestration Layer."
-    },
-    "AGENT-002-RULES": {
-      "id": "AGENT-002-RULES",
-      "title": "Rule Audit Protocol",
-      "path": "rules/agent/002-rules-audit.md",
-      "partition": "agent",
-      "priority": "HIGH",
-      "version": "2.1.0",
-      "triggers": ["rule audit", "validate rules", "check rules", "structural integrity"],
-      "dependencies": ["ARCH-000", "ARCH-002"],
-      "crossReferences": ["APP-RULES-001"],
-      "description": "Validates rule files for structural integrity, consistency, and coverage."
-    },
-    "AGENT-002-CODE": {
-      "id": "AGENT-002-CODE",
-      "title": "Code Audit Protocol",
-      "path": "rules/agent/002-code-audit.md",
-      "partition": "agent",
-      "priority": "HIGH",
-      "version": "2.0.0",
-      "triggers": ["code audit", "code compliance", "verify code", "anti-pattern"],
-      "dependencies": ["ARCH-000", "ARCH-001"],
-      "crossReferences": ["UI-004", "UI-005", "HUB-001", "HUB-003"],
-      "description": "Validates that the codebase correctly implements documented rules."
-    },
-    "AGENT-003": {
-      "id": "AGENT-003",
-      "title": "Workflow Contract",
-      "path": "rules/agent/003-workflow-contract.md",
-      "partition": "agent",
-      "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": ["workflow", "workflow contract", "local workflow", "n8n workflow", "execute workflow"],
-      "dependencies": ["ARCH-000", "ARCH-003", "INT-003"],
-      "crossReferences": ["ARCH-003", "INT-003", "DATA-002", "AGENT-002-RULES"],
-      "description": "Standard interface for agentic workflows that can run locally or on n8n."
-    },
-    "AGENT-003-FOOTBALL": {
-      "id": "AGENT-003-FOOTBALL",
-      "title": "European Football Daily Workflow",
-      "path": "rules/agent/003-european-football-daily.md",
-      "partition": "agent",
-      "priority": "MEDIUM",
-      "version": "1.0.0",
-      "triggers": ["football", "european football", "daily news", "sentiment analysis", "facebook post"],
-      "dependencies": ["AGENT-003", "INT-003"],
-      "crossReferences": ["AGENT-003", "INT-003", "DATA-002"],
-      "description": "Daily automated European football news aggregation with sentiment analysis and Facebook posting."
     },
     "ARCH-010": {
       "id": "ARCH-010",
@@ -443,9 +767,22 @@
       "partition": "architecture",
       "priority": "CRITICAL",
       "version": "2.0.0",
-      "triggers": ["exit", "complete", "finish", "done", "validate rules", "update rules", "before completing"],
-      "dependencies": ["ARCH-000", "ARCH-002"],
-      "crossReferences": ["ARCH-000", "AGENT-002-RULES"],
+      "triggers": [
+        "exit",
+        "complete",
+        "finish",
+        "done",
+        "validate rules",
+        "update rules",
+        "before completing"
+      ],
+      "dependencies": [
+        "ARCH-000",
+        "ARCH-002"
+      ],
+      "crossReferences": [
+        "ARCH-000"
+      ],
       "description": "Validate rule compliance and propose rule updates before completing any task."
     },
     "ARCH-011": {
@@ -455,9 +792,20 @@
       "partition": "architecture",
       "priority": "CRITICAL",
       "version": "2.0.0",
-      "triggers": ["replit.md", "documentation", "readme", "bootstrap", "grounding"],
-      "dependencies": ["ARCH-000"],
-      "crossReferences": ["ARCH-002", "ARCH-006"],
+      "triggers": [
+        "replit.md",
+        "documentation",
+        "readme",
+        "bootstrap",
+        "grounding"
+      ],
+      "dependencies": [
+        "ARCH-000"
+      ],
+      "crossReferences": [
+        "ARCH-002",
+        "ARCH-006"
+      ],
       "description": "replit.md is a bootstrap pointer only. 15 lines max. No implementation details."
     },
     "APP-RULES-001": {
@@ -467,9 +815,20 @@
       "partition": "apps",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["rules explorer", "rule catalog", "rule viewer", "browse rules"],
-      "dependencies": ["HUB-001", "HUB-002", "HUB-003", "AGENT-002-RULES"],
-      "crossReferences": ["AGENT-002-RULES", "DATA-003"],
+      "triggers": [
+        "rules explorer",
+        "rule catalog",
+        "rule viewer",
+        "browse rules"
+      ],
+      "dependencies": [
+        "HUB-001",
+        "HUB-002",
+        "HUB-003"
+      ],
+      "crossReferences": [
+        "DATA-003"
+      ],
       "description": "Admin-only app for browsing, reading, and auditing the rule system."
     },
     "DATA-003": {
@@ -479,22 +838,19 @@
       "partition": "data",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["rule audit", "audit storage", "audit table", "audit schema"],
-      "dependencies": ["DATA-001", "AGENT-002-RULES"],
-      "crossReferences": ["AGENT-002-RULES", "APP-RULES-001"],
+      "triggers": [
+        "rule audit",
+        "audit storage",
+        "audit table",
+        "audit schema"
+      ],
+      "dependencies": [
+        "DATA-001"
+      ],
+      "crossReferences": [
+        "APP-RULES-001"
+      ],
       "description": "Schema and practices for storing rule audit reports."
-    },
-    "AGT-001": {
-      "id": "AGT-001",
-      "title": "n8n Development Workflow",
-      "path": "rules/agent/001-n8n-development-workflow.md",
-      "partition": "agent",
-      "priority": "CRITICAL",
-      "version": "1.0.0",
-      "triggers": ["n8n workflow", "develop workflow", "modify workflow", "workflow development", "FETCH", "ANALYZE", "MODIFY", "PUSH", "BACKUP", "VERIFY"],
-      "dependencies": ["ARCH-000", "INT-002"],
-      "crossReferences": ["INT-003", "INT-004", "AGENT-003", "ENV-001"],
-      "description": "Executable 6-phase protocol for n8n workflow development: FETCH → ANALYZE → MODIFY → PUSH → BACKUP → VERIFY."
     },
     "INT-005": {
       "id": "INT-005",
@@ -503,9 +859,21 @@
       "partition": "integration",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["callback", "persistence", "final output", "execution result", "workflow callback"],
-      "dependencies": ["INT-003", "AGENT-003", "DATA-002"],
-      "crossReferences": ["DATA-002", "AGENT-003-FOOTBALL", "ENV-001"],
+      "triggers": [
+        "callback",
+        "persistence",
+        "final output",
+        "execution result",
+        "workflow callback"
+      ],
+      "dependencies": [
+        "INT-003",
+        "DATA-002"
+      ],
+      "crossReferences": [
+        "DATA-002",
+        "ENV-001"
+      ],
       "description": "Defines how n8n workflow callbacks persist execution results for distribution workflows."
     },
     "ENV-001": {
@@ -515,9 +883,22 @@
       "partition": "env",
       "priority": "CRITICAL",
       "version": "1.0.0",
-      "triggers": ["environment", "dev url", "prod url", "callback url", "replit url", "n8n url", "workflow tag"],
-      "dependencies": ["ARCH-000"],
-      "crossReferences": ["ENV-002", "INT-003", "AGT-001"],
+      "triggers": [
+        "environment",
+        "dev url",
+        "prod url",
+        "callback url",
+        "replit url",
+        "n8n url",
+        "workflow tag"
+      ],
+      "dependencies": [
+        "ARCH-000"
+      ],
+      "crossReferences": [
+        "ENV-002",
+        "INT-003"
+      ],
       "description": "Single source of truth for deployment environments, URLs, and naming conventions."
     },
     "ENV-002": {
@@ -527,9 +908,18 @@
       "partition": "env",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["workflow registry", "workflow artifact", "dev workflow", "prod workflow"],
-      "dependencies": ["ENV-001", "AGENT-003"],
-      "crossReferences": ["ENV-001", "AGT-001", "AGENT-003"],
+      "triggers": [
+        "workflow registry",
+        "workflow artifact",
+        "dev workflow",
+        "prod workflow"
+      ],
+      "dependencies": [
+        "ENV-001"
+      ],
+      "crossReferences": [
+        "ENV-001"
+      ],
       "description": "Central registry of all n8n workflows with environment-specific artifact paths."
     },
     "ENV-003": {
@@ -539,9 +929,19 @@
       "partition": "env",
       "priority": "HIGH",
       "version": "1.0.0",
-      "triggers": ["channel", "facebook page", "social media", "distribution", "public interface"],
-      "dependencies": ["ENV-001"],
-      "crossReferences": ["ENV-002", "AGENT-003-FOOTBALL"],
+      "triggers": [
+        "channel",
+        "facebook page",
+        "social media",
+        "distribution",
+        "public interface"
+      ],
+      "dependencies": [
+        "ENV-001"
+      ],
+      "crossReferences": [
+        "ENV-002"
+      ],
       "description": "Registry of all public-facing channels and distribution endpoints."
     }
   },
@@ -576,11 +976,6 @@
       "description": "External service integration and cross-project contracts",
       "readOrder": 5
     },
-    "agent": {
-      "path": "rules/agent/",
-      "description": "Agentic workflow protocols for audits and automated reasoning",
-      "readOrder": 6
-    },
     "env": {
       "path": "rules/env/",
       "description": "Environment configuration, workflow artifacts, and channel registry",
@@ -589,16 +984,63 @@
   },
   "routing": {
     "redFlags": [
-      { "pattern": "n8n|stripe|external service", "partitions": ["integration"] },
-      { "pattern": "database|table|schema|migrate", "partitions": ["data"] },
-      { "pattern": "user sees|layout|page|component", "partitions": ["ui"] },
-      { "pattern": "hub|sidebar|navigation|access control", "partitions": ["hub"] },
-      { "pattern": "endpoint|api route|authentication", "partitions": ["architecture"] },
-      { "pattern": "new app|new feature", "partitions": ["apps", "architecture"] },
-      { "pattern": "audit|agentic|rule audit|code audit", "partitions": ["agent"] },
-      { "pattern": "headless|auto-sync|programmatic|api-first", "partitions": ["architecture", "integration"] },
-      { "pattern": "environment|dev url|prod url|callback url|workflow artifact|channel|facebook page", "partitions": ["env"] }
+      {
+        "pattern": "n8n|stripe|external service",
+        "partitions": [
+          "integration"
+        ]
+      },
+      {
+        "pattern": "database|table|schema|migrate",
+        "partitions": [
+          "data"
+        ]
+      },
+      {
+        "pattern": "user sees|layout|page|component",
+        "partitions": [
+          "ui"
+        ]
+      },
+      {
+        "pattern": "hub|sidebar|navigation|access control",
+        "partitions": [
+          "hub"
+        ]
+      },
+      {
+        "pattern": "endpoint|api route|authentication",
+        "partitions": [
+          "architecture"
+        ]
+      },
+      {
+        "pattern": "new app|new feature",
+        "partitions": [
+          "apps",
+          "architecture"
+        ]
+      },
+      {
+        "pattern": "headless|auto-sync|programmatic|api-first",
+        "partitions": [
+          "architecture",
+          "integration"
+        ]
+      },
+      {
+        "pattern": "environment|dev url|prod url|callback url|workflow artifact|channel|facebook page",
+        "partitions": [
+          "env"
+        ]
+      }
     ],
-    "alwaysInclude": ["ARCH-000", "ARCH-000-A", "ARCH-000-B", "ARCH-006", "ARCH-011"]
+    "alwaysInclude": [
+      "ARCH-000",
+      "ARCH-000-A",
+      "ARCH-000-B",
+      "ARCH-006",
+      "ARCH-011"
+    ]
   }
 }

@@ -47,4 +47,4 @@ To register a new channel:
 
 ## Cross-References
 - ENV-002: Workflow Registry
-- AGENT-003-FOOTBALL: European Football Daily Workflow
+- AGT-003-FOOTBALL: European Football Daily Workflow (in /agents/)

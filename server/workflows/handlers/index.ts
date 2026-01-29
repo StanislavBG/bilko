@@ -7,7 +7,7 @@ async function rulesAuditHandler(input: WorkflowInput): Promise<WorkflowOutput> 
   return {
     success: true,
     data: {
-      message: "Rules audit is currently executed via agent reasoning (AGENT-002-RULES). This local handler is a placeholder for future automated execution.",
+      message: "Rules audit is currently executed via agent reasoning (AGT-002-RULES). This local handler is a placeholder for future automated execution.",
       action: input.action,
       payload: input.payload,
     },
@@ -25,7 +25,7 @@ async function codeAuditHandler(input: WorkflowInput): Promise<WorkflowOutput> {
   return {
     success: true,
     data: {
-      message: "Code audit is currently executed via agent reasoning (AGENT-002-CODE). This local handler is a placeholder for future automated execution.",
+      message: "Code audit is currently executed via agent reasoning (AGT-002-CODE). This local handler is a placeholder for future automated execution.",
       action: input.action,
       payload: input.payload,
     },
