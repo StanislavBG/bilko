@@ -1,4 +1,4 @@
-# AGENT-003: Workflow Contract
+# AGT-003: Workflow Contract
 
 **Version:** 1.0.0  
 **Priority:** HIGH  
@@ -202,4 +202,4 @@ To migrate a workflow from local to n8n (or vice versa):
 - ARCH-003: Orchestration Layer
 - INT-003: Orchestrator Communication Contract
 - DATA-002: Communication Trace Storage
-- AGENT-002: Auditor protocols (can become local workflows)
+- AGT-002: Auditor protocols (can become local workflows)

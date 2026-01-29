@@ -1,4 +1,4 @@
-# AGENT-002-RULES: Rule Audit Protocol
+# AGT-002-RULES: Rule Audit Protocol
 
 **Version:** 2.1.0  
 **Priority:** HIGH  

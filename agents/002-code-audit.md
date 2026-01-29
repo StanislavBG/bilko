@@ -1,4 +1,4 @@
-# AGENT-002-CODE: Code Audit Protocol
+# AGT-002-CODE: Code Audit Protocol
 
 **Version:** 2.0.0  
 **Priority:** HIGH  

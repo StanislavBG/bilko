@@ -1,9 +1,9 @@
-# AGENT-003-FOOTBALL: European Football Daily Workflow
+# AGT-003-FOOTBALL: European Football Daily Workflow
 
 **Version:** 1.0.0  
 **Priority:** MEDIUM  
 **Partition:** agent  
-**Dependencies:** AGENT-003, INT-003
+**Dependencies:** AGT-003, INT-003
 
 ## Purpose
 
@@ -47,11 +47,11 @@ RSS Fetch → Parse → Sentiment → Winner → Reddit → Summary → Image �
 7. **Generate Infographic**: Gemini Imagen creates celebratory image
 8. **Compose Post**: Gemini writes Facebook caption
 9. **Upload to Facebook**: Graph API posts image + text
-10. **Build Response**: AGENT-003 compliant output
+10. **Build Response**: AGT-003 compliant output
 
 ## Input Schema
 
-Per AGENT-003 contract:
+Per AGT-003 contract:
 
 ```typescript
 interface WorkflowInput {
@@ -149,7 +149,7 @@ Webhook ───────────┘
                             ↓
                    HTTP Request (Gemini Post) → Code (Parse)
                             ↓
-                   HTTP Request (Facebook) → Code (AGENT-003 Response)
+                   HTTP Request (Facebook) → Code (AGT-003 Response)
                             ↓
                    ┌────────┴────────┐
                    ↓                 ↓
@@ -158,6 +158,6 @@ Webhook ───────────┘
 
 ## Cross-References
 
-- AGENT-003: Workflow Contract (input/output schemas)
+- AGT-003: Workflow Contract (input/output schemas)
 - INT-003: Orchestrator Communication Contract
 - DATA-002: Communication Trace Storage
