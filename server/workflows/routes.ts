@@ -19,7 +19,9 @@ const callbackSchema = z.object({
   traceId: z.string().min(1),
   output: jsonValue.optional(),
   executionId: z.string().optional(),
-  status: z.enum(["success", "failed", "in_progress"]).default("success")
+  status: z.enum(["success", "failed", "in_progress"]).default("success"),
+  errorMessage: z.string().optional(),
+  details: z.record(jsonValue).optional()
 });
 
 export function registerWorkflowRoutes(app: Express): void {
@@ -37,7 +39,7 @@ export function registerWorkflowRoutes(app: Express): void {
         });
       }
 
-      const { workflowId, step, stepIndex, traceId, output, executionId, status } = parsed.data;
+      const { workflowId, step, stepIndex, traceId, output, executionId, status, errorMessage, details } = parsed.data;
       
       let execution = await orchestratorStorage.getExecutionByTriggerTrace(traceId);
       
@@ -67,6 +69,8 @@ export function registerWorkflowRoutes(app: Express): void {
         requestPayload: { step, stepIndex },
         responsePayload: output as Record<string, unknown> | undefined,
         overallStatus: status,
+        errorDetail: errorMessage || null,
+        details: details as Record<string, unknown> | undefined,
         n8nExecutionId: executionId || null
       });
 

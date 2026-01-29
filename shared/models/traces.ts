@@ -39,6 +39,9 @@ export const communicationTraces = pgTable("communication_traces", {
   errorCode: text("error_code"),
   errorDetail: text("error_detail"),
   
+  // Structured context (for debugging)
+  details: jsonb("details"),
+  
   // Metadata
   n8nExecutionId: text("n8n_execution_id"),
 }, (table) => ({

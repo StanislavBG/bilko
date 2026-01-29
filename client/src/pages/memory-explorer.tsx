@@ -154,9 +154,11 @@ function TraceDetailModal({
             )}
           </div>
 
-          {trace.errorCode && (
+          {(trace.errorCode || trace.errorDetail) && (
             <div className="p-3 bg-destructive/10 rounded-md">
-              <p className="text-sm font-medium text-destructive">{trace.errorCode}</p>
+              {trace.errorCode && (
+                <p className="text-sm font-medium text-destructive">{trace.errorCode}</p>
+              )}
               {trace.errorDetail && (
                 <pre className="text-xs mt-2 whitespace-pre-wrap max-h-64 overflow-auto">
                   {trace.errorDetail}
@@ -164,6 +166,13 @@ function TraceDetailModal({
               )}
             </div>
           )}
+
+          {trace.details && typeof trace.details === 'object' && Object.keys(trace.details as object).length > 0 ? (
+            <div>
+              <h4 className="text-sm font-medium mb-2">Details</h4>
+              <JsonDisplay data={trace.details} />
+            </div>
+          ) : null}
 
           <div>
             <h4 className="text-sm font-medium mb-2">Request Payload</h4>

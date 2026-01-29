@@ -60,7 +60,12 @@ Preferences: Move slowly, rules-first, no over-building
   - Uses Sharp library for reliable text overlay (not AI-generated text)
   - Graceful fallback: if no image generated, branding is skipped
   - New nodes: Brand Image (HTTP) + Parse Brand Response (Code)
-- **DEV Workflow Nodes**: 26 total (PROD still at 24)
+- **Code Node Pattern for Complex Prompts** (January 29, 2026):
+  - HTTP Request nodes with multiple `{{ }}` expressions in jsonBody fail with "JSON parameter needs to be valid JSON"
+  - **Solution**: Use Code node before HTTP Request to build the request body, then reference via `JSON.stringify($json.requestBody)`
+  - Added: "Build Compliance Request" + "Build Image Request" Code nodes
+  - See INT-002 ISSUE-011 for details
+- **DEV Workflow Nodes**: 28 total (PROD still at 24)
 
 ### European Football Daily - Source Links + Tagline + Nano Banana Pro (January 26, 2026) - VERIFIED
 - **Status**: Fully operational - Execution 93 confirmed all features working
