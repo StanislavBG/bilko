@@ -2,7 +2,7 @@
 
 Rule ID: INT-002
 Priority: HIGH
-Version: 1.8.0
+Version: 1.9.0
 
 ## Context
 These rules apply when integrating with n8n via API, whether using n8n cloud or self-hosted. The Replit coding agent should follow these practices for consistent, reliable integration.
@@ -87,6 +87,58 @@ AI training data becomes stale. n8n v2.0 (December 2024) introduced breaking cha
   1. n8n UI → Webhook node → Path field
   2. Bilko logs → `[webhook-cache] Cached URL for...`
   3. Actual curl call URL
+
+### ISSUE-008: Expression Escaping in Programmatic Updates (CRITICAL)
+- **Status**: DOCUMENTED (January 2026)
+- **Description**: When updating n8n workflows programmatically via API, JSON body expressions with nested quotes cause "Unexpected end of JSON input" errors.
+- **Root Cause**: n8n expressions like `={{ $json.field }}` exist inside JSON strings. When the expression contains JavaScript with quotes (e.g., `.map(([k,v]) => k + " as " + v)`), the escaping levels conflict.
+- **Problem Pattern**:
+  ```javascript
+  // BAD: Nested quotes break JSON parsing
+  jsonBody: '={"text": "{{ $json.items.map(x => x + \" suffix\").join(\", \") }}"}'
+  ```
+- **Fix Options**:
+  1. **Use JSON.stringify()**: Let JavaScript handle the escaping
+     ```javascript
+     jsonBody: '={"text": "{{ JSON.stringify($json.items) }}"}'
+     ```
+  2. **Use single quotes in JS**: Avoid double-quote conflicts
+     ```javascript
+     // In Code node, not jsonBody expression
+     items.map(x => x + ' suffix').join(', ')
+     ```
+  3. **Simplify expressions**: Move complex logic to preceding Code nodes
+- **Multi-Level Escaping**: When pushing updates programmatically (via curl/API), newlines need extra escaping: `\n` in the workflow becomes `\\n` in the API payload, which becomes `\\\\n` in a shell command.
+- **Verification**: After push, GET the workflow and inspect the expression to confirm it wasn't corrupted.
+
+### ISSUE-009: Imagen Silent Content Filtering
+- **Status**: DOCUMENTED (January 2026)
+- **Description**: Google Imagen API silently filters prompts involving real people or copyrighted content. Instead of returning an error, it returns an empty `predictions` array.
+- **Symptom**: Workflow completes successfully, but no image is generated. `predictions: []` in response.
+- **Root Cause**: Imagen's content safety filters reject prompts with celebrity names, trademarked terms, or other restricted content without explicit error messaging.
+- **Detection Pattern**:
+  ```javascript
+  const predictions = response.predictions || [];
+  if (predictions.length === 0) {
+    // Content was filtered - handle gracefully
+    return [{ json: { imageDataUri: null, filtered: true } }];
+  }
+  ```
+- **Prevention**: Use "anonymized descriptions" instead of real names in image prompts:
+  - BAD: "Cristiano Ronaldo celebrating a goal"
+  - GOOD: "tall athletic man with short dark hair celebrating on football pitch"
+- **Impact**: Workflows must handle null/missing images gracefully - branding steps should be skipped, not fail.
+
+### ISSUE-010: Rate Limits During Development Testing
+- **Status**: DOCUMENTED (January 2026)
+- **Description**: Repeated workflow test executions during development quickly exhaust Google API rate limits (429 errors).
+- **Root Cause**: Each workflow run makes 4-6 Gemini API calls. Testing 5+ times in quick succession exceeds RPM limits.
+- **Symptoms**: Workflow worked earlier, now fails with 429 or empty responses.
+- **Workaround**: 
+  1. Wait 1 hour for limits to reset
+  2. Space out test runs (5+ minutes between full executions)
+  3. Use DEV workflow with reduced API calls for testing
+- **Not a production concern**: Production workflows run once per day (scheduled), well within limits.
 
 ## Documentation References
 

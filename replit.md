@@ -97,11 +97,13 @@ Preferences: Move slowly, rules-first, no over-building
 - **Testing Procedure**: Simply trigger DEV workflow - no need to deactivate PROD
 
 ### Key n8n Learnings
-1. **User-Agent Required**: Google APIs block n8n's default user-agent. Always add custom User-Agent header.
-2. **Webhook Body Structure**: Data sent to webhook is at `.json.body.keyName`, not `.json.keyName`
-3. **Data Flow**: API keys must be explicitly passed through all Code nodes in n8n workflows
-4. **Execution Grouping**: Executions are grouped by triggerTraceId - the traceId from the initial webhook call
-5. **Gemini JSON Parsing**: Gemini wraps JSON responses in markdown fences - strip with regex before parsing
-6. **No JSON Sanitization Needed**: Don't sanitize structural newlines - JSON.parse() handles them correctly
-7. **Imagen Safety Filters**: Imagen silently returns empty predictions (not errors) when prompts mention specific celebrities or real people - workflow should handle gracefully
-8. **Dynamic Callback URLs**: For dev workflows, use `={{ $('Webhook').first().json.body.callbackUrl }}` instead of hardcoded URLs to handle changing dev domains
+**Full details in INT-002** (`rules/integration/002-n8n-api-practices.md`) - Known Issues Registry
+
+1. **User-Agent Required**: Google APIs block n8n's default user-agent (INT-002 D12)
+2. **Webhook Body Structure**: Data at `.json.body.keyName`, not `.json.keyName` (INT-002 D13)
+3. **Data Flow**: API keys must flow through all Code nodes (INT-002 D13)
+4. **Gemini JSON Parsing**: Strip markdown fences before parsing (INT-002 D14)
+5. **Expression Escaping**: Avoid nested quotes in `{{ }}` - use JSON.stringify() (INT-002 ISSUE-008)
+6. **Imagen Silent Filters**: Empty predictions = content filtered, not error (INT-002 ISSUE-009)
+7. **Rate Limits**: Space out test runs during development (INT-002 ISSUE-010)
+8. **Dynamic Callback URLs**: Use `={{ $('Webhook').first().json.body.callbackUrl }}` for dev
