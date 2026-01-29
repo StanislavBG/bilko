@@ -7,7 +7,7 @@ export function registerAuditorRoutes(app: Express) {
   // Get the Auditor Base Protocol markdown
   app.get("/api/audit/protocol", async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const content = await readFile("rules/agent/002-auditor-base.md", "utf-8");
+      const content = await readFile("agents/002-rules-audit.md", "utf-8");
       res.json({ content });
     } catch (err) {
       next(err);

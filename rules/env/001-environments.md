@@ -75,4 +75,4 @@ When building or modifying n8n workflows:
 ## Cross-References
 - ENV-002: Workflow Registry
 - INT-003: Orchestrator Communication Contract
-- AGT-001: n8n Development Workflow
+- AGT-001: n8n Development Workflow (in /agents/)

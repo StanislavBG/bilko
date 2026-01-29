@@ -44,5 +44,5 @@ When creating or updating workflows:
 
 ## Cross-References
 - ENV-001: Environments
-- AGT-001: n8n Development Workflow
-- AGENT-003: Workflow Contract
+- AGT-001: n8n Development Workflow (in /agents/)
+- AGT-003: Workflow Contract (in /agents/)

@@ -5,7 +5,7 @@ Priority: HIGH
 Version: 1.0.0
 
 ## Context
-This rule defines the schema for storing rule audit reports. Audits are performed by agents following AGENT-002 (Auditor Base) and saved for historical tracking.
+This rule defines the schema for storing rule audit reports. Audits are performed by agents following AGT-002-RULES (Rule Audit Protocol in `/agents/`) and saved for historical tracking.
 
 ## Purpose
 
