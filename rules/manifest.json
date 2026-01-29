@@ -394,7 +394,7 @@
       "path": "rules/agent/002-rules-audit.md",
       "partition": "agent",
       "priority": "HIGH",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "triggers": ["rule audit", "validate rules", "check rules", "structural integrity"],
       "dependencies": ["ARCH-000", "ARCH-002"],
       "crossReferences": ["APP-RULES-001"],
