@@ -450,15 +450,15 @@
     },
     "ARCH-011": {
       "id": "ARCH-011",
-      "title": "Documentation Brevity",
+      "title": "replit.md Governance",
       "path": "rules/architecture/011-documentation-brevity.md",
       "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "1.1.0",
-      "triggers": ["replit.md", "documentation", "readme", "brevity", "grounding"],
+      "version": "2.0.0",
+      "triggers": ["replit.md", "documentation", "readme", "bootstrap", "grounding"],
       "dependencies": ["ARCH-000"],
-      "crossReferences": [],
-      "description": "Project documentation provides grounding, not replication of rules."
+      "crossReferences": ["ARCH-002", "ARCH-006"],
+      "description": "replit.md is a bootstrap pointer only. 15 lines max. No implementation details."
     },
     "APP-RULES-001": {
       "id": "APP-RULES-001",
