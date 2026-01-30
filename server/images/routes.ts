@@ -4,7 +4,7 @@ import sharp from "sharp";
 export function registerImageRoutes(app: Express): void {
   app.post("/api/images/brand", async (req, res) => {
     try {
-      const { imageBase64, text = "Bilko AI Academy", position = "bottom" } = req.body;
+      const { imageBase64, text = "Bilko Bibitkov AI Academy", position = "bottom-right" } = req.body;
 
       if (!imageBase64) {
         return res.status(400).json({ error: "imageBase64 is required", success: false });
@@ -38,13 +38,13 @@ export function registerImageRoutes(app: Express): void {
         <svg width="${width}" height="${barHeight}">
           <rect x="0" y="0" width="${width}" height="${barHeight}" fill="black"/>
           <text 
-            x="${width / 2}" 
+            x="${width - 12}" 
             y="${barHeight / 2 + fontSize / 3}" 
             font-family="Arial, sans-serif" 
             font-size="${fontSize}" 
             font-weight="bold"
             fill="white" 
-            text-anchor="middle"
+            text-anchor="end"
           >${text}</text>
         </svg>
       `;
