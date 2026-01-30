@@ -11,4 +11,4 @@ This file is a **bootstrap pointer only**. All project knowledge lives in `/rule
 - **Rules**: `/rules/` (start with ARCH-000, ARCH-006)
 - **Stack**: React + Tailwind + Shadcn | Express | PostgreSQL + Drizzle | Replit Auth
 - **Manifest**: `rules/manifest.json`
-- **Preferences**: Move slowly, rules-first, no over-building
+- **Preferences**: Move slowly, rules-first, no over-building, automation-first (never ask user to manually modify systems)

@@ -46,5 +46,14 @@ All orchestrator requests and responses MUST be logged to the communication trac
 **DO**: Log before sending, update after receiving
 **DON'T**: Allow any external call to bypass logging
 
+### D7: Automation-First
+All configuration and system changes MUST be performed programmatically via APIs. Never instruct the user to manually modify settings, configurations, or external systems. Exhaust all API and automation options before considering manual intervention.
+
+**DO**: Use APIs, scripts, and automation to push changes to n8n, databases, and external services
+**DO**: Retry API calls multiple times with different approaches before giving up
+**DO**: Build admin interfaces for any configuration the user might need to change
+**DON'T**: Ask users to manually edit n8n workflows, database records, or service configurations
+**DON'T**: Abandon API automation after a single failure—try alternative endpoints, authentication methods, or workarounds
+
 ## Rationale
 These principles ensure the application remains maintainable as it scales to support multiple n8n workflows, admin portals, and customer-facing features. The orchestration layer provides intelligent error handling and creates a trace history for agent learning.
