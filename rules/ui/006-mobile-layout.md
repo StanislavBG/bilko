@@ -1,6 +1,6 @@
 # UI-006: Mobile Layout
 
-**Version**: 1.2.0  
+**Version**: 1.3.0  
 **Priority**: HIGH  
 **Partition**: ui
 
@@ -104,29 +104,76 @@ const [isNavCollapsed, setIsNavCollapsed] = useState(false);
 
 ### D6: Mobile Drill-Down Navigation
 
-For pages with deep hierarchy (e.g., Agentic Workflows), use Sheet-based drill-down:
+For pages with deep hierarchy, use stack-based drill-down within the Shadcn Sidebar Sheet. This supports N levels of depth with a consistent interface.
 
-```tsx
-// Sheet with internal back navigation
-<Sheet>
-  <SheetContent side="left">
-    <SheetHeader>
-      {showSecondLevel && (
-        <Button onClick={() => setShowSecondLevel(false)}>
-          <ChevronLeft /> Back
-        </Button>
-      )}
-    </SheetHeader>
-    {showSecondLevel ? <SecondLevelNav /> : <FirstLevelNav />}
-  </SheetContent>
-</Sheet>
+**Data Structure** (see ARCH-012):
+```typescript
+interface NavItem {
+  id: string;
+  title: string;
+  url?: string;        // Leaf items navigate
+  icon?: LucideIcon;
+  children?: NavItem[]; // Parent items drill down
+  adminOnly?: boolean;
+}
+
+interface NavLevel {
+  title: string;
+  items: NavItem[];
+}
 ```
 
-**Pattern:**
-- First level: Category/folder list
-- Second level: Items within selected category
-- Back button returns to previous level within Sheet
-- Selection closes Sheet and shows detail
+**Stack-Based State:**
+```tsx
+const rootLevel: NavLevel = { title: "App Name", items: visibleNavItems };
+const [navStack, setNavStack] = useState<NavLevel[]>([rootLevel]);
+
+const currentLevel = navStack[navStack.length - 1];
+const canGoBack = navStack.length > 1;
+
+const handleDrillInto = (item: NavItem) => {
+  if (item.children) {
+    setNavStack([...navStack, { title: item.title, items: item.children }]);
+  }
+};
+
+const handleBack = () => {
+  if (canGoBack) setNavStack(navStack.slice(0, -1));
+};
+
+const handleNavigate = (url: string) => {
+  setLocation(url);
+  setOpenMobile(false);
+  setNavStack([rootLevel]); // Reset on navigation
+};
+```
+
+**Rendering Pattern:**
+```tsx
+// Render current level uniformly - works for any depth
+{currentLevel.items.map((item) => (
+  <SidebarMenuItem key={item.id}>
+    <SidebarMenuButton
+      onClick={() => {
+        if (item.children) handleDrillInto(item);
+        else if (item.url) handleNavigate(item.url);
+      }}
+    >
+      {item.icon && <item.icon className="h-4 w-4" />}
+      <span>{item.title}</span>
+      {item.children && <ChevronRight className="ml-auto h-4 w-4" />}
+    </SidebarMenuButton>
+  </SidebarMenuItem>
+))}
+```
+
+**Key Behaviors:**
+- Clicking item with `children` → pushes new level onto stack
+- Back button → pops stack (visible when `canGoBack`)
+- Clicking leaf item (has `url`) → navigates, closes Sheet, resets stack
+- Adding new levels is data-only, no component changes needed
+
+**Cross-Reference:** See ARCH-012 for NavItem interface and navigation data location.
 
 ### D7: Mobile Swipeable Carousel
 
@@ -177,3 +224,4 @@ useEffect(() => {
 - UI-005: Minimal Design Principles (sizing, aesthetics)
 - HUB-001: Hub Layout (primary sidebar)
 - APP-WORKFLOWS-001: Agentic Workflows (uses D6, D7 patterns)
+- ARCH-012: Unified Navigation Structure (NavItem interface, navigation data)

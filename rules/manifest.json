@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "1.0.0",
-  "lastUpdated": "2026-01-29T00:00:00Z",
+  "lastUpdated": "2026-01-30T00:00:00Z",
   "primaryDirective": "ARCH-000",
   "rules": {
     "ARCH-000": {
@@ -584,7 +584,7 @@
       "path": "rules/ui/006-mobile-layout.md",
       "partition": "ui",
       "priority": "HIGH",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "triggers": [
         "mobile",
         "responsive",
@@ -752,6 +752,32 @@
         "ARCH-006"
       ],
       "description": "replit.md is a bootstrap pointer only. 15 lines max. No implementation details."
+    },
+    "ARCH-012": {
+      "id": "ARCH-012",
+      "title": "Unified Navigation Structure",
+      "path": "rules/architecture/012-navigation-structure.md",
+      "partition": "architecture",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": [
+        "navigation",
+        "NavItem",
+        "sidebar nav",
+        "drill-down",
+        "nav stack",
+        "navigation data"
+      ],
+      "dependencies": [
+        "ARCH-000",
+        "UI-006"
+      ],
+      "crossReferences": [
+        "UI-006",
+        "UI-004",
+        "HUB-001"
+      ],
+      "description": "Unified recursive NavItem interface for N-level navigation. Data-driven approach with stack-based mobile drill-down."
     },
     "APP-RULES-001": {
       "id": "APP-RULES-001",
