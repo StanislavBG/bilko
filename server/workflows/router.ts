@@ -147,6 +147,15 @@ async function executeN8nWorkflow(
 
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
+  // Create execution record BEFORE triggering - this tracks the async workflow
+  const execution = await orchestratorStorage.createExecution({
+    workflowId: workflow.id,
+    triggerTraceId: input.context.traceId,
+    externalExecutionId: null,
+    status: "running",
+    userId: input.context.userId,
+  });
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -196,29 +205,59 @@ async function executeN8nWorkflow(
     clearTimeout(timeout);
 
     const data = await response.json();
-    const isSuccess = response.ok && data.success !== false;
+    const webhookSuccess = response.ok && data.success !== false;
 
-    const errorCode = data.error?.code || data.code || "N8N_ERROR";
-    const errorMessage = data.error?.message || data.message || "Workflow execution failed";
-    const errorHint = data.hint;
+    if (!webhookSuccess) {
+      // Webhook trigger failed - mark execution as failed
+      await orchestratorStorage.updateExecution(execution.id, {
+        status: "failed",
+        completedAt: new Date(),
+      });
+      
+      const errorCode = data.error?.code || data.code || "N8N_ERROR";
+      const errorMessage = data.error?.message || data.message || "Workflow trigger failed";
+      const errorHint = data.hint;
 
+      return {
+        success: false,
+        error: {
+          code: String(errorCode),
+          message: errorHint ? `${errorMessage} ${errorHint}` : errorMessage,
+          retryable: data.error?.retryable ?? (response.status >= 500),
+          details: data.error?.details || (errorHint ? { hint: errorHint } : undefined),
+        },
+        metadata: {
+          workflowId: workflow.id,
+          executionId: execution.id,
+          executedAt: new Date().toISOString(),
+          durationMs: Date.now() - startTime,
+        },
+      };
+    }
+
+    // Webhook trigger succeeded - workflow is now running in n8n
+    // Return "running" status with execution ID for polling
     return {
-      success: isSuccess,
-      data: isSuccess ? (data.data || data) : undefined,
-      error: !isSuccess ? {
-        code: String(errorCode),
-        message: errorHint ? `${errorMessage} ${errorHint}` : errorMessage,
-        retryable: data.error?.retryable ?? (response.status >= 500),
-        details: data.error?.details || (errorHint ? { hint: errorHint } : undefined),
-      } : undefined,
+      success: true,
+      data: {
+        status: "running",
+        message: "Workflow triggered successfully. Processing in background...",
+        executionId: execution.id,
+      },
       metadata: {
         workflowId: workflow.id,
-        executionId: data.metadata?.executionId,
+        executionId: execution.id,
         executedAt: new Date().toISOString(),
         durationMs: Date.now() - startTime,
       },
     };
   } catch (error) {
+    // Network/timeout error - mark execution as failed
+    await orchestratorStorage.updateExecution(execution.id, {
+      status: "failed",
+      completedAt: new Date(),
+    });
+    
     return {
       success: false,
       error: {
@@ -230,6 +269,7 @@ async function executeN8nWorkflow(
       },
       metadata: {
         workflowId: workflow.id,
+        executionId: execution.id,
         executedAt: new Date().toISOString(),
         durationMs: Date.now() - startTime,
       },

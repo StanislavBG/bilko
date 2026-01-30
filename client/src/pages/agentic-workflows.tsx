@@ -71,15 +71,29 @@ interface WorkflowsResponse {
 
 interface ExecutionResult {
   success: boolean;
-  data?: Record<string, unknown>;
+  data?: {
+    status?: string;
+    message?: string;
+    executionId?: string;
+  } & Record<string, unknown>;
   error?: {
     code: string;
     message: string;
   };
   metadata: {
     workflowId: string;
+    executionId?: string;
     executedAt: string;
     durationMs: number;
+  };
+}
+
+interface ExecutionStatus {
+  execution: {
+    id: string;
+    workflowId: string;
+    status: "running" | "completed" | "failed";
+    completedAt?: string;
   };
 }
 
@@ -340,6 +354,98 @@ export default function AgenticWorkflows() {
   const [isWorkflowNavOpen, setIsWorkflowNavOpen] = useState(false);
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
   
+  // Track running workflow executions for polling (scoped by workflow ID)
+  const [runningExecutions, setRunningExecutions] = useState<Record<string, { executionId: string; startedAt: number }>>({}); 
+  
+  // Get running execution for current workflow (for UI display)
+  const currentWorkflowRunning = selectedWorkflow ? runningExecutions[selectedWorkflow.id] : null;
+  const isWorkflowRunning = !!currentWorkflowRunning;
+  
+  // Get all running execution IDs for polling
+  const allRunningExecutionIds = Object.values(runningExecutions).map(r => r.executionId);
+  
+  // Poll ALL running executions (not just selected one)
+  useEffect(() => {
+    if (allRunningExecutionIds.length === 0) return;
+    
+    const pollInterval = setInterval(async () => {
+      for (const executionId of allRunningExecutionIds) {
+        try {
+          const res = await fetch(`/api/executions/${executionId}`, { credentials: "include" });
+          if (!res.ok) continue;
+          
+          const data: ExecutionStatus = await res.json();
+          const { status, workflowId: execWorkflowId } = data.execution;
+          
+          if (status === "completed") {
+            setRunningExecutions(prev => {
+              const updated = { ...prev };
+              delete updated[execWorkflowId];
+              return updated;
+            });
+            toast({
+              title: "Workflow completed",
+              description: "Processing finished successfully. Refreshing output...",
+            });
+            queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/workflows", execWorkflowId, "output"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/workflows", execWorkflowId, "executions"] });
+          } else if (status === "failed") {
+            setRunningExecutions(prev => {
+              const updated = { ...prev };
+              delete updated[execWorkflowId];
+              return updated;
+            });
+            toast({
+              title: "Workflow failed",
+              description: "Processing encountered an error",
+              variant: "destructive",
+            });
+            queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/workflows", execWorkflowId, "executions"] });
+          }
+        } catch {
+          // Ignore polling errors
+        }
+      }
+    }, 3000); // Poll every 3 seconds
+    
+    return () => clearInterval(pollInterval);
+  }, [allRunningExecutionIds.join(","), toast]);
+  
+  // Timeout check - clear stuck executions after 10 minutes with notification
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const TEN_MINUTES = 10 * 60 * 1000;
+      const timedOutWorkflows: string[] = [];
+      
+      setRunningExecutions(prev => {
+        const updated = { ...prev };
+        let hasChanges = false;
+        for (const [wfId, data] of Object.entries(updated)) {
+          if (now - data.startedAt > TEN_MINUTES) {
+            timedOutWorkflows.push(wfId);
+            delete updated[wfId];
+            hasChanges = true;
+          }
+        }
+        return hasChanges ? updated : prev;
+      });
+      
+      // Show timeout toast for each timed-out workflow
+      timedOutWorkflows.forEach(wfId => {
+        toast({
+          title: "Workflow timed out",
+          description: `${wfId} did not complete within 10 minutes. Check the execution history for details.`,
+          variant: "destructive",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/workflows", wfId, "executions"] });
+      });
+    }, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, [toast]);
+  
   // Mobile drill-down navigation state
   const [mobileNavLevel, setMobileNavLevel] = useState<"categories" | "workflows">("categories");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -370,21 +476,38 @@ export default function AgenticWorkflows() {
     },
     onSuccess: (result: ExecutionResult) => {
       if (result.success) {
-        toast({
-          title: "Workflow executed",
-          description: `${result.metadata.workflowId} completed in ${result.metadata.durationMs}ms`,
-        });
+        // Check if this is a "running" response (n8n workflows)
+        if (result.data?.status === "running" && result.metadata.executionId) {
+          const workflowId = result.metadata.workflowId;
+          setRunningExecutions(prev => ({
+            ...prev,
+            [workflowId]: {
+              executionId: result.metadata.executionId!,
+              startedAt: Date.now(),
+            },
+          }));
+          toast({
+            title: "Workflow started",
+            description: result.data.message || "Processing in background...",
+          });
+        } else {
+          // Immediate completion (local workflows)
+          toast({
+            title: "Workflow executed",
+            description: `${result.metadata.workflowId} completed in ${result.metadata.durationMs}ms`,
+          });
+          queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+          if (selectedWorkflow) {
+            queryClient.invalidateQueries({ queryKey: ["/api/workflows", selectedWorkflow.id, "output"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/workflows", selectedWorkflow.id, "executions"] });
+          }
+        }
       } else {
         toast({
           title: "Workflow failed",
           description: result.error?.message || "Unknown error",
           variant: "destructive",
         });
-      }
-      queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
-      if (selectedWorkflow) {
-        queryClient.invalidateQueries({ queryKey: ["/api/workflows", selectedWorkflow.id, "output"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/workflows", selectedWorkflow.id, "executions"] });
       }
     },
     onError: (error: Error) => {
@@ -411,17 +534,29 @@ export default function AgenticWorkflows() {
   const categories = Object.keys(workflowsByCategory).sort();
   const categoryWorkflows = selectedCategory ? workflowsByCategory[selectedCategory] || [] : [];
 
+  const getExecuteButtonState = () => {
+    if (executeMutation.isPending) {
+      return { label: "Starting...", icon: <RefreshCw className="h-4 w-4 animate-spin" />, disabled: true };
+    }
+    if (isWorkflowRunning) {
+      return { label: "Running...", icon: <RefreshCw className="h-4 w-4 animate-spin" />, disabled: true };
+    }
+    return { label: "Execute", icon: <Play className="h-4 w-4" />, disabled: false };
+  };
+
+  const buttonState = getExecuteButtonState();
+
   const actions = selectedWorkflow?.mode === "n8n"
     ? [
         {
           id: "execute-workflow",
-          label: executeMutation.isPending ? "Executing..." : "Execute",
-          icon: <Play className={`h-4 w-4 ${executeMutation.isPending ? "animate-pulse" : ""}`} />,
+          label: buttonState.label,
+          icon: buttonState.icon,
           method: "POST" as const,
           endpoint: `/api/workflows/${selectedWorkflow.id}/execute`,
-          description: "Send test payload to n8n",
+          description: isWorkflowRunning ? "Workflow is processing..." : "Send test payload to n8n",
           onClick: () => executeMutation.mutate(selectedWorkflow.id),
-          disabled: executeMutation.isPending,
+          disabled: buttonState.disabled,
           variant: "outline" as const,
         },
       ]
@@ -599,6 +734,12 @@ export default function AgenticWorkflows() {
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold" data-testid="text-workflow-name">{selectedWorkflow.name}</h2>
                 <Badge variant="outline">{selectedWorkflow.mode}</Badge>
+                {isWorkflowRunning && (
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" data-testid="badge-running">
+                    <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                    Running
+                  </Badge>
+                )}
               </div>
               {selectedWorkflow.mode === "n8n" && (
                 <div className="flex items-center gap-2">
