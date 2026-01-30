@@ -1,8 +1,9 @@
-import { Home, Activity, BookOpen, Workflow, PanelLeft, FolderOpen } from "lucide-react";
+import { Home, Activity, BookOpen, Workflow, PanelLeft, FolderOpen, ChevronRight } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Sidebar,
   SidebarContent,
@@ -14,20 +15,18 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { projects } from "@/data/projects";
 
 const navItems = [
   {
     title: "Home",
     url: "/",
     icon: Home,
-    adminOnly: false,
-  },
-  {
-    title: "Projects",
-    url: "/projects",
-    icon: FolderOpen,
     adminOnly: false,
   },
   {
@@ -77,7 +76,81 @@ export function AppSidebar() {
           <SidebarGroupLabel>Applications</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {visibleNavItems.map((item) => (
+              {visibleNavItems.filter(item => item.url === "/").map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === item.url}
+                    data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              
+              {isCollapsed ? (
+                <SidebarMenuItem>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={location.startsWith("/projects")}
+                        data-testid="nav-projects"
+                      >
+                        <Link href="/projects">
+                          <FolderOpen className="h-4 w-4" />
+                          <span>Projects</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">Projects</TooltipContent>
+                  </Tooltip>
+                </SidebarMenuItem>
+              ) : (
+                <Collapsible defaultOpen className="group/collapsible">
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        isActive={location.startsWith("/projects")}
+                        data-testid="nav-projects"
+                      >
+                        <FolderOpen className="h-4 w-4" />
+                        <span>Projects</span>
+                        <ChevronRight className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        <SidebarMenuSubItem>
+                          <SidebarMenuSubButton
+                            asChild
+                            isActive={location === "/projects"}
+                            data-testid="nav-projects-all"
+                          >
+                            <Link href="/projects">All Projects</Link>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                        {projects.map((project) => (
+                          <SidebarMenuSubItem key={project.id}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={location === `/projects/${project.id}`}
+                              data-testid={`nav-project-${project.id}`}
+                            >
+                              <Link href={`/projects/${project.id}`}>{project.title}</Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              )}
+
+              {visibleNavItems.filter(item => item.url !== "/").map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
