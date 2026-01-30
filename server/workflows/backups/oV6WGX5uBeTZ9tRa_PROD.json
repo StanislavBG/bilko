@@ -2,7 +2,7 @@
   "updatedAt": "2026-01-30T06:10:38.004Z",
   "createdAt": "2026-01-25T09:36:24.234Z",
   "id": "oV6WGX5uBeTZ9tRa",
-  "name": "[PROD] European Football Daily",
+  "name": "[EFD] European Football Daily",
   "description": null,
   "active": true,
   "isArchived": false,
@@ -1822,5 +1822,9 @@
         "userId": "80f5768f-36e3-4197-9886-2f8e29df41d7"
       }
     ]
+  },
+  "_backup_meta": {
+    "backedUpAt": "2026-01-30T08:48:05.208Z",
+    "changeDescription": "Renamed from [PROD] to [EFD]"
   }
 }

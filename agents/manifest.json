@@ -52,13 +52,13 @@
     },
     "INT-006": {
       "title": "European Football Daily Workflow",
-      "newPath": "rules/integration/INT-006-european-football-daily.md",
-      "reason": "Workflow specs belong in integration rules"
+      "status": "DELETED",
+      "reason": "Workflow evolved beyond documentation; never used"
     },
     "INT-007": {
       "title": "Workflow Contract",
-      "newPath": "rules/integration/INT-007-workflow-contract.md",
-      "reason": "Interface contracts belong in integration rules"
+      "status": "DELETED",
+      "reason": "Architecture pattern was never implemented"
     }
   }
 }
