@@ -3,6 +3,9 @@ import { executeLocal } from "./local-executor";
 import { orchestratorStorage } from "../orchestrator/storage";
 import { getWebhookUrl } from "../n8n/webhook-cache";
 import registry from "./registry.json";
+import { createLogger } from "../logger";
+
+const log = createLogger("router");
 
 const workflowRegistry = registry as WorkflowRegistry;
 
@@ -166,18 +169,15 @@ async function executeN8nWorkflow(
     const PROD_CALLBACK_URL = 'https://bilkobibitkov.replit.app/api/workflows/callback';
     
     if (process.env.CALLBACK_URL_OVERRIDE) {
-      // Explicit override (for testing or custom deployments)
       callbackUrl = process.env.CALLBACK_URL_OVERRIDE;
-      console.log(`[n8n] Using override callback URL: ${callbackUrl}`);
+      log.debug(`Using override callback URL: ${callbackUrl}`);
     } else if (process.env.REPLIT_DOMAINS) {
-      // Dev environment: use current Replit domain (dynamic, changes on restart)
       const currentDomain = process.env.REPLIT_DOMAINS.split(',')[0];
       callbackUrl = `https://${currentDomain}/api/workflows/callback`;
-      console.log(`[n8n] Using dev callback URL: ${callbackUrl}`);
+      log.debug(`Using dev callback URL: ${callbackUrl}`);
     } else {
-      // Production: use stable prod URL per ENV-001
       callbackUrl = PROD_CALLBACK_URL;
-      console.log(`[n8n] Using prod callback URL: ${callbackUrl}`);
+      log.debug(`Using prod callback URL: ${callbackUrl}`);
     }
 
     // Fetch recent topics for deduplication (per ARCH-000)
@@ -186,7 +186,7 @@ async function executeN8nWorkflow(
       headline: t.headline,
       usedAt: t.usedAt?.toISOString(),
     }));
-    console.log(`[n8n] Sending ${recentTopics.length} recent topics for deduplication`);
+    log.debug(`Sending ${recentTopics.length} recent topics for deduplication`);
 
     // Include secrets needed by n8n workflows (passed via payload per ARCH-000-B)
     const n8nPayload = {

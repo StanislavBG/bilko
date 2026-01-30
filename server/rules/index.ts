@@ -1,6 +1,9 @@
 import type { Rule, ValidationResult, TaskRoutingResult } from "./types";
 import { loadManifest, reloadManifest, getRule, getAllRules, getPrimaryDirective } from "./manifest";
 import { routeTask, suggestRulesForKeywords } from "./router";
+import { createLogger } from "../logger";
+
+const log = createLogger("rules");
 
 export class RulesService {
   private initialized = false;
@@ -9,29 +12,29 @@ export class RulesService {
   async initialize(): Promise<void> {
     if (this.initialized) return;
     
-    console.log("[RulesService] Initializing...");
+    log.info("Initializing...");
     
     try {
       loadManifest();
       const allRules = getAllRules();
       this.ruleCount = allRules.length;
     } catch (error) {
-      console.error("[RulesService] Failed to load manifest:", error);
+      log.error("Failed to load manifest", error);
       throw error;
     }
     
-    console.log(`[RulesService] Loaded ${this.ruleCount} rules`);
-    console.log("[RulesService] Validation is agentic - see AGT-002-RULES (agents/002-rules-audit.md)");
+    log.info(`Loaded ${this.ruleCount} rules`);
+    log.debug("Validation is agentic - see AGT-002-RULES (agents/002-rules-audit.md)");
     
     this.initialized = true;
   }
 
   reload(): void {
-    console.log("[RulesService] Reloading manifest...");
+    log.info("Reloading manifest...");
     reloadManifest();
     const allRules = getAllRules();
     this.ruleCount = allRules.length;
-    console.log("[RulesService] Reload complete");
+    log.info("Reload complete");
   }
 
   getPrimaryDirective(): Rule {
@@ -49,9 +52,8 @@ export class RulesService {
   routeTask(taskDescription: string): TaskRoutingResult {
     const result = routeTask(taskDescription);
     
-    console.log(`[RulesService] Routed task: "${taskDescription.substring(0, 50)}..."`);
-    console.log(`[RulesService] Matched ${result.matchedRules.length} rules`);
-    console.log(`[RulesService] Partitions: ${result.partitionsToConsult.join(", ")}`);
+    log.debug(`Routed task: "${taskDescription.substring(0, 50)}..."`);
+    log.debug(`Matched ${result.matchedRules.length} rules, Partitions: ${result.partitionsToConsult.join(", ")}`);
     
     return result;
   }

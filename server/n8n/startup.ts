@@ -1,9 +1,12 @@
 import { syncWorkflowsToN8n } from "./sync";
+import { createLogger } from "../logger";
+
+const log = createLogger("n8n");
 
 export async function syncWorkflowsOnStartup(): Promise<void> {
   const result = await syncWorkflowsToN8n();
   
   if (!result.success && result.errors.length > 0) {
-    console.error("[n8n] Some workflows failed to sync:", result.errors);
+    log.error("Some workflows failed to sync", { errors: result.errors });
   }
 }

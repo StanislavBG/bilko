@@ -68,6 +68,7 @@ function StatusIcon({ status }: { status: string }) {
 
 function CopyButton({ text, onCopy }: { text: string; onCopy: () => void }) {
   const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
 
   const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -77,7 +78,7 @@ function CopyButton({ text, onCopy }: { text: string; onCopy: () => void }) {
       onCopy();
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      console.error("Failed to copy");
+      toast({ title: "Failed to copy", variant: "destructive" });
     }
   };
 
