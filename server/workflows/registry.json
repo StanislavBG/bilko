@@ -2,30 +2,12 @@
   "version": "1.1.0",
   "workflows": [
     {
-      "id": "echo-test",
-      "name": "Bilko Echo Test",
-      "mode": "n8n",
-      "webhookPath": "bilko-echo-test",
-      "description": "Verifies end-to-end connectivity between Bilko and n8n. Sends a test payload to the n8n webhook and confirms the round-trip response is received correctly. Use this to validate that the n8n integration is properly configured and responding.",
-      "instructions": "Click 'Execute' to send a test message to n8n. The workflow will echo back your message with a timestamp, confirming the connection is working.",
-      "category": "system"
-    },
-    {
       "id": "european-football-daily",
       "name": "[PROD] European Football Daily",
       "mode": "n8n",
       "webhookPath": "european-football-daily",
       "description": "PRODUCTION workflow. Daily automated European football news aggregation. Runs at 00:00 to search the last 24 hours of European football news, identifies the most positive/cheerful event using sentiment analysis, generates an AI image, and publishes a congratulatory post with AI transparency disclosure.",
-      "instructions": "This is the PRODUCTION workflow. It runs automatically at 00:00 daily via n8n Schedule Trigger. Uses fixed callback URL to bilkobibitkov.replit.app. For testing, use the DEV workflow instead.",
-      "category": "content"
-    },
-    {
-      "id": "dev-european-football-daily",
-      "name": "[DEV] European Football Daily",
-      "mode": "n8n",
-      "webhookPath": "dev-european-football-daily",
-      "description": "DEVELOPMENT workflow. Same pipeline as PROD but with dynamic callback URLs and manual trigger only. Use this for testing new features before promoting to PROD.",
-      "instructions": "Manual execution only. Uses dynamic callback URLs so it works with any Replit dev domain. Both DEV and PROD can be active simultaneously (different webhook paths).",
+      "instructions": "This is the PRODUCTION workflow. It runs automatically at 00:00 daily via n8n Schedule Trigger. Uses fixed callback URL to bilkobibitkov.replit.app.",
       "category": "content"
     }
   ]
