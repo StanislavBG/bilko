@@ -1,38 +1,9 @@
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-interface Project {
-  id: string;
-  title: string;
-  tagline: string;
-  description: string;
-  url: string;
-  features: string[];
-  category: string;
-}
-
-const projects: Project[] = [
-  {
-    id: "family-frame",
-    title: "Family Frame",
-    tagline: "The Window Between Homes",
-    description: "Transform your smart screen into a dedicated social network for households. Connect with family, share memories through Google Photos integration, and stay in sync across distances with shared calendars and live weather from all family locations.",
-    url: "https://family-frame.replit.app/",
-    features: ["Google Photos Integration", "Multi-household Sync", "Shared Calendar", "Live Weather"],
-    category: "Connected Living"
-  },
-  {
-    id: "provocations",
-    title: "Provocations",
-    tagline: "A tool that makes you think, not one that thinks for you",
-    description: "An AI-powered analysis tool designed to deepen your thinking rather than replace it. Paste meeting transcripts, reports, or notes and receive thoughtful provocations that challenge assumptions and reveal new perspectives.",
-    url: "https://provocations.replit.app/",
-    features: ["Deep Analysis", "Critical Thinking", "Source Material Processing"],
-    category: "AI Thinking Tools"
-  }
-];
+import { projects } from "@/data/projects";
 
 export default function Projects() {
   return (
@@ -49,7 +20,7 @@ export default function Projects() {
           {projects.map((project) => (
             <Card key={project.id} data-testid={`card-project-${project.id}`}>
               <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-lg" data-testid={`text-project-title-${project.id}`}>
@@ -61,17 +32,30 @@ export default function Projects() {
                       {project.tagline}
                     </CardDescription>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                    data-testid={`button-visit-${project.id}`}
-                  >
-                    <a href={project.url} target="_blank" rel="noopener noreferrer">
-                      Visit
-                      <ExternalLink className="h-3 w-3 ml-1" />
-                    </a>
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      asChild
+                      data-testid={`button-details-${project.id}`}
+                    >
+                      <Link href={`/projects/${project.id}`}>
+                        Details
+                        <ArrowRight className="h-3 w-3 ml-1" />
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      data-testid={`button-visit-${project.id}`}
+                    >
+                      <a href={project.url} target="_blank" rel="noopener noreferrer">
+                        Visit
+                        <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
