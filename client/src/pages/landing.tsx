@@ -9,13 +9,10 @@ export default function Landing() {
       </div>
 
       <main className="flex-1 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-6 text-center">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-md bg-foreground flex items-center justify-center">
-              <span className="text-background font-bold text-xl">B</span>
-            </div>
-            <span className="font-semibold text-2xl">Bilko Bibitkov</span>
-          </div>
+        <div className="flex flex-col items-center gap-8 text-center">
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
+            Bilko Bibitkov AI Academy
+          </h1>
           
           <Button size="lg" asChild data-testid="button-sign-in">
             <a href="/api/login">Sign In</a>
