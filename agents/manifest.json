@@ -29,6 +29,15 @@
       "version": "2.1.0",
       "triggers": ["rule audit", "validate rules", "check rules", "structural integrity"],
       "description": "Validates rule files for structural integrity, consistency, and coverage."
+    },
+    "AGT-004": {
+      "id": "AGT-004",
+      "title": "Dynamic Code Audit Protocol",
+      "path": "agents/AGT-004-dynamic-audit.md",
+      "category": "audit",
+      "version": "1.0.0",
+      "triggers": ["dynamic audit", "check code against rules", "validate implementation", "orphan audit", "cleanup audit"],
+      "description": "Dynamically validates the codebase against active rules in /rules. Detects orphan folders, implementation drift, and anti-patterns."
     }
   },
   "categories": {
