@@ -368,7 +368,7 @@ export default function MemoryExplorer() {
 
             {/* Pagination Controls */}
             {pagination && pagination.total > 0 && (
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
                 <p className="text-sm text-muted-foreground">
                   Showing {pagination.offset + 1} - {Math.min(pagination.offset + PAGE_SIZE, pagination.total)} of {pagination.total} traces
                 </p>

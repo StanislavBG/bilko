@@ -171,7 +171,7 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="text-sm font-medium">Latest Output</h3>
         <Button
           variant="ghost"
