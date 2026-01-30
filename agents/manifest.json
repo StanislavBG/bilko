@@ -1,7 +1,7 @@
 {
-  "version": "1.0.0",
-  "lastUpdated": "2026-01-29T00:00:00Z",
-  "description": "Registry of AI personas/agents used for development tasks (like Google Gems)",
+  "version": "1.1.0",
+  "lastUpdated": "2026-01-30T00:00:00Z",
+  "description": "Registry of executable agent protocols for development tasks",
   "agents": {
     "AGT-001": {
       "id": "AGT-001",
@@ -12,17 +12,8 @@
       "triggers": ["n8n workflow", "develop workflow", "modify workflow", "workflow development", "FETCH", "ANALYZE", "MODIFY", "PUSH", "BACKUP", "VERIFY"],
       "description": "Executable 6-phase protocol for n8n workflow development: FETCH → ANALYZE → MODIFY → PUSH → BACKUP → VERIFY."
     },
-    "AGT-002-RULES": {
-      "id": "AGT-002-RULES",
-      "title": "Rule Audit Protocol",
-      "path": "agents/002-rules-audit.md",
-      "category": "audit",
-      "version": "2.1.0",
-      "triggers": ["rule audit", "validate rules", "check rules", "structural integrity"],
-      "description": "Validates rule files for structural integrity, consistency, and coverage."
-    },
-    "AGT-002-CODE": {
-      "id": "AGT-002-CODE",
+    "AGT-002": {
+      "id": "AGT-002",
       "title": "Code Audit Protocol",
       "path": "agents/002-code-audit.md",
       "category": "audit",
@@ -32,30 +23,12 @@
     },
     "AGT-003": {
       "id": "AGT-003",
-      "title": "Workflow Contract",
-      "path": "agents/003-workflow-contract.md",
-      "category": "workflow",
-      "version": "1.0.0",
-      "triggers": ["workflow", "workflow contract", "local workflow", "n8n workflow", "execute workflow"],
-      "description": "Standard interface for agentic workflows that can run locally or on n8n."
-    },
-    "AGT-003-FOOTBALL": {
-      "id": "AGT-003-FOOTBALL",
-      "title": "European Football Daily Workflow",
-      "path": "agents/003-european-football-daily.md",
-      "category": "workflow",
-      "version": "1.0.0",
-      "triggers": ["football", "european football", "daily news", "sentiment analysis", "facebook post"],
-      "description": "Daily automated European football news aggregation with sentiment analysis and Facebook posting."
-    },
-    "AGT-ARCH-PERSONA": {
-      "id": "AGT-ARCH-PERSONA",
-      "title": "n8n Architect Persona",
-      "path": "agents/001-n8n-architect-persona.md",
-      "category": "persona",
-      "version": "1.0.0",
-      "triggers": ["n8n architect", "architect persona", "n8n expert"],
-      "description": "Expert persona for n8n architecture decisions and workflow design."
+      "title": "Rule Audit Protocol",
+      "path": "agents/003-rules-audit.md",
+      "category": "audit",
+      "version": "2.1.0",
+      "triggers": ["rule audit", "validate rules", "check rules", "structural integrity"],
+      "description": "Validates rule files for structural integrity, consistency, and coverage."
     }
   },
   "categories": {
@@ -63,10 +36,24 @@
       "description": "Audit protocols for validating rules and code"
     },
     "workflow": {
-      "description": "Workflow definitions and development protocols"
+      "description": "Workflow development protocols"
+    }
+  },
+  "movedToOtherLocations": {
+    "PER-001": {
+      "title": "n8n Architect Persona",
+      "newPath": "personas/PER-001-n8n-architect.md",
+      "reason": "Personas are philosophy/mindset docs, not executable protocols"
     },
-    "persona": {
-      "description": "Expert personas for specialized guidance"
+    "INT-006": {
+      "title": "European Football Daily Workflow",
+      "newPath": "rules/integration/INT-006-european-football-daily.md",
+      "reason": "Workflow specs belong in integration rules"
+    },
+    "INT-007": {
+      "title": "Workflow Contract",
+      "newPath": "rules/integration/INT-007-workflow-contract.md",
+      "reason": "Interface contracts belong in integration rules"
     }
   }
 }
