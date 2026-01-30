@@ -10,60 +10,26 @@
       "path": "rules/architecture/000-primary-directive.md",
       "partition": "architecture",
       "priority": "ABSOLUTE",
-      "version": "2.0.0",
+      "version": "3.0.0",
       "triggers": [
-        "*"
-      ],
-      "dependencies": [],
-      "crossReferences": [
-        "ARCH-000-A",
-        "ARCH-000-B",
-        "ARCH-010"
-      ],
-      "description": "NO CODE SHALL BE WRITTEN WITHOUT FIRST CONSULTING THE RULES."
-    },
-    "ARCH-000-A": {
-      "id": "ARCH-000-A",
-      "title": "Founding Principle: Orchestrator Pattern",
-      "path": "rules/architecture/000-A-orchestrator-pattern.md",
-      "partition": "architecture",
-      "priority": "ABSOLUTE",
-      "version": "1.0.0",
-      "triggers": [
+        "*",
         "orchestrat",
         "external",
         "proxy",
-        "trace"
-      ],
-      "dependencies": [
-        "ARCH-000"
-      ],
-      "crossReferences": [
-        "ARCH-003"
-      ],
-      "description": "ALL EXTERNAL COMMUNICATION MUST FLOW THROUGH THE ORCHESTRATION LAYER."
-    },
-    "ARCH-000-B": {
-      "id": "ARCH-000-B",
-      "title": "Founding Principle: Headless Operation",
-      "path": "rules/architecture/000-B-headless-operation.md",
-      "partition": "architecture",
-      "priority": "ABSOLUTE",
-      "version": "1.0.0",
-      "triggers": [
+        "trace",
         "headless",
         "api-first",
         "programmatic",
         "auto-sync",
         "automation"
       ],
-      "dependencies": [
-        "ARCH-000"
-      ],
+      "dependencies": [],
       "crossReferences": [
+        "ARCH-003",
+        "ARCH-010",
         "INT-002"
       ],
-      "description": "ALL EXTERNAL SERVICE CONFIGURATION MUST BE AUTOMATED AND PROGRAMMATIC."
+      "description": "Primary directive with founding principles: Rules-First, Orchestrator Pattern, and Headless Operation."
     },
     "ARCH-001": {
       "id": "ARCH-001",
@@ -116,7 +82,7 @@
       "path": "rules/architecture/003-orchestration-layer.md",
       "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "1.0.2",
+      "version": "2.0.0",
       "triggers": [
         "orchestrat",
         "proxy",
@@ -124,7 +90,11 @@
         "n8n",
         "api call",
         "trace",
-        "logging"
+        "logging",
+        "dispatch",
+        "n8n call",
+        "external call",
+        "app-to-app"
       ],
       "dependencies": [
         "ARCH-000"
@@ -134,7 +104,7 @@
         "INT-001",
         "INT-003"
       ],
-      "description": "The intelligent proxy between web app and external services."
+      "description": "The intelligent proxy between web app and external services, including dispatch protocol."
     },
     "ARCH-004": {
       "id": "ARCH-004",
@@ -735,31 +705,6 @@
       "crossReferences": [],
       "description": "How AI developers should bootstrap and use the rule system."
     },
-    "ARCH-009": {
-      "id": "ARCH-009",
-      "title": "Orchestration Dispatch Protocol",
-      "path": "rules/architecture/009-orchestration-dispatch.md",
-      "partition": "architecture",
-      "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": [
-        "orchestrate",
-        "dispatch",
-        "n8n call",
-        "external call",
-        "app-to-app"
-      ],
-      "dependencies": [
-        "ARCH-000",
-        "ARCH-003",
-        "INT-003"
-      ],
-      "crossReferences": [
-        "ARCH-003",
-        "INT-003"
-      ],
-      "description": "How application code dispatches requests through the Orchestration Layer."
-    },
     "ARCH-010": {
       "id": "ARCH-010",
       "title": "Exit Directive",
@@ -1037,8 +982,6 @@
     ],
     "alwaysInclude": [
       "ARCH-000",
-      "ARCH-000-A",
-      "ARCH-000-B",
       "ARCH-006",
       "ARCH-011"
     ]
