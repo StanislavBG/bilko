@@ -3,7 +3,6 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { initializeRulesService } from "./rules";
-import { validateOnStartup as runAuditOnStartup } from "./auditor";
 import { syncWorkflowsOnStartup } from "./n8n/startup";
 
 const app = express();
@@ -71,13 +70,6 @@ app.use((req, res, next) => {
     console.error("CRITICAL: Rules Service failed to initialize. Application cannot start.");
     console.error(error);
     process.exit(1);
-  }
-
-  const auditPassed = await runAuditOnStartup();
-  if (!auditPassed) {
-    log("WARNING: Audit checks failed - see above for details", "auditor");
-  } else {
-    log("Audit checks passed", "auditor");
   }
 
   await syncWorkflowsOnStartup();
