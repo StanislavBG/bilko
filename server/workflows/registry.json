@@ -3,7 +3,7 @@
   "workflows": [
     {
       "id": "european-football-daily",
-      "name": "[PROD] European Football Daily",
+      "name": "[EFD] European Football Daily",
       "mode": "n8n",
       "webhookPath": "european-football-daily",
       "description": "PRODUCTION workflow. Daily automated European football news aggregation. Runs at 00:00 to search the last 24 hours of European football news, identifies the most positive/cheerful event using sentiment analysis, generates an AI image, and publishes a congratulatory post with AI transparency disclosure.",
