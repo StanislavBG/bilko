@@ -96,6 +96,12 @@ Bilko Bibitkov Human-Centric AI Curation`;
         if (status === "success" && output && typeof output === "object") {
           const outputData = output as Record<string, unknown>;
           const selectedTopic = outputData.selectedTopic as Record<string, unknown> | undefined;
+          
+          // Debug logging to trace sourceHeadline presence
+          console.log(`[callback] selectedTopic keys: ${selectedTopic ? Object.keys(selectedTopic).join(', ') : 'null'}`);
+          console.log(`[callback] sourceHeadline present: ${!!selectedTopic?.sourceHeadline}`);
+          console.log(`[callback] headline present: ${!!selectedTopic?.headline}`);
+          
           // Use sourceHeadline (original RSS title) for duplicate prevention, fallback to headline
           const headlineToRecord = (selectedTopic?.sourceHeadline || selectedTopic?.headline) as string | undefined;
           if (headlineToRecord && typeof headlineToRecord === "string") {
@@ -114,6 +120,8 @@ Bilko Bibitkov Human-Centric AI Curation`;
             } catch (topicErr) {
               console.error("[callback] Failed to record used topic:", topicErr);
             }
+          } else {
+            console.warn(`[callback] WARNING: No headline to record! sourceHeadline=${selectedTopic?.sourceHeadline}, headline=${selectedTopic?.headline}`);
           }
         }
       }
@@ -138,6 +146,34 @@ Bilko Bibitkov Human-Centric AI Curation`;
   app.get("/api/workflows", (_req: Request, res: Response) => {
     const workflows = listWorkflows();
     res.json({ workflows });
+  });
+
+  // API endpoint to view used topics for deduplication verification
+  // Must be before parameterized routes to avoid being caught by :id
+  app.get("/api/workflows/used-topics", async (req: Request, res: Response) => {
+    try {
+      const workflowId = (req.query.workflowId as string) || "european-football-daily";
+      const hoursBack = parseInt(req.query.hoursBack as string) || 48;
+      
+      const topics = await orchestratorStorage.getRecentTopics(workflowId, hoursBack);
+      
+      res.json({
+        workflowId,
+        hoursBack,
+        count: topics.length,
+        topics: topics.map(t => ({
+          id: t.id,
+          headline: t.headline,
+          usedAt: t.usedAt,
+          metadata: t.metadata ? JSON.parse(t.metadata) : null
+        }))
+      });
+    } catch (error) {
+      console.error("[used-topics] Error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Internal error" 
+      });
+    }
   });
 
   app.get("/api/workflows/:id/output", async (req: Request, res: Response) => {
