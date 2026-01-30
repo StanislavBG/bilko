@@ -447,25 +447,68 @@ export default function AgenticWorkflows() {
     return () => clearInterval(interval);
   }, [toast]);
   
-  // Mobile drill-down navigation state
-  const [mobileNavLevel, setMobileNavLevel] = useState<"categories" | "workflows">("categories");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  // Stack-based mobile drill-down navigation (per UI-006 D6, ARCH-012)
+  interface WorkflowNavLevel {
+    title: string;
+    items: Array<{
+      id: string;
+      title: string;
+      subtitle?: string;
+      children?: WorkflowDefinition[];
+      workflow?: WorkflowDefinition;
+    }>;
+  }
+  
+  const [navStack, setNavStack] = useState<WorkflowNavLevel[]>([]);
+
+  // Fetch workflows data first (needed for navigation)
+  const { data, isLoading } = useQuery<WorkflowsResponse>({
+    queryKey: ["/api/workflows"],
+  });
+  
+  const workflows = data?.workflows || [];
 
   useEffect(() => {
     setIsActionPanelCollapsed(isMobile);
   }, [isMobile]);
   
-  // Reset mobile nav when sheet closes
+  // Build root navigation level from workflows data
+  const buildRootLevel = (): WorkflowNavLevel => {
+    const byCategory = workflows.reduce((acc, workflow) => {
+      const category = workflow.category || "Uncategorized";
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(workflow);
+      return acc;
+    }, {} as Record<string, WorkflowDefinition[]>);
+    
+    return {
+      title: "Workflows",
+      items: Object.keys(byCategory).sort().map(category => ({
+        id: `category-${category}`,
+        title: category,
+        subtitle: `${byCategory[category].length} workflow${byCategory[category].length !== 1 ? "s" : ""}`,
+        children: byCategory[category],
+      })),
+    };
+  };
+  
+  // Initialize stack with root level when workflows load
   useEffect(() => {
-    if (!isWorkflowNavOpen) {
-      setMobileNavLevel("categories");
-      setSelectedCategory(null);
+    if (workflows.length > 0 && navStack.length === 0) {
+      setNavStack([buildRootLevel()]);
+    }
+  }, [workflows.length]);
+  
+  // Reset stack when sheet closes
+  useEffect(() => {
+    if (!isWorkflowNavOpen && workflows.length > 0) {
+      setNavStack([buildRootLevel()]);
     }
   }, [isWorkflowNavOpen]);
-
-  const { data, isLoading } = useQuery<WorkflowsResponse>({
-    queryKey: ["/api/workflows"],
-  });
+  
+  // Get current level from stack
+  const currentLevel = navStack.length > 0 ? navStack[navStack.length - 1] : null;
+  const canGoBack = navStack.length > 1;
 
   const executeMutation = useMutation({
     mutationFn: async (workflowId: string) => {
@@ -520,21 +563,6 @@ export default function AgenticWorkflows() {
     },
   });
 
-  const workflows = data?.workflows || [];
-  
-  // Group workflows by category for mobile drill-down
-  const workflowsByCategory = workflows.reduce((acc, workflow) => {
-    const category = workflow.category || "Uncategorized";
-    if (!acc[category]) {
-      acc[category] = [];
-    }
-    acc[category].push(workflow);
-    return acc;
-  }, {} as Record<string, WorkflowDefinition[]>);
-  
-  const categories = Object.keys(workflowsByCategory).sort();
-  const categoryWorkflows = selectedCategory ? workflowsByCategory[selectedCategory] || [] : [];
-
   const getExecuteButtonState = () => {
     if (executeMutation.isPending) {
       return { label: "Starting...", icon: <RefreshCw className="h-4 w-4 animate-spin" />, disabled: true };
@@ -563,14 +591,26 @@ export default function AgenticWorkflows() {
       ]
     : [];
 
-  const handleCategorySelect = (category: string) => {
-    setSelectedCategory(category);
-    setMobileNavLevel("workflows");
+  // Stack-based navigation handlers (per UI-006 D6)
+  const handleDrillInto = (item: { title: string; children?: WorkflowDefinition[] }) => {
+    if (item.children) {
+      const nextLevel: WorkflowNavLevel = {
+        title: item.title,
+        items: item.children.map(wf => ({
+          id: `workflow-${wf.id}`,
+          title: wf.name,
+          subtitle: wf.mode,
+          workflow: wf,
+        })),
+      };
+      setNavStack([...navStack, nextLevel]);
+    }
   };
   
-  const handleMobileBack = () => {
-    setMobileNavLevel("categories");
-    setSelectedCategory(null);
+  const handleBack = () => {
+    if (canGoBack) {
+      setNavStack(navStack.slice(0, -1));
+    }
   };
 
   const handleWorkflowSelect = (workflow: WorkflowDefinition) => {
@@ -579,6 +619,8 @@ export default function AgenticWorkflows() {
     setViewMode("latest");
     if (isMobile) {
       setIsWorkflowNavOpen(false);
+      // Reset stack on navigation per UI-006 D6
+      setNavStack([buildRootLevel()]);
     }
   };
 
@@ -616,64 +658,56 @@ export default function AgenticWorkflows() {
     </>
   );
 
-  // Mobile nav - drill-down with categories then workflows
+  // Mobile nav - stack-based drill-down (per UI-006 D6, ARCH-012)
   const MobileNavContent = () => (
     <>
       <div className="p-3 border-b">
-        {mobileNavLevel === "categories" ? (
-          <h2 className="text-sm font-medium">Categories</h2>
-        ) : (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          {canGoBack && (
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleMobileBack}
+              onClick={handleBack}
               data-testid="button-nav-back"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <h2 className="text-sm font-medium truncate">{selectedCategory}</h2>
-          </div>
-        )}
+          )}
+          <h2 className="text-sm font-medium truncate" data-testid="sidebar-title">
+            {currentLevel?.title || "Workflows"}
+          </h2>
+        </div>
       </div>
       <div className="flex-1 overflow-auto p-2 space-y-1">
-        {isLoading ? (
+        {isLoading || !currentLevel ? (
           <div className="space-y-2" data-testid="status-loading-workflows">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
-        ) : mobileNavLevel === "categories" ? (
-          // Show categories
-          categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => handleCategorySelect(category)}
-              className="w-full text-left px-3 py-2 rounded-md text-sm transition-colors hover-elevate flex items-center justify-between gap-2"
-              data-testid={`nav-category-${category}`}
-            >
-              <div>
-                <div className="font-medium truncate">{category}</div>
-                <div className="text-xs opacity-70">{workflowsByCategory[category].length} workflow{workflowsByCategory[category].length !== 1 ? "s" : ""}</div>
-              </div>
-              <ChevronRight className="h-4 w-4 opacity-50" />
-            </button>
-          ))
         ) : (
-          // Show workflows in selected category
-          categoryWorkflows.map((workflow) => (
+          currentLevel.items.map((item) => (
             <button
-              key={workflow.id}
-              onClick={() => handleWorkflowSelect(workflow)}
-              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                selectedWorkflow?.id === workflow.id
+              key={item.id}
+              onClick={() => {
+                if (item.children) {
+                  handleDrillInto(item);
+                } else if (item.workflow) {
+                  handleWorkflowSelect(item.workflow);
+                }
+              }}
+              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between gap-2 ${
+                item.workflow && selectedWorkflow?.id === item.workflow.id
                   ? "bg-foreground text-background"
                   : "hover-elevate"
               }`}
-              data-testid={`nav-workflow-${workflow.id}`}
+              data-testid={`nav-${item.id}`}
             >
-              <div className="font-medium truncate">{workflow.name}</div>
-              <div className="text-xs opacity-70 truncate">{workflow.mode}</div>
+              <div className="min-w-0">
+                <div className="font-medium truncate">{item.title}</div>
+                {item.subtitle && <div className="text-xs opacity-70 truncate">{item.subtitle}</div>}
+              </div>
+              {item.children && <ChevronRight className="h-4 w-4 opacity-50 flex-shrink-0" />}
             </button>
           ))
         )}

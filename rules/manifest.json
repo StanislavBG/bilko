@@ -381,28 +381,31 @@
       "path": "rules/apps/agentic-workflows/001-overview.md",
       "partition": "apps",
       "priority": "HIGH",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "triggers": [
         "workflow",
         "agentic",
         "n8n",
         "execution",
         "carousel",
-        "drill-down"
+        "drill-down",
+        "nav stack"
       ],
       "dependencies": [
         "HUB-001",
         "UI-006",
+        "ARCH-012",
         "DATA-002",
         "INT-005"
       ],
       "crossReferences": [
         "UI-006",
+        "ARCH-012",
         "INT-005",
         "DATA-002",
         "HUB-003"
       ],
-      "description": "Agentic Workflows page with category/workflow navigation, execution history, and mobile carousel."
+      "description": "Agentic Workflows page with stack-based category/workflow navigation, execution history, and mobile carousel."
     },
     "DATA-001": {
       "id": "DATA-001",
