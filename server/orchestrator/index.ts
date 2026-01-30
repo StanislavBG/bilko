@@ -86,6 +86,19 @@ export function registerOrchestratorRoutes(app: Express) {
         const traceId = generateTraceId();
         const startTime = Date.now();
 
+        let enrichedPayload = { ...payload };
+        if (workflowId === "european-football-daily") {
+          const recentTopics = await orchestratorStorage.getRecentTopics(workflowId, 24);
+          enrichedPayload = {
+            ...payload,
+            recentTopics: recentTopics.map(t => ({
+              headline: t.headline,
+              headlineHash: t.headlineHash,
+              usedAt: t.usedAt,
+            })),
+          };
+        }
+
         const trace = await orchestratorStorage.createTrace({
           traceId,
           attemptNumber: 1,
@@ -95,11 +108,11 @@ export function registerOrchestratorRoutes(app: Express) {
           action: action || null,
           userId,
           requestedAt: new Date(),
-          requestPayload: payload,
+          requestPayload: enrichedPayload,
           overallStatus: "in_progress",
         });
 
-        const result = await callN8nWorkflow(workflowId, { ...payload, action, traceId });
+        const result = await callN8nWorkflow(workflowId, { ...enrichedPayload, action, traceId });
 
         await orchestratorStorage.updateTrace(trace.id, {
           respondedAt: new Date(),
@@ -171,6 +184,54 @@ export function registerOrchestratorRoutes(app: Express) {
         return res.status(404).json({ error: "Trace not found" });
       }
       res.json(trace);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.get("/api/topics/:workflowId", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const workflowId = req.params.workflowId as string;
+      const hoursBackParam = Array.isArray(req.query.hoursBack) ? req.query.hoursBack[0] : req.query.hoursBack;
+      const hoursBack = parseInt(hoursBackParam as string) || 24;
+      const topics = await orchestratorStorage.getRecentTopics(workflowId, hoursBack);
+      res.json({
+        workflowId,
+        hoursBack,
+        topics: topics.map(t => ({
+          headline: t.headline,
+          headlineHash: t.headlineHash,
+          usedAt: t.usedAt,
+        })),
+        count: topics.length,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post("/api/topics/:workflowId", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const workflowId = req.params.workflowId as string;
+      const { headline, metadata } = req.body as { headline: string; metadata?: string };
+      
+      if (!headline) {
+        return res.status(400).json({ error: "headline is required" });
+      }
+      
+      const topic = await orchestratorStorage.recordUsedTopic(workflowId, headline, metadata);
+      res.json({ success: true, topic });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.delete("/api/topics/cleanup", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const hoursOldParam = Array.isArray(req.query.hoursOld) ? req.query.hoursOld[0] : req.query.hoursOld;
+      const hoursOld = parseInt(hoursOldParam as string) || 48;
+      const deleted = await orchestratorStorage.cleanupOldTopics(hoursOld);
+      res.json({ success: true, deleted });
     } catch (err) {
       next(err);
     }
