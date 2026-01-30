@@ -1,6 +1,6 @@
 {
-  "version": "1.3.0",
-  "lastUpdated": "2026-01-30T12:00:00Z",
+  "version": "1.4.0",
+  "lastUpdated": "2026-01-30T14:00:00Z",
   "description": "Registry of executable agent protocols for development tasks",
   "agents": {
     "AGT-002": {
@@ -34,16 +34,6 @@
   "categories": {
     "audit": {
       "description": "Audit protocols for validating rules and code"
-    },
-    "workflow": {
-      "description": "Workflow development protocols"
-    }
-  },
-  "movedToOtherLocations": {
-    "AGT-001": {
-      "title": "n8n Development Workflow",
-      "mergedInto": "personas/PER-001-n8n-architect.md",
-      "reason": "Workflow methodology belongs in persona as 'Operating Protocol', not standalone agent"
     }
   }
 }
