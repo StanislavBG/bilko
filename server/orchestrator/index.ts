@@ -1,7 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { orchestratorStorage } from "./storage";
 import { randomUUID } from "crypto";
-import { createEchoTestWorkflow, getWebhookUrl, WEBHOOK_TIMEOUT } from "../n8n/api";
 import { authStorage } from "../replit_integrations/auth/storage";
 
 function generateTraceId(): string {
@@ -165,91 +164,5 @@ export function registerOrchestratorRoutes(app: Express) {
     }
   });
 
-  app.post("/api/test-connection", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    const traceId = generateTraceId();
-    const startTime = Date.now();
-    let trace: any = null;
-    
-    try {
-      const { workflowId, webhookPath } = await createEchoTestWorkflow();
-      const webhookUrl = getWebhookUrl(webhookPath);
-      
-      const userId = (req as any).dbUser?.id || (req as any).user?.claims?.sub || "anonymous";
-
-      const testPayload = {
-        action: "test",
-        message: "Hello from Bilko Bibitkov!",
-        timestamp: new Date().toISOString(),
-        traceId,
-      };
-
-      trace = await orchestratorStorage.createTrace({
-        traceId,
-        attemptNumber: 1,
-        sourceService: "bilko",
-        destinationService: "n8n",
-        workflowId: "echo-test",
-        action: "test",
-        userId,
-        requestedAt: new Date(),
-        requestPayload: testPayload,
-        overallStatus: "in_progress",
-      });
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT);
-      
-      let fetchResponse: globalThis.Response;
-      try {
-        fetchResponse = await fetch(webhookUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Bilko-Request-Id": traceId,
-          },
-          body: JSON.stringify(testPayload),
-          signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timeoutId);
-      }
-
-      const data = await fetchResponse.json();
-      const success = fetchResponse.ok;
-
-      await orchestratorStorage.updateTrace(trace.id, {
-        respondedAt: new Date(),
-        durationMs: Date.now() - startTime,
-        responsePayload: data,
-        overallStatus: success ? "success" : "failed",
-        errorCode: success ? null : `HTTP_${fetchResponse.status}`,
-        errorDetail: success ? null : JSON.stringify(data, null, 2),
-        n8nExecutionId: data?.metadata?.executionId || null,
-      });
-
-      res.json({
-        success,
-        traceId,
-        workflowId,
-        data,
-      });
-    } catch (err: any) {
-      if (trace) {
-        const errorDetail = err.name === "AbortError" 
-          ? "Request timeout - n8n did not respond within 30 seconds" 
-          : (err.stack || err.message || "Unknown error");
-        await orchestratorStorage.updateTrace(trace.id, {
-          respondedAt: new Date(),
-          durationMs: Date.now() - startTime,
-          responsePayload: null,
-          overallStatus: "failed",
-          errorCode: err.name === "AbortError" ? "TIMEOUT" : "NETWORK_ERROR",
-          errorDetail,
-          n8nExecutionId: null,
-        });
-      }
-      next(err);
-    }
-  });
 }
 
