@@ -6,7 +6,7 @@ import {
   type WorkflowExecution,
   type InsertWorkflowExecution
 } from "@shared/schema";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, count } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
@@ -28,7 +28,8 @@ export interface IOrchestratorStorage {
   updateTrace(id: string, updates: Partial<InsertCommunicationTrace>): Promise<CommunicationTrace | undefined>;
   getTrace(id: string): Promise<CommunicationTrace | undefined>;
   getTracesByTraceId(traceId: string): Promise<CommunicationTrace[]>;
-  getRecentTraces(limit: number): Promise<CommunicationTrace[]>;
+  getRecentTraces(limit: number, offset?: number): Promise<CommunicationTrace[]>;
+  countTraces(): Promise<number>;
   
   createExecution(execution: InsertWorkflowExecution): Promise<WorkflowExecution>;
   updateExecution(id: string, updates: Partial<InsertWorkflowExecution>): Promise<WorkflowExecution | undefined>;
@@ -67,12 +68,18 @@ class OrchestratorStorage implements IOrchestratorStorage {
       .orderBy(communicationTraces.attemptNumber);
   }
 
-  async getRecentTraces(limit: number = 50): Promise<CommunicationTrace[]> {
+  async getRecentTraces(limit: number = 50, offset: number = 0): Promise<CommunicationTrace[]> {
     return db
       .select()
       .from(communicationTraces)
       .orderBy(desc(communicationTraces.requestedAt))
-      .limit(limit);
+      .limit(limit)
+      .offset(offset);
+  }
+
+  async countTraces(): Promise<number> {
+    const result = await db.select({ value: count() }).from(communicationTraces);
+    return Number(result[0]?.value ?? 0);
   }
 
   async createExecution(execution: InsertWorkflowExecution): Promise<WorkflowExecution> {

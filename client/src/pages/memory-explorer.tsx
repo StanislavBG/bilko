@@ -7,11 +7,21 @@ import { ActionPanel } from "@/components/action-panel";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Loader2, ArrowRight, Copy, Check, Database } from "lucide-react";
+import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Loader2, ArrowRight, Copy, Check, Database, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { CommunicationTrace } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
+
+interface TracesResponse {
+  traces: CommunicationTrace[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+}
 
 function formatDuration(ms: number | null): string {
   if (ms === null) return "-";
@@ -189,20 +199,35 @@ function TraceDetailModal({
   );
 }
 
+const PAGE_SIZE = 10;
+
 export default function MemoryExplorer() {
   const { effectiveIsAdmin } = useViewMode();
   const isMobile = useIsMobile();
   const [selectedTrace, setSelectedTrace] = useState<CommunicationTrace | null>(null);
   const [isActionPanelCollapsed, setIsActionPanelCollapsed] = useState(false);
+  const [page, setPage] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
     setIsActionPanelCollapsed(isMobile);
   }, [isMobile]);
 
-  const { data: traces, isLoading, refetch, isRefetching } = useQuery<CommunicationTrace[]>({
-    queryKey: ["/api/traces"],
+  const { data, isLoading, refetch, isRefetching } = useQuery<TracesResponse>({
+    queryKey: ["/api/traces", page],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        offset: String(page * PAGE_SIZE)
+      });
+      const res = await fetch(`/api/traces?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch traces");
+      return res.json();
+    }
   });
+
+  const traces = data?.traces;
+  const pagination = data?.pagination;
 
 
   if (!effectiveIsAdmin) {
@@ -339,6 +364,40 @@ export default function MemoryExplorer() {
                 </table>
               </div>
             </Card>
+
+            {/* Pagination Controls */}
+            {pagination && pagination.total > 0 && (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Showing {pagination.offset + 1} - {Math.min(pagination.offset + PAGE_SIZE, pagination.total)} of {pagination.total} traces
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(0, p - 1))}
+                    disabled={page === 0 || isLoading}
+                    data-testid="button-prev-page"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground px-2">
+                    Page {page + 1} of {Math.ceil(pagination.total / PAGE_SIZE)}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => p + 1)}
+                    disabled={!pagination.hasMore || isLoading}
+                    data-testid="button-next-page"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           <TraceDetailModal 
