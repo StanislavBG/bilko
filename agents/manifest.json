@@ -1,17 +1,8 @@
 {
-  "version": "1.1.0",
-  "lastUpdated": "2026-01-30T00:00:00Z",
+  "version": "1.2.0",
+  "lastUpdated": "2026-01-30T08:00:00Z",
   "description": "Registry of executable agent protocols for development tasks",
   "agents": {
-    "AGT-001": {
-      "id": "AGT-001",
-      "title": "n8n Development Workflow",
-      "path": "agents/AGT-001-n8n-development-workflow.md",
-      "category": "workflow",
-      "version": "1.0.0",
-      "triggers": ["n8n workflow", "develop workflow", "modify workflow", "workflow development", "FETCH", "ANALYZE", "MODIFY", "PUSH", "BACKUP", "VERIFY"],
-      "description": "Executable 6-phase protocol for n8n workflow development: FETCH → ANALYZE → MODIFY → PUSH → BACKUP → VERIFY."
-    },
     "AGT-002": {
       "id": "AGT-002",
       "title": "Code Audit Protocol",
@@ -49,6 +40,11 @@
     }
   },
   "movedToOtherLocations": {
+    "AGT-001": {
+      "title": "n8n Development Workflow",
+      "mergedInto": "personas/PER-001-n8n-architect.md",
+      "reason": "Workflow methodology belongs in persona as 'Operating Protocol', not standalone agent"
+    },
     "PER-001": {
       "title": "n8n Architect Persona",
       "newPath": "personas/PER-001-n8n-architect.md",
