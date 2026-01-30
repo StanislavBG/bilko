@@ -11,24 +11,6 @@
       "category": "system"
     },
     {
-      "id": "rules-audit",
-      "name": "Rules Audit",
-      "mode": "local",
-      "description": "Analyzes the rule framework for structural integrity, cross-references, and coverage gaps. Validates that all rules are properly formatted, have valid dependencies, and follow the partitioning scheme defined in ARCH-006.",
-      "instructions": "This workflow is executed via agent reasoning. Ask the agent: 'Run a rule audit' or 'Act as Rule Architect'. The agent will analyze all rules following the AGT-002-RULES protocol (agents/002-rules-audit.md) and provide a comprehensive audit report.",
-      "handler": "rulesAudit",
-      "category": "audit"
-    },
-    {
-      "id": "code-audit",
-      "name": "Code Audit",
-      "mode": "local",
-      "description": "Validates that the codebase correctly implements the rules defined in /rules/. Checks for rule violations, missing implementations, and alignment between code behavior and rule specifications.",
-      "instructions": "This workflow is executed via agent reasoning. Ask the agent: 'Run a code audit' or specify which rules to audit. The agent will analyze the code following the AGT-002-CODE protocol (agents/002-code-audit.md) and report any violations or gaps.",
-      "handler": "codeAudit",
-      "category": "audit"
-    },
-    {
       "id": "european-football-daily",
       "name": "[PROD] European Football Daily",
       "mode": "n8n",
