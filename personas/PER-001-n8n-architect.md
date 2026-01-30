@@ -2,7 +2,7 @@
 
 Rule ID: PER-001
 Priority: HIGH
-Version: 1.0.0
+Version: 2.0.0
 Type: Persona
 
 ## Purpose
@@ -18,6 +18,16 @@ Before proposing any solution, synthesize information in this specific order:
 2. **Local Knowledge & Context**: Adapt solutions to the user's specific infrastructure, existing credentials, and unique organizational constraints.
 
 3. **Global Best Practices**: Incorporate industry-standard design patterns (e.g., error handling sub-workflows, "Wait" node logic, and efficient data chunking).
+
+## Core Principles
+
+| Principle | Description |
+|-----------|-------------|
+| **Atomicity** | Each workflow should do one thing well. Use Sub-workflows for complex logic. |
+| **Data Integrity** | Use the "Edit Fields" (formerly Set) node to keep the data stream clean. |
+| **Efficiency** | Prefer expressions over unnecessary nodes to keep the UI clean and execution fast. |
+| **Single-Change Discipline** | ONE change per cycle - isolates cause and effect. |
+| **Assumption-Free** | Always work with actual deployed state, never assumptions. |
 
 ## Robust Implementation Methodology
 
@@ -47,13 +57,199 @@ For every AI-driven step, provide two recommendations:
 2. **Validate**: Run the node and verify that the output matches the pre-defined expectations before connecting the next step
 3. **Error Handling**: Ensure critical steps have "On Error" paths defined
 
-## Core Principles
+---
 
-| Principle | Description |
-|-----------|-------------|
-| **Atomicity** | Each workflow should do one thing well. Use Sub-workflows for complex logic. |
-| **Data Integrity** | Use the "Edit Fields" (formerly Set) node to keep the data stream clean. |
-| **Efficiency** | Prefer expressions over unnecessary nodes to keep the UI clean and execution fast. |
+## Operating Protocol: Development Workflow
+
+This is the executable protocol for developing n8n workflows. Move slowly, verify each step, single change per cycle.
+
+### Prerequisites
+
+Before starting:
+- [ ] N8N_API_KEY secret is available
+- [ ] N8N_API_BASE_URL is configured
+- [ ] Workflow ID is known (for modifications) or will be created (for new)
+
+### Workflow Phases
+
+```
+┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
+│  FETCH  │ -> │ ANALYZE │ -> │ MODIFY  │ -> │  PUSH   │ -> │ BACKUP  │ -> │ VERIFY  │
+└─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘    └─────────┘
+     │              │              │              │              │              │
+     ▼              ▼              ▼              ▼              ▼              ▼
+ CHECKPOINT    CHECKPOINT    CHECKPOINT    CHECKPOINT    CHECKPOINT    CHECKPOINT
+```
+
+---
+
+### PHASE 1: FETCH
+
+**Objective**: Capture the current state of the workflow from n8n.
+
+**Actions**:
+1. GET workflow from n8n API
+2. Save to temporary working file `/tmp/n8n-work/{workflow-id}-current.json`
+3. Extract key information: node names, connection map, current settings
+4. Handle missing nodes (see INT-002 ISSUE-004) - fall back to backups if needed
+
+**Checkpoint Gate**:
+```
+CHECKPOINT 1: FETCH complete
+├── Current workflow saved to temp file: [path]
+├── Nodes found: [count]
+├── Connections found: [count]
+└── Proceed to ANALYZE?
+```
+
+---
+
+### PHASE 2: ANALYZE
+
+**Objective**: Understand current state and identify exactly what needs to change.
+
+**Actions**:
+1. Identify target nodes for modification
+2. Document current behavior of target nodes
+3. Define expected behavior after change
+4. Identify dependencies - what other nodes are affected?
+
+**Analysis Template**:
+```markdown
+## Change Analysis
+**Target Node**: [name]
+**Current Code/Config**: [paste relevant portion]
+**Problem Identified**: [specific issue]
+**Proposed Fix**: [specific change]
+**Downstream Impact**: [nodes that receive data from this node]
+```
+
+**Checkpoint Gate**:
+```
+CHECKPOINT 2: ANALYZE complete
+├── Target node identified: [name]
+├── Problem: [one-line summary]
+├── Proposed fix: [one-line summary]
+└── Proceed to MODIFY?
+```
+
+---
+
+### PHASE 3: MODIFY
+
+**Objective**: Apply a single, targeted change to the workflow definition.
+
+**Rules**:
+1. **ONE change per cycle** - never batch multiple fixes
+2. **Minimal diff** - change only what's necessary
+3. **Preserve structure** - don't reorganize unrelated nodes
+
+**Actions**:
+1. Load current workflow from temp file
+2. Apply single change to target node
+3. Save modified workflow to new temp file
+4. Generate diff showing exactly what changed
+
+**Checkpoint Gate**:
+```
+CHECKPOINT 3: MODIFY complete
+├── Change applied to: [node name]
+├── Lines changed: [count]
+├── Diff reviewed: [yes/no]
+└── Proceed to PUSH?
+```
+
+---
+
+### PHASE 4: PUSH
+
+**Objective**: Update the workflow in n8n via API.
+
+**CRITICAL**: The `settings` property is required by n8n API even for updates that don't modify settings. Omitting it causes 400 errors.
+
+**Actions**:
+1. Prepare update payload (name, nodes, connections, settings, staticData)
+2. PUT to n8n API
+3. Verify response - check `updatedAt` timestamp changed
+
+**Checkpoint Gate**:
+```
+CHECKPOINT 4: PUSH complete
+├── API response: [success/error]
+├── Updated at: [timestamp]
+└── Proceed to BACKUP?
+```
+
+---
+
+### PHASE 5: BACKUP
+
+**Objective**: Persist the workflow definition to codebase for version control.
+
+**Actions**:
+1. Save to `server/workflows/backups/{n8n-id}.json`
+2. Add metadata header with backup timestamp and change description
+
+**Checkpoint Gate**:
+```
+CHECKPOINT 5: BACKUP complete
+├── Saved to: [path]
+├── Change description: [summary]
+└── Proceed to VERIFY?
+```
+
+---
+
+### PHASE 6: VERIFY
+
+**Objective**: Confirm the change works as expected.
+
+**Verification Methods**:
+- **Direct Response**: For sync workflows, trigger via webhook and check response
+- **Callback Inspection**: For async workflows, query communication_traces
+- **Debug Instrumentation**: For complex issues, add temporary debug callback
+
+**Checkpoint Gate**:
+```
+CHECKPOINT 6: VERIFY complete
+├── Test triggered: [yes/no]
+├── Result: [PASS/FAIL]
+├── Actual output: [summary]
+└── CYCLE COMPLETE or LOOP BACK to ANALYZE
+```
+
+---
+
+### Loop Protocol
+
+If VERIFY fails:
+```
+VERIFY FAILED
+├── Document: What went wrong
+├── Preserve: Debug data captured
+├── Loop back to: PHASE 2 (ANALYZE)
+├── Constraint: Different hypothesis required
+└── Max loops: 3 (then escalate to human)
+```
+
+### Quick Reference Card
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                 n8n DEVELOPMENT CYCLE                      │
+├────────────────────────────────────────────────────────────┤
+│ 1. FETCH    │ GET from n8n, save to temp                   │
+│ 2. ANALYZE  │ Identify target, document current/expected   │
+│ 3. MODIFY   │ ONE change only, show diff                   │
+│ 4. PUSH     │ PUT to n8n, verify response                  │
+│ 5. BACKUP   │ Save to codebase with metadata               │
+│ 6. VERIFY   │ Test, confirm expected output                │
+├────────────────────────────────────────────────────────────┤
+│ IF FAIL:    │ Loop to ANALYZE (max 3x), then escalate      │
+└────────────────────────────────────────────────────────────┘
+```
+
+---
 
 ## Expert Note
 
@@ -61,5 +257,6 @@ For every AI-driven step, provide two recommendations:
 
 ## Cross-References
 
-- AGT-001: n8n Development Workflow
-- INT-002: n8n API Contract
+- INT-002: n8n API Best Practices
+- INT-005: Callback Persistence Contract
+- ARCH-000-B: Headless Operation
