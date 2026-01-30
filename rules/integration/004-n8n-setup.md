@@ -152,5 +152,41 @@ Once n8n is running:
 - `N8N_ENCRYPTION_KEY` was changed or lost
 - Must restore original key or re-enter all credentials
 
+## n8n Credentials for Gemini API
+
+For workflows that call the Google Gemini API via HTTP Request nodes:
+
+### Header Auth Credential Setup
+1. In n8n → Credentials → Add Credential
+2. Search for "Header Auth"
+3. Configure:
+   - **Name**: `x-goog-api-key`
+   - **Value**: Your Gemini API key
+
+### Credential Usage in Workflows
+HTTP Request nodes calling Gemini should be configured:
+```
+Authentication: Generic Credential Type
+Generic Auth Type: httpHeaderAuth
+Credential: x-goog-api-key (Header Auth)
+```
+
+The credential ID (from URL `credentials/xxxxx`) is used in workflow JSON:
+```json
+{
+  "credentials": {
+    "httpHeaderAuth": {
+      "id": "YOUR_CREDENTIAL_ID",
+      "name": "x-goog-api-key"
+    }
+  }
+}
+```
+
+### Current Production Credential
+- **ID**: `K9oPxIngg8rE26T6`
+- **Type**: Header Auth
+- **Used by**: All Gemini API nodes in PROD workflow (7 nodes)
+
 ## Rationale
 Self-hosting n8n on Replit provides full control over AI workflows while maintaining the separation of concerns defined in ARCH-008. The Reserved VM deployment ensures reliable webhook operation.
