@@ -1,12 +1,16 @@
 import { 
   communicationTraces, 
   workflowExecutions,
+  usedTopics,
   type CommunicationTrace, 
   type InsertCommunicationTrace,
   type WorkflowExecution,
-  type InsertWorkflowExecution
+  type InsertWorkflowExecution,
+  type UsedTopic,
+  type InsertUsedTopic
 } from "@shared/schema";
-import { eq, desc, and, count } from "drizzle-orm";
+import { eq, desc, and, count, gte, sql } from "drizzle-orm";
+import crypto from "crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
@@ -38,6 +42,14 @@ export interface IOrchestratorStorage {
   getWorkflowExecutions(workflowId: string, limit?: number): Promise<ExecutionListItem[]>;
   getExecutionTraces(executionId: string): Promise<TraceListItem[]>;
   getExecutionTracesWithPayloads(executionId: string): Promise<CommunicationTrace[]>;
+  
+  recordUsedTopic(workflowId: string, headline: string, metadata?: string): Promise<UsedTopic>;
+  getRecentTopics(workflowId: string, hoursBack?: number): Promise<UsedTopic[]>;
+  cleanupOldTopics(hoursOld?: number): Promise<number>;
+}
+
+function hashHeadline(headline: string): string {
+  return crypto.createHash('sha256').update(headline.toLowerCase().trim()).digest('hex').substring(0, 16);
 }
 
 class OrchestratorStorage implements IOrchestratorStorage {
@@ -159,6 +171,37 @@ class OrchestratorStorage implements IOrchestratorStorage {
       .from(communicationTraces)
       .where(eq(communicationTraces.executionId, executionId))
       .orderBy(communicationTraces.attemptNumber);
+  }
+
+  async recordUsedTopic(workflowId: string, headline: string, metadata?: string): Promise<UsedTopic> {
+    const [created] = await db.insert(usedTopics).values({
+      workflowId,
+      headline,
+      headlineHash: hashHeadline(headline),
+      metadata: metadata || null,
+    }).returning();
+    return created;
+  }
+
+  async getRecentTopics(workflowId: string, hoursBack: number = 24): Promise<UsedTopic[]> {
+    const cutoff = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+    return db
+      .select()
+      .from(usedTopics)
+      .where(and(
+        eq(usedTopics.workflowId, workflowId),
+        gte(usedTopics.usedAt, cutoff)
+      ))
+      .orderBy(desc(usedTopics.usedAt));
+  }
+
+  async cleanupOldTopics(hoursOld: number = 48): Promise<number> {
+    const cutoff = new Date(Date.now() - hoursOld * 60 * 60 * 1000);
+    const result = await db
+      .delete(usedTopics)
+      .where(sql`${usedTopics.usedAt} < ${cutoff}`)
+      .returning({ id: usedTopics.id });
+    return result.length;
   }
 }
 

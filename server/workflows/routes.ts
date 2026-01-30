@@ -81,6 +81,31 @@ export function registerWorkflowRoutes(app: Express): void {
           finalOutput: output as Record<string, unknown> | undefined,
         });
         console.log(`[callback] Execution ${execution.id} completed with final output`);
+        
+        // Record the used topic to prevent duplicates
+        if (status === "success" && output && typeof output === "object") {
+          const outputData = output as Record<string, unknown>;
+          const selectedTopic = outputData.selectedTopic as Record<string, unknown> | undefined;
+          // Use sourceHeadline (original RSS title) for duplicate prevention, fallback to headline
+          const headlineToRecord = (selectedTopic?.sourceHeadline || selectedTopic?.headline) as string | undefined;
+          if (headlineToRecord && typeof headlineToRecord === "string") {
+            try {
+              await orchestratorStorage.recordUsedTopic(
+                workflowId,
+                headlineToRecord,
+                JSON.stringify({ 
+                  traceId, 
+                  executionId: execution.id,
+                  analyzedHeadline: selectedTopic?.headline,
+                  sourceHeadlineHash: selectedTopic?.sourceHeadlineHash
+                })
+              );
+              console.log(`[callback] Recorded used topic: ${headlineToRecord.substring(0, 50)}...`);
+            } catch (topicErr) {
+              console.error("[callback] Failed to record used topic:", topicErr);
+            }
+          }
+        }
       }
 
       console.log(`[callback] ${workflowId}/${step}: Received (trace: ${traceId}, step: ${stepIndex})`);
