@@ -144,9 +144,21 @@ export function registerOrchestratorRoutes(app: Express) {
 
   app.get("/api/traces", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-      const traces = await orchestratorStorage.getRecentTraces(limit);
-      res.json(traces);
+      const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
+      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+      const [traces, total] = await Promise.all([
+        orchestratorStorage.getRecentTraces(limit, offset),
+        orchestratorStorage.countTraces()
+      ]);
+      res.json({
+        traces,
+        pagination: {
+          total,
+          limit,
+          offset,
+          hasMore: offset + traces.length < total
+        }
+      });
     } catch (err) {
       next(err);
     }
