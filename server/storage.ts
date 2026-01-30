@@ -1,24 +1,13 @@
 // Storage interface for application-specific data
 // Auth storage is handled by server/replit_integrations/auth/storage.ts
-
-import { db } from "./db";
-import { ruleAudits, RuleAudit, InsertRuleAudit } from "@shared/schema";
-import { desc } from "drizzle-orm";
+// Orchestrator storage is handled by server/orchestrator/storage.ts
 
 export interface IStorage {
-  createAudit(data: InsertRuleAudit): Promise<RuleAudit>;
-  getAudits(): Promise<RuleAudit[]>;
+  // Add application-specific storage methods here as needed
 }
 
 export class DatabaseStorage implements IStorage {
-  async createAudit(data: InsertRuleAudit): Promise<RuleAudit> {
-    const [audit] = await db.insert(ruleAudits).values(data).returning();
-    return audit;
-  }
-
-  async getAudits(): Promise<RuleAudit[]> {
-    return await db.select().from(ruleAudits).orderBy(desc(ruleAudits.createdAt));
-  }
+  // Add application-specific storage methods here as needed
 }
 
 export const storage = new DatabaseStorage();

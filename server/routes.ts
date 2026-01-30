@@ -2,7 +2,6 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth, registerAuthRoutes } from "./replit_integrations/auth";
 import { registerOrchestratorRoutes } from "./orchestrator";
-import { registerAuditorRoutes } from "./auditor";
 import { registerRulesRoutes } from "./rules/routes";
 import { registerWorkflowRoutes } from "./workflows/routes";
 import { registerImageRoutes } from "./images/routes";
@@ -18,9 +17,6 @@ export async function registerRoutes(
   
   // Orchestrator routes for n8n communication
   registerOrchestratorRoutes(app);
-  
-  // Auditor routes for rule compliance checking
-  registerAuditorRoutes(app);
   
   // Rules catalog and preview routes
   registerRulesRoutes(app);
