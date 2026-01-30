@@ -1,24 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-
-interface ExecutionListItem {
-  id: string;
-  workflowId: string;
-  triggerTraceId: string | null;
-  externalExecutionId: string | null;
-  status: "pending" | "running" | "completed" | "failed";
-  startedAt: string;
-  completedAt: string | null;
-  userId: string | null;
-}
-
-interface ExecutionsResponse {
-  executions: ExecutionListItem[];
-}
+import { useExecutionsList, type ExecutionListItem } from "@/hooks/use-workflow-data";
 
 interface ExecutionsListProps {
   workflowId: string;
@@ -55,14 +40,7 @@ function StatusBadge({ status }: { status: ExecutionListItem["status"] }) {
 }
 
 export function ExecutionsList({ workflowId, selectedExecutionId, onSelectExecution }: ExecutionsListProps) {
-  const { data, isLoading } = useQuery<ExecutionsResponse>({
-    queryKey: ["/api/workflows", workflowId, "executions"],
-    queryFn: async () => {
-      const res = await fetch(`/api/workflows/${workflowId}/executions`);
-      return res.json();
-    },
-    refetchInterval: 10000,
-  });
+  const { data, isLoading } = useExecutionsList(workflowId);
 
   const executions = data?.executions || [];
 

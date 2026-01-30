@@ -7,6 +7,9 @@ import { orchestratorStorage } from "../orchestrator/storage";
 import { z } from "zod";
 import * as fs from "fs";
 import * as path from "path";
+import { createLogger } from "../logger";
+
+const log = createLogger("workflows");
 
 const jsonValue: z.ZodType<unknown> = z.lazy(() =>
   z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(jsonValue), z.record(jsonValue)])
@@ -51,7 +54,7 @@ export function registerWorkflowRoutes(app: Express): void {
           status: "running",
           userId: "system",
         });
-        console.log(`[callback] Created execution ${execution.id} for trace ${traceId}`);
+        log.info(`Created execution ${execution.id} for trace ${traceId}`);
       }
 
       const trace = await orchestratorStorage.createTrace({
@@ -90,17 +93,14 @@ Bilko Bibitkov Human-Centric AI Curation`;
           completedAt: new Date(),
           finalOutput: enrichedOutput as Record<string, unknown> | undefined,
         });
-        console.log(`[callback] Execution ${execution.id} completed with final output (FB2 disclosure added)`);
+        log.info(`Execution ${execution.id} completed with final output (FB2 disclosure added)`);
         
         // Record the used topic to prevent duplicates
         if (status === "success" && output && typeof output === "object") {
           const outputData = output as Record<string, unknown>;
           const selectedTopic = outputData.selectedTopic as Record<string, unknown> | undefined;
           
-          // Debug logging to trace sourceHeadline presence
-          console.log(`[callback] selectedTopic keys: ${selectedTopic ? Object.keys(selectedTopic).join(', ') : 'null'}`);
-          console.log(`[callback] sourceHeadline present: ${!!selectedTopic?.sourceHeadline}`);
-          console.log(`[callback] headline present: ${!!selectedTopic?.headline}`);
+          log.debug(`selectedTopic keys: ${selectedTopic ? Object.keys(selectedTopic).join(', ') : 'null'}`);
           
           // Use sourceHeadline (original RSS title) for duplicate prevention, fallback to headline
           const headlineToRecord = (selectedTopic?.sourceHeadline || selectedTopic?.headline) as string | undefined;
@@ -116,17 +116,17 @@ Bilko Bibitkov Human-Centric AI Curation`;
                   sourceHeadlineHash: selectedTopic?.sourceHeadlineHash
                 })
               );
-              console.log(`[callback] Recorded used topic: ${headlineToRecord.substring(0, 50)}...`);
+              log.info(`Recorded used topic: ${headlineToRecord.substring(0, 50)}...`);
             } catch (topicErr) {
-              console.error("[callback] Failed to record used topic:", topicErr);
+              log.error("Failed to record used topic", topicErr);
             }
           } else {
-            console.warn(`[callback] WARNING: No headline to record! sourceHeadline=${selectedTopic?.sourceHeadline}, headline=${selectedTopic?.headline}`);
+            log.warn(`No headline to record! sourceHeadline=${selectedTopic?.sourceHeadline}, headline=${selectedTopic?.headline}`);
           }
         }
       }
 
-      console.log(`[callback] ${workflowId}/${step}: Received (trace: ${traceId}, step: ${stepIndex})`);
+      log.debug(`${workflowId}/${step}: Received (trace: ${traceId}, step: ${stepIndex})`);
 
       res.json({ 
         success: true, 
@@ -135,7 +135,7 @@ Bilko Bibitkov Human-Centric AI Curation`;
         traceRecordId: trace.id 
       });
     } catch (error) {
-      console.error("[callback] Error:", error);
+      log.error("Callback error", error);
       res.status(500).json({ 
         success: false, 
         error: error instanceof Error ? error.message : "Internal error" 
@@ -169,7 +169,7 @@ Bilko Bibitkov Human-Centric AI Curation`;
         }))
       });
     } catch (error) {
-      console.error("[used-topics] Error:", error);
+      log.error("Used topics error", error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : "Internal error" 
       });
@@ -224,7 +224,7 @@ Bilko Bibitkov Human-Centric AI Curation`;
         }
       });
     } catch (error) {
-      console.error("[output] Error:", error);
+      log.error("Output error", error);
       res.status(500).json({ 
         hasOutput: false,
         error: error instanceof Error ? error.message : "Internal error" 
@@ -322,7 +322,7 @@ Bilko Bibitkov Human-Centric AI Curation`;
         newName: prodWorkflow.name
       });
     } catch (error) {
-      console.error("[push-prod] Error:", error);
+      log.error("Push prod error", error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : String(error)
@@ -347,7 +347,7 @@ Bilko Bibitkov Human-Centric AI Curation`;
       const executions = await orchestratorStorage.getWorkflowExecutions(workflowId, limit);
       res.json({ executions });
     } catch (error) {
-      console.error("[executions] Error:", error);
+      log.error("Executions error", error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : "Internal error" 
       });
@@ -367,7 +367,7 @@ Bilko Bibitkov Human-Centric AI Curation`;
       
       res.json({ execution, traces });
     } catch (error) {
-      console.error("[execution] Error:", error);
+      log.error("Execution error", error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : "Internal error" 
       });
@@ -383,7 +383,7 @@ Bilko Bibitkov Human-Centric AI Curation`;
     // Ensure user.id exists - Replit Auth uses 'id' field
     const userId = user.id || user.claims?.sub;
     if (!userId) {
-      console.error("[execute] User object missing id:", JSON.stringify(user));
+      log.error("User object missing id", { user: JSON.stringify(user) });
       return res.status(400).json({ error: "User ID not found in authentication" });
     }
 

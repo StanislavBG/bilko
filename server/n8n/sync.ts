@@ -2,6 +2,9 @@ import { createN8nClient, buildWorkflowNodes, type N8nWorkflow, type N8nNode } f
 import { setWebhookUrl } from "./webhook-cache";
 import registry from "../workflows/registry.json";
 import type { WorkflowDefinition, WorkflowRegistry } from "../workflows/types";
+import { createLogger } from "../logger";
+
+const log = createLogger("n8n");
 
 const workflowRegistry = registry as WorkflowRegistry;
 
@@ -130,9 +133,9 @@ async function syncWorkflow(
 
   try {
     await client.activateWorkflow(created.id);
-    console.log(`[n8n] Activated new workflow: ${workflow.name}`);
+    log.info(`Activated new workflow: ${workflow.name}`);
   } catch (activateError) {
-    console.warn(`[n8n] Failed to activate ${workflow.name}:`, activateError);
+    log.warn(`Failed to activate ${workflow.name}`, activateError);
   }
 
   const webhookUrl = extractWebhookUrl(created, nodes);

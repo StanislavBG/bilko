@@ -686,7 +686,7 @@ export default function AgenticWorkflows() {
       {/* Mobile Workflow Nav Sheet */}
       {isMobile && (
         <Sheet open={isWorkflowNavOpen} onOpenChange={setIsWorkflowNavOpen}>
-          <SheetContent side="left" className="w-64 p-0">
+          <SheetContent side="left" className="w-[80vw] max-w-[16rem] p-0">
             <SheetHeader className="sr-only">
               <SheetTitle>Workflows</SheetTitle>
               <SheetDescription>Select a workflow to view</SheetDescription>
@@ -700,7 +700,7 @@ export default function AgenticWorkflows() {
 
       {/* Desktop Left Nav - Workflow List */}
       {!isMobile && (
-        <div className="w-64 border-r bg-muted/30 flex flex-col overflow-hidden">
+        <div className="min-w-[14rem] max-w-[18rem] flex-shrink-0 border-r bg-muted/30 flex flex-col overflow-hidden">
           <DesktopNavContent />
         </div>
       )}
@@ -796,7 +796,7 @@ export default function AgenticWorkflows() {
 
             {selectedWorkflow.mode === "n8n" && viewMode === "history" && (
               <div className="flex gap-4 min-h-[400px] max-h-[calc(100vh-200px)]">
-                <div className="w-64 flex-shrink-0 overflow-auto">
+                <div className="min-w-[12rem] max-w-[16rem] flex-shrink-0 overflow-auto">
                   <ExecutionsList
                     workflowId={selectedWorkflow.id}
                     selectedExecutionId={selectedExecution?.id || null}

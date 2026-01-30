@@ -4,6 +4,9 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { initializeRulesService } from "./rules";
 import { syncWorkflowsOnStartup } from "./n8n/startup";
+import { createLogger } from "./logger";
+
+const serverLog = createLogger("express");
 
 const app = express();
 const httpServer = createServer(app);
@@ -26,14 +29,8 @@ app.use(
 app.use(express.urlencoded({ extended: false }));
 
 export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-
-  console.log(`${formattedTime} [${source}] ${message}`);
+  const logger = createLogger(source);
+  logger.info(message);
 }
 
 app.use((req, res, next) => {
@@ -67,8 +64,7 @@ app.use((req, res, next) => {
     await initializeRulesService();
     log("Rules Service initialized - Primary Directive active", "rules");
   } catch (error) {
-    console.error("CRITICAL: Rules Service failed to initialize. Application cannot start.");
-    console.error(error);
+    serverLog.error("CRITICAL: Rules Service failed to initialize. Application cannot start.", error);
     process.exit(1);
   }
 
@@ -80,7 +76,7 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
-    console.error("Internal Server Error:", err);
+    serverLog.error("Internal Server Error", { message: err.message, status });
 
     if (res.headersSent) {
       return next(err);

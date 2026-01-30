@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { getRulesService } from "./index";
 import fs from "fs";
 import path from "path";
+import { createLogger } from "../logger";
+
+const log = createLogger("rules");
 
 interface RuleMetadata {
   id: string;
@@ -113,7 +116,7 @@ export function registerRulesRoutes(app: Express): void {
 
       return res.json(response);
     } catch (error) {
-      console.error("[Rules API] Error fetching rules catalog:", error);
+      log.error("Error fetching rules catalog", error);
       return res.status(500).json({ 
         error: "Failed to fetch rules catalog" 
       });
@@ -163,7 +166,7 @@ export function registerRulesRoutes(app: Express): void {
 
       return res.json(response);
     } catch (error) {
-      console.error("[Rules API] Error fetching rule:", error);
+      log.error("Error fetching rule", error);
       return res.status(500).json({ 
         error: "Failed to fetch rule content" 
       });

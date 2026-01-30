@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState, useRef, useEffect } from "react";
 import { CheckCircle, XCircle, Clock, Image, FileText, Activity, Shield, Copy, Download, Check } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -8,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { useExecutionDetail, type CommunicationTrace, type WorkflowExecution } from "@/hooks/use-workflow-data";
 
 function useCopyToClipboard() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -47,40 +47,6 @@ function downloadImage(imageUrl: string, filename: string = "infographic.png") {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-}
-
-interface CommunicationTrace {
-  id: string;
-  traceId: string;
-  executionId: string | null;
-  attemptNumber: number;
-  sourceService: string;
-  destinationService: string;
-  workflowId: string | null;
-  action: string;
-  overallStatus: string;
-  requestedAt: string;
-  respondedAt: string | null;
-  durationMs: number;
-  requestPayload: Record<string, unknown> | null;
-  responsePayload: Record<string, unknown> | null;
-}
-
-interface WorkflowExecution {
-  id: string;
-  workflowId: string;
-  triggerTraceId: string;
-  externalExecutionId: string | null;
-  status: "pending" | "running" | "completed" | "failed";
-  startedAt: string;
-  completedAt: string | null;
-  finalOutput: Record<string, unknown> | null;
-  userId: string;
-}
-
-interface ExecutionDetailResponse {
-  execution: WorkflowExecution;
-  traces: CommunicationTrace[];
 }
 
 interface ExecutionDetailProps {
@@ -145,13 +111,7 @@ export function ExecutionDetail({ executionId }: ExecutionDetailProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const carouselRef = useRef<HTMLDivElement>(null);
   
-  const { data, isLoading } = useQuery<ExecutionDetailResponse>({
-    queryKey: ["/api/executions", executionId],
-    queryFn: async () => {
-      const res = await fetch(`/api/executions/${executionId}`);
-      return res.json();
-    },
-  });
+  const { data, isLoading } = useExecutionDetail(executionId);
   
   // Track scroll position to update dot indicators
   useEffect(() => {

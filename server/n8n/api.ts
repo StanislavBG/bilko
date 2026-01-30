@@ -1,3 +1,6 @@
+import { createLogger } from "../logger";
+
+const log = createLogger("n8n");
 const API_TIMEOUT = 10000;
 const WEBHOOK_TIMEOUT = 30000;
 
@@ -106,7 +109,7 @@ export async function createWorkflow(params: CreateWorkflowParams): Promise<N8nW
 
 export async function activateWorkflow(workflowId: string): Promise<void> {
   const headers = await getHeaders();
-  console.log(`[n8n] Calling POST ${getApiBaseUrl()}/workflows/${workflowId}/activate`);
+  log.debug(`Calling POST ${getApiBaseUrl()}/workflows/${workflowId}/activate`);
   const response = await fetchWithTimeout(
     `${getApiBaseUrl()}/workflows/${workflowId}/activate`,
     { method: "POST", headers },
@@ -115,10 +118,10 @@ export async function activateWorkflow(workflowId: string): Promise<void> {
   
   if (!response.ok) {
     const error = await response.text();
-    console.log(`[n8n] Activation failed: ${response.status} - ${error}`);
+    log.warn(`Activation failed: ${response.status} - ${error}`);
     throw new Error(`Failed to activate workflow: ${response.status} - ${error}`);
   }
-  console.log(`[n8n] Workflow ${workflowId} activated successfully`);
+  log.info(`Workflow ${workflowId} activated successfully`);
 }
 
 export async function getWorkflow(workflowId: string): Promise<N8nWorkflow> {
@@ -138,7 +141,7 @@ export async function getWorkflow(workflowId: string): Promise<N8nWorkflow> {
 
 export async function updateWorkflow(workflowId: string, params: { nodes: N8nNode[]; connections: Record<string, unknown> }): Promise<N8nWorkflow> {
   const headers = await getHeaders();
-  console.log(`[n8n] Updating workflow ${workflowId}...`);
+  log.debug(`Updating workflow ${workflowId}...`);
   const response = await fetchWithTimeout(
     `${getApiBaseUrl()}/workflows/${workflowId}`,
     {
@@ -158,7 +161,7 @@ export async function updateWorkflow(workflowId: string, params: { nodes: N8nNod
     throw new Error(`Failed to update workflow: ${response.status} - ${error}`);
   }
   
-  console.log(`[n8n] Workflow ${workflowId} updated successfully`);
+  log.info(`Workflow ${workflowId} updated successfully`);
   return response.json();
 }
 

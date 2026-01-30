@@ -1,4 +1,7 @@
 import type { WorkflowDefinition } from "../workflows/types";
+import { createLogger } from "../logger";
+
+const log = createLogger("n8n");
 
 export interface N8nWorkflow {
   id: string;
@@ -76,7 +79,7 @@ function mapN8nError(status: number, rawMessage: string): { code: string; messag
     retryable: status >= 500 
   };
 
-  console.error(`[n8n] API error: ${status} - ${rawMessage}`);
+  log.error(`API error: ${status} - ${rawMessage}`);
   return mapped;
 }
 
@@ -122,7 +125,7 @@ export class N8nClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
-    console.log(`[n8n] ${method} ${path} (request: ${requestId})`);
+    log.debug(`${method} ${path} (request: ${requestId})`);
 
     try {
       const response = await fetch(url, {
@@ -209,7 +212,7 @@ export function createN8nClient(): N8nClient | null {
   try {
     return new N8nClient();
   } catch (error) {
-    console.warn("n8n client not configured:", error instanceof Error ? error.message : error);
+    log.warn("n8n client not configured", error);
     return null;
   }
 }

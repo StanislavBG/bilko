@@ -1,5 +1,8 @@
 import type { Express } from "express";
 import sharp from "sharp";
+import { createLogger } from "../logger";
+
+const log = createLogger("images");
 
 export function registerImageRoutes(app: Express): void {
   app.post("/api/images/brand", async (req, res) => {
@@ -73,7 +76,7 @@ export function registerImageRoutes(app: Express): void {
       });
 
     } catch (error: any) {
-      console.error("[images/brand] Error:", error.message);
+      log.error("Error branding image", { message: error.message });
       res.status(500).json({ 
         success: false,
         error: "Failed to brand image", 
