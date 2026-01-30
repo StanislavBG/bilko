@@ -1,9 +1,9 @@
 # APP-WORKFLOWS-001: Agentic Workflows Page
 
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Priority**: HIGH  
 **Partition**: apps  
-**Dependencies**: HUB-001, UI-006, DATA-002, INT-005
+**Dependencies**: HUB-001, UI-006, ARCH-012, DATA-002, INT-005
 
 ## Purpose
 
@@ -46,29 +46,45 @@ Step 3: Execution Detail (Main content)
 
 ## Directives
 
-### D1: Mobile Drill-Down Navigation
+### D1: Stack-Based Mobile Drill-Down Navigation
 
-On mobile, use Sheet component for hierarchical navigation:
+On mobile, use Sheet component with stack-based navigation (per UI-006 D6, ARCH-012):
 
 ```tsx
-<Sheet>
-  <SheetTrigger asChild>
-    <Button size="icon" variant="ghost">
-      <Menu />
-    </Button>
-  </SheetTrigger>
-  <SheetContent side="left">
-    <SheetHeader>
-      {showWorkflows && (
-        <Button onClick={() => setShowWorkflows(false)}>
-          <ChevronLeft /> Back
-        </Button>
-      )}
-    </SheetHeader>
-    {showWorkflows ? <WorkflowList /> : <CategoryList />}
-  </SheetContent>
-</Sheet>
+interface WorkflowNavLevel {
+  title: string;
+  items: Array<{
+    id: string;
+    title: string;
+    subtitle?: string;
+    children?: WorkflowDefinition[];
+    workflow?: WorkflowDefinition;
+  }>;
+}
+
+const [navStack, setNavStack] = useState<WorkflowNavLevel[]>([rootLevel]);
+const currentLevel = navStack[navStack.length - 1];
+const canGoBack = navStack.length > 1;
+
+// Push to drill into category
+const handleDrillInto = (item) => {
+  if (item.children) {
+    setNavStack([...navStack, { title: item.title, items: mapToNavItems(item.children) }]);
+  }
+};
+
+// Pop to go back
+const handleBack = () => setNavStack(navStack.slice(0, -1));
+
+// Reset stack when Sheet closes
+useEffect(() => {
+  if (!isOpen) setNavStack([rootLevel]);
+}, [isOpen]);
 ```
+
+**Pattern:** Push/pop stack operations, not boolean/enum toggles.
+
+**Note:** WorkflowNavLevel is an app-specific adaptation of the NavLevel pattern from ARCH-012. It follows the same stack-based mechanics but includes workflow-specific fields (workflow?: WorkflowDefinition). The main sidebar uses NavItem/NavLevel; individual apps may define domain-specific level interfaces while maintaining the push/pop/reset behavior.
 
 ### D2: Execution Detail Views
 
@@ -126,7 +142,8 @@ Workflow Registry (n8n) → API → Frontend
 
 ## Cross-References
 
-- UI-006: Mobile Layout (carousel pattern, Sheet overlays)
+- UI-006: Mobile Layout (carousel pattern, Sheet overlays, D6 stack-based drill-down)
+- ARCH-012: Unified Navigation Structure (WorkflowNavLevel interface pattern)
 - INT-005: Callback Persistence Contract (execution data)
 - DATA-002: Communication Traces (trace linkage)
 - HUB-003: Nested Navigation Pattern (column layout)
