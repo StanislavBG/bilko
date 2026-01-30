@@ -180,12 +180,21 @@ async function executeN8nWorkflow(
       console.log(`[n8n] Using prod callback URL: ${callbackUrl}`);
     }
 
+    // Fetch recent topics for deduplication (per ARCH-000)
+    const recentTopicsRaw = await orchestratorStorage.getRecentTopics(workflow.id, 48);
+    const recentTopics = recentTopicsRaw.map(t => ({
+      headline: t.headline,
+      usedAt: t.usedAt?.toISOString(),
+    }));
+    console.log(`[n8n] Sending ${recentTopics.length} recent topics for deduplication`);
+
     // Include secrets needed by n8n workflows (passed via payload per ARCH-000-B)
     const n8nPayload = {
       ...input,
       geminiApiKey: process.env.GEMINI_API_KEY,
       traceId: input.context.traceId,
       callbackUrl, // Dynamic callback URL for n8n to use
+      recentTopics, // Recent topics for duplicate prevention
     };
 
     const response = await fetch(webhookUrl, {

@@ -100,6 +100,7 @@ interface ExecutionStatus {
 interface WorkflowOutput {
   hasOutput: boolean;
   message?: string;
+  fb2DisclosureText?: string;
   outputs?: {
     final: {
       traceId: string;
@@ -289,13 +290,13 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
             </Card>
           )}
 
-          {transparencyPost && (
-            <Card data-testid="card-transparency-post">
+          {data.fb2DisclosureText && (
+            <Card data-testid="card-fb2-disclosure">
               <CardHeader className="py-2 px-3">
                 <div className="flex items-center justify-between gap-1">
                   <div className="flex items-center gap-1">
                     <Shield className="h-3 w-3 text-muted-foreground" />
-                    <CardTitle className="text-xs">Post 2: Transparency</CardTitle>
+                    <CardTitle className="text-xs">Post 2: Professional Disclosure</CardTitle>
                   </div>
                   <div className="flex items-center gap-1">
                     <Tooltip>
@@ -304,21 +305,21 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
-                          onClick={() => copy(transparencyPost, "transparency-post", "Post copied")}
-                          data-testid="button-copy-transparency"
+                          onClick={() => copy(data.fb2DisclosureText!, "fb2-disclosure", "Disclosure copied")}
+                          data-testid="button-copy-fb2"
                         >
-                          {isCopied("transparency-post") ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                          {isCopied("fb2-disclosure") ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Copy post</TooltipContent>
+                      <TooltipContent>Copy disclosure</TooltipContent>
                     </Tooltip>
-                    <Badge variant="secondary" className="text-[10px] px-1">Follow-up</Badge>
+                    <Badge variant="secondary" className="text-[10px] px-1">FB Post 2</Badge>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-2 pt-0">
                 <div className="bg-muted/50 rounded p-2">
-                  <p className="text-xs text-muted-foreground line-clamp-3" data-testid="text-transparency-content">{transparencyPost}</p>
+                  <p className="text-xs text-muted-foreground whitespace-pre-line" data-testid="text-fb2-disclosure">{data.fb2DisclosureText}</p>
                 </div>
               </CardContent>
             </Card>

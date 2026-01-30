@@ -75,12 +75,22 @@ export function registerWorkflowRoutes(app: Express): void {
       });
 
       if (step === "final-output") {
+        // Static FB2 disclosure text for easy copy-paste
+        const FB2_DISCLOSURE_TEXT = `I've developed this AI-driven system to efficiently curate European football news, serving as a professional 'proof of work' for AI integration. Grounded in transparency and the human-in-the-loop principle, this project demonstrates how AI can enhance specialized content. Follow for updates, or visit my bio to learn how to build similar systems.
+
+Bilko Bibitkov Human-Centric AI Curation`;
+
+        // Inject FB2 disclosure text into the output
+        const enrichedOutput = output && typeof output === "object" 
+          ? { ...output as Record<string, unknown>, fb2DisclosureText: FB2_DISCLOSURE_TEXT }
+          : output;
+
         await orchestratorStorage.updateExecution(execution.id, {
           status: status === "success" ? "completed" : "failed",
           completedAt: new Date(),
-          finalOutput: output as Record<string, unknown> | undefined,
+          finalOutput: enrichedOutput as Record<string, unknown> | undefined,
         });
-        console.log(`[callback] Execution ${execution.id} completed with final output`);
+        console.log(`[callback] Execution ${execution.id} completed with final output (FB2 disclosure added)`);
         
         // Record the used topic to prevent duplicates
         if (status === "success" && output && typeof output === "object") {
@@ -131,6 +141,11 @@ export function registerWorkflowRoutes(app: Express): void {
   });
 
   app.get("/api/workflows/:id/output", async (req: Request, res: Response) => {
+    // Static FB2 disclosure text for easy copy-paste
+    const FB2_DISCLOSURE_TEXT = `I've developed this AI-driven system to efficiently curate European football news, serving as a professional 'proof of work' for AI integration. Grounded in transparency and the human-in-the-loop principle, this project demonstrates how AI can enhance specialized content. Follow for updates, or visit my bio to learn how to build similar systems.
+
+Bilko Bibitkov Human-Centric AI Curation`;
+
     try {
       const workflowId = req.params.id;
       const traces = await orchestratorStorage.getRecentTraces(50);
@@ -146,12 +161,14 @@ export function registerWorkflowRoutes(app: Express): void {
       if (!finalOutput && !sentimentOutput && !articlesOutput) {
         return res.json({ 
           hasOutput: false,
-          message: "No workflow output found. Execute the workflow to see results."
+          message: "No workflow output found. Execute the workflow to see results.",
+          fb2DisclosureText: FB2_DISCLOSURE_TEXT // Always available for copy-paste
         });
       }
 
       res.json({
         hasOutput: true,
+        fb2DisclosureText: FB2_DISCLOSURE_TEXT, // Always available for copy-paste
         outputs: {
           final: finalOutput ? {
             traceId: finalOutput.traceId,
