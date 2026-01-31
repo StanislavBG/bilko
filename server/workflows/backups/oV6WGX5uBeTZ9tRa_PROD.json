@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-01-30T09:09:43.376Z",
+  "updatedAt": "2026-01-31T22:24:51.612Z",
   "createdAt": "2026-01-25T09:36:24.234Z",
   "id": "oV6WGX5uBeTZ9tRa",
   "name": "[EFD] European Football Daily",
@@ -522,7 +522,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create a short, punchy tagline for a European football social media image.\\n\\nTOPIC: {{ $json.selectedTopic?.headline || \"Football news\" }}\\nPOST PREVIEW: {{ $json.postContent ? $json.postContent.substring(0, 100) : \"Football update\" }}\\n\\nRules:\\n- Maximum 4-5 words\\n- Catchy and memorable\\n- No hashtags\\n- Use action words or emotions\\n- Should work overlaid on a football image\\n\\nReturn ONLY a JSON object: {\\\"tagline\\\": \\\"your tagline here\\\"}\"\n    }]\n  }]\n}",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create an informative headline for a European football image.\\n\\nTOPIC: {{ $json.selectedTopic?.headline || \\\"Football news\\\" }}\\nTEAMS: {{ ($json.selectedTopic?.teams || []).join(' vs ') }}\\nEVENT: {{ $json.selectedTopic?.event || \\\"update\\\" }}\\nHAS SCORE: {{ $json.selectedTopic?.hasScore || false }}\\nHAS NUMBERS: {{ $json.selectedTopic?.hasNumbers || false }}\\n\\nRules:\\n- 3-6 words maximum\\n- If HAS SCORE is true, INCLUDE the actual score from the headline (e.g., \\\"Barcelona 3-0 Madrid\\\")\\n- If HAS NUMBERS is true, include the key number (transfer fee, points, goals)\\n- Prioritize team names and factual information\\n- NO generic phrases like \\\"Game On\\\", \\\"Breaking News\\\", \\\"Big Win\\\", \\\"What A Match\\\"\\n- Should inform the viewer of WHAT happened, not just generate excitement\\n\\nGood examples:\\n- \\\"Barcelona 3-0 Real Madrid\\\"\\n- \\\"Man City Clinches Title\\\"\\n- \\\"£80M Transfer Complete\\\"\\n- \\\"Liverpool Top After Win\\\"\\n\\nBad examples (DO NOT USE):\\n- \\\"Game On!\\\"\\n- \\\"What A Match!\\\"\\n- \\\"Football Fever\\\"\\n- \\\"Big News Today\\\"\\n\\nReturn ONLY a JSON object: {\\\"tagline\\\": \\\"your informative headline here\\\"}\"\n    }]\n  }]\n}",
         "options": {
           "response": {
             "response": {}
@@ -911,9 +911,9 @@
   },
   "meta": null,
   "pinData": {},
-  "versionId": "bd90ae12-2c0e-49ec-9290-198c6a52b76c",
-  "activeVersionId": "bd90ae12-2c0e-49ec-9290-198c6a52b76c",
-  "versionCounter": 295,
+  "versionId": "922d2045-d278-4ab5-9d7d-fa05025eb58e",
+  "activeVersionId": "922d2045-d278-4ab5-9d7d-fa05025eb58e",
+  "versionCounter": 348,
   "triggerCount": 1,
   "shared": [
     {
@@ -938,7 +938,7 @@
             "userId": "80f5768f-36e3-4197-9886-2f8e29df41d7",
             "projectId": "tYcTNrTV20x5m3NS",
             "user": {
-              "updatedAt": "2026-01-30T08:00:02.000Z",
+              "updatedAt": "2026-01-31T08:03:32.000Z",
               "createdAt": "2026-01-21T18:01:09.996Z",
               "id": "80f5768f-36e3-4197-9886-2f8e29df41d7",
               "email": "bilkobibitkov2000@gmail.com",
@@ -950,11 +950,15 @@
                 "userClaimedAiCredits": true,
                 "easyAIWorkflowOnboarded": true,
                 "firstSuccessfulWorkflowId": "d144QoAsV5hIbzvQ",
-                "userActivatedAt": 1769150504302
+                "userActivatedAt": 1769150504302,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1769766178056
+                }
               },
               "disabled": false,
               "mfaEnabled": false,
-              "lastActiveAt": "2026-01-30",
+              "lastActiveAt": "2026-01-31",
               "isPending": false
             }
           }
@@ -964,9 +968,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-01-30T09:09:43.377Z",
-    "createdAt": "2026-01-30T09:09:43.377Z",
-    "versionId": "bd90ae12-2c0e-49ec-9290-198c6a52b76c",
+    "updatedAt": "2026-01-31T22:24:51.616Z",
+    "createdAt": "2026-01-31T22:24:51.616Z",
+    "versionId": "922d2045-d278-4ab5-9d7d-fa05025eb58e",
     "workflowId": "oV6WGX5uBeTZ9tRa",
     "nodes": [
       {
@@ -1015,7 +1019,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const rss = $input.first().json;\nconst items = rss?.rss?.channel?.item || [];\nconst articles = items.slice(0, 10).map(item => ({\n  title: item.title || '',\n  link: item.link || '',\n  source: 'Google News',\n  pubDate: item.pubDate || ''\n}));\nreturn articles.map(a => ({ json: a }));"
+          "jsCode": "const rss = $input.first().json;\nconst webhookData = $('Webhook').first().json.body || {};\nconst recentTopics = webhookData.recentTopics || [];\n\n// Build normalized headline set for exact matching\nconst recentHeadlinesNormalized = new Set(\n  recentTopics.map(t => t.headline.toLowerCase().trim().replace(/[^a-z0-9\\s]/g, ''))\n);\n\nconst items = rss?.rss?.channel?.item || [];\n\nconst articles = items.slice(0, 20).map(item => ({\n  title: item.title || '',\n  sourceHeadline: item.title || '', // Preserve original for callback\n  link: item.link || '',\n  source: 'Google News',\n  pubDate: item.pubDate || ''\n})).filter(a => {\n  const normalizedTitle = a.title.toLowerCase().trim().replace(/[^a-z0-9\\s]/g, '');\n  \n  // PRIMARY: Normalized exact headline match\n  if (recentHeadlinesNormalized.has(normalizedTitle)) {\n    return false;\n  }\n  \n  // SECONDARY: Word overlap check (>50% = likely duplicate)\n  const words = new Set(normalizedTitle.split(/\\s+/).filter(w => w.length > 3));\n  if (words.size >= 3) {\n    for (const recent of recentTopics) {\n      const recentNorm = recent.headline.toLowerCase().replace(/[^a-z0-9\\s]/g, '');\n      const recentWords = new Set(recentNorm.split(/\\s+/).filter(w => w.length > 3));\n      if (recentWords.size >= 3) {\n        const overlap = [...words].filter(w => recentWords.has(w)).length;\n        const similarity = overlap / Math.min(words.size, recentWords.size);\n        if (similarity > 0.5) {\n          return false;\n        }\n      }\n    }\n  }\n  \n  return true;\n}).slice(0, 10);\n\n// Fallback if all filtered out\nif (articles.length === 0 && items.length > 0) {\n  const first = items[0];\n  return [{\n    json: {\n      title: first.title || 'European Football Update',\n      sourceHeadline: first.title || 'European Football Update',\n      link: first.link || '',\n      source: 'Google News',\n      pubDate: first.pubDate || '',\n      forcedFallback: true,\n      recentTopicsCount: recentTopics.length\n    }\n  }];\n}\n\nreturn articles.map(a => ({ json: { ...a, recentTopicsCount: recentTopics.length } }));"
         },
         "name": "Extract Articles",
         "type": "n8n-nodes-base.code",
@@ -1067,7 +1071,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are a passionate European football social media manager. Create an engaging Facebook post.\\n\\nTOPIC: {{ $json.selectedTopic.headline }}\\nEVENT: {{ $json.selectedTopic.event }}\\nTEAMS: {{ ($json.selectedTopic.teams || []).join(', ') }}\\nHASHTAGS TO USE: {{ $json.hashtagString }}\\n\\nCreate an exciting Facebook post (2-3 paragraphs max) that:\\n1. Opens with energy and excitement\\n2. Highlights the key story\\n3. Invites engagement (follow, comment)\\n4. MUST end with these EXACT hashtags: {{ $json.hashtagString }}\\n\\nIMPORTANT: Do NOT mention specific player or coach names. Focus on TEAM and EVENT.\\n\\nReturn ONLY a JSON object with postContent (the text including hashtags) and sentiment (positive/neutral/negative)\"\n    }]\n  }]\n}",
+          "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are a European football social media manager. Create an informative Facebook post.\\n\\nTOPIC: {{ $json.selectedTopic.headline }}\\nEVENT: {{ $json.selectedTopic.event }}\\nTEAMS: {{ ($json.selectedTopic.teams || []).join(', ') }}\\nHAS SCORE: {{ $json.selectedTopic.hasScore || false }}\\nHASHTAGS TO USE: {{ $json.hashtagString }}\\n\\nCreate an informative Facebook post (2-3 short paragraphs) that:\\n1. Leads with the key facts - scores, numbers, team names\\n2. Provides context about what this means for the league/tournament\\n3. Ends with a question to drive engagement\\n4. MUST end with these EXACT hashtags: {{ $json.hashtagString }}\\n\\nStyle guidelines:\\n- Be factual and informative, not sensational\\n- Highlight scores, statistics, and numbers prominently\\n- Mention team and league names for brand recognition\\n- Do NOT mention specific player or coach names\\n- Keep tone professional but accessible\\n\\nReturn ONLY a JSON object with postContent (the text including hashtags) and sentiment (positive/neutral/negative)\"\n    }]\n  }]\n}",
           "options": {},
           "authentication": "genericCredentialType",
           "genericAuthType": "httpHeaderAuth"
@@ -1161,7 +1165,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const brandingResult = $input.first().json;\nconst prevData = $(\"Parse Imagen Response\").first().json;\n\nconst postContent = prevData.postContent || \"Football news update!\";\nconst imagePrompt = prevData.imagePrompt || \"European football celebration\";\nconst sourceLink = prevData.sourceLink || \"\";\n\n// Use branded image if available, otherwise fallback to original\nlet imageDataUri = prevData.imageDataUri || null;\nif (brandingResult.success && brandingResult.brandedImageBase64) {\n  imageDataUri = \"data:image/png;base64,\" + brandingResult.brandedImageBase64;\n}\n\n// Create transparency/disclosure post\nlet transparencyPost = \"I've developed this AI-driven system to efficiently curate European football news, serving as a professional 'proof of work' for AI integration. Grounded in transparency and the human-in-the-loop principle, this project demonstrates how AI can enhance specialized content. Follow for updates, or visit my bio to learn how to build similar systems.\\n\\nBilko Bibitkov Human-Centric AI Curation\";\n\nif (sourceLink) {\n  transparencyPost += \"\\n\\nSource: \" + sourceLink;\n}\n\nconst output = {\n  success: true,\n  data: {\n    postContent: postContent,\n    imagePrompt: imagePrompt,\n    imageUrl: imageDataUri,\n    transparencyPost: transparencyPost,\n    sourceLink: sourceLink,\n    contentFiltered: !imageDataUri,\n    brandingApplied: brandingResult.success === true\n  },\n  metadata: {\n    workflowId: \"european-football-daily\",\n    executedAt: new Date().toISOString(),\n    aiGenerated: true\n  }\n};\nreturn [{ json: output }];"
+          "jsCode": "const brandingResult = $input.first().json;\nconst prevData = $(\"Parse Imagen Response\").first().json;\nconst aggregateData = $(\"Aggregate Compliant Topics\").first().json;\n\nconst postContent = prevData.postContent || \"Football news update!\";\nconst imagePrompt = prevData.imagePrompt || \"European football celebration\";\nconst sourceLink = prevData.sourceLink || \"\";\n\n// Get the selected topic from aggregation step (includes sourceHeadline)\nconst selectedTopic = aggregateData.selectedTopic || {};\n\n// Use branded image if available, otherwise fallback to original\nlet imageDataUri = prevData.imageDataUri || null;\nif (brandingResult.success && brandingResult.brandedImageBase64) {\n  imageDataUri = \"data:image/png;base64,\" + brandingResult.brandedImageBase64;\n}\n\n// Create transparency/disclosure post\nlet transparencyPost = \"I've developed this AI-driven system to efficiently curate European football news, serving as a professional 'proof of work' for AI integration. Grounded in transparency and the human-in-the-loop principle, this project demonstrates how AI can enhance specialized content. Follow for updates, or visit my bio to learn how to build similar systems.\\n\\nBilko Bibitkov Human-Centric AI Curation\";\n\nif (sourceLink) {\n  transparencyPost += \"\\n\\nSource: \" + sourceLink;\n}\n\nconst output = {\n  success: true,\n  selectedTopic: {\n    headline: selectedTopic.headline || \"\",\n    sourceHeadline: selectedTopic.sourceHeadline || selectedTopic.headline || \"\",\n    sourceHeadlineHash: selectedTopic.sourceHeadlineHash || \"\",\n    teams: selectedTopic.teams || [],\n    event: selectedTopic.event || \"\",\n    dataRichness: selectedTopic.dataRichness || 0,\n    brandValue: selectedTopic.brandValue || 0\n  },\n  data: {\n    postContent: postContent,\n    imagePrompt: imagePrompt,\n    imageUrl: imageDataUri,\n    transparencyPost: transparencyPost,\n    sourceLink: sourceLink,\n    contentFiltered: !imageDataUri,\n    brandingApplied: brandingResult.success === true\n  },\n  metadata: {\n    workflowId: \"european-football-daily\",\n    executedAt: new Date().toISOString(),\n    aiGenerated: true\n  }\n};\nreturn [{ json: output }];"
         },
         "name": "Build Final Output",
         "type": "n8n-nodes-base.code",
@@ -1296,7 +1300,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Analyze this football news headline and extract key entities:\\n\\nHEADLINE: {{ $json.title }}\\n\\nReturn ONLY a JSON object with:\\n- headline: the original headline\\n- people: array of person names mentioned (players, coaches, etc)\\n- teams: array of team names mentioned\\n- event: brief description of the event (match, transfer, injury, etc)\\n- imageability: score 1-10 how easy to create a generic image (10=easy, 1=hard)\\n- imageSuggestion: a generic image concept that avoids real people names\\n\\nExample: { \\\"headline\\\": \\\"Barcelona wins 3-0\\\", \\\"people\\\": [], \\\"teams\\\": [\\\"Barcelona\\\"], \\\"event\\\": \\\"match victory\\\", \\\"imageability\\\": 9, \\\"imageSuggestion\\\": \\\"celebrating football team in red and blue\\\" }\"\n    }]\n  }]\n}",
+          "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Analyze this football news headline and extract key information for social media.\\n\\nHEADLINE: {{ $json.title }}\\n\\nReturn ONLY a JSON object with:\\n- headline: the original headline\\n- teams: array of team names mentioned (prioritize big clubs: Real Madrid, Barcelona, Man City, Liverpool, Bayern, PSG, Juventus, etc.)\\n- event: brief description (match result, transfer, injury, etc.)\\n- hasScore: boolean - true if headline contains a match score like 3-0, 2-1\\n- hasNumbers: boolean - true if contains significant numbers (transfer fees, goals, points, positions)\\n- dataRichness: score 1-10 (10=has scores/stats/numbers, 5=has team names, 1=vague/generic)\\n- brandValue: score 1-10 (10=mentions top clubs/leagues/tournaments, 1=unknown teams)\\n- imageability: score 1-10 how easy to create a generic image\\n- imageSuggestion: a generic image concept avoiding real people names\\n\\nPrioritize headlines with: actual scores, transfer fees, league standings, big club names.\\nExample: { \\\"headline\\\": \\\"Barcelona 3-0 Real Madrid\\\", \\\"teams\\\": [\\\"Barcelona\\\", \\\"Real Madrid\\\"], \\\"event\\\": \\\"El Clasico victory\\\", \\\"hasScore\\\": true, \\\"hasNumbers\\\": true, \\\"dataRichness\\\": 10, \\\"brandValue\\\": 10, \\\"imageability\\\": 9, \\\"imageSuggestion\\\": \\\"celebrating football team in red and blue\\\" }\"\n    }]\n  }]\n}",
           "options": {
             "batching": {
               "batch": {
@@ -1325,7 +1329,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const input = $input.first().json;\nconst geminiApiKey = $(\"Webhook\").first().json.body.geminiApiKey;\nconst callbackUrl = $(\"Webhook\").first().json.body.callbackUrl;\n\n// Get the source article link from Extract Articles using item index\nconst articleItems = $(\"Extract Articles\").all();\nconst currentIndex = $runIndex;\nconst articleData = articleItems[currentIndex]?.json || {};\nconst sourceLink = articleData.link || \"\";\n\n// Get the text response from Gemini\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\n\n// Strip markdown fences if present\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const analysis = JSON.parse(cleaned);\n  return [{\n    json: {\n      ...analysis,\n      sourceLink: sourceLink,\n      geminiApiKey,\n      callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      headline: \"Football news update\",\n      people: [],\n      teams: [],\n      event: \"general news\",\n      imageability: 5,\n      imageSuggestion: \"generic football stadium scene\",\n      sourceLink: sourceLink,\n      parseError: e.message,\n      geminiApiKey,\n      callbackUrl\n    }\n  }];\n}"
+          "jsCode": "const input = $input.first().json;\nconst geminiApiKey = $(\"Webhook\").first().json.body.geminiApiKey;\nconst callbackUrl = $(\"Webhook\").first().json.body.callbackUrl;\n\n// Get the source article data from Extract Articles using item index\nconst articleItems = $(\"Extract Articles\").all();\nconst currentIndex = $runIndex;\nconst articleData = articleItems[currentIndex]?.json || {};\nconst sourceLink = articleData.link || \"\";\nconst sourceHeadline = articleData.sourceHeadline || articleData.title || \"\";\nconst sourceHeadlineHash = articleData.titleHash || \"\";\n\n// Get the text response from Gemini\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\n\n// Strip markdown fences if present\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const analysis = JSON.parse(cleaned);\n  return [{\n    json: {\n      ...analysis,\n      sourceLink: sourceLink,\n      sourceHeadline: sourceHeadline,\n      sourceHeadlineHash: sourceHeadlineHash,\n      geminiApiKey,\n      callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      headline: \"Football news update\",\n      people: [],\n      teams: [],\n      event: \"general news\",\n      imageability: 5,\n      imageSuggestion: \"generic football stadium scene\",\n      sourceLink: sourceLink,\n      sourceHeadline: sourceHeadline,\n      sourceHeadlineHash: sourceHeadlineHash,\n      parseError: e.message,\n      geminiApiKey,\n      callbackUrl\n    }\n  }];\n}"
         },
         "id": "4a292d0b-d120-4074-87fc-6667de4e4de6",
         "name": "Parse Topic Analysis",
@@ -1398,7 +1402,7 @@
       },
       {
         "parameters": {
-          "jsCode": "// Collect all items (each article's compliance check result)\nconst items = $input.all();\nconst geminiApiKey = items[0]?.json?.geminiApiKey;\nconst callbackUrl = items[0]?.json?.callbackUrl;\n\n// Filter to only compliant topics and sort by imageability\nconst compliantTopics = items\n  .map(item => item.json)\n  .filter(topic => topic.compliant === true)\n  .sort((a, b) => (b.imageability || 0) - (a.imageability || 0));\n\n// If no compliant topics, create a safe fallback\nif (compliantTopics.length === 0) {\n  return [{\n    json: {\n      selectedTopic: {\n        headline: 'European Football Weekly Update',\n        teams: [],\n        event: 'weekly roundup',\n        safeImagePrompt: 'Exciting football match scene in a packed stadium with cheering fans',\n        anonymizedDescriptions: {},\n        fallback: true\n      },\n      allTopics: items.map(i => i.json),\n      geminiApiKey,\n      callbackUrl\n    }\n  }];\n}\n\n// Select the best topic (highest imageability score)\nreturn [{\n  json: {\n    selectedTopic: compliantTopics[0],\n    alternativeTopics: compliantTopics.slice(1, 3),\n    allTopics: items.map(i => i.json),\n    geminiApiKey,\n    callbackUrl\n  }\n}];"
+          "jsCode": "// Collect all items (each article's compliance check result)\nconst items = $input.all();\nconst geminiApiKey = items[0]?.json?.geminiApiKey;\nconst callbackUrl = items[0]?.json?.callbackUrl;\n\n// Filter to only compliant topics and sort by data-richness + brand value\nconst compliantTopics = items\n  .map(item => item.json)\n  .filter(topic => topic.compliant === true)\n  .sort((a, b) => {\n    // Combined score prioritizing data-rich, high-brand topics\n    const scoreA = (a.dataRichness || 0) * 2 + (a.brandValue || 0) * 1.5 + (a.imageability || 0);\n    const scoreB = (b.dataRichness || 0) * 2 + (b.brandValue || 0) * 1.5 + (b.imageability || 0);\n    return scoreB - scoreA;\n  });\n\n// If no compliant topics, create a safe fallback\nif (compliantTopics.length === 0) {\n  return [{\n    json: {\n      selectedTopic: {\n        headline: 'European Football Weekly Update',\n        teams: [],\n        event: 'weekly roundup',\n        safeImagePrompt: 'Exciting football match scene in a packed stadium with cheering fans',\n        anonymizedDescriptions: {},\n        fallback: true\n      },\n      allTopics: items.map(i => i.json),\n      geminiApiKey,\n      callbackUrl\n    }\n  }];\n}\n\n// Select the best topic (highest combined score)\nreturn [{\n  json: {\n    selectedTopic: compliantTopics[0],\n    alternativeTopics: compliantTopics.slice(1, 3),\n    allTopics: items.map(i => i.json),\n    geminiApiKey,\n    callbackUrl\n  }\n}];"
         },
         "id": "2426cf99-5a5b-4963-9ffc-81c4ec3cee01",
         "name": "Aggregate Compliant Topics",
@@ -1484,7 +1488,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create a short, punchy tagline for a European football social media image.\\n\\nTOPIC: {{ $json.selectedTopic?.headline || \"Football news\" }}\\nPOST PREVIEW: {{ $json.postContent ? $json.postContent.substring(0, 100) : \"Football update\" }}\\n\\nRules:\\n- Maximum 4-5 words\\n- Catchy and memorable\\n- No hashtags\\n- Use action words or emotions\\n- Should work overlaid on a football image\\n\\nReturn ONLY a JSON object: {\\\"tagline\\\": \\\"your tagline here\\\"}\"\n    }]\n  }]\n}",
+          "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create an informative headline for a European football image.\\n\\nTOPIC: {{ $json.selectedTopic?.headline || \\\"Football news\\\" }}\\nTEAMS: {{ ($json.selectedTopic?.teams || []).join(' vs ') }}\\nEVENT: {{ $json.selectedTopic?.event || \\\"update\\\" }}\\nHAS SCORE: {{ $json.selectedTopic?.hasScore || false }}\\nHAS NUMBERS: {{ $json.selectedTopic?.hasNumbers || false }}\\n\\nRules:\\n- 3-6 words maximum\\n- If HAS SCORE is true, INCLUDE the actual score from the headline (e.g., \\\"Barcelona 3-0 Madrid\\\")\\n- If HAS NUMBERS is true, include the key number (transfer fee, points, goals)\\n- Prioritize team names and factual information\\n- NO generic phrases like \\\"Game On\\\", \\\"Breaking News\\\", \\\"Big Win\\\", \\\"What A Match\\\"\\n- Should inform the viewer of WHAT happened, not just generate excitement\\n\\nGood examples:\\n- \\\"Barcelona 3-0 Real Madrid\\\"\\n- \\\"Man City Clinches Title\\\"\\n- \\\"£80M Transfer Complete\\\"\\n- \\\"Liverpool Top After Win\\\"\\n\\nBad examples (DO NOT USE):\\n- \\\"Game On!\\\"\\n- \\\"What A Match!\\\"\\n- \\\"Football Fever\\\"\\n- \\\"Big News Today\\\"\\n\\nReturn ONLY a JSON object: {\\\"tagline\\\": \\\"your informative headline here\\\"}\"\n    }]\n  }]\n}",
           "options": {
             "response": {
               "response": {}
@@ -1867,10 +1871,10 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-01-30T09:09:43.621Z",
-        "id": 158,
+        "createdAt": "2026-01-31T22:24:51.846Z",
+        "id": 161,
         "workflowId": "oV6WGX5uBeTZ9tRa",
-        "versionId": "bd90ae12-2c0e-49ec-9290-198c6a52b76c",
+        "versionId": "922d2045-d278-4ab5-9d7d-fa05025eb58e",
         "event": "activated",
         "userId": "80f5768f-36e3-4197-9886-2f8e29df41d7"
       }

@@ -917,6 +917,30 @@
         "ENV-002"
       ],
       "description": "Registry of all public-facing channels and distribution endpoints."
+    },
+    "ENV-004": {
+      "id": "ENV-004",
+      "title": "EFD Workflow",
+      "path": "rules/env/004-efd-workflow.md",
+      "partition": "env",
+      "priority": "HIGH",
+      "version": "1.1.0",
+      "triggers": [
+        "european football daily",
+        "efd",
+        "tagline",
+        "image title",
+        "generate tagline"
+      ],
+      "dependencies": [
+        "ENV-001",
+        "ENV-002"
+      ],
+      "crossReferences": [
+        "ENV-002",
+        "INT-001"
+      ],
+      "description": "European Football Daily workflow documentation including node purposes, prompt guidelines, and changelog."
     }
   },
   "partitions": {
