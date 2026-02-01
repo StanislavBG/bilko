@@ -1,19 +1,33 @@
 # ENV-002: Workflow Registry
 
 **Priority**: HIGH  
-**Version**: 1.0.0  
-**Last Updated**: 2026-01-25
+**Version**: 1.1.0  
+**Last Updated**: 2026-02-01
 
 ## Purpose
 
-Central registry of all n8n workflows with their environment-specific artifacts. This is the authoritative source for locating workflow definitions.
+Central registry of all n8n workflows with their environment-specific artifacts and operational details. This is the authoritative source for locating workflow definitions, n8n IDs, and webhook URLs.
 
 ## Registry
 
-| Workflow ID | Name | DEV Artifact | PROD Artifact | Status |
-|-------------|------|--------------|---------------|--------|
-| `european-football-daily` | European Football Daily | `artifacts/dev/workflows/european-football-daily.json` | `artifacts/prod/workflows/european-football-daily.json` | Active |
-| `echo-test` | Bilko Echo Test | N/A (simple test) | N/A (simple test) | Active |
+| Workflow ID | Name | n8n ID | Webhook Path | Status |
+|-------------|------|--------|--------------|--------|
+| `european-football-daily` | European Football Daily | `oV6WGX5uBeTZ9tRa` | `european-football-daily` | Active |
+| `echo-test` | Bilko Echo Test | (simple test) | `bilko-echo-test` | Active |
+
+## Artifact Locations
+
+| Workflow ID | DEV Artifact | PROD Artifact |
+|-------------|--------------|---------------|
+| `european-football-daily` | `artifacts/dev/workflows/european-football-daily.json` | `artifacts/prod/workflows/european-football-daily.json` |
+| `echo-test` | N/A | N/A |
+
+## Human Goals/Objectives
+
+| Workflow ID | Purpose | Key Outputs |
+|-------------|---------|-------------|
+| `european-football-daily` | Multi-source European football news aggregation with AI-generated Facebook posts | `postContent`, `imagePrompt`, hashtags |
+| `echo-test` | Simple connectivity test for n8n webhook integration | Echo response |
 
 ## Artifact File Naming
 
