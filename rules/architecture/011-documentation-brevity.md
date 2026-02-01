@@ -88,9 +88,19 @@ This file is a **bootstrap pointer only**. All project knowledge lives in `/rule
 
 - **Rules**: `/rules/` (start with ARCH-000, ARCH-006)
 - **Stack**: React + Tailwind + Shadcn | Express | PostgreSQL + Drizzle | Replit Auth
-- **Manifest**: `rules/manifest.json`
-- **Preferences**: Move slowly, rules-first, no over-building
+- **Manifest**: `rules/manifest.json` (contains bootstrap.readingOrder and full rule index)
+- **Preferences**: Move slowly, rules-first, no over-building, automation-first
 ```
+
+## Manifest Bootstrap Section
+
+The `rules/manifest.json` file contains a `bootstrap` section that provides:
+- `_instruction`: Directive to read all rules
+- `readingOrder`: Priority files to read first
+- `preferences`: User working preferences
+- `stack`: Technology choices
+
+This section is machine-readable AND human-readable. Agents should parse it for routing, but the actual rule content lives in the `.md` files.
 
 ## Anti-Patterns
 
