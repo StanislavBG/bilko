@@ -1,12 +1,12 @@
 # UI-006: Mobile Layout
 
-**Version**: 1.3.0  
+**Version**: 2.0.0  
 **Priority**: HIGH  
 **Partition**: ui
 
 ## Purpose
 
-Defines mobile-responsive layout behavior for the "on the go" view, focusing on collapsible navigation columns with user-controlled expand/collapse.
+Defines mobile-responsive layout behavior for the "on the go" view. Mobile provides clean content-focused screens with navigation via primary sidebar drill-down.
 
 ## Scope
 
@@ -20,26 +20,25 @@ This rule applies when viewport width is below the mobile breakpoint (768px / md
 - Below 768px: Mobile layout applies
 - Above 768px: Desktop layout with side-by-side columns
 
-### D2: Collapsible Column Layout
+### D2: Clean Content Layout (Mobile)
 
-Navigation columns use the same layout on mobile and desktop. Users control collapse state:
+On mobile, pages show **content only** - no secondary/tertiary nav columns:
 
 ```
-ALL VIEWPORTS:
-+----+----+----+-------+      +--+--+--+--------+
-|Nav1|Nav2|Nav3|Content|  or  |N1|N2|N3|Content |
-|    |    |    |       |      |  |  |  |        |
-| expanded columns     |      | collapsed cols  |
-+----+----+----+-------+      +--+--+--+--------+
+MOBILE (<768px):                    DESKTOP (>=768px):
++------------------+                +----+----+----+-------+
+|     Content      |                |Nav1|Nav2|Nav3|Content|
+|                  |                |    |    |    |       |
+| (full width,     |                | L1 | L2 | L3 |       |
+|  scrollable)     |                |    |    |    |       |
++------------------+                +----+----+----+-------+
 ```
 
 **Behavior:**
-- Columns use min-width/max-width constraints (rem-based)
-- Each column has a user-controlled collapse toggle in footer
-- When collapsed: ~48px wide with abbreviated content
-- When expanded: 8-12rem wide with full labels
-- No automatic collapse on mobile - user-driven only
-- All columns remain accessible at all viewport sizes
+- L2/L3 nav columns: Hidden on mobile (`hidden md:flex`)
+- Content fills available width
+- All navigation happens through primary sidebar (L1) drill-down
+- Simple, Projects-like experience on mobile
 
 ### D3: Touch-Friendly Sizing
 
@@ -50,45 +49,28 @@ ALL VIEWPORTS:
 ### D4: Navigation Visibility
 
 On mobile:
-- Primary sidebar: Hidden by default, accessible via SidebarTrigger in mobile header (per HUB-001)
-- Secondary/tertiary navs: Remain visible as narrow collapsed columns
-- Each nav column uses its existing collapse toggle to expand/collapse
-
-No new navigation controls are introduced - reuse existing collapse toggles and SidebarTrigger.
+- Primary sidebar: Hidden by default, accessible via SidebarTrigger in GlobalHeader
+- Secondary/tertiary navs: **Hidden** (use `hidden md:flex`)
+- Navigation hierarchy moves to primary sidebar drill-down
 
 ### D5: No New APIs
 
 No new backend APIs or data persistence required:
-- Leverage existing collapse state (local useState) per nav column
-- Ephemeral local UI state (useState) is permitted
-- "Stateless" means no backend persistence of nav state, not prohibition of React state
-- Primary sidebar uses Shadcn SidebarProvider with `hidden md:flex` pattern
+- Primary sidebar uses Shadcn SidebarProvider with Sheet overlay on mobile
+- Desktop nav columns manage local state (useState) for collapse
+- "Stateless" means no backend persistence of nav state
 
 ## Implementation Pattern
 
 ```tsx
-// Each nav manages its own collapse state
-const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+// L2/L3 nav columns: hidden on mobile, visible on desktop
+<div className="hidden md:flex shrink-0 border-r bg-muted/20 flex-col">
+  {/* Desktop nav content */}
+</div>
 
-// Nav column with responsive sizing
-<div className={`shrink-0 border-r flex flex-col transition-all ${
-  isNavCollapsed ? "min-w-12 max-w-12" : "min-w-[8rem] max-w-[10rem] flex-1"
-}`}>
-  {/* Nav items with collapsed/expanded display */}
-  <div className="flex-1 overflow-auto">
-    {isNavCollapsed ? (
-      <Tooltip><Button>A</Button></Tooltip>  // Abbreviated
-    ) : (
-      <Button>Full Label</Button>  // Full text
-    )}
-  </div>
-  
-  {/* Footer toggle */}
-  <div className="border-t p-2 flex justify-center">
-    <Button onClick={() => setIsNavCollapsed(!isNavCollapsed)}>
-      <PanelLeft />
-    </Button>
-  </div>
+// Content area: full width on mobile
+<div className="flex-1 overflow-auto p-6">
+  {/* Page content */}
 </div>
 ```
 
@@ -97,10 +79,10 @@ const [isNavCollapsed, setIsNavCollapsed] = useState(false);
 | Element | Mobile (< 768px) | Desktop (>= 768px) |
 |---------|------------------|-------------------|
 | Primary sidebar | Sheet overlay via SidebarTrigger | Persistent side column |
-| Secondary nav | User-controlled collapse | User-controlled collapse |
-| Tertiary nav | User-controlled collapse | User-controlled collapse |
-| Content area | Remaining space | Remaining space |
-| Mobile header | Visible with SidebarTrigger | Hidden |
+| Secondary nav | **Hidden** | Visible column |
+| Tertiary nav | **Hidden** | Visible column |
+| Content area | Full width | Remaining space |
+| GlobalHeader | Visible with SidebarTrigger | Visible |
 
 ### D6: Mobile Drill-Down Navigation
 
@@ -217,10 +199,21 @@ useEffect(() => {
 }, []);
 ```
 
+## Changelog
+
+### v2.0.0 (2026-02-01)
+- **Breaking**: L2/L3 navs now hidden on mobile (previously collapsed columns)
+- Mobile uses clean content layout with navigation via primary sidebar drill-down
+- Updated D2, D4 to reflect Projects-like mobile experience
+- Removed collapsible column pattern for mobile
+
+### v1.3.0
+- Added D6 Mobile Drill-Down Navigation
+- Added D7 Mobile Swipeable Carousel
+
 ## Cross-References
 
-- HUB-003: Nested Navigation Pattern (desktop layout)
-- UI-004: Left-Nav Collapsible Behavior (collapse mechanics)
+- HUB-003: Nested Navigation Pattern (desktop layout, collapsible behavior)
 - UI-005: Minimal Design Principles (sizing, aesthetics)
 - HUB-001: Hub Layout (primary sidebar)
 - APP-WORKFLOWS-001: Agentic Workflows (uses D6, D7 patterns)
