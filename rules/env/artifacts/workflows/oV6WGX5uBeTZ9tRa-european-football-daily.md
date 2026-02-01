@@ -2,54 +2,76 @@
 
 **n8n ID**: `oV6WGX5uBeTZ9tRa`  
 **Webhook Path**: `european-football-daily`  
-**Version**: 2.0.0  
+**Version**: 2.1.0  
 **Last Updated**: 2026-02-01
 
 ## Objectives
 
-Multi-source European football news aggregation with AI-generated Facebook posts featuring wallpaper-style imagery.
+Automated daily European football news aggregation producing two main outputs for Facebook distribution.
+
+### Output 1: AI-Generated Infographic Image
+
+A cinematic, wallpaper-style, epic scenery image that functions as a sports infographic:
+
+- **Visual Style**: Cinematic/wallpaper/epic scenery composition
+- **Team Identity**: Features logos of teams or leagues participating in the event
+- **Data Overlays**: 1-5 key statistics about the match/event displayed as succinct, readable overlays
+- **Infographic Treatment**: Statistics presented clearly within the visual composition
+
+### Output 2: Facebook Post
+
+A descriptive post accompanying the infographic:
+
+- **Content**: Describes what the infographic shows, explaining the event and key facts
+- **Source Citations**: Numbered references to original sources (objective journalism style)
+- **Branding**: Includes "Bilko Bibitkov AI Academy" branding line (replaces separate disclaimer post)
+- **Hashtags**: Relevant to the topic; prefer hashtags mentioned in source material
 
 ### Success Criteria
 
-1. **Content Quality**: Objective journalism style - no bias, numbered citations to sources
-2. **Image Style**: Wallpaper-style imagery with informative text overlays (not clickbait)
-3. **Deduplication**: Recent topics are filtered to avoid repetitive posts
-4. **Distribution**: Ready-to-publish Facebook post format
+| Criterion | Description |
+|-----------|-------------|
+| **Deduplication** | Recent topics are filtered using headline normalization and word overlap detection (>50% similarity = duplicate) |
+| **Image Quality** | Cinematic composition with team/league identity and clear data overlays |
+| **Content Quality** | Objective journalism - no bias, factual reporting with numbered source citations |
+| **Hashtag Relevance** | Hashtags directly relate to topic; sourced from original articles when possible |
+| **Single Post** | All content in one post with branding line (no separate disclaimer post) |
 
 ### Key Outputs
 
 | Output | Description |
 |--------|-------------|
-| `postContent` | Facebook post text with numbered citations |
-| `imagePrompt` | Prompt for AI image generation |
-| `tagline` | 3-6 word overlay for image (factual, not generic) |
-| `hashtags` | Relevant hashtags for reach |
+| `postContent` | Facebook post describing the infographic with numbered source citations and branding |
+| `imagePrompt` | AI image generation prompt for cinematic infographic with team logos and stat overlays |
+| `eventSummary` | Complete, easy-to-read sentence describing the event facts (displayed on image) |
+| `hashtags` | Topic-relevant hashtags, preferably sourced from original articles |
 
 ## Key Nodes
 
-### Generate Tagline
+### Generate Event Summary
 
-Creates the text overlay for AI-generated images.
+Creates the text overlay for AI-generated infographic images.
 
-**Prompt Guidelines** (v1.1.0):
-- 3-6 words maximum
-- If headline contains a score, INCLUDE the score (e.g., "Barcelona 3-0 Madrid")
-- If headline contains numbers (transfer fees, points, goals), include them
-- Prioritize team names and factual information
+**Prompt Guidelines** (v2.1.0):
+- Complete, easy-to-read sentence describing the event facts
+- Include all key data: scores, teams, competition, key statistics
+- Must be readable as a standalone statement
 - NO generic phrases: "Game On", "Breaking News", "Big Win", "What A Match"
-- Should inform the viewer of WHAT happened, not just generate excitement
+- Should inform the viewer of exactly WHAT happened
 
 **Good Examples**:
-- "Barcelona 3-0 Real Madrid"
-- "Man City Clinches Title"
-- "£80M Transfer Complete"
-- "Liverpool Top After Win"
+- "Barcelona defeated Real Madrid 3-0 in El Clásico with Lewandowski scoring twice"
+- "Manchester City secured the Premier League title with 2 games remaining after Arsenal dropped points"
+- "Kylian Mbappé completes €180M transfer to Real Madrid on a 5-year contract"
+- "Liverpool moved top of the table after a 2-1 victory over Chelsea at Anfield"
+- "Bayern Munich eliminated Arsenal from Champions League with 3-2 aggregate win"
 
 **Bad Examples** (prohibited):
-- "Game On!"
-- "What A Match!"
-- "Football Fever"
-- "Big News Today"
+- "Game On!" (generic, no facts)
+- "What A Match!" (generic, no facts)
+- "Football Fever" (generic, no facts)
+- "Big News Today" (generic, no facts)
+- "Barcelona 3-0 Real Madrid" (too short, missing context)
 
 ### Topic Analyst
 
@@ -68,6 +90,16 @@ Selects the best topic based on:
 3. Brand value (major clubs/leagues)
 
 ## Changelog
+
+### v2.1.0 (2026-02-01)
+- **MAJOR**: Rewrote Objectives with two explicit outputs (Infographic Image + Facebook Post)
+- **Output 1**: Detailed infographic image requirements (cinematic style, team logos, stat overlays)
+- **Output 2**: Facebook post requirements (describes infographic, numbered citations, branding line)
+- **Renamed**: "Generate Tagline" → "Generate Event Summary" (complete sentences, not 3-6 words)
+- **Expanded**: Good examples now full sentences with context
+- **Added**: Success Criteria table with deduplication, image quality, content quality, hashtag relevance
+- **Removed**: Separate disclaimer post (now handled by "Bilko Bibitkov AI Academy" branding line)
+- **Changed**: `tagline` output → `eventSummary` output
 
 ### v2.0.0 (2026-02-01)
 - Merged objectives and JSON definition into single artifact file
