@@ -613,7 +613,7 @@
         112
       ],
       "parameters": {
-        "jsCode": "const prevData = $input.first().json;\nconst selectedTopic = prevData.selectedTopic || {};\nconst extractedStats = prevData.extractedStats || {};\nconst keyFacts = prevData.keyFacts || [];\nconst sourceCount = prevData.sourceCount || 1;\nconst teams = selectedTopic.teams || [];\n\n// WALLPAPER-FIRST DESIGN: Prioritize cinematic scene with minimal overlays\n// Select only 2-3 MOST IMPACTFUL stats (not all of them)\nconst statPriority = [];\n\n// Priority 1: Score (most important for match results)\nif (extractedStats.score) {\n  statPriority.push({\n    type: 'score',\n    value: extractedStats.score,\n    display: extractedStats.score\n  });\n}\n\n// Priority 2: Transfer fee (for transfer news)\nif (extractedStats.transferFee && !extractedStats.score) {\n  statPriority.push({\n    type: 'transfer',\n    value: extractedStats.transferFee,\n    display: extractedStats.transferFee\n  });\n}\n\n// Priority 3: League position (for standings news)\nif (extractedStats.leaguePosition && statPriority.length < 2) {\n  const ordinal = extractedStats.leaguePosition + (['st','nd','rd'][((extractedStats.leaguePosition+90)%100-10)%10-1]||'th');\n  statPriority.push({\n    type: 'position',\n    value: extractedStats.leaguePosition,\n    display: ordinal + ' Place'\n  });\n}\n\n// Priority 4: Possession (visual stat for match)\nif (extractedStats.possession?.home && statPriority.length < 2) {\n  statPriority.push({\n    type: 'possession',\n    value: extractedStats.possession.home,\n    display: extractedStats.possession.home + '% Possession'\n  });\n}\n\n// Priority 5: Points (if league standings)\nif (extractedStats.points && statPriority.length < 2) {\n  statPriority.push({\n    type: 'points',\n    value: extractedStats.points,\n    display: extractedStats.points + ' pts'\n  });\n}\n\n// Limit to MAX 2 overlay elements for clean aesthetic\nconst selectedStats = statPriority.slice(0, 2);\n\n// Build team color context\nconst teamColors = teams.length >= 2 \n  ? 'colors inspired by ' + teams[0] + ' and ' + teams[1]\n  : teams.length === 1 \n    ? 'colors inspired by ' + teams[0]\n    : 'deep blue and gold accents';\n\n// Determine scene type based on news category\nlet sceneType = 'epic stadium atmosphere at golden hour';\nif (extractedStats.transferFee) {\n  sceneType = 'dramatic press conference lighting with stadium silhouette in background';\n} else if (extractedStats.leaguePosition) {\n  sceneType = 'trophy room with championship memorabilia, dramatic spotlight';\n} else if (extractedStats.score) {\n  sceneType = 'packed stadium celebrating, flares and confetti, wide cinematic angle';\n}\n\n// WALLPAPER-FIRST prompt structure\nlet fullPrompt = 'Create a CINEMATIC DESKTOP WALLPAPER image (16:9 aspect ratio). ';\nfullPrompt += 'Primary focus: ' + sceneType + '. ';\nfullPrompt += 'Style: High-end sports broadcast quality, dramatic lighting, ' + teamColors + '. ';\nfullPrompt += 'Composition: 70% atmospheric scene, 30% clean negative space for optional text overlay. ';\nfullPrompt += 'Aesthetic: Premium, immersive, like a movie poster or AAA game cover. ';\n\n// Add MINIMAL stat overlays (2 max)\nif (selectedStats.length > 0) {\n  const overlays = selectedStats.map(s => {\n    if (s.type === 'score') {\n      return 'SCORE: \"' + s.display + '\" - large, elegant typography in lower third';\n    } else if (s.type === 'transfer') {\n      return 'FEE BADGE: \"' + s.display + '\" - gold accent, corner placement';\n    } else if (s.type === 'position') {\n      return 'RANK: \"' + s.display + '\" - subtle, integrated into scene';\n    } else if (s.type === 'possession') {\n      return 'STAT: \"' + s.display + '\" - thin bar graphic, bottom edge';\n    } else if (s.type === 'points') {\n      return 'POINTS: \"' + s.display + '\" - small badge, corner';\n    }\n    return '';\n  }).filter(Boolean);\n  \n  fullPrompt += 'Minimal overlays: ' + overlays.join('. ') + '. ';\n} else {\n  fullPrompt += 'No text overlays - pure atmospheric image. ';\n}\n\nfullPrompt += 'CRITICAL: NO faces, NO real people, NO player likenesses. Focus on atmosphere, stadium, crowd energy, abstract team elements. ';\nfullPrompt += 'Quality: 4K desktop wallpaper, sharp details, professional color grading.';\n\nconst requestBody = {\n  contents: [{\n    parts: [{\n      text: fullPrompt\n    }]\n  }]\n};\n\nreturn [{\n  json: {\n    requestBody,\n    imagePrompt: fullPrompt,\n    selectedStats: selectedStats,\n    sceneType: sceneType,\n    postContent: prevData.postContent,\n    selectedTopic: prevData.selectedTopic,\n    extractedStats: extractedStats,\n    comprehensiveSummary: prevData.comprehensiveSummary,\n    keyFacts: keyFacts,\n    sourceUrls: prevData.sourceUrls,\n    sourceCount: sourceCount,\n    sourceLink: prevData.sourceLink,\n    geminiApiKey: prevData.geminiApiKey,\n    callbackUrl: prevData.callbackUrl\n  }\n}];"
+        "jsCode": "const prevData = $input.first().json;\nconst selectedTopic = prevData.selectedTopic || {};\nconst extractedStats = prevData.extractedStats || {};\nconst keyFacts = prevData.keyFacts || [];\nconst sourceCount = prevData.sourceCount || 1;\n\n// Build comprehensive infographic elements\nconst infographicElements = [];\n\n// Score overlay (most prominent)\nif (extractedStats.score) {\n  infographicElements.push('LARGE SCORE OVERLAY: \"' + extractedStats.score + '\" in bold white text with drop shadow');\n}\n\n// Possession comparison bar\nif (extractedStats.possession?.home && extractedStats.possession?.away) {\n  infographicElements.push('POSSESSION BAR: horizontal split bar showing ' + extractedStats.possession.home + '% vs ' + extractedStats.possession.away + '%');\n}\n\n// Shots comparison\nif (extractedStats.shots?.home && extractedStats.shots?.away) {\n  infographicElements.push('SHOTS GRAPHIC: \"Shots: ' + extractedStats.shots.home + ' - ' + extractedStats.shots.away + '\"');\n}\n\n// Shots on target\nif (extractedStats.shotsOnTarget?.home && extractedStats.shotsOnTarget?.away) {\n  infographicElements.push('ON TARGET: \"' + extractedStats.shotsOnTarget.home + ' - ' + extractedStats.shotsOnTarget.away + ' on target\"');\n}\n\n// xG data\nif (extractedStats.xG?.home && extractedStats.xG?.away) {\n  infographicElements.push('xG METRIC: \"xG: ' + (typeof extractedStats.xG.home === \"number\" ? extractedStats.xG.home.toFixed(2) : parseFloat(extractedStats.xG.home || 0).toFixed(2)) + ' - ' + (typeof extractedStats.xG.away === \"number\" ? extractedStats.xG.away.toFixed(2) : parseFloat(extractedStats.xG.away || 0).toFixed(2)) + '\"');\n}\n\n// Corners\nif (extractedStats.corners?.home && extractedStats.corners?.away) {\n  infographicElements.push('CORNER KICKS: \"' + extractedStats.corners.home + ' - ' + extractedStats.corners.away + '\"');\n}\n\n// Cards\nconst homeYellow = extractedStats.yellowCards?.home || 0;\nconst awayYellow = extractedStats.yellowCards?.away || 0;\nconst homeRed = extractedStats.redCards?.home || 0;\nconst awayRed = extractedStats.redCards?.away || 0;\nif (homeYellow + awayYellow + homeRed + awayRed > 0) {\n  infographicElements.push('CARDS: Yellow ' + homeYellow + '-' + awayYellow + ', Red ' + homeRed + '-' + awayRed);\n}\n\n// Transfer fee badge\nif (extractedStats.transferFee) {\n  infographicElements.push('TRANSFER FEE BADGE: \"' + extractedStats.transferFee + '\" in gold/yellow accent');\n}\n\n// League position indicator\nif (extractedStats.leaguePosition) {\n  const ordinal = extractedStats.leaguePosition + (['st','nd','rd'][((extractedStats.leaguePosition+90)%100-10)%10-1]||'th');\n  infographicElements.push('LEAGUE POSITION: \"' + ordinal + ' Place\" with table icon');\n}\n\n// Points display\nif (extractedStats.points) {\n  infographicElements.push('POINTS: \"' + extractedStats.points + ' pts\"');\n}\n\n// Goal difference\nif (extractedStats.goalDifference) {\n  const prefix = extractedStats.goalDifference > 0 ? '+' : '';\n  infographicElements.push('GOAL DIFFERENCE: \"GD: ' + prefix + extractedStats.goalDifference + '\"');\n}\n\n// Win streak\nif (extractedStats.winStreak && extractedStats.winStreak >= 3) {\n  infographicElements.push('WIN STREAK: \"' + extractedStats.winStreak + ' WINS IN A ROW\" flame icon');\n}\n\n// Clean sheets\nif (extractedStats.cleanSheets) {\n  infographicElements.push('CLEAN SHEETS: \"' + extractedStats.cleanSheets + ' Clean Sheets\" shield icon');\n}\n\n// Other notable stats\nconst otherStats = extractedStats.otherStats || [];\notherStats.slice(0, 3).forEach(stat => {\n  infographicElements.push('STAT BADGE: \"' + stat + '\"');\n});\n\n// Source count badge\nif (sourceCount > 1) {\n  infographicElements.push('SOURCE BADGE: \"' + sourceCount + ' Sources Analyzed\" in corner');\n}\n\n// Build the infographic prompt\nconst teams = selectedTopic.teams || [];\nconst teamColors = teams.length >= 2 \n  ? 'using colors associated with ' + teams[0] + ' and ' + teams[1]\n  : teams.length === 1 \n    ? 'using colors associated with ' + teams[0]\n    : 'using vibrant football colors';\n\nconst basePrompt = selectedTopic.safeImagePrompt || 'Modern football stadium atmosphere with dramatic lighting';\n\nlet fullPrompt = 'Create a professional SPORTS INFOGRAPHIC image. ' + basePrompt + '. ';\nfullPrompt += 'Style: Clean, modern sports broadcast graphics ' + teamColors + '. ';\nfullPrompt += 'Dark background with vibrant stat overlays. ';\n\nif (infographicElements.length > 0) {\n  fullPrompt += 'Include these data visualizations: ' + infographicElements.join('. ') + '. ';\n} else {\n  fullPrompt += 'Include subtle stadium atmosphere and team imagery. ';\n}\n\nfullPrompt += 'Professional typography, clear hierarchy, broadcast-quality graphics. NO faces, NO real people, NO text that could be misread.';\n\nconst requestBody = {\n  contents: [{\n    parts: [{\n      text: fullPrompt\n    }]\n  }]\n};\n\nreturn [{\n  json: {\n    requestBody,\n    imagePrompt: fullPrompt,\n    infographicElements,\n    postContent: prevData.postContent,\n    selectedTopic: prevData.selectedTopic,\n    extractedStats: extractedStats,\n    comprehensiveSummary: prevData.comprehensiveSummary,\n    keyFacts: keyFacts,\n    sourceUrls: prevData.sourceUrls,\n    sourceCount: sourceCount,\n    sourceLink: prevData.sourceLink,\n    geminiApiKey: prevData.geminiApiKey,\n    callbackUrl: prevData.callbackUrl\n  }\n}];"
       }
     },
     {
@@ -879,44 +879,6 @@
         -200
       ],
       "id": "parse-summary-001"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://bilkobibitkov.replit.app/api/workflows/callback",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"workflowId\": \"european-football-daily\",\n  \"step\": \"comprehensive-summary\",\n  \"stepIndex\": 5,\n  \"traceId\": \"{{ $('Webhook').first().json.body.traceId || 'trace_' + $execution.id }}\",\n  \"output\": {\n    \"summary\": {{ JSON.stringify($json.comprehensiveSummary || \"\") }},\n    \"stats\": {{ JSON.stringify($json.extractedStats || {}) }},\n    \"teams\": {{ JSON.stringify($json.teams || []) }},\n    \"competition\": {{ JSON.stringify($json.competition || \"\") }},\n    \"keyFacts\": {{ JSON.stringify($json.keyFacts || []) }},\n    \"sourceCount\": {{ $json.sourceCount || 0 }},\n    \"dataConfidence\": {{ JSON.stringify($json.dataConfidence || \"low\") }}\n  },\n  \"executionId\": \"{{ $execution.id }}\"\n}",
-        "options": {}
-      },
-      "name": "Callback Summary",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        4000,
-        -300
-      ],
-      "id": "callback-summary-001",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://bilkobibitkov.replit.app/api/workflows/callback",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"workflowId\": \"european-football-daily\",\n  \"step\": \"tagline-generated\",\n  \"stepIndex\": 7,\n  \"traceId\": \"{{ $('Webhook').first().json.body.traceId || 'trace_' + $execution.id }}\",\n  \"output\": {\n    \"tagline\": {{ JSON.stringify($json.tagline || \"\") }},\n    \"imagePrompt\": {{ JSON.stringify($json.imagePrompt || \"\").substring(0, 500) }},\n    \"selectedStats\": {{ JSON.stringify($json.selectedStats || []) }},\n    \"sceneType\": {{ JSON.stringify($json.sceneType || \"\") }}\n  },\n  \"executionId\": \"{{ $execution.id }}\"\n}",
-        "options": {}
-      },
-      "name": "Callback Tagline",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        2950,
-        250
-      ],
-      "id": "callback-tagline-001",
-      "continueOnFail": true
     }
   ],
   "connections": {
@@ -1152,11 +1114,6 @@
             "node": "Call Imagen API",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Callback Tagline",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -1353,11 +1310,6 @@
         [
           {
             "node": "Hashtag Researcher",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Callback Summary",
             "type": "main",
             "index": 0
           }
