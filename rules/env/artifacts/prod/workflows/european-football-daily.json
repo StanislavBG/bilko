@@ -105,7 +105,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are an objective European football journalist creating a comprehensive Facebook post.\\n\\nTOPIC: {{ $json.selectedTopic.headline }}\\nCOMPREHENSIVE SUMMARY: {{ $json.comprehensiveSummary }}\\nTEAMS: {{ ($json.teams || []).join(', ') }}\\nCOMPETITION: {{ $json.competition }}\\nHASHTAGS TO USE: {{ $json.hashtagString }}\\n\\nEXTRACTED STATISTICS:\\n- Score: {{ $json.extractedStats?.score || 'not available' }}\\n- Possession: Home {{ $json.extractedStats?.possession?.home || '?' }}% - Away {{ $json.extractedStats?.possession?.away || '?' }}%\\n- Shots: Home {{ $json.extractedStats?.shots?.home || '?' }} - Away {{ $json.extractedStats?.shots?.away || '?' }}\\n- Shots on Target: Home {{ $json.extractedStats?.shotsOnTarget?.home || '?' }} - Away {{ $json.extractedStats?.shotsOnTarget?.away || '?' }}\\n- xG: Home {{ $json.extractedStats?.xG?.home || '?' }} - Away {{ $json.extractedStats?.xG?.away || '?' }}\\n- Corners: Home {{ $json.extractedStats?.corners?.home || '?' }} - Away {{ $json.extractedStats?.corners?.away || '?' }}\\n- Yellow Cards: Home {{ $json.extractedStats?.yellowCards?.home || '?' }} - Away {{ $json.extractedStats?.yellowCards?.away || '?' }}\\n- Transfer Fee: {{ $json.extractedStats?.transferFee || 'N/A' }}\\n- League Position: {{ $json.extractedStats?.leaguePosition || 'N/A' }}\\n- Points: {{ $json.extractedStats?.points || 'N/A' }}\\n- Other Stats: {{ JSON.stringify($json.extractedStats?.otherStats || []) }}\\n\\nKEY FACTS: {{ JSON.stringify($json.keyFacts || []) }}\\n\\nSOURCE COUNT: {{ $json.sourceCount }} sources analyzed\\nDATA CONFIDENCE: {{ $json.dataConfidence }}\\n\\nCreate an OBJECTIVE journalism-style Facebook post (3-4 paragraphs) that:\\n1. LEADS with the most significant statistic or result\\n2. Presents facts neutrally without bias toward any team\\n3. Includes ALL available statistics naturally in the narrative\\n4. Provides context about implications for the league/tournament\\n5. Uses measured language - avoid superlatives and hype\\n6. MUST end with these EXACT hashtags: {{ $json.hashtagString }}\\n\\nTONE REQUIREMENTS:\\n- Objective and balanced reporting\\n- Data-driven narrative\\n- NO player or coach names\\n- NO sensationalism or clickbait\\n- Present both sides fairly\\n- Let the numbers tell the story\\n\\nReturn ONLY a JSON object with:\\n- postContent: the full post text including hashtags\\n- sentiment: positive/neutral/negative\\n- statsHighlighted: array of stats you included\\\"\\n    }]\\n  }]\\n}\"",
+        "jsonBody": "={{ JSON.stringify($json.geminiRequestBody) }}",
         "options": {},
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
@@ -492,7 +492,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Get Gemini response from HTTP Request\nconst geminiResponse = $input.first().json;\n\n// Get original data from Parse Summary (has multi-source data)\nconst originalData = $(\"Parse Summary\").first().json;\nconst geminiApiKey = originalData.geminiApiKey;\nconst callbackUrl = originalData.callbackUrl;\nconst selectedTopic = originalData.selectedTopic;\nconst comprehensiveSummary = originalData.comprehensiveSummary;\nconst extractedStats = originalData.extractedStats || {};\nconst teams = originalData.teams || [];\nconst competition = originalData.competition || \"\";\nconst keyFacts = originalData.keyFacts || [];\nconst sourceUrls = originalData.sourceUrls || [];\nconst sourceCount = originalData.sourceCount || 1;\nconst dataConfidence = originalData.dataConfidence || \"low\";\n\n// Parse hashtags from Gemini response\nlet hashtags = [\"#football\", \"#soccer\", \"#UEFA\"]; // fallback\ntry {\n  const candidates = geminiResponse.candidates || [];\n  if (candidates.length > 0) {\n    let text = candidates[0].content?.parts?.[0]?.text || \"\";\n    text = text.replace(/```json\\n?/g, \"\").replace(/```/g, \"\").trim();\n    const parsed = JSON.parse(text);\n    if (parsed.hashtags && Array.isArray(parsed.hashtags)) {\n      hashtags = parsed.hashtags.slice(0, 3);\n    }\n  }\n} catch (e) {\n  // Keep fallback\n}\n\nreturn [{\n  json: {\n    selectedTopic: selectedTopic,\n    comprehensiveSummary: comprehensiveSummary,\n    extractedStats: extractedStats,\n    teams: teams,\n    competition: competition,\n    keyFacts: keyFacts,\n    sourceUrls: sourceUrls,\n    sourceCount: sourceCount,\n    dataConfidence: dataConfidence,\n    sourceLink: selectedTopic?.sourceLink || \"\",\n    anonymizedDescriptions: selectedTopic?.anonymizedDescriptions || {},\n    hashtags: hashtags,\n    hashtagString: hashtags.join(\" \"),\n    geminiApiKey: geminiApiKey,\n    callbackUrl: callbackUrl\n  }\n}];"
+        "jsCode": "// Get Gemini response from HTTP Request\nconst geminiResponse = $input.first().json;\n\n// Get original data from Aggregate Compliant Topics or Parse Statistics (whichever is available)\nlet originalData;\ntry {\n  originalData = $(\"Parse Statistics\").first().json;\n} catch (e) {\n  try {\n    originalData = $(\"Aggregate Compliant Topics\").first().json;\n  } catch (e2) {\n    originalData = {};\n  }\n}\n\nconst geminiApiKey = originalData.geminiApiKey;\nconst callbackUrl = originalData.callbackUrl;\nconst selectedTopic = originalData.selectedTopic || {};\nconst extractedStats = selectedTopic.extractedStats || originalData.extractedStats || {};\nconst teams = selectedTopic.teams || [];\nconst competition = selectedTopic.competition || \"\";\nconst sourceUrls = originalData.sourceUrls || [];\nconst sourceCount = originalData.sourceCount || 1;\n\n// Parse hashtags from Gemini response\nlet hashtags = [\"#football\", \"#soccer\", \"#UEFA\"]; // fallback\ntry {\n  const candidates = geminiResponse.candidates || [];\n  if (candidates.length > 0) {\n    let text = candidates[0].content?.parts?.[0]?.text || \"\";\n    text = text.replace(/```json\\n?/g, \"\").replace(/```/g, \"\").trim();\n    const parsed = JSON.parse(text);\n    if (parsed.hashtags && Array.isArray(parsed.hashtags)) {\n      hashtags = parsed.hashtags.slice(0, 3);\n    }\n  }\n} catch (e) {\n  // Keep fallback\n}\n\nreturn [{\n  json: {\n    selectedTopic: selectedTopic,\n    extractedStats: extractedStats,\n    teams: teams,\n    competition: competition,\n    sourceUrls: sourceUrls,\n    sourceCount: sourceCount,\n    sourceLink: selectedTopic?.sourceLink || \"\",\n    anonymizedDescriptions: selectedTopic?.anonymizedDescriptions || {},\n    hashtags: hashtags,\n    hashtagString: hashtags.join(\" \"),\n    geminiApiKey: geminiApiKey,\n    callbackUrl: callbackUrl\n  }\n}];"
       },
       "id": "parse-hashtags-1769380010487",
       "name": "Parse Hashtags",
@@ -502,6 +502,19 @@
         -32
       ],
       "typeVersion": 2
+    },
+    {
+      "id": "prepare-post-request-1769980000001",
+      "name": "Prepare Post Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2750,
+        -32
+      ],
+      "parameters": {
+        "jsCode": "// Sanitize content for JSON serialization\nconst prevData = $input.first().json;\nconst selectedTopic = prevData.selectedTopic || {};\nconst extractedStats = prevData.extractedStats || selectedTopic.extractedStats || {};\nconst teams = prevData.teams || selectedTopic.teams || [];\nconst competition = prevData.competition || selectedTopic.competition || '';\nconst hashtagString = prevData.hashtagString || '#football #soccer #UEFA';\nconst sourceCount = prevData.sourceCount || 1;\nconst keyFacts = prevData.keyFacts || [];\n\n// Sanitize function - remove characters that break JSON\nconst sanitize = (str) => {\n  if (typeof str !== 'string') return String(str || '');\n  return str\n    .replace(/[\\x00-\\x1F\\x7F]/g, ' ')\n    .replace(/\\\\/g, '\\\\\\\\')\n    .replace(/\"/g, \"'\")\n    .replace(/\\n/g, ' ')\n    .substring(0, 2000)\n    .trim();\n};\n\n// Build sanitized values\nconst headline = sanitize(selectedTopic.headline || 'Football news');\nconst comprehensiveSummary = sanitize(prevData.comprehensiveSummary || 'Football update');\nconst teamsStr = sanitize(teams.join(', '));\nconst competitionStr = sanitize(competition);\nconst keyFactsStr = sanitize(keyFacts.slice(0, 3).join('; '));\n\n// Build the prompt\nconst promptText = `You are an objective European football journalist creating a comprehensive Facebook post.\n\nTOPIC: ${headline}\nCOMPREHENSIVE SUMMARY: ${comprehensiveSummary}\nTEAMS: ${teamsStr}\nCOMPETITION: ${competitionStr}\nHASHTAGS TO USE: ${hashtagString}\n\nEXTRACTED STATISTICS:\n- Score: ${extractedStats.score || 'not available'}\n- Possession: Home ${extractedStats.possession?.home || '?'}% - Away ${extractedStats.possession?.away || '?'}%\n- Shots: Home ${extractedStats.shots?.home || '?'} - Away ${extractedStats.shots?.away || '?'}\n- Transfer Fee: ${extractedStats.transferFee || 'N/A'}\n- League Position: ${extractedStats.leaguePosition || 'N/A'}\n- Points: ${extractedStats.points || 'N/A'}\n\nKEY FACTS: ${keyFactsStr}\nSOURCE COUNT: ${sourceCount} sources analyzed\n\nCreate an OBJECTIVE journalism-style Facebook post (3-4 paragraphs) that:\n1. LEADS with the most significant statistic or result\n2. Presents facts neutrally without bias toward any team\n3. Includes ALL available statistics naturally in the narrative\n4. Provides context about implications for the league/tournament\n5. Uses measured language - avoid superlatives and hype\n6. MUST end with these EXACT hashtags: ${hashtagString}\n\nReturn ONLY a JSON object with:\n- postContent: the full post text including hashtags\n- sentiment: positive/neutral/negative\n- statsHighlighted: array of stats you included`;\n\n// Build Gemini request body\nconst requestBody = {\n  contents: [{\n    parts: [{\n      text: promptText\n    }]\n  }]\n};\n\nreturn [{\n  json: {\n    geminiRequestBody: requestBody,\n    selectedTopic: selectedTopic,\n    extractedStats: extractedStats,\n    teams: teams,\n    competition: competition,\n    hashtagString: hashtagString,\n    sourceUrls: prevData.sourceUrls || [],\n    sourceCount: sourceCount,\n    sourceLink: prevData.sourceLink || selectedTopic.sourceLink || '',\n    geminiApiKey: prevData.geminiApiKey,\n    callbackUrl: prevData.callbackUrl\n  }\n}];"
+      }
     },
     {
       "parameters": {
@@ -648,6 +661,19 @@
       "waitBetweenTries": 2000
     },
     {
+      "id": "prepare-stats-request-1769980000000",
+      "name": "Prepare Stats Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2675,
+        -150
+      ],
+      "parameters": {
+        "jsCode": "// Sanitize article content to prevent JSON serialization issues\nconst articleData = $('Fetch Article Content').first().json;\nconst aggregateData = $('Aggregate Compliant Topics').first().json;\nconst selectedTopic = aggregateData.selectedTopic || {};\n\n// Get raw content and sanitize it\nlet rawContent = articleData?.data || 'No content available';\n\n// Remove problematic characters and limit length\nrawContent = rawContent\n  .replace(/[\\x00-\\x1F\\x7F]/g, ' ')  // Remove control characters\n  .replace(/\\\\n/g, ' ')  // Replace escaped newlines\n  .replace(/\\n/g, ' ')   // Replace actual newlines\n  .replace(/\\r/g, ' ')   // Replace carriage returns\n  .replace(/\\t/g, ' ')   // Replace tabs\n  .replace(/\\\\/g, ' ')   // Remove backslashes\n  .replace(/\"/g, \"'\")    // Replace double quotes with single\n  .substring(0, 6000)    // Limit content length\n  .trim();\n\n// Build the prompt text\nconst promptText = `Extract SPECIFIC STATISTICS from this football article. Look for:\n\n1. MATCH SCORES (e.g., 3-0, 2-1)\n2. POSSESSION PERCENTAGES\n3. SHOT COUNTS\n4. TRANSFER FEES (in millions)\n5. LEAGUE STANDINGS/POINTS\n6. GOAL SCORERS (without names, just counts)\n7. ANY OTHER NUMERICAL DATA\n\nARTICLE CONTENT:\n${rawContent}\n\nHEADLINE: ${selectedTopic.headline || 'No headline'}\n\nReturn ONLY valid JSON:\n{\n  \"score\": \"3-0\" or null,\n  \"homeTeam\": \"Team A\" or null,\n  \"awayTeam\": \"Team B\" or null,\n  \"possession\": { \"home\": 65, \"away\": 35 } or null,\n  \"shots\": { \"home\": 15, \"away\": 8 } or null,\n  \"transferFee\": \"80M\" or null,\n  \"leaguePosition\": 1 or null,\n  \"points\": 45 or null,\n  \"goalCount\": 3 or null,\n  \"keyStatistic\": \"most important number/stat found\",\n  \"dataRichness\": 1-10 (how much real data found)\n}`;\n\n// Build the Gemini request body\nconst requestBody = {\n  contents: [{\n    parts: [{\n      text: promptText\n    }]\n  }]\n};\n\nreturn [{\n  json: {\n    geminiRequestBody: requestBody,\n    selectedTopic: selectedTopic,\n    geminiApiKey: aggregateData.geminiApiKey,\n    callbackUrl: aggregateData.callbackUrl\n  }\n}];"
+      }
+    },
+    {
       "id": "extract-statistics-1769975476415",
       "name": "Extract Statistics",
       "type": "n8n-nodes-base.httpRequest",
@@ -674,7 +700,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [{\n      text: \"Extract SPECIFIC STATISTICS from this football article. Look for:\\n\\n1. MATCH SCORES (e.g., 3-0, 2-1)\\n2. POSSESSION PERCENTAGES\\n3. SHOT COUNTS\\n4. TRANSFER FEES (in millions)\\n5. LEAGUE STANDINGS/POINTS\\n6. GOAL SCORERS (without names, just counts)\\n7. ANY OTHER NUMERICAL DATA\\n\\nARTICLE CONTENT:\\n\" + ($('Fetch Article Content').first().json.data || \"No content\").substring(0, 8000) + \"\\n\\nHEADLINE: \" + $json.selectedTopic.headline + \"\\n\\nReturn ONLY valid JSON:\\n{\\n  \\\"score\\\": \\\"3-0\\\" or null,\\n  \\\"homeTeam\\\": \\\"Team A\\\" or null,\\n  \\\"awayTeam\\\": \\\"Team B\\\" or null,\\n  \\\"possession\\\": { \\\"home\\\": 65, \\\"away\\\": 35 } or null,\\n  \\\"shots\\\": { \\\"home\\\": 15, \\\"away\\\": 8 } or null,\\n  \\\"transferFee\\\": \\\"80M\\\" or null,\\n  \\\"leaguePosition\\\": 1 or null,\\n  \\\"points\\\": 45 or null,\\n  \\\"goalCount\\\": 3 or null,\\n  \\\"keyStatistic\\\": \\\"most important number/stat found\\\",\\n  \\\"dataRichness\\\": 1-10 (how much real data found)\\n}\"\n    }]\n  }]\n}) }}",
+        "jsonBody": "={{ JSON.stringify($json.geminiRequestBody) }}",
         "options": {},
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
@@ -1127,6 +1153,17 @@
       "main": [
         [
           {
+            "node": "Prepare Post Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Post Request": {
+      "main": [
+        [
+          {
             "node": "Generate Post",
             "type": "main",
             "index": 0
@@ -1206,6 +1243,17 @@
       ]
     },
     "Fetch Article Content": {
+      "main": [
+        [
+          {
+            "node": "Prepare Stats Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Stats Request": {
       "main": [
         [
           {
@@ -1537,7 +1585,7 @@
           },
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are a European football social media manager. Create an informative Facebook post.\\n\\nTOPIC: {{ $json.selectedTopic.headline }}\\nEVENT: {{ $json.selectedTopic.event }}\\nTEAMS: {{ ($json.selectedTopic.teams || []).join(', ') }}\\nHAS SCORE: {{ $json.selectedTopic.hasScore || false }}\\nHASHTAGS TO USE: {{ $json.hashtagString }}\\n\\nCreate an informative Facebook post (2-3 short paragraphs) that:\\n1. Leads with the key facts - scores, numbers, team names\\n2. Provides context about what this means for the league/tournament\\n3. Ends with a question to drive engagement\\n4. MUST end with these EXACT hashtags: {{ $json.hashtagString }}\\n\\nStyle guidelines:\\n- Be factual and informative, not sensational\\n- Highlight scores, statistics, and numbers prominently\\n- Mention team and league names for brand recognition\\n- Do NOT mention specific player or coach names\\n- Keep tone professional but accessible\\n\\nReturn ONLY a JSON object with postContent (the text including hashtags) and sentiment (positive/neutral/negative)\"\n    }]\n  }]\n}",
+          "jsonBody": "={{ JSON.stringify($json.geminiRequestBody) }}",
           "options": {},
           "authentication": "genericCredentialType",
           "genericAuthType": "httpHeaderAuth"
@@ -2254,6 +2302,17 @@
         ]
       },
       "Parse Hashtags": {
+        "main": [
+          [
+            {
+              "node": "Prepare Post Request",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Prepare Post Request": {
         "main": [
           [
             {
