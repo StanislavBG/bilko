@@ -32,7 +32,7 @@ export function ActionPanel({
 }: ActionPanelProps) {
   return (
     <div 
-      className={`shrink-0 border-l bg-muted/20 flex flex-col transition-all duration-200 ${
+      className={`hidden md:flex shrink-0 border-l bg-muted/20 flex-col transition-all duration-200 ${
         isCollapsed ? "min-w-12 max-w-12" : "min-w-[12rem] max-w-[14rem]"
       }`}
       data-testid={testId}

@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { Play, RefreshCw, Workflow, Image, FileText, History, Shield, Menu, Copy, Download, Check, ChevronDown, ChevronRight, ChevronLeft, Info } from "lucide-react";
+import { Play, RefreshCw, Workflow, Image, FileText, History, Shield, Copy, Download, Check, ChevronDown, ChevronRight, Info } from "lucide-react";
 import { ActionBar } from "@/components/action-bar";
 import { ActionPanel } from "@/components/action-panel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { ExecutionsList } from "@/components/executions-list";
 import { ExecutionDetail } from "@/components/execution-detail";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -352,7 +351,6 @@ export default function AgenticWorkflows() {
   const [selectedExecution, setSelectedExecution] = useState<SelectedExecution | null>(null);
   const [isActionPanelCollapsed, setIsActionPanelCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<"latest" | "history">("latest");
-  const [isWorkflowNavOpen, setIsWorkflowNavOpen] = useState(false);
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
   
   // Track running workflow executions for polling (scoped by workflow ID)
@@ -447,21 +445,7 @@ export default function AgenticWorkflows() {
     return () => clearInterval(interval);
   }, [toast]);
   
-  // Stack-based mobile drill-down navigation (per UI-006 D6, ARCH-012)
-  interface WorkflowNavLevel {
-    title: string;
-    items: Array<{
-      id: string;
-      title: string;
-      subtitle?: string;
-      children?: WorkflowDefinition[];
-      workflow?: WorkflowDefinition;
-    }>;
-  }
-  
-  const [navStack, setNavStack] = useState<WorkflowNavLevel[]>([]);
-
-  // Fetch workflows data first (needed for navigation)
+  // Fetch workflows data
   const { data, isLoading } = useQuery<WorkflowsResponse>({
     queryKey: ["/api/workflows"],
   });
@@ -471,44 +455,6 @@ export default function AgenticWorkflows() {
   useEffect(() => {
     setIsActionPanelCollapsed(isMobile);
   }, [isMobile]);
-  
-  // Build root navigation level from workflows data
-  const buildRootLevel = (): WorkflowNavLevel => {
-    const byCategory = workflows.reduce((acc, workflow) => {
-      const category = workflow.category || "Uncategorized";
-      if (!acc[category]) acc[category] = [];
-      acc[category].push(workflow);
-      return acc;
-    }, {} as Record<string, WorkflowDefinition[]>);
-    
-    return {
-      title: "Workflows",
-      items: Object.keys(byCategory).sort().map(category => ({
-        id: `category-${category}`,
-        title: category,
-        subtitle: `${byCategory[category].length} workflow${byCategory[category].length !== 1 ? "s" : ""}`,
-        children: byCategory[category],
-      })),
-    };
-  };
-  
-  // Initialize stack with root level when workflows load
-  useEffect(() => {
-    if (workflows.length > 0 && navStack.length === 0) {
-      setNavStack([buildRootLevel()]);
-    }
-  }, [workflows.length]);
-  
-  // Reset stack when sheet closes
-  useEffect(() => {
-    if (!isWorkflowNavOpen && workflows.length > 0) {
-      setNavStack([buildRootLevel()]);
-    }
-  }, [isWorkflowNavOpen]);
-  
-  // Get current level from stack
-  const currentLevel = navStack.length > 0 ? navStack[navStack.length - 1] : null;
-  const canGoBack = navStack.length > 1;
 
   const executeMutation = useMutation({
     mutationFn: async (workflowId: string) => {
@@ -591,37 +537,10 @@ export default function AgenticWorkflows() {
       ]
     : [];
 
-  // Stack-based navigation handlers (per UI-006 D6)
-  const handleDrillInto = (item: { title: string; children?: WorkflowDefinition[] }) => {
-    if (item.children) {
-      const nextLevel: WorkflowNavLevel = {
-        title: item.title,
-        items: item.children.map(wf => ({
-          id: `workflow-${wf.id}`,
-          title: wf.name,
-          subtitle: wf.mode,
-          workflow: wf,
-        })),
-      };
-      setNavStack([...navStack, nextLevel]);
-    }
-  };
-  
-  const handleBack = () => {
-    if (canGoBack) {
-      setNavStack(navStack.slice(0, -1));
-    }
-  };
-
   const handleWorkflowSelect = (workflow: WorkflowDefinition) => {
     setSelectedWorkflow(workflow);
     setSelectedExecution(null);
     setViewMode("latest");
-    if (isMobile) {
-      setIsWorkflowNavOpen(false);
-      // Reset stack on navigation per UI-006 D6
-      setNavStack([buildRootLevel()]);
-    }
   };
 
   // Desktop nav - shows all workflows flat
@@ -658,113 +577,24 @@ export default function AgenticWorkflows() {
     </>
   );
 
-  // Mobile nav - stack-based drill-down (per UI-006 D6, ARCH-012)
-  const MobileNavContent = () => (
-    <>
-      <div className="p-3 border-b">
-        <div className="flex items-center gap-2">
-          {canGoBack && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-              data-testid="button-nav-back"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-          )}
-          <h2 className="text-sm font-medium truncate" data-testid="sidebar-title">
-            {currentLevel?.title || "Workflows"}
-          </h2>
-        </div>
-      </div>
-      <div className="flex-1 overflow-auto p-2 space-y-1">
-        {isLoading || !currentLevel ? (
-          <div className="space-y-2" data-testid="status-loading-workflows">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ) : (
-          currentLevel.items.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.children) {
-                  handleDrillInto(item);
-                } else if (item.workflow) {
-                  handleWorkflowSelect(item.workflow);
-                }
-              }}
-              className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between gap-2 ${
-                item.workflow && selectedWorkflow?.id === item.workflow.id
-                  ? "bg-foreground text-background"
-                  : "hover-elevate"
-              }`}
-              data-testid={`nav-${item.id}`}
-            >
-              <div className="min-w-0">
-                <div className="font-medium truncate">{item.title}</div>
-                {item.subtitle && <div className="text-xs opacity-70 truncate">{item.subtitle}</div>}
-              </div>
-              {item.children && <ChevronRight className="h-4 w-4 opacity-50 flex-shrink-0" />}
-            </button>
-          ))
-        )}
-      </div>
-    </>
-  );
-
   return (
     <div className="flex flex-1 overflow-hidden">
-      {/* Mobile Workflow Nav Sheet */}
-      {isMobile && (
-        <Sheet open={isWorkflowNavOpen} onOpenChange={setIsWorkflowNavOpen}>
-          <SheetContent side="left" className="w-[80vw] max-w-[16rem] p-0">
-            <SheetHeader className="sr-only">
-              <SheetTitle>Workflows</SheetTitle>
-              <SheetDescription>Select a workflow to view</SheetDescription>
-            </SheetHeader>
-            <div className="flex flex-col h-full">
-              <MobileNavContent />
-            </div>
-          </SheetContent>
-        </Sheet>
-      )}
-
-      {/* Desktop Left Nav - Workflow List */}
-      {!isMobile && (
-        <div className="min-w-[14rem] max-w-[18rem] flex-shrink-0 border-r bg-muted/30 flex flex-col overflow-hidden">
-          <DesktopNavContent />
-        </div>
-      )}
+      {/* Left Nav - Workflow List (hidden on mobile per UI-006) */}
+      <div className="hidden md:flex min-w-[14rem] max-w-[18rem] flex-shrink-0 border-r bg-muted/30 flex-col overflow-hidden">
+        <DesktopNavContent />
+      </div>
 
       {/* Main Content - Workflow Detail */}
       <div className="flex-1 overflow-auto p-4">
-        {/* Mobile nav toggle */}
-        {isMobile && (
-          <div className="flex items-center gap-2 mb-4">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setIsWorkflowNavOpen(true)}
-                  data-testid="button-open-workflow-nav"
-                >
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Open workflows</TooltipContent>
-            </Tooltip>
-            {selectedWorkflow && (
-              <span className="text-sm font-medium truncate">{selectedWorkflow.name}</span>
-            )}
-          </div>
-        )}
 
         {selectedWorkflow ? (
           <div className="space-y-4">
+            {/* Mobile back button */}
+            <div className="md:hidden">
+              <Button variant="ghost" size="sm" onClick={() => handleWorkflowSelect(null)} data-testid="button-back-to-workflows">
+                Back
+              </Button>
+            </div>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-semibold" data-testid="text-workflow-name">{selectedWorkflow.name}</h2>
@@ -853,10 +683,42 @@ export default function AgenticWorkflows() {
             )}
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            <div className="text-center">
-              <Workflow className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p>Select a workflow to view details</p>
+          /* Mobile: Show workflow list as cards. Desktop: Prompt to select from nav */
+          <div className="space-y-4">
+            <div className="md:hidden">
+              <h2 className="text-lg font-semibold mb-4" data-testid="text-workflows-heading">Agentic Workflows</h2>
+              {isLoading ? (
+                <div className="space-y-3" data-testid="status-loading-workflows-mobile">
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {workflows.map((workflow) => (
+                    <Card
+                      key={workflow.id}
+                      className="cursor-pointer hover-elevate"
+                      onClick={() => handleWorkflowSelect(workflow)}
+                      data-testid={`card-workflow-${workflow.id}`}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <CardTitle className="text-base">{workflow.name}</CardTitle>
+                          <Badge variant="outline">{workflow.mode}</Badge>
+                        </div>
+                        <CardDescription className="text-sm">{workflow.description}</CardDescription>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="hidden md:flex items-center justify-center h-full text-muted-foreground">
+              <div className="text-center">
+                <Workflow className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                <p>Select a workflow to view details</p>
+              </div>
             </div>
           </div>
         )}

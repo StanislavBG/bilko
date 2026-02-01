@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { Card } from "@/components/ui/card";
@@ -11,7 +11,6 @@ import { Clock, GitBranch, Link2, PanelLeft } from "lucide-react";
 import { PageContent } from "@/components/page-content";
 import { ActionBar } from "@/components/action-bar";
 import { ActionPanel } from "@/components/action-panel";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface RuleMetadata {
   id: string;
@@ -261,10 +260,12 @@ function RuleNavItem({
 
 function RuleDetailPanel({ 
   ruleId,
-  onSelectRule
+  onSelectRule,
+  onBack
 }: { 
   ruleId: string;
   onSelectRule: (ruleId: string) => void;
+  onBack?: () => void;
 }) {
   const { data: rule, isLoading, error } = useQuery<RuleContent>({
     queryKey: ["/api/rules", ruleId],
@@ -291,6 +292,14 @@ function RuleDetailPanel({
   return (
     <div className="flex-1 overflow-auto bg-background" data-testid={`detail-rule-${ruleId.toLowerCase()}`}>
       <div className="p-4 border-b bg-muted/30">
+        {/* Mobile back button */}
+        {onBack && (
+          <div className="md:hidden mb-3">
+            <Button variant="ghost" size="sm" onClick={onBack} data-testid="button-back-to-rules">
+              Back
+            </Button>
+          </div>
+        )}
         <div className="flex items-center gap-3 flex-wrap mb-2">
           <code className="text-sm font-bold bg-muted px-2 py-0.5 rounded">
             {rule.id}
@@ -380,16 +389,8 @@ function CatalogView({
   selectedRuleId: string | null;
   setSelectedRuleId: (id: string | null) => void;
 }) {
-  const isMobile = useIsMobile();
   const [isPartitionCollapsed, setIsPartitionCollapsed] = useState(false);
   const [isTertiaryCollapsed, setIsTertiaryCollapsed] = useState(false);
-
-  useEffect(() => {
-    if (isMobile) {
-      setIsPartitionCollapsed(true);
-      setIsTertiaryCollapsed(true);
-    }
-  }, [isMobile]);
 
   const { data: catalog, isLoading } = useQuery<RulesCatalog>({
     queryKey: ["/api/rules"],
@@ -398,7 +399,7 @@ function CatalogView({
   if (isLoading) {
     return (
       <>
-        <div className="w-44 shrink-0 border-r bg-muted/20 p-2">
+        <div className="hidden md:flex w-44 shrink-0 border-r bg-muted/20 p-2 flex-col">
           <Skeleton className="h-6 w-full mb-2" />
           {[1, 2, 3, 4, 5, 6].map(i => (
             <Skeleton key={i} className="h-8 w-full mb-1" />
@@ -431,7 +432,7 @@ function CatalogView({
 
   return (
     <>
-      <div className={`shrink-0 border-r bg-muted/20 flex flex-col transition-all duration-200 ${
+      <div className={`hidden md:flex shrink-0 border-r bg-muted/20 flex-col transition-all duration-200 ${
         isPartitionCollapsed ? "min-w-12 max-w-12" : "min-w-[8rem] max-w-[10rem] flex-1"
       }`} data-testid="partition-nav">
         <div className="border-b px-2 h-8 flex items-center shrink-0">
@@ -483,7 +484,7 @@ function CatalogView({
         <TertiaryNavPanel
           isCollapsed={isTertiaryCollapsed}
           onToggleCollapse={() => setIsTertiaryCollapsed(!isTertiaryCollapsed)}
-          className={`transition-all duration-200 ${
+          className={`hidden md:flex transition-all duration-200 ${
             isTertiaryCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
           }`}
           testId="tertiary-nav-rules"
@@ -506,15 +507,76 @@ function CatalogView({
           <RuleDetailPanel 
             ruleId={selectedRuleId}
             onSelectRule={handleSelectRule}
+            onBack={() => setSelectedRuleId(null)}
           />
         ) : selectedPartition ? (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground bg-background">
-            <p className="text-sm">Select a rule to view details</p>
-          </div>
+          <>
+            {/* Desktop: prompt to select rule from nav */}
+            <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground bg-background">
+              <p className="text-sm">Select a rule to view details</p>
+            </div>
+            {/* Mobile: show rules as cards */}
+            <div className="md:hidden flex-1 p-4 overflow-auto">
+              <div className="flex items-center gap-2 mb-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedPartitionId(null)}
+                  data-testid="button-back-to-partitions"
+                >
+                  Back
+                </Button>
+                <h2 className="text-lg font-semibold capitalize" data-testid="text-partition-name">{selectedPartition.id}</h2>
+              </div>
+              <div className="space-y-3">
+                {selectedPartition.rules.map((rule) => (
+                  <Card
+                    key={rule.id}
+                    className="p-4 cursor-pointer hover-elevate"
+                    onClick={() => setSelectedRuleId(rule.id)}
+                    data-testid={`card-rule-${rule.id}`}
+                  >
+                    <div className="font-medium text-sm">{rule.title}</div>
+                    <div className="text-xs text-muted-foreground mt-1">{rule.id} v{rule.version}</div>
+                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{rule.description}</div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground bg-background">
-            <p className="text-sm">Select a partition to browse rules</p>
-          </div>
+          <>
+            {/* Desktop: prompt to select partition from nav */}
+            <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground bg-background">
+              <p className="text-sm">Select a partition to browse rules</p>
+            </div>
+            {/* Mobile: show partitions as cards */}
+            <div className="md:hidden flex-1 p-4 overflow-auto">
+              <h2 className="text-lg font-semibold mb-4" data-testid="text-rules-heading">Rules Explorer</h2>
+              {isCatalogLoading ? (
+                <div className="space-y-3" data-testid="status-loading-partitions-mobile">
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-20 w-full" />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {catalog?.partitions.map((partition) => (
+                    <Card
+                      key={partition.id}
+                      className="p-4 cursor-pointer hover-elevate"
+                      onClick={() => setSelectedPartitionId(partition.id)}
+                      data-testid={`card-partition-${partition.id}`}
+                    >
+                      <div className="font-medium text-sm capitalize">{partition.id}</div>
+                      <div className="text-xs text-muted-foreground mt-1">{partition.rules.length} rules</div>
+                      <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{partition.description}</div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
         )}
       </PageContent>
     </>
