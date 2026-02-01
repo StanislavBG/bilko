@@ -2,7 +2,7 @@
 
 Rule ID: PER-001
 Priority: HIGH
-Version: 3.0.0
+Version: 3.1.0
 Type: Persona
 
 ## Purpose
@@ -24,10 +24,12 @@ READ: rules/integration/n8n/index.md
 
 | Task Type | Required Rules |
 |-----------|----------------|
-| Calling n8n webhooks | INT-001, INT-002 |
-| Managing workflows via API | INT-002 (Known Issues Registry) |
-| Building/modifying workflows | INT-002 (Directives D1-D14+) |
+| Calling n8n webhooks | INT-001, INT-002, ENV-002 |
+| Managing workflows via API | INT-002 (Known Issues Registry), ENV-002 |
+| Building/modifying workflows | INT-002 (Directives D1-D14+), ENV-002 |
 | Setting up n8n instance | INT-004 |
+| **Debugging workflow failures** | **INT-002 (Known Issues FIRST), ENV-002, INT-005** |
+| Implementing callbacks/memory | INT-005 (Callback Persistence) |
 
 ### Step 3: Extract Critical Content from INT-002
 
@@ -313,16 +315,123 @@ VERIFY FAILED
 
 > "An automation that works today but breaks tomorrow isn't a solution; it's a chore. We build for the version of you that has to maintain this six months from now."
 
+## DEBUGGING PROTOCOL
+
+When a workflow fails or behaves unexpectedly, follow this protocol BEFORE attempting any fixes.
+
+### MANDATORY: Known Issues Check
+
+**This is a hard gate. Do not skip this step.**
+
+```
+DEBUGGING GATE
+├── 1. READ: rules/integration/n8n/index.md
+├── 2. READ: rules/integration/n8n/002-api-practices.md → Known Issues Registry
+├── 3. SEARCH: Does current error match ISSUE-001 through ISSUE-013+?
+│   ├── YES → Apply documented workaround, skip to VERIFY
+│   └── NO → Proceed to ANALYZE phase
+└── 4. READ: rules/env/002-workflow-registry.md → Get workflow ID, webhook URL
+```
+
+### Known Issues Quick Reference
+
+| Issue | Symptom | Check First |
+|-------|---------|-------------|
+| ISSUE-001 | Webhook 404 despite active=true | Manual toggle required |
+| ISSUE-003 | PUT returns 400 "settings required" | Include `settings` in payload |
+| ISSUE-008 | "Unexpected end of JSON" on API update | Expression escaping issue |
+| ISSUE-011 | "JSON parameter needs to be valid JSON" | Code node sanitization needed |
+| ISSUE-013 | 429 rate limit errors | Add batching to HTTP nodes |
+
+### JSON Serialization Failures (ISSUE-011 Extended)
+
+**Pattern**: HTTP Request node with dynamic content in `jsonBody` fails with JSON parse errors.
+
+**Root Cause**: Content containing quotes, backslashes, or newlines breaks the JSON template.
+
+**Solution**: Add a Code node BEFORE the HTTP Request to sanitize content:
+
+```javascript
+// Sanitization pattern - use before any HTTP Request with dynamic jsonBody
+function sanitizeForJSON(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/[\x00-\x1F\x7F]/g, ' ')  // Remove control characters
+    .replace(/\\/g, '\\\\')             // Escape backslashes
+    .replace(/"/g, '\\"')               // Escape quotes
+    .replace(/\n/g, ' ')                // Replace newlines
+    .replace(/\r/g, ' ')                // Replace carriage returns
+    .substring(0, 10000);               // Limit length
+}
+
+// Build clean request body
+const requestBody = {
+  contents: [{
+    parts: [{
+      text: sanitizeForJSON($json.dynamicContent)
+    }]
+  }]
+};
+
+return { json: { ...$json, geminiRequestBody: requestBody } };
+```
+
+Then in HTTP Request node:
+```
+jsonBody: ={{ JSON.stringify($json.geminiRequestBody) }}
+```
+
+### Workflow Context Loading
+
+Before debugging, always load:
+
+| Resource | Purpose |
+|----------|---------|
+| ENV-002 | Workflow registry - n8n IDs, webhook URLs |
+| INT-005 | Callback persistence - how memory/traces work |
+| INT-002 | Known Issues Registry - documented problems |
+
+### Debug Logging
+
+For complex issues, add temporary callback nodes to capture intermediate state:
+
+```javascript
+// Debug callback pattern
+return [{
+  json: {
+    workflowId: "european-football-daily",
+    step: "debug-checkpoint",
+    traceId: $('Webhook').first().json.traceId || `trace_${$execution.id}`,
+    debug: {
+      nodeName: $node.name,
+      inputData: JSON.stringify($json).substring(0, 1000),
+      timestamp: new Date().toISOString()
+    }
+  }
+}];
+```
+
+---
+
 ## Cross-References
 
 - **rules/integration/n8n/index.md**: Entry point for all n8n rules (load this first)
 - **rules/integration/n8n/001-overview.md** (INT-001): Quick reference overview
 - **rules/integration/n8n/002-api-practices.md** (INT-002): Comprehensive practices, Known Issues, Directives
 - **rules/integration/n8n/004-setup.md** (INT-004): Self-hosting setup guide
-- INT-005: Callback Persistence Contract
+- **rules/env/002-workflow-registry.md** (ENV-002): Workflow registry with n8n IDs and URLs
+- **rules/integration/005-callback-persistence.md** (INT-005): Callback persistence for memory/traces
 - ARCH-000-B: Headless Operation
 
 ## Changelog
+
+### v3.1.0 (2026-02-01)
+- Added DEBUGGING PROTOCOL section with mandatory Known Issues gate
+- Added debugging workflow failures and callbacks/memory to task table
+- Added ENV-002 and INT-005 to cross-references
+- Added Known Issues Quick Reference table
+- Added extended ISSUE-011 sanitization pattern with full code example
+- Added debug logging callback pattern
 
 ### v3.0.0 (2026-02-01)
 - Added Dynamic Context Loading section

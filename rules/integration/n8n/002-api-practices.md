@@ -143,31 +143,61 @@ AI training data becomes stale. n8n v2.0 (December 2024) introduced breaking cha
 - **Not a production concern**: Production workflows run once per day (scheduled), well within limits.
 
 ### ISSUE-011: HTTP Request jsonBody with Embedded Expressions (CRITICAL)
-- **Status**: RESOLVED (January 2026)
+- **Status**: RESOLVED (February 2026) - Extended with sanitization pattern
 - **Description**: HTTP Request nodes with complex `jsonBody` expressions containing multiple `{{ }}` patterns fail with "JSON parameter needs to be valid JSON" even when the JSON structure is valid.
 - **Root Cause**: n8n's expression parser struggles with nested `{{ }}` patterns inside JSON string values, especially when combined with:
   1. Embedded example JSON in prompt text
   2. Multiple expression interpolations in the same string
   3. Complex JavaScript within `{{ }}` blocks
+  4. **Dynamic content containing quotes, backslashes, or newlines** (e.g., scraped article text)
 - **Failure Pattern**:
   ```javascript
   // FAILS: Multiple expressions + example JSON in text
   jsonBody: '={"contents":[{"parts":[{"text":"Analyze: {{ $json.topic }}. Return JSON: {\"field\": \"value\"}"}]}]}'
+  
+  // ALSO FAILS: Dynamic content with special characters
+  jsonBody: '={"contents":[{"parts":[{"text":"Article: {{ $json.articleContent }}"}]}]}'
+  // If articleContent contains: He said "hello" and pressed \ to escape
   ```
-- **Solution**: Use a Code node to build the request body, then reference it with simple `JSON.stringify()`:
+- **Solution**: Use a Code node to build AND SANITIZE the request body:
   ```javascript
-  // Step 1: Add Code node "Build Request Body" BEFORE HTTP Request
-  const prompt = `Analyze: ${$json.topic}. Return JSON with field and value.`;
-  return { json: { ...item, requestBody: { contents: [{ parts: [{ text: prompt }] }] } } };
+  // Step 1: Add Code node "Prepare [X] Request" BEFORE HTTP Request
+  
+  // Sanitization function - CRITICAL for dynamic content
+  function sanitizeForJSON(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/[\x00-\x1F\x7F]/g, ' ')  // Remove control characters
+      .replace(/\\/g, '\\\\')             // Escape backslashes FIRST
+      .replace(/"/g, '\\"')               // Escape quotes
+      .replace(/\n/g, ' ')                // Replace newlines
+      .replace(/\r/g, ' ')                // Replace carriage returns
+      .substring(0, 10000);               // Limit length to prevent payload issues
+  }
+  
+  // Build clean request body
+  const prompt = `Analyze: ${sanitizeForJSON($json.articleContent)}. Return JSON with field and value.`;
+  const requestBody = {
+    contents: [{
+      parts: [{
+        text: prompt
+      }]
+    }]
+  };
+  
+  return { json: { ...$json, geminiRequestBody: requestBody } };
   
   // Step 2: HTTP Request jsonBody uses simple reference
-  jsonBody: '={{ JSON.stringify($json.requestBody) }}'
+  jsonBody: '={{ JSON.stringify($json.geminiRequestBody) }}'
   ```
-- **When to use Code nodes**: Whenever the Gemini prompt includes:
+- **When to use sanitization Code nodes**: Whenever the HTTP Request receives:
   1. Multiple dynamic values (`{{ $json.x }}`)
   2. Example JSON in the prompt text
   3. `JSON.stringify()` calls within the text
-- **DEV Workflow Impact**: Added "Build Compliance Request" and "Build Image Request" Code nodes to fix broken Compliance Checker and Generate Image nodes.
+  4. **Any scraped/external content** (articles, RSS feeds, user input)
+  5. **Any content that may contain quotes or special characters**
+- **Naming Convention**: `Prepare [Target Node] Request` (e.g., "Prepare Stats Request", "Prepare Post Request")
+- **PROD Workflow Impact (February 2026)**: Added "Prepare Stats Request" and "Prepare Post Request" Code nodes to fix European Football Daily workflow JSON parse errors with scraped article content.
 
 ### ISSUE-012: n8n Credential API Requires Explicit Boolean Fields
 - **Status**: DOCUMENTED (January 2026)
