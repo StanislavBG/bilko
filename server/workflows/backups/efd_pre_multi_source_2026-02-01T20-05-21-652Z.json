@@ -105,7 +105,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are an objective European football journalist creating a comprehensive Facebook post.\\n\\nTOPIC: {{ $json.selectedTopic.headline }}\\nCOMPREHENSIVE SUMMARY: {{ $json.comprehensiveSummary }}\\nTEAMS: {{ ($json.teams || []).join(', ') }}\\nCOMPETITION: {{ $json.competition }}\\nHASHTAGS TO USE: {{ $json.hashtagString }}\\n\\nEXTRACTED STATISTICS:\\n- Score: {{ $json.extractedStats?.score || 'not available' }}\\n- Possession: Home {{ $json.extractedStats?.possession?.home || '?' }}% - Away {{ $json.extractedStats?.possession?.away || '?' }}%\\n- Shots: Home {{ $json.extractedStats?.shots?.home || '?' }} - Away {{ $json.extractedStats?.shots?.away || '?' }}\\n- Shots on Target: Home {{ $json.extractedStats?.shotsOnTarget?.home || '?' }} - Away {{ $json.extractedStats?.shotsOnTarget?.away || '?' }}\\n- xG: Home {{ $json.extractedStats?.xG?.home || '?' }} - Away {{ $json.extractedStats?.xG?.away || '?' }}\\n- Corners: Home {{ $json.extractedStats?.corners?.home || '?' }} - Away {{ $json.extractedStats?.corners?.away || '?' }}\\n- Yellow Cards: Home {{ $json.extractedStats?.yellowCards?.home || '?' }} - Away {{ $json.extractedStats?.yellowCards?.away || '?' }}\\n- Transfer Fee: {{ $json.extractedStats?.transferFee || 'N/A' }}\\n- League Position: {{ $json.extractedStats?.leaguePosition || 'N/A' }}\\n- Points: {{ $json.extractedStats?.points || 'N/A' }}\\n- Other Stats: {{ JSON.stringify($json.extractedStats?.otherStats || []) }}\\n\\nKEY FACTS: {{ JSON.stringify($json.keyFacts || []) }}\\n\\nSOURCE COUNT: {{ $json.sourceCount }} sources analyzed\\nDATA CONFIDENCE: {{ $json.dataConfidence }}\\n\\nCreate an OBJECTIVE journalism-style Facebook post (3-4 paragraphs) that:\\n1. LEADS with the most significant statistic or result\\n2. Presents facts neutrally without bias toward any team\\n3. Includes ALL available statistics naturally in the narrative\\n4. Provides context about implications for the league/tournament\\n5. Uses measured language - avoid superlatives and hype\\n6. MUST end with these EXACT hashtags: {{ $json.hashtagString }}\\n\\nTONE REQUIREMENTS:\\n- Objective and balanced reporting\\n- Data-driven narrative\\n- NO player or coach names\\n- NO sensationalism or clickbait\\n- Present both sides fairly\\n- Let the numbers tell the story\\n\\nReturn ONLY a JSON object with:\\n- postContent: the full post text including hashtags\\n- sentiment: positive/neutral/negative\\n- statsHighlighted: array of stats you included\\\"\\n    }]\\n  }]\\n}\"",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are a European football social media manager. Create an INFORMATIVE, DATA-RICH Facebook post.\\n\\nTOPIC: {{ $json.selectedTopic.headline }}\\nEVENT: {{ $json.selectedTopic.event }}\\nTEAMS: {{ ($json.selectedTopic.teams || []).join(', ') }}\\nHASHTAGS TO USE: {{ $json.hashtagString }}\\n\\nEXTRACTED STATISTICS (INCLUDE THESE):\\n- Score: {{ $json.selectedTopic?.extractedStats?.score || \\\"not available\\\" }}\\n- Possession: {{ JSON.stringify($json.selectedTopic?.extractedStats?.possession) || \\\"not available\\\" }}\\n- Shots: {{ JSON.stringify($json.selectedTopic?.extractedStats?.shots) || \\\"not available\\\" }}\\n- Transfer Fee: {{ $json.selectedTopic?.extractedStats?.transferFee || \\\"not available\\\" }}\\n- League Position: {{ $json.selectedTopic?.extractedStats?.leaguePosition || \\\"not available\\\" }}\\n- Points: {{ $json.selectedTopic?.extractedStats?.points || \\\"not available\\\" }}\\n- Key Statistic: {{ $json.selectedTopic?.extractedStats?.keyStatistic || \\\"not available\\\" }}\\n\\nCreate an informative Facebook post (2-3 short paragraphs) that:\\n1. LEADS WITH SPECIFIC DATA - scores, percentages, transfer fees, standings\\n2. Include ALL available statistics in the post\\n3. Provides context about what this means for the league/tournament\\n4. Ends with a question to drive engagement\\n5. MUST end with these EXACT hashtags: {{ $json.hashtagString }}\\n\\nStyle guidelines:\\n- Be factual and NUMBERS-FOCUSED\\n- Highlight every statistic available\\n- NO generic filler - pack it with data\\n- Do NOT mention specific player or coach names\\n\\nReturn ONLY a JSON object with postContent (the text including hashtags) and sentiment (positive/neutral/negative)\"\n    }]\n  }]\n}",
         "options": {},
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
@@ -130,7 +130,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Hashtags\").first().json;\n\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^\\`\\`\\`[a-zA-Z]*\\\\n?/, \"\").replace(/\\\\n?\\`\\`\\`\\\\s*$/, \"\");\n\ntry {\n  const post = JSON.parse(cleaned);\n  let postContent = post.postContent || \"\";\n  \n  // Add source citations at the end (before hashtags)\n  const sourceUrls = prevData.sourceUrls || [];\n  if (sourceUrls.length > 0) {\n    // Find where hashtags start (# followed by word)\n    const hashtagMatch = postContent.match(/#[A-Za-z]/);\n    let beforeHashtags = postContent;\n    let hashtags = \"\";\n    \n    if (hashtagMatch) {\n      const hashtagIndex = postContent.indexOf(hashtagMatch[0]);\n      beforeHashtags = postContent.slice(0, hashtagIndex).trim();\n      hashtags = postContent.slice(hashtagIndex).trim();\n    }\n    \n    // Build citation line with numbered hyperlinks\n    const citations = sourceUrls.map((s, i) => \n      \"[\" + (i + 1) + \"](\" + s.url + \")\"\n    ).join(\" \");\n    \n    // Reconstruct post with sources\n    postContent = beforeHashtags + \"\\n\\nSources: \" + citations + \"\\n\\n\" + hashtags;\n  }\n  \n  return [{\n    json: {\n      postContent: postContent,\n      sentiment: post.sentiment || \"neutral\",\n      statsHighlighted: post.statsHighlighted || [],\n      safeImagePrompt: prevData.selectedTopic?.safeImagePrompt,\n      anonymizedDescriptions: prevData.selectedTopic?.anonymizedDescriptions || prevData.anonymizedDescriptions || {},\n      selectedTopic: prevData.selectedTopic,\n      comprehensiveSummary: prevData.comprehensiveSummary,\n      extractedStats: prevData.extractedStats || {},\n      teams: prevData.teams,\n      competition: prevData.competition,\n      keyFacts: prevData.keyFacts,\n      sourceUrls: prevData.sourceUrls,\n      sourceCount: prevData.sourceCount,\n      sourceLink: sourceUrls[0]?.url || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  const sourceUrls = prevData.sourceUrls || [];\n  const citations = sourceUrls.map((s, i) => \"[\" + (i + 1) + \"](\" + s.url + \")\").join(\" \");\n  \n  return [{\n    json: {\n      postContent: \"Football news update! Exciting developments in European football today.\\n\\nSources: \" + citations,\n      sentiment: \"neutral\",\n      statsHighlighted: [],\n      safeImagePrompt: prevData.selectedTopic?.safeImagePrompt || \"Exciting football stadium scene\",\n      anonymizedDescriptions: prevData.selectedTopic?.anonymizedDescriptions || {},\n      selectedTopic: prevData.selectedTopic,\n      comprehensiveSummary: prevData.comprehensiveSummary,\n      extractedStats: prevData.extractedStats || {},\n      teams: prevData.teams,\n      competition: prevData.competition,\n      keyFacts: prevData.keyFacts,\n      sourceUrls: prevData.sourceUrls,\n      sourceCount: prevData.sourceCount,\n      sourceLink: sourceUrls[0]?.url || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
+        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Statistics\").first().json;\nconst hashtagData = $(\"Parse Hashtags\").first().json;\n\n// Get Gemini response\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const post = JSON.parse(cleaned);\n  return [{\n    json: {\n      postContent: post.postContent,\n      sentiment: post.sentiment || \"positive\",\n      safeImagePrompt: prevData.selectedTopic.safeImagePrompt,\n      anonymizedDescriptions: prevData.selectedTopic.anonymizedDescriptions || hashtagData.anonymizedDescriptions || {},\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.selectedTopic.extractedStats || {},\n      sourceLink: prevData.selectedTopic?.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      postContent: \"Football news update! Exciting developments in European football today.\",\n      sentiment: \"positive\",\n      safeImagePrompt: prevData.selectedTopic?.safeImagePrompt || \"Exciting football stadium scene with cheering fans\",\n      anonymizedDescriptions: prevData.selectedTopic?.anonymizedDescriptions || {},\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.selectedTopic?.extractedStats || {},\n      sourceLink: prevData.selectedTopic?.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
       },
       "name": "Parse Post",
       "type": "n8n-nodes-base.code",
@@ -199,7 +199,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const brandingResult = $input.first().json;\n\nconst postContent = brandingResult.postContent || \"Football news update!\";\nconst imagePrompt = brandingResult.imagePrompt || \"European football celebration\";\nconst sourceLink = brandingResult.sourceLink || \"\";\nconst extractedStats = brandingResult.extractedStats || {};\nconst selectedTopic = brandingResult.selectedTopic || {};\nconst sourceUrls = brandingResult.sourceUrls || [];\nconst comprehensiveSummary = brandingResult.comprehensiveSummary || \"\";\nconst keyFacts = brandingResult.keyFacts || [];\nconst infographicElements = brandingResult.infographicElements || [];\n\nlet imageDataUri = brandingResult.imageDataUri || null;\nif (brandingResult.success && brandingResult.brandedImageBase64) {\n  imageDataUri = \"data:image/png;base64,\" + brandingResult.brandedImageBase64;\n}\n\n// Build source citations for transparency post\nconst citations = sourceUrls.map((s, i) => \"[\" + (i + 1) + \"] \" + s.url).join(\"\\n\");\n\nlet transparencyPost = \"I've developed this AI-driven system to efficiently curate European football news, serving as a professional 'proof of work' for AI integration. Grounded in transparency and the human-in-the-loop principle, this project demonstrates how AI can enhance specialized content. Follow for updates, or visit my bio to learn how to build similar systems.\\n\\nBilko Bibitkov Human-Centric AI Curation\\n\\n\" + brandingResult.sourceCount + \" sources analyzed for this report.\";\n\nif (citations) {\n  transparencyPost += \"\\n\\nSources:\\n\" + citations;\n}\n\nconst output = {\n  success: true,\n  selectedTopic: {\n    headline: selectedTopic.headline || \"\",\n    sourceHeadline: selectedTopic.sourceHeadline || selectedTopic.headline || \"\",\n    sourceHeadlineHash: selectedTopic.sourceHeadlineHash || \"\",\n    teams: selectedTopic.teams || [],\n    event: selectedTopic.event || \"\",\n    dataRichness: extractedStats.dataConfidence || selectedTopic.dataRichness || 0,\n    brandValue: selectedTopic.brandValue || 0,\n    extractedStats: extractedStats,\n    enhancedTagline: brandingResult.tagline || \"\"\n  },\n  data: {\n    postContent: postContent,\n    comprehensiveSummary: comprehensiveSummary,\n    keyFacts: keyFacts,\n    imagePrompt: imagePrompt,\n    imageUrl: imageDataUri,\n    tagline: brandingResult.tagline || \"\",\n    infographicElements: infographicElements,\n    transparencyPost: transparencyPost,\n    sourceLink: sourceLink,\n    sourceUrls: sourceUrls,\n    sourceCount: brandingResult.sourceCount || 1,\n    contentFiltered: !imageDataUri\n  }\n};\n\nreturn [{ json: output }];"
+        "jsCode": "const brandingResult = $input.first().json;\n// Now use data from Parse Brand Response which has the full chain data\nconst postContent = brandingResult.postContent || \"Football news update!\";\nconst imagePrompt = brandingResult.imagePrompt || \"European football celebration\";\nconst sourceLink = brandingResult.sourceLink || \"\";\nconst extractedStats = brandingResult.extractedStats || {};\nconst selectedTopic = brandingResult.selectedTopic || {};\n\n// Use branded image if available, otherwise fallback to original\nlet imageDataUri = brandingResult.imageDataUri || null;\nif (brandingResult.success && brandingResult.brandedImageBase64) {\n  imageDataUri = \"data:image/png;base64,\" + brandingResult.brandedImageBase64;\n}\n\n// Create transparency/disclosure post\nlet transparencyPost = \"I've developed this AI-driven system to efficiently curate European football news, serving as a professional 'proof of work' for AI integration. Grounded in transparency and the human-in-the-loop principle, this project demonstrates how AI can enhance specialized content. Follow for updates, or visit my bio to learn how to build similar systems.\\n\\nBilko Bibitkov Human-Centric AI Curation\";\n\nif (sourceLink) {\n  transparencyPost += \"\\n\\nSource: \" + sourceLink;\n}\n\nconst output = {\n  success: true,\n  selectedTopic: {\n    headline: selectedTopic.headline || \"\",\n    sourceHeadline: selectedTopic.sourceHeadline || selectedTopic.headline || \"\",\n    sourceHeadlineHash: selectedTopic.sourceHeadlineHash || \"\",\n    teams: selectedTopic.teams || [],\n    event: selectedTopic.event || \"\",\n    dataRichness: extractedStats.dataRichness || selectedTopic.dataRichness || 0,\n    brandValue: selectedTopic.brandValue || 0,\n    extractedStats: extractedStats,\n    enhancedTagline: selectedTopic.enhancedTagline || \"\"\n  },\n  data: {\n    postContent: postContent,\n    imagePrompt: imagePrompt,\n    imageUrl: imageDataUri,\n    tagline: brandingResult.tagline || \"\",\n    transparencyPost: transparencyPost,\n    sourceLink: sourceLink,\n    contentFiltered: !imageDataUri,\n    extractedStats: extractedStats\n  }\n};\n\nreturn [{ json: output }];"
       },
       "name": "Build Final Output",
       "type": "n8n-nodes-base.code",
@@ -304,7 +304,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Tagline\").first().json;\n\nconst parts = input?.candidates?.[0]?.content?.parts || [];\nconst imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith(\"image/\"));\n\nif (imagePart && imagePart.inlineData?.data) {\n  const mimeType = imagePart.inlineData.mimeType;\n  const base64Data = imagePart.inlineData.data;\n  const imageDataUri = \"data:\" + mimeType + \";base64,\" + base64Data;\n\n  return [{\n    json: {\n      imageDataUri: imageDataUri,\n      imagePrompt: prevData.imagePrompt,\n      tagline: prevData.tagline,\n      infographicElements: prevData.infographicElements,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      comprehensiveSummary: prevData.comprehensiveSummary,\n      keyFacts: prevData.keyFacts,\n      sourceUrls: prevData.sourceUrls,\n      sourceCount: prevData.sourceCount,\n      sourceLink: prevData.sourceLink,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} else {\n  return [{\n    json: {\n      imageDataUri: null,\n      imagePrompt: prevData.imagePrompt,\n      tagline: prevData.tagline,\n      infographicElements: prevData.infographicElements,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      comprehensiveSummary: prevData.comprehensiveSummary,\n      keyFacts: prevData.keyFacts,\n      sourceUrls: prevData.sourceUrls,\n      sourceCount: prevData.sourceCount,\n      sourceLink: prevData.sourceLink,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      imagenError: \"No image data in response\"\n    }\n  }];\n}"
+        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Tagline\").first().json;\n\n// Get image from Nano Banana Pro response format\nconst parts = input?.candidates?.[0]?.content?.parts || [];\nconst imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith(\"image/\"));\n\nif (imagePart && imagePart.inlineData?.data) {\n  const mimeType = imagePart.inlineData.mimeType;\n  const base64Data = imagePart.inlineData.data;\n  const imageDataUri = \"data:\" + mimeType + \";base64,\" + base64Data;\n\n  return [{\n    json: {\n      imageDataUri: imageDataUri,\n      imagePrompt: prevData.imagePrompt,\n      tagline: prevData.tagline,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} else {\n  // Fallback when image generation fails\n  return [{\n    json: {\n      imageDataUri: null,\n      imagePrompt: prevData.imagePrompt,\n      tagline: prevData.tagline,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      imagenError: \"No image data in response\"\n    }\n  }];\n}"
       },
       "id": "ec694419-9c45-4f5d-b2a9-56f136492315",
       "name": "Parse Imagen Response",
@@ -492,7 +492,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Get Gemini response from HTTP Request\nconst geminiResponse = $input.first().json;\n\n// Get original data from Parse Summary (has multi-source data)\nconst originalData = $(\"Parse Summary\").first().json;\nconst geminiApiKey = originalData.geminiApiKey;\nconst callbackUrl = originalData.callbackUrl;\nconst selectedTopic = originalData.selectedTopic;\nconst comprehensiveSummary = originalData.comprehensiveSummary;\nconst extractedStats = originalData.extractedStats || {};\nconst teams = originalData.teams || [];\nconst competition = originalData.competition || \"\";\nconst keyFacts = originalData.keyFacts || [];\nconst sourceUrls = originalData.sourceUrls || [];\nconst sourceCount = originalData.sourceCount || 1;\nconst dataConfidence = originalData.dataConfidence || \"low\";\n\n// Parse hashtags from Gemini response\nlet hashtags = [\"#football\", \"#soccer\", \"#UEFA\"]; // fallback\ntry {\n  const candidates = geminiResponse.candidates || [];\n  if (candidates.length > 0) {\n    let text = candidates[0].content?.parts?.[0]?.text || \"\";\n    text = text.replace(/```json\\n?/g, \"\").replace(/```/g, \"\").trim();\n    const parsed = JSON.parse(text);\n    if (parsed.hashtags && Array.isArray(parsed.hashtags)) {\n      hashtags = parsed.hashtags.slice(0, 3);\n    }\n  }\n} catch (e) {\n  // Keep fallback\n}\n\nreturn [{\n  json: {\n    selectedTopic: selectedTopic,\n    comprehensiveSummary: comprehensiveSummary,\n    extractedStats: extractedStats,\n    teams: teams,\n    competition: competition,\n    keyFacts: keyFacts,\n    sourceUrls: sourceUrls,\n    sourceCount: sourceCount,\n    dataConfidence: dataConfidence,\n    sourceLink: selectedTopic?.sourceLink || \"\",\n    anonymizedDescriptions: selectedTopic?.anonymizedDescriptions || {},\n    hashtags: hashtags,\n    hashtagString: hashtags.join(\" \"),\n    geminiApiKey: geminiApiKey,\n    callbackUrl: callbackUrl\n  }\n}];"
+        "jsCode": "// Get Gemini response from HTTP Request\nconst geminiResponse = $input.first().json;\n\n// Get original data from Parse Statistics (now has extractedStats)\nconst originalData = $(\"Parse Statistics\").first().json;\nconst geminiApiKey = originalData.geminiApiKey;\nconst callbackUrl = originalData.callbackUrl;\nconst selectedTopic = originalData.selectedTopic;\n\n// Parse hashtags from Gemini response\nlet hashtags = [\"#football\", \"#soccer\", \"#UEFA\"]; // fallback\ntry {\n  const candidates = geminiResponse.candidates || [];\n  if (candidates.length > 0) {\n    let text = candidates[0].content?.parts?.[0]?.text || \"\";\n    text = text.replace(/```json\\n?/g, \"\").replace(/```/g, \"\").trim();\n    const parsed = JSON.parse(text);\n    if (parsed.hashtags && Array.isArray(parsed.hashtags)) {\n      hashtags = parsed.hashtags.slice(0, 3);\n    }\n  }\n} catch (e) {\n  // Keep fallback\n}\n\nreturn [{\n  json: {\n    selectedTopic: selectedTopic,\n    sourceLink: selectedTopic.sourceLink || \"\",\n    anonymizedDescriptions: selectedTopic.anonymizedDescriptions || {},\n    hashtags: hashtags,\n    hashtagString: hashtags.join(\" \"),\n    geminiApiKey: geminiApiKey,\n    callbackUrl: callbackUrl\n  }\n}];"
       },
       "id": "parse-hashtags-1769380010487",
       "name": "Parse Hashtags",
@@ -522,7 +522,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create a SHORT, DATA-FOCUSED tagline for a sports infographic.\\n\\nTOPIC: {{ $json.selectedTopic?.headline }}\\nSCORE: {{ $json.extractedStats?.score || 'N/A' }}\\nPOSSESSION: {{ $json.extractedStats?.possession?.home || '?' }}% - {{ $json.extractedStats?.possession?.away || '?' }}%\\nSHOTS: {{ $json.extractedStats?.shots?.home || '?' }} - {{ $json.extractedStats?.shots?.away || '?' }}\\nTRANSFER FEE: {{ $json.extractedStats?.transferFee || 'N/A' }}\\nLEAGUE POSITION: {{ $json.extractedStats?.leaguePosition || 'N/A' }}\\nPOINTS: {{ $json.extractedStats?.points || 'N/A' }}\\nSOURCES: {{ $json.sourceCount }} sources analyzed\\n\\nCreate a tagline that:\\n1. Is 3-6 words maximum\\n2. MUST include the most important number/stat\\n3. Is punchy and impactful\\n4. Works as a headline overlay\\n\\nExamples with data:\\n- Score available: '2-1 Victory!'\\n- Transfer: '€85M Move Confirmed'\\n- League: 'Top of the Table'\\n- Stats: '67% Possession Dominance'\\n\\nReturn ONLY JSON: { \\\"tagline\\\": \\\"your tagline here\\\" }\"\n    }]\n  }]\n}",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create a DATA-RICH headline for a European football image.\\n\\nTOPIC: {{ $json.selectedTopic?.headline || \\\"Football news\\\" }}\\nTEAMS: {{ ($json.selectedTopic?.teams || []).join(' vs ') }}\\nEVENT: {{ $json.selectedTopic?.event || \\\"update\\\" }}\\n\\nEXTRACTED REAL DATA (USE THIS IF AVAILABLE):\\n- Score: {{ $json.selectedTopic?.extractedStats?.score || \\\"not found\\\" }}\\n- Home Team: {{ $json.selectedTopic?.extractedStats?.homeTeam || \\\"unknown\\\" }}\\n- Away Team: {{ $json.selectedTopic?.extractedStats?.awayTeam || \\\"unknown\\\" }}\\n- Possession: {{ JSON.stringify($json.selectedTopic?.extractedStats?.possession) || \\\"not found\\\" }}\\n- Transfer Fee: {{ $json.selectedTopic?.extractedStats?.transferFee || \\\"not found\\\" }}\\n- League Position: {{ $json.selectedTopic?.extractedStats?.leaguePosition || \\\"not found\\\" }}\\n- Points: {{ $json.selectedTopic?.extractedStats?.points || \\\"not found\\\" }}\\n- Key Statistic: {{ $json.selectedTopic?.extractedStats?.keyStatistic || \\\"none\\\" }}\\n- Enhanced Tagline (pre-computed): {{ $json.selectedTopic?.enhancedTagline || \\\"none\\\" }}\\n\\nRules:\\n- 3-6 words maximum\\n- PRIORITIZE REAL DATA: If we have a score, USE IT (e.g., \\\"Barcelona 3-0 Madrid\\\")\\n- If transfer fee exists, use it (e.g., \\\"£80M Transfer Done\\\")\\n- If league position/points exist, use them\\n- The Enhanced Tagline is already computed from real data - consider using it directly\\n- DO NOT use generic phrases like \\\"Game On\\\", \\\"What A Match\\\"\\n\\nReturn ONLY a JSON object: {\\\"tagline\\\": \\\"your data-rich headline here\\\"}\"\n    }]\n  }]\n}",
         "options": {
           "response": {
             "response": {}
@@ -548,7 +548,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Build Image Request\").first().json;\n\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const taglineData = JSON.parse(cleaned);\n  return [{\n    json: {\n      tagline: taglineData.tagline || \"Match Report\",\n      imagePrompt: prevData.imagePrompt,\n      infographicElements: prevData.infographicElements,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      comprehensiveSummary: prevData.comprehensiveSummary,\n      keyFacts: prevData.keyFacts,\n      sourceUrls: prevData.sourceUrls,\n      sourceCount: prevData.sourceCount,\n      sourceLink: prevData.sourceLink,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  // Generate fallback tagline from stats\n  let fallbackTagline = \"Match Report\";\n  if (prevData.extractedStats?.score) {\n    fallbackTagline = prevData.extractedStats.score + \" Final\";\n  } else if (prevData.extractedStats?.transferFee) {\n    fallbackTagline = prevData.extractedStats.transferFee + \" Deal\";\n  } else if (prevData.extractedStats?.leaguePosition) {\n    fallbackTagline = \"#\" + prevData.extractedStats.leaguePosition + \" Ranking\";\n  }\n  \n  return [{\n    json: {\n      tagline: fallbackTagline,\n      imagePrompt: prevData.imagePrompt,\n      infographicElements: prevData.infographicElements,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      comprehensiveSummary: prevData.comprehensiveSummary,\n      keyFacts: prevData.keyFacts,\n      sourceUrls: prevData.sourceUrls,\n      sourceCount: prevData.sourceCount,\n      sourceLink: prevData.sourceLink,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
+        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Image Prompt\").first().json;\n\n// Get Gemini response\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const taglineData = JSON.parse(cleaned);\n  return [{\n    json: {\n      tagline: taglineData.tagline || \"Game On!\",\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      tagline: \"Game On!\",\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
       },
       "name": "Parse Tagline",
       "type": "n8n-nodes-base.code",
@@ -587,7 +587,7 @@
         112
       ],
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Imagen Response\").first().json;\n\nconst parts = input?.candidates?.[0]?.content?.parts || [];\nconst imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith(\"image/\"));\n\nlet brandedImageBase64 = null;\nif (imagePart && imagePart.inlineData?.data) {\n  brandedImageBase64 = imagePart.inlineData.data;\n}\n\nreturn [{\n  json: {\n    success: !!brandedImageBase64,\n    brandedImageBase64: brandedImageBase64,\n    imageDataUri: prevData.imageDataUri,\n    imagePrompt: prevData.imagePrompt,\n    tagline: prevData.tagline,\n    infographicElements: prevData.infographicElements,\n    postContent: prevData.postContent,\n    selectedTopic: prevData.selectedTopic,\n    extractedStats: prevData.extractedStats || {},\n    comprehensiveSummary: prevData.comprehensiveSummary,\n    keyFacts: prevData.keyFacts,\n    sourceUrls: prevData.sourceUrls,\n    sourceCount: prevData.sourceCount,\n    sourceLink: prevData.sourceLink,\n    geminiApiKey: prevData.geminiApiKey,\n    callbackUrl: prevData.callbackUrl\n  }\n}];"
+        "jsCode": "const brandingResponse = $input.first().json;\nconst prevData = $(\"Parse Imagen Response\").first().json;\n\n// Pass through branding response with original data including extractedStats\nreturn [{\n  json: {\n    // Branding response fields\n    success: brandingResponse.success === true,\n    brandedImageBase64: brandingResponse.brandedImageBase64 || null,\n    \n    // Original data from Parse Imagen Response\n    imageDataUri: prevData.imageDataUri,\n    imagePrompt: prevData.imagePrompt,\n    tagline: prevData.tagline,\n    postContent: prevData.postContent,\n    selectedTopic: prevData.selectedTopic,\n    extractedStats: prevData.extractedStats || {},\n    sourceLink: prevData.sourceLink || \"\",\n    geminiApiKey: prevData.geminiApiKey,\n    callbackUrl: prevData.callbackUrl\n  }\n}];"
       }
     },
     {
@@ -613,7 +613,7 @@
         112
       ],
       "parameters": {
-        "jsCode": "const prevData = $input.first().json;\nconst selectedTopic = prevData.selectedTopic || {};\nconst extractedStats = prevData.extractedStats || {};\nconst keyFacts = prevData.keyFacts || [];\nconst sourceCount = prevData.sourceCount || 1;\n\n// Build comprehensive infographic elements\nconst infographicElements = [];\n\n// Score overlay (most prominent)\nif (extractedStats.score) {\n  infographicElements.push('LARGE SCORE OVERLAY: \"' + extractedStats.score + '\" in bold white text with drop shadow');\n}\n\n// Possession comparison bar\nif (extractedStats.possession?.home && extractedStats.possession?.away) {\n  infographicElements.push('POSSESSION BAR: horizontal split bar showing ' + extractedStats.possession.home + '% vs ' + extractedStats.possession.away + '%');\n}\n\n// Shots comparison\nif (extractedStats.shots?.home && extractedStats.shots?.away) {\n  infographicElements.push('SHOTS GRAPHIC: \"Shots: ' + extractedStats.shots.home + ' - ' + extractedStats.shots.away + '\"');\n}\n\n// Shots on target\nif (extractedStats.shotsOnTarget?.home && extractedStats.shotsOnTarget?.away) {\n  infographicElements.push('ON TARGET: \"' + extractedStats.shotsOnTarget.home + ' - ' + extractedStats.shotsOnTarget.away + ' on target\"');\n}\n\n// xG data\nif (extractedStats.xG?.home && extractedStats.xG?.away) {\n  infographicElements.push('xG METRIC: \"xG: ' + (typeof extractedStats.xG.home === \"number\" ? extractedStats.xG.home.toFixed(2) : parseFloat(extractedStats.xG.home || 0).toFixed(2)) + ' - ' + (typeof extractedStats.xG.away === \"number\" ? extractedStats.xG.away.toFixed(2) : parseFloat(extractedStats.xG.away || 0).toFixed(2)) + '\"');\n}\n\n// Corners\nif (extractedStats.corners?.home && extractedStats.corners?.away) {\n  infographicElements.push('CORNER KICKS: \"' + extractedStats.corners.home + ' - ' + extractedStats.corners.away + '\"');\n}\n\n// Cards\nconst homeYellow = extractedStats.yellowCards?.home || 0;\nconst awayYellow = extractedStats.yellowCards?.away || 0;\nconst homeRed = extractedStats.redCards?.home || 0;\nconst awayRed = extractedStats.redCards?.away || 0;\nif (homeYellow + awayYellow + homeRed + awayRed > 0) {\n  infographicElements.push('CARDS: Yellow ' + homeYellow + '-' + awayYellow + ', Red ' + homeRed + '-' + awayRed);\n}\n\n// Transfer fee badge\nif (extractedStats.transferFee) {\n  infographicElements.push('TRANSFER FEE BADGE: \"' + extractedStats.transferFee + '\" in gold/yellow accent');\n}\n\n// League position indicator\nif (extractedStats.leaguePosition) {\n  const ordinal = extractedStats.leaguePosition + (['st','nd','rd'][((extractedStats.leaguePosition+90)%100-10)%10-1]||'th');\n  infographicElements.push('LEAGUE POSITION: \"' + ordinal + ' Place\" with table icon');\n}\n\n// Points display\nif (extractedStats.points) {\n  infographicElements.push('POINTS: \"' + extractedStats.points + ' pts\"');\n}\n\n// Goal difference\nif (extractedStats.goalDifference) {\n  const prefix = extractedStats.goalDifference > 0 ? '+' : '';\n  infographicElements.push('GOAL DIFFERENCE: \"GD: ' + prefix + extractedStats.goalDifference + '\"');\n}\n\n// Win streak\nif (extractedStats.winStreak && extractedStats.winStreak >= 3) {\n  infographicElements.push('WIN STREAK: \"' + extractedStats.winStreak + ' WINS IN A ROW\" flame icon');\n}\n\n// Clean sheets\nif (extractedStats.cleanSheets) {\n  infographicElements.push('CLEAN SHEETS: \"' + extractedStats.cleanSheets + ' Clean Sheets\" shield icon');\n}\n\n// Other notable stats\nconst otherStats = extractedStats.otherStats || [];\notherStats.slice(0, 3).forEach(stat => {\n  infographicElements.push('STAT BADGE: \"' + stat + '\"');\n});\n\n// Source count badge\nif (sourceCount > 1) {\n  infographicElements.push('SOURCE BADGE: \"' + sourceCount + ' Sources Analyzed\" in corner');\n}\n\n// Build the infographic prompt\nconst teams = selectedTopic.teams || [];\nconst teamColors = teams.length >= 2 \n  ? 'using colors associated with ' + teams[0] + ' and ' + teams[1]\n  : teams.length === 1 \n    ? 'using colors associated with ' + teams[0]\n    : 'using vibrant football colors';\n\nconst basePrompt = selectedTopic.safeImagePrompt || 'Modern football stadium atmosphere with dramatic lighting';\n\nlet fullPrompt = 'Create a professional SPORTS INFOGRAPHIC image. ' + basePrompt + '. ';\nfullPrompt += 'Style: Clean, modern sports broadcast graphics ' + teamColors + '. ';\nfullPrompt += 'Dark background with vibrant stat overlays. ';\n\nif (infographicElements.length > 0) {\n  fullPrompt += 'Include these data visualizations: ' + infographicElements.join('. ') + '. ';\n} else {\n  fullPrompt += 'Include subtle stadium atmosphere and team imagery. ';\n}\n\nfullPrompt += 'Professional typography, clear hierarchy, broadcast-quality graphics. NO faces, NO real people, NO text that could be misread.';\n\nconst requestBody = {\n  contents: [{\n    parts: [{\n      text: fullPrompt\n    }]\n  }]\n};\n\nreturn [{\n  json: {\n    requestBody,\n    imagePrompt: fullPrompt,\n    infographicElements,\n    postContent: prevData.postContent,\n    selectedTopic: prevData.selectedTopic,\n    extractedStats: extractedStats,\n    comprehensiveSummary: prevData.comprehensiveSummary,\n    keyFacts: keyFacts,\n    sourceUrls: prevData.sourceUrls,\n    sourceCount: sourceCount,\n    sourceLink: prevData.sourceLink,\n    geminiApiKey: prevData.geminiApiKey,\n    callbackUrl: prevData.callbackUrl\n  }\n}];"
+        "jsCode": "// Build the Gemini API request body for image prompt generation\nconst item = $input.first().json;\nconst safeImagePrompt = item.safeImagePrompt || '';\nconst anonymizedDescriptions = item.anonymizedDescriptions || {};\nconst extractedStats = item.extractedStats || {};\nconst geminiApiKey = item.geminiApiKey;\n\n// Build stats string for infographic elements\nlet statsElements = [];\nif (extractedStats.score) statsElements.push(\"Score overlay: \" + extractedStats.score);\nif (extractedStats.possession?.home) statsElements.push(\"Possession bar: \" + extractedStats.possession.home + \"% vs \" + extractedStats.possession.away + \"%\");\nif (extractedStats.transferFee) statsElements.push(\"Transfer fee badge: \" + extractedStats.transferFee);\nif (extractedStats.leaguePosition) statsElements.push(\"League position: #\" + extractedStats.leaguePosition);\nif (extractedStats.points) statsElements.push(\"Points total: \" + extractedStats.points);\n\nconst infographicElements = statsElements.length > 0 \n  ? \"Include these INFOGRAPHIC ELEMENTS as styled overlays: \" + statsElements.join(\", \") + \".\" \n  : \"\";\n\nconst prompt = `Create an INFOGRAPHIC-STYLE image prompt for European football content.\nBase concept: ${safeImagePrompt}\nPeople descriptions: ${JSON.stringify(anonymizedDescriptions)}\n\n${infographicElements}\n\nStyle requirements:\n- Modern sports broadcast aesthetic\n- Clean data visualization overlays (score boxes, stat bars)\n- Professional sports graphics with team colors\n- Dynamic composition with space for text overlays\n- NO real person faces or recognizable individuals\n\nReturn ONLY valid JSON with: imagePrompt (detailed infographic-style prompt), style (photorealistic)`;\n\nreturn {\n  json: {\n    ...item,\n    requestBody: {\n      contents: [{\n        parts: [{ text: prompt }]\n      }]\n    }\n  }\n};\n"
       }
     },
     {
@@ -698,187 +698,6 @@
       "parameters": {
         "jsCode": "const geminiResponse = $input.first().json;\nconst aggregateData = $(\"Aggregate Compliant Topics\").first().json;\nconst geminiApiKey = aggregateData.geminiApiKey;\nconst callbackUrl = aggregateData.callbackUrl;\nconst selectedTopic = aggregateData.selectedTopic;\n\nlet extractedStats = {\n  score: null,\n  homeTeam: null,\n  awayTeam: null,\n  possession: null,\n  shots: null,\n  transferFee: null,\n  leaguePosition: null,\n  points: null,\n  goalCount: null,\n  keyStatistic: null,\n  dataRichness: 1\n};\n\ntry {\n  const candidates = geminiResponse.candidates || [];\n  if (candidates.length > 0) {\n    let text = candidates[0].content?.parts?.[0]?.text || \"\";\n    text = text.replace(/```json\\n?/g, \"\").replace(/```/g, \"\").trim();\n    const parsed = JSON.parse(text);\n    extractedStats = { ...extractedStats, ...parsed };\n  }\n} catch (e) {\n  // Keep defaults\n}\n\n// Build enhanced tagline based on extracted data\nlet enhancedTagline = selectedTopic.headline;\nif (extractedStats.score && extractedStats.homeTeam && extractedStats.awayTeam) {\n  enhancedTagline = extractedStats.homeTeam + \" \" + extractedStats.score + \" \" + extractedStats.awayTeam;\n} else if (extractedStats.score) {\n  enhancedTagline = selectedTopic.teams?.[0] + \" \" + extractedStats.score + \" \" + (selectedTopic.teams?.[1] || \"\");\n} else if (extractedStats.transferFee) {\n  enhancedTagline = extractedStats.transferFee + \" Transfer Complete\";\n} else if (extractedStats.leaguePosition && extractedStats.points) {\n  enhancedTagline = selectedTopic.teams?.[0] + \" #\" + extractedStats.leaguePosition + \" (\" + extractedStats.points + \" pts)\";\n}\n\nreturn [{\n  json: {\n    selectedTopic: {\n      ...selectedTopic,\n      extractedStats: extractedStats,\n      enhancedTagline: enhancedTagline.trim(),\n      hasRealData: extractedStats.dataRichness >= 5\n    },\n    sourceLink: selectedTopic.sourceLink || \"\",\n    anonymizedDescriptions: selectedTopic.anonymizedDescriptions || {},\n    geminiApiKey: geminiApiKey,\n    callbackUrl: callbackUrl\n  }\n}];"
       }
-    },
-    {
-      "parameters": {
-        "jsCode": "const prevData = $input.first().json;\nconst selectedTopic = prevData.selectedTopic || {};\nconst headline = selectedTopic.headline || '';\nconst teams = selectedTopic.teams || [];\n\n// Build search query from topic\nconst searchTerms = [];\nif (teams.length > 0) {\n  searchTerms.push(...teams.slice(0, 2));\n}\n\n// Extract key words from headline\nconst keyWords = headline\n  .replace(/[^a-zA-Z0-9\\s]/g, '')\n  .split(/\\s+/)\n  .filter(w => w.length > 4 && !['about', 'after', 'before', 'their', 'there', 'where', 'which', 'would', 'could', 'should'].includes(w.toLowerCase()))\n  .slice(0, 3);\n\nsearchTerms.push(...keyWords);\nconst searchQuery = searchTerms.join(' ');\n\n// Build Google News RSS URL for topic-specific search\nconst encodedQuery = encodeURIComponent(searchQuery + ' football');\nconst searchUrl = 'https://news.google.com/rss/search?q=' + encodedQuery + '&hl=en-US&gl=US&ceid=US:en';\n\nreturn [{\n  json: {\n    ...prevData,\n    searchQuery: searchQuery,\n    searchUrl: searchUrl,\n    primarySource: {\n      url: selectedTopic.sourceLink || '',\n      headline: selectedTopic.sourceHeadline || headline\n    }\n  }\n}];"
-      },
-      "name": "Build Search Query",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1900,
-        -200
-      ],
-      "id": "search-query-builder-001"
-    },
-    {
-      "parameters": {
-        "url": "={{ $json.searchUrl }}",
-        "options": {}
-      },
-      "name": "Search Related Sources",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        2100,
-        -200
-      ],
-      "id": "search-related-sources-001"
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "name": "Parse Search Results",
-      "type": "n8n-nodes-base.xml",
-      "typeVersion": 1,
-      "position": [
-        2300,
-        -200
-      ],
-      "id": "parse-search-results-001"
-    },
-    {
-      "parameters": {
-        "jsCode": "const rssData = $input.first().json;\nconst prevData = $(\"Build Search Query\").first().json;\nconst primarySource = prevData.primarySource || {};\n\n// Extract articles from RSS\nconst items = rssData?.rss?.channel?.item || [];\n\n// Collect up to 5 sources (including primary)\nconst sources = [];\n\n// Add primary source first\nif (primarySource.url) {\n  sources.push({\n    url: primarySource.url,\n    headline: primarySource.headline,\n    isPrimary: true\n  });\n}\n\n// Add related sources (skip duplicates)\nconst seenUrls = new Set([primarySource.url?.toLowerCase()]);\n\nfor (const item of items.slice(0, 10)) {\n  if (sources.length >= 5) break;\n  \n  const link = item.link || '';\n  const title = item.title || '';\n  \n  // Skip if duplicate or same domain as primary\n  if (seenUrls.has(link.toLowerCase())) continue;\n  \n  // Skip Google News redirect wrapper - extract actual URL\n  let actualUrl = link;\n  if (link.includes('news.google.com')) {\n    // Keep the redirect link as-is for now\n    actualUrl = link;\n  }\n  \n  seenUrls.add(actualUrl.toLowerCase());\n  sources.push({\n    url: actualUrl,\n    headline: title,\n    isPrimary: false\n  });\n}\n\nreturn [{\n  json: {\n    ...prevData,\n    sources: sources,\n    sourceCount: sources.length\n  }\n}];"
-      },
-      "name": "Collect Sources",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2500,
-        -200
-      ],
-      "id": "collect-sources-001"
-    },
-    {
-      "parameters": {
-        "jsCode": "const prevData = $input.first().json;\nconst sources = prevData.sources || [];\n\n// Create HTTP requests for each source\nconst requests = sources.map((source, index) => ({\n  json: {\n    sourceIndex: index,\n    sourceUrl: source.url,\n    sourceHeadline: source.headline,\n    isPrimary: source.isPrimary,\n    allSources: sources,\n    selectedTopic: prevData.selectedTopic,\n    geminiApiKey: prevData.geminiApiKey,\n    callbackUrl: prevData.callbackUrl\n  }\n}));\n\nreturn requests;"
-      },
-      "name": "Split Sources",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2700,
-        -200
-      ],
-      "id": "split-sources-001"
-    },
-    {
-      "parameters": {
-        "url": "={{ $json.sourceUrl }}",
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": false,
-              "responseFormat": "text"
-            }
-          },
-          "timeout": 10000
-        }
-      },
-      "name": "Fetch Source Content",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        2900,
-        -200
-      ],
-      "id": "fetch-source-content-001",
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "jsCode": "const htmlContent = $input.first().json.data || $input.first().json || '';\nconst prevItem = $input.first().json;\nconst sourceIndex = prevItem.sourceIndex ?? 0;\nconst sourceUrl = prevItem.sourceUrl || '';\nconst sourceHeadline = prevItem.sourceHeadline || '';\nconst isPrimary = prevItem.isPrimary || false;\nconst allSources = prevItem.allSources || [];\n\n// Extract text from HTML (basic extraction)\nlet text = '';\nif (typeof htmlContent === 'string') {\n  // Remove scripts and styles\n  text = htmlContent\n    .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<nav[^>]*>[\\s\\S]*?<\\/nav>/gi, '')\n    .replace(/<header[^>]*>[\\s\\S]*?<\\/header>/gi, '')\n    .replace(/<footer[^>]*>[\\s\\S]*?<\\/footer>/gi, '')\n    .replace(/<aside[^>]*>[\\s\\S]*?<\\/aside>/gi, '')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/\\s+/g, ' ')\n    .trim()\n    .slice(0, 8000);\n}\n\nreturn [{\n  json: {\n    sourceIndex,\n    sourceUrl,\n    sourceHeadline,\n    isPrimary,\n    content: text,\n    allSources,\n    selectedTopic: prevItem.selectedTopic,\n    geminiApiKey: prevItem.geminiApiKey,\n    callbackUrl: prevItem.callbackUrl\n  }\n}];"
-      },
-      "name": "Parse Source Content",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        3100,
-        -200
-      ],
-      "id": "parse-source-content-001"
-    },
-    {
-      "parameters": {
-        "aggregate": "aggregateAllItemData",
-        "options": {}
-      },
-      "name": "Aggregate Sources",
-      "type": "n8n-nodes-base.aggregate",
-      "typeVersion": 1,
-      "position": [
-        3300,
-        -200
-      ],
-      "id": "aggregate-sources-001"
-    },
-    {
-      "parameters": {
-        "jsCode": "const items = $input.first().json.data || [];\nconst firstItem = items[0] || {};\nconst allSources = firstItem.allSources || [];\nconst selectedTopic = firstItem.selectedTopic || {};\n\n// Build combined content\nconst articlesText = items\n  .sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))\n  .map((item, idx) => {\n    const label = item.isPrimary ? '[PRIMARY SOURCE]' : '[SOURCE ' + (idx + 1) + ']';\n    return label + '\\nHeadline: ' + item.sourceHeadline + '\\nContent: ' + (item.content || 'No content available').slice(0, 3000);\n  })\n  .join('\\n\\n---\\n\\n');\n\n// Build source URLs for citations\nconst sourceUrls = allSources.map((s, i) => ({\n  index: i + 1,\n  url: s.url,\n  headline: s.headline\n}));\n\nreturn [{\n  json: {\n    articlesText,\n    sourceUrls,\n    sourceCount: items.length,\n    selectedTopic,\n    geminiApiKey: firstItem.geminiApiKey,\n    callbackUrl: firstItem.callbackUrl\n  }\n}];"
-      },
-      "name": "Merge All Content",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        3500,
-        -200
-      ],
-      "id": "merge-all-content-001"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "x-goog-api-key",
-              "value": "={{ $json.geminiApiKey }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are an objective football journalist synthesizing multiple sources into a comprehensive summary.\\n\\nARTICLES:\\n{{ $json.articlesText }}\\n\\nAnalyze ALL sources and extract:\\n\\nReturn ONLY a JSON object with:\\n{\\n  \\\"summary\\\": \\\"2-3 paragraph objective summary synthesizing all sources (NO player names, focus on facts and numbers)\\\",\\n  \\\"stats\\\": {\\n    \\\"score\\\": \\\"final score if match (e.g. 2-1) or null\\\",\\n    \\\"possession\\\": { \\\"home\\\": number or null, \\\"away\\\": number or null },\\n    \\\"shots\\\": { \\\"home\\\": number or null, \\\"away\\\": number or null },\\n    \\\"shotsOnTarget\\\": { \\\"home\\\": number or null, \\\"away\\\": number or null },\\n    \\\"xG\\\": { \\\"home\\\": number or null, \\\"away\\\": number or null },\\n    \\\"corners\\\": { \\\"home\\\": number or null, \\\"away\\\": number or null },\\n    \\\"fouls\\\": { \\\"home\\\": number or null, \\\"away\\\": number or null },\\n    \\\"yellowCards\\\": { \\\"home\\\": number or null, \\\"away\\\": number or null },\\n    \\\"redCards\\\": { \\\"home\\\": number or null, \\\"away\\\": number or null },\\n    \\\"transferFee\\\": \\\"transfer amount if applicable or null\\\",\\n    \\\"leaguePosition\\\": number or null,\\n    \\\"points\\\": number or null,\\n    \\\"goalDifference\\\": number or null,\\n    \\\"winStreak\\\": number or null,\\n    \\\"cleanSheets\\\": number or null,\\n    \\\"otherStats\\\": [\\\"any other significant numbers found\\\"]\\n  },\\n  \\\"teams\\\": [\\\"team names mentioned\\\"],\\n  \\\"competition\\\": \\\"league/tournament name\\\",\\n  \\\"keyFacts\\\": [\\\"3-5 bullet point facts\\\"],\\n  \\\"dataConfidence\\\": \\\"high/medium/low - based on source agreement\\\"\\n}\\n\\nBe thorough - extract EVERY statistic mentioned across ALL sources. Prioritize numbers and objective facts.\\\"\\n    }]\\n  }]\\n}\"\n    }",
-        "options": {},
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth"
-      },
-      "name": "Comprehensive Summary",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        3700,
-        -200
-      ],
-      "id": "comprehensive-summary-001",
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "K9oPxIngg8rE26T6",
-          "name": "Header Auth account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Merge All Content\").first().json;\n\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const summary = JSON.parse(cleaned);\n  return [{\n    json: {\n      comprehensiveSummary: summary.summary,\n      extractedStats: summary.stats,\n      teams: summary.teams,\n      competition: summary.competition,\n      keyFacts: summary.keyFacts,\n      dataConfidence: summary.dataConfidence,\n      sourceUrls: prevData.sourceUrls,\n      sourceCount: prevData.sourceCount,\n      selectedTopic: prevData.selectedTopic,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      comprehensiveSummary: prevData.selectedTopic?.headline || \"Football news update\",\n      extractedStats: {},\n      teams: prevData.selectedTopic?.teams || [],\n      competition: \"\",\n      keyFacts: [],\n      dataConfidence: \"low\",\n      sourceUrls: prevData.sourceUrls,\n      sourceCount: prevData.sourceCount,\n      selectedTopic: prevData.selectedTopic,\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
-      },
-      "name": "Parse Summary",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        3900,
-        -200
-      ],
-      "id": "parse-summary-001"
     }
   ],
   "connections": {
@@ -1185,127 +1004,6 @@
       ]
     },
     "Parse Statistics": {
-      "main": [
-        [
-          {
-            "node": "Hashtag Researcher",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Build Search Query": {
-      "main": [
-        [
-          {
-            "node": "Search Related Sources",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Search Related Sources": {
-      "main": [
-        [
-          {
-            "node": "Parse Search Results",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Search Results": {
-      "main": [
-        [
-          {
-            "node": "Collect Sources",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Collect Sources": {
-      "main": [
-        [
-          {
-            "node": "Split Sources",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Split Sources": {
-      "main": [
-        [
-          {
-            "node": "Fetch Source Content",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch Source Content": {
-      "main": [
-        [
-          {
-            "node": "Parse Source Content",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Source Content": {
-      "main": [
-        [
-          {
-            "node": "Aggregate Sources",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Aggregate Sources": {
-      "main": [
-        [
-          {
-            "node": "Merge All Content",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Merge All Content": {
-      "main": [
-        [
-          {
-            "node": "Comprehensive Summary",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Comprehensive Summary": {
-      "main": [
-        [
-          {
-            "node": "Parse Summary",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Summary": {
       "main": [
         [
           {
