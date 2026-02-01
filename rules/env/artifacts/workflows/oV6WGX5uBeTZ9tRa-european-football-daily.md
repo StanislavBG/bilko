@@ -1,3 +1,92 @@
+# European Football Daily Workflow
+
+**n8n ID**: `oV6WGX5uBeTZ9tRa`  
+**Webhook Path**: `european-football-daily`  
+**Version**: 2.0.0  
+**Last Updated**: 2026-02-01
+
+## Objectives
+
+Multi-source European football news aggregation with AI-generated Facebook posts featuring wallpaper-style imagery.
+
+### Success Criteria
+
+1. **Content Quality**: Objective journalism style - no bias, numbered citations to sources
+2. **Image Style**: Wallpaper-style imagery with informative text overlays (not clickbait)
+3. **Deduplication**: Recent topics are filtered to avoid repetitive posts
+4. **Distribution**: Ready-to-publish Facebook post format
+
+### Key Outputs
+
+| Output | Description |
+|--------|-------------|
+| `postContent` | Facebook post text with numbered citations |
+| `imagePrompt` | Prompt for AI image generation |
+| `tagline` | 3-6 word overlay for image (factual, not generic) |
+| `hashtags` | Relevant hashtags for reach |
+
+## Key Nodes
+
+### Generate Tagline
+
+Creates the text overlay for AI-generated images.
+
+**Prompt Guidelines** (v1.1.0):
+- 3-6 words maximum
+- If headline contains a score, INCLUDE the score (e.g., "Barcelona 3-0 Madrid")
+- If headline contains numbers (transfer fees, points, goals), include them
+- Prioritize team names and factual information
+- NO generic phrases: "Game On", "Breaking News", "Big Win", "What A Match"
+- Should inform the viewer of WHAT happened, not just generate excitement
+
+**Good Examples**:
+- "Barcelona 3-0 Real Madrid"
+- "Man City Clinches Title"
+- "£80M Transfer Complete"
+- "Liverpool Top After Win"
+
+**Bad Examples** (prohibited):
+- "Game On!"
+- "What A Match!"
+- "Football Fever"
+- "Big News Today"
+
+### Topic Analyst
+
+Extracts structured data from news headlines:
+- `hasScore`: Boolean - true if headline contains match score
+- `hasNumbers`: Boolean - true if contains transfer fees, goals, points
+- `teams`: Array of team names mentioned
+- `event`: Brief event description
+- `dataRichness`: Score 1-10 prioritizing headlines with actual data
+
+### Aggregate Compliant Topics
+
+Selects the best topic based on:
+1. Compliance (safe for image generation)
+2. Data richness (scores > generic news)
+3. Brand value (major clubs/leagues)
+
+## Changelog
+
+### v2.0.0 (2026-02-01)
+- Merged objectives and JSON definition into single artifact file
+- Moved from `rules/env/004-efd-workflow.md` to artifacts folder
+- Added detailed success criteria and key outputs table
+
+### v1.1.0 (2026-01-31)
+- Updated Generate Tagline prompt to produce informative titles with scores/teams instead of generic catchphrases
+- Added `hasScore`, `teams`, `event` fields to tagline prompt; prohibited generic phrases
+
+### v1.0.0 (2026-01-25)
+- Initial workflow creation
+
+## Workflow Definition
+
+<details>
+<summary>Click to expand n8n workflow JSON (2400+ lines)</summary>
+
+```json
 {
   "updatedAt": "2026-01-31T22:24:51.612Z",
   "createdAt": "2026-01-25T09:36:24.234Z",
@@ -2405,4 +2494,6 @@
       }
     ]
   }
-}
+}```
+
+</details>
