@@ -1,6 +1,6 @@
-# AGT-002-RULES: Rule Audit Protocol
+# AGT-003-RULES: Rule Audit Protocol
 
-**Version:** 2.1.0  
+**Version:** 2.2.0  
 **Priority:** HIGH  
 **Partition:** agent  
 **Dependencies:** ARCH-000, ARCH-002
@@ -8,6 +8,16 @@
 ## Purpose
 
 Validates rule files for structural integrity, consistency, and coverage. Ensures the rule system itself is healthy.
+
+## Changelog
+
+### v2.2.0 (2026-02-01)
+- Added CHECK 7: Sub-Manifest Discovery (validates subManifests section in manifest.json)
+- Updated Quick Audit to include CHECK 7
+- Added 5 new entries to Common Issues Reference for sub-manifest validation
+
+### v2.1.0 (2026-01-30)
+- Initial structured audit protocol
 
 ## Auditor Persona
 
@@ -68,12 +78,12 @@ Triggered when:
 ## Audit Modes
 
 ### Quick Audit (Default)
-Checks: 1-3 (Structural, Routing, Conflicts)
+Checks: 1-3, 7 (Structural, Routing, Conflicts, Sub-Manifest Discovery)
 Duration: ~2 minutes
 Use when: Regular health check
 
 ### Full Audit
-Checks: 1-6 (All checks)
+Checks: 1-7 (All checks)
 Duration: ~5-10 minutes
 Use when: Major rule changes, quarterly review
 
@@ -228,6 +238,55 @@ grep -rn "v[0-9]\.[0-9]\.[0-9]" rules/ --include="*.md"
 grep -rn "\.tsx\|\.ts" rules/**/*.md | head -20
 ```
 
+### CHECK 7: Sub-Manifest Discovery (REQUIRED)
+
+Validate that `subManifests` section in manifest.json is complete and accurate.
+
+**Purpose:** As the rules system grows, domains (like n8n, auth, etc.) may have their own index files or sub-manifests. This check ensures the root manifest properly documents and points to all sub-manifests.
+
+| Check | How to Verify | Severity if Failed |
+|-------|--------------|-------------------|
+| subManifests section exists | Check manifest has `.subManifests` | WARNING |
+| All index.md files are registered | Find all `index.md` in rules/, compare to entries | CRITICAL |
+| All entry paths exist | Verify each `path` file exists | CRITICAL |
+| relatedRules reference valid IDs | Cross-check against `.rules` section | WARNING |
+| relatedPersonas reference valid IDs | Cross-check against personas/ folder | WARNING |
+| No orphan sub-manifests | index.md files not in subManifests.entries | WARNING |
+
+**Evidence commands:**
+```bash
+# Check if subManifests section exists
+cat rules/manifest.json | jq '.subManifests // "NOT CONFIGURED"'
+
+# List all sub-manifest entries
+cat rules/manifest.json | jq '.subManifests.entries[]?.id'
+
+# Find all index.md files in rules/ (potential sub-manifests)
+find rules -name "index.md" -type f
+
+# Verify each sub-manifest path exists
+cat rules/manifest.json | jq -r '.subManifests.entries[]?.path' | while read path; do
+  [ -f "$path" ] && echo "OK: $path" || echo "MISSING: $path"
+done
+
+# Cross-check relatedRules against manifest rules
+cat rules/manifest.json | jq -r '.subManifests.entries[]?.relatedRules[]?' | while read rule; do
+  cat rules/manifest.json | jq -e ".rules[\"$rule\"]" > /dev/null 2>&1 && echo "OK: $rule" || echo "INVALID: $rule"
+done
+
+# Cross-check relatedPersonas against personas/ folder
+cat rules/manifest.json | jq -r '.subManifests.entries[]?.relatedPersonas[]?' | while read persona; do
+  [ -f "personas/${persona}*.md" ] 2>/dev/null || ls personas/${persona}*.md > /dev/null 2>&1 && echo "OK: $persona" || echo "INVALID: $persona"
+done
+```
+
+**Discovery Protocol:**
+When a new domain-specific index.md is created:
+1. Add entry to `subManifests.entries[]` with id, domain, path, description
+2. List all relatedRules that the index references
+3. List any relatedPersonas (from personas/ folder)
+4. Run CHECK 7 to validate
+
 ## Output Format
 
 All audit reports use this structure:
@@ -296,6 +355,11 @@ After completing an audit:
 | Orphan rule | Rule exists but not in routing | Add to redFlags or alwaysInclude |
 | Circular dependency | A → B → A pattern | Break the cycle |
 | Stale content | Rule not updated after code change | Update rule to match code |
+| Missing subManifests section | No sub-manifests defined yet | Add subManifests to manifest.json |
+| Orphan index.md | index.md not in subManifests.entries | Add entry to subManifests.entries |
+| Invalid relatedRules | Rule ID typo in subManifest entry | Correct the rule ID |
+| Missing sub-manifest file | Path in entry doesn't exist | Create the index.md file |
+| Invalid relatedPersonas | Persona ID typo or persona deleted | Update or remove the persona reference |
 
 ## Cross-References
 
