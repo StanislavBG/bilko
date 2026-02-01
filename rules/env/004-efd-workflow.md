@@ -13,6 +13,7 @@ Documents the European Football Daily (EFD) n8n workflow structure, node purpose
 - **n8n ID**: `oV6WGX5uBeTZ9tRa`
 - **Webhook Path**: `european-football-daily`
 - **Registry Entry**: ENV-002
+- **Artifact**: `rules/env/artifacts/prod/workflows/european-football-daily.json` (per ENV-002)
 
 ## Key Nodes
 
