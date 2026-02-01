@@ -24,7 +24,6 @@ A descriptive post accompanying the infographic:
 
 - **Content**: Describes what the infographic shows, explaining the event and key facts
 - **Source Citations**: Numbered references to original sources (objective journalism style)
-- **Branding**: Includes "Bilko Bibitkov AI Academy" branding line (replaces separate disclaimer post)
 - **Hashtags**: Relevant to the topic; prefer hashtags mentioned in source material
 
 ### Success Criteria
@@ -35,13 +34,13 @@ A descriptive post accompanying the infographic:
 | **Image Quality** | Cinematic composition with team/league identity and clear data overlays |
 | **Content Quality** | Objective journalism - no bias, factual reporting with numbered source citations |
 | **Hashtag Relevance** | Hashtags directly relate to topic; sourced from original articles when possible |
-| **Single Post** | All content in one post with branding line (no separate disclaimer post) |
+| **Single Post** | All content in one post (no separate disclaimer post) |
 
 ### Key Outputs
 
 | Output | Description |
 |--------|-------------|
-| `postContent` | Facebook post describing the infographic with numbered source citations and branding |
+| `postContent` | Facebook post describing the infographic with numbered source citations |
 | `imagePrompt` | AI image generation prompt for cinematic infographic with team logos and stat overlays |
 | `eventSummary` | Complete, easy-to-read sentence describing the event facts (displayed on image) |
 | `hashtags` | Topic-relevant hashtags, preferably sourced from original articles |
