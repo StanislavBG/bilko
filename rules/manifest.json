@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
-  "version": "1.4.0",
-  "lastUpdated": "2026-02-01T22:10:00Z",
+  "version": "1.5.0",
+  "lastUpdated": "2026-02-01T23:00:00Z",
   "bootstrap": {
     "_instruction": "AI developers: READ ALL RULES in the /rules/ directory. This manifest indexes them for routing, but you must read the actual .md files.",
     "primaryDirective": "ARCH-000",
