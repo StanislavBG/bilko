@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { orchestratorStorage } from "./storage";
 import { randomUUID } from "crypto";
 import { authStorage } from "../replit_integrations/auth/storage";
+import { getWebhookUrl } from "../n8n/webhook-cache";
 
 function generateTraceId(): string {
   return `trace_${randomUUID().replace(/-/g, "").substring(0, 16)}`;
@@ -26,14 +27,16 @@ async function callN8nWorkflow(
   workflowId: string,
   payload: Record<string, unknown>
 ): Promise<{ success: boolean; data?: unknown; error?: { code: string; message: string }; executionId?: string }> {
-  const webhookUrl = process.env[`N8N_WEBHOOK_${workflowId.toUpperCase()}`];
+  const cachedUrl = getWebhookUrl(workflowId);
+  const envUrl = process.env[`N8N_WEBHOOK_${workflowId.toUpperCase().replace(/-/g, "_")}`];
+  const webhookUrl = cachedUrl || envUrl;
   
   if (!webhookUrl) {
     return {
       success: false,
       error: {
         code: "WORKFLOW_NOT_CONFIGURED",
-        message: `Workflow ${workflowId} is not configured. Set N8N_WEBHOOK_${workflowId.toUpperCase()} environment variable.`,
+        message: `Workflow ${workflowId} is not configured. Webhook cache empty and no env var found.`,
       },
     };
   }
@@ -87,10 +90,24 @@ export function registerOrchestratorRoutes(app: Express) {
         const startTime = Date.now();
 
         let enrichedPayload = { ...payload };
+        
+        const PROD_CALLBACK_URL = 'https://bilkobibitkov.replit.app/api/workflows/callback';
+        let callbackUrl: string;
+        if (process.env.CALLBACK_URL_OVERRIDE) {
+          callbackUrl = process.env.CALLBACK_URL_OVERRIDE;
+        } else if (process.env.REPLIT_DOMAINS) {
+          const currentDomain = process.env.REPLIT_DOMAINS.split(',')[0];
+          callbackUrl = `https://${currentDomain}/api/workflows/callback`;
+        } else {
+          callbackUrl = PROD_CALLBACK_URL;
+        }
+        
         if (workflowId === "european-football-daily") {
           const recentTopics = await orchestratorStorage.getRecentTopics(workflowId, 24);
           enrichedPayload = {
             ...payload,
+            geminiApiKey: process.env.GEMINI_API_KEY,
+            callbackUrl,
             recentTopics: recentTopics.map(t => ({
               headline: t.headline,
               headlineHash: t.headlineHash,
