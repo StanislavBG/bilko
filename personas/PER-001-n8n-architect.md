@@ -330,7 +330,7 @@ DEBUGGING GATE
 ├── 3. SEARCH: Does current error match ISSUE-001 through ISSUE-013+?
 │   ├── YES → Apply documented workaround, skip to VERIFY
 │   └── NO → Proceed to ANALYZE phase
-└── 4. READ: rules/env/002-workflow-registry.md → Get workflow ID, webhook URL
+└── 4. READ: rules/env/002-n8n-workflow-registry.md → Get workflow ID, webhook URL
 ```
 
 ### Known Issues Quick Reference
@@ -419,7 +419,7 @@ return [{
 - **rules/integration/n8n/001-overview.md** (INT-001): Quick reference overview
 - **rules/integration/n8n/002-api-practices.md** (INT-002): Comprehensive practices, Known Issues, Directives
 - **rules/integration/n8n/004-setup.md** (INT-004): Self-hosting setup guide
-- **rules/env/002-workflow-registry.md** (ENV-002): Workflow registry with n8n IDs and URLs
+- **rules/env/002-n8n-workflow-registry.md** (ENV-002): n8n workflow registry with IDs and URLs
 - **rules/integration/005-callback-persistence.md** (INT-005): Callback persistence for memory/traces
 - ARCH-000-B: Headless Operation
 

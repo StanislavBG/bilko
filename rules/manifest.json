@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
-  "version": "1.3.0",
-  "lastUpdated": "2026-02-01T21:00:00Z",
+  "version": "1.4.0",
+  "lastUpdated": "2026-02-01T22:10:00Z",
   "bootstrap": {
     "_instruction": "AI developers: READ ALL RULES in the /rules/ directory. This manifest indexes them for routing, but you must read the actual .md files.",
     "primaryDirective": "ARCH-000",
@@ -899,49 +899,48 @@
     },
     "ENV-001": {
       "id": "ENV-001",
-      "title": "Environments",
-      "path": "rules/env/001-environments.md",
+      "title": "n8n Instance Configuration",
+      "path": "rules/env/001-n8n-instance.md",
       "partition": "env",
       "priority": "CRITICAL",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "triggers": [
-        "environment",
-        "dev url",
-        "prod url",
-        "callback url",
-        "replit url",
+        "n8n instance",
         "n8n url",
-        "workflow tag"
+        "webhook base",
+        "callback url",
+        "replit url"
       ],
       "dependencies": [
         "ARCH-000"
       ],
       "crossReferences": [
         "ENV-002",
-        "INT-003"
+        "INT-002"
       ],
-      "description": "Single source of truth for deployment environments, URLs, and naming conventions."
+      "description": "n8n instance and Replit application URLs. No dev/prod separation."
     },
     "ENV-002": {
       "id": "ENV-002",
-      "title": "Workflow Registry",
-      "path": "rules/env/002-workflow-registry.md",
+      "title": "n8n Workflow Registry",
+      "path": "rules/env/002-n8n-workflow-registry.md",
       "partition": "env",
       "priority": "HIGH",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "triggers": [
         "workflow registry",
         "workflow artifact",
-        "dev workflow",
-        "prod workflow"
+        "n8n workflow",
+        "workflow id"
       ],
       "dependencies": [
         "ENV-001"
       ],
       "crossReferences": [
-        "ENV-001"
+        "ENV-001",
+        "PER-001"
       ],
-      "description": "Central registry of all n8n workflows with environment-specific artifact paths."
+      "description": "Central registry of all n8n workflows with artifact paths."
     },
     "ENV-003": {
       "id": "ENV-003",
@@ -964,30 +963,6 @@
         "ENV-002"
       ],
       "description": "Registry of all public-facing channels and distribution endpoints."
-    },
-    "ENV-004": {
-      "id": "ENV-004",
-      "title": "EFD Workflow",
-      "path": "rules/env/004-efd-workflow.md",
-      "partition": "env",
-      "priority": "HIGH",
-      "version": "1.1.0",
-      "triggers": [
-        "european football daily",
-        "efd",
-        "tagline",
-        "image title",
-        "generate tagline"
-      ],
-      "dependencies": [
-        "ENV-001",
-        "ENV-002"
-      ],
-      "crossReferences": [
-        "ENV-002",
-        "INT-001"
-      ],
-      "description": "European Football Daily workflow documentation including node purposes, prompt guidelines, and changelog."
     }
   },
   "partitions": {

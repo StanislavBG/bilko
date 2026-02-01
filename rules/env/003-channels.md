@@ -46,5 +46,5 @@ To register a new channel:
 4. Document in ENV-002 which workflows target this channel
 
 ## Cross-References
-- ENV-002: Workflow Registry
-- AGT-003-FOOTBALL: European Football Daily Workflow (in /agents/)
+
+- ENV-002: n8n Workflow Registry
