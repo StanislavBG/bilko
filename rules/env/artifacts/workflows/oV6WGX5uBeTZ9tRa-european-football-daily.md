@@ -2,7 +2,7 @@
 
 **n8n ID**: `oV6WGX5uBeTZ9tRa`  
 **Webhook Path**: `european-football-daily`  
-**Version**: 2.2.0  
+**Version**: 2.3.0  
 **Last Updated**: 2026-02-01
 
 ## Objectives
@@ -89,7 +89,150 @@ Selects the best topic based on:
 2. Data richness (scores > generic news)
 3. Brand value (major clubs/leagues)
 
+---
+
+## n8n Implementation Changes (v2.3.0)
+
+The following changes must be applied to the live n8n workflow to align with v2.2.0 objectives.
+
+### Implementation Protocol (PER-001 Single-Change Discipline)
+
+Apply changes ONE AT A TIME in this order, with webhook test after each:
+
+| Step | Change | Verification |
+|------|--------|--------------|
+| 1 | Rename node + update prompt (Change 1) | Webhook returns `eventSummary` as complete sentence |
+| 2 | Rename field in all downstream nodes (Change 2) | No `tagline` references remain |
+| 3 | Update stat overlay logic (Change 3) | Overlay count varies with dataRichness |
+| 4 | Add team logo instruction (Change 3 continued) | Image prompt includes logo instruction |
+| 5 | Update Call Imagen API body (Change 4) | Image text overlay uses eventSummary |
+
+After each step: Save workflow → Test via webhook → Verify output → Proceed to next.
+
+### Change 1: Rename "Generate Tagline" → "Generate Event Summary"
+
+**Node**: `Generate Tagline` (id: `tagline-gen-1769390960853`)  
+**Action**: Rename node and update prompt
+
+**Current Prompt** (INCORRECT):
+```
+Create a SHORT, DATA-FOCUSED tagline for a sports infographic.
+...
+1. Is 3-6 words maximum
+2. MUST include the most important number/stat
+3. Is punchy and impactful
+4. Works as a headline overlay
+```
+
+**New Prompt** (CORRECT):
+```
+Create a complete, informative EVENT SUMMARY sentence for a sports infographic overlay.
+
+TOPIC: {{ $json.selectedTopic?.headline }}
+SCORE: {{ $json.extractedStats?.score || 'N/A' }}
+TEAMS: {{ $json.selectedTopic?.teams?.join(' vs ') || 'N/A' }}
+COMPETITION: {{ $json.selectedTopic?.competition || 'European Football' }}
+TRANSFER FEE: {{ $json.extractedStats?.transferFee || 'N/A' }}
+LEAGUE POSITION: {{ $json.extractedStats?.leaguePosition || 'N/A' }}
+POINTS: {{ $json.extractedStats?.points || 'N/A' }}
+
+Create an event summary that:
+1. Is a COMPLETE SENTENCE (15-25 words)
+2. Includes ALL key facts: teams, scores, competition, context
+3. Is informative and readable as a standalone statement
+4. NO generic phrases: "Game On", "What A Match", "Breaking News"
+
+GOOD EXAMPLES:
+- "Barcelona defeated Real Madrid 3-0 in El Clásico with Lewandowski scoring twice"
+- "Manchester City secured the Premier League title with 2 games remaining"
+- "Kylian Mbappé completes €180M transfer to Real Madrid on a 5-year contract"
+
+BAD EXAMPLES (PROHIBITED):
+- "2-1 Victory!" (too short, no context)
+- "Game On!" (generic, no facts)
+- "Top of the Table" (vague, no teams)
+
+Return ONLY JSON: { "eventSummary": "your complete sentence here" }
+```
+
+### Change 2: Rename Field `tagline` → `eventSummary`
+
+**Affected Nodes**:
+- `Parse Tagline` → rename to `Parse Event Summary`
+- `Call Imagen API` → change `{{ $json.tagline }}` to `{{ $json.eventSummary }}`
+- `Parse Imagen Response` → change `tagline:` to `eventSummary:`
+- `Parse Brand Response` → change `tagline:` to `eventSummary:`
+- `Build Final Output` → change all `tagline` references to `eventSummary`
+
+### Change 3: Update "Build Image Request" for Team Logos and 1-5 Stats
+
+**Node**: `Build Image Request` (id: `gi_body_builder`)  
+**Action**: Update stat selection logic and add team logo instruction
+
+**Current Logic** (INCORRECT):
+```javascript
+// Limit to MAX 2 overlay elements for clean aesthetic
+const selectedStats = statPriority.slice(0, 2);
+```
+
+**New Logic** (CORRECT):
+```javascript
+// Allow 1-5 stat overlays based on data richness
+// dataRichness is from Topic Analyst (selectedTopic), not extractedStats
+const dataRichness = selectedTopic.dataRichness || extractedStats.dataConfidence || 3;
+const maxOverlays = Math.min(5, Math.max(1, Math.ceil(dataRichness / 2)));
+const selectedStats = statPriority.slice(0, maxOverlays);
+```
+
+**Add to Image Prompt Generation**:
+```javascript
+// Build team logo instruction
+const teamLogos = teams.length > 0
+  ? `Include stylized logos or emblems representing: ${teams.join(', ')}.`
+  : 'Include relevant league/competition branding.';
+
+// Image prompt must include:
+// 1. Cinematic/wallpaper style
+// 2. Team/league logos
+// 3. 1-5 stat overlays
+const imagePromptInstructions = `
+Create a cinematic, wallpaper-style sports infographic.
+${teamLogos}
+Display ${selectedStats.length} key statistics as clean, readable overlays.
+Stats to display: ${selectedStats.map(s => s.display).join(', ')}.
+Style: Epic scenery, dramatic lighting, professional sports broadcast quality.
+`;
+```
+
+### Change 4: Update "Call Imagen API" Body
+
+**Node**: `Call Imagen API` (id: `74affa50-0102-49a6-8190-3e24f1ec0a2e`)  
+**Action**: Update JSON body to use `eventSummary` instead of `tagline`
+
+**Current Body** (INCORRECT):
+```json
+"text": "{{ $json.imagePrompt }}. Include bold stylized text overlay on the image saying: {{ $json.tagline }}"
+```
+
+**New Body** (CORRECT):
+```json
+"text": "{{ $json.imagePrompt }}. Include bold stylized text overlay on the image saying: {{ $json.eventSummary }}"
+```
+
+---
+
 ## Changelog
+
+### v2.3.0 (2026-02-01)
+- **PER-001 ANALYSIS**: Added n8n Implementation Changes section with specific node updates
+- **STATUS**: Documentation complete; changes pending application to live n8n workflow
+- **PROTOCOL**: Added single-change discipline table (5 steps with verification)
+- **Change 1**: Generate Tagline → Generate Event Summary (complete sentences, 15-25 words)
+- **Change 2**: Renamed `tagline` field → `eventSummary` across all nodes
+- **Change 3**: Updated Build Image Request for 1-5 stat overlays (was hardcoded to 2)
+- **Change 4**: Added team/league logo instruction to image prompt
+- **FIX**: Corrected dataRichness source (from selectedTopic, not extractedStats)
+- **NOTE**: Branding happens on the image itself via Brand Image node, not in post text
 
 ### v2.2.0 (2026-02-01)
 - **SEPARATED**: Moved workflow JSON to backup file (`backups/oV6WGX5uBeTZ9tRa.json`)
