@@ -1,7 +1,27 @@
 {
   "$schema": "./manifest.schema.json",
-  "version": "1.2.0",
-  "lastUpdated": "2026-02-01T06:00:00Z",
+  "version": "1.3.0",
+  "lastUpdated": "2026-02-01T21:00:00Z",
+  "bootstrap": {
+    "_instruction": "AI developers: READ ALL RULES in the /rules/ directory. This manifest indexes them for routing, but you must read the actual .md files.",
+    "primaryDirective": "ARCH-000",
+    "readingOrder": [
+      "rules/architecture/000-primary-directive.md",
+      "rules/architecture/006-agent-bootstrap.md",
+      "rules/architecture/010-exit-directive.md"
+    ],
+    "preferences": {
+      "pacing": "Move slowly, verify before building",
+      "philosophy": "Rules-first, no over-building",
+      "automation": "Never ask user to manually modify systems"
+    },
+    "stack": {
+      "frontend": "React + Tailwind + Shadcn",
+      "backend": "Express",
+      "database": "PostgreSQL + Drizzle",
+      "auth": "Replit Auth"
+    }
+  },
   "primaryDirective": "ARCH-000",
   "subManifests": {
     "_description": "Sub-manifests and index files provide domain-specific rule groupings. Load these first when working in their domain.",
@@ -722,7 +742,7 @@
       "path": "rules/architecture/006-agent-bootstrap.md",
       "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "triggers": [
         "bootstrap",
         "session start",

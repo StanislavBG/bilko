@@ -1,8 +1,8 @@
 # ARCH-006: Agent Bootstrap Protocol
 
 **Priority**: CRITICAL  
-**Version**: 1.1.0  
-**Last Updated**: 2026-01-29
+**Version**: 1.2.0  
+**Last Updated**: 2026-02-01
 
 ## Context
 
@@ -14,9 +14,11 @@ This rule applies to any AI developer (Replit Agent or future alternatives) at t
 
 When beginning a new session:
 
-1. **Read `replit.md`** - This is your entry point
-2. **Read this rule (ARCH-006)** - This explains how the rule system works
-3. **Note the Primary Directive** - ARCH-000 is absolute
+1. **Read `replit.md`** - This is your entry point (bootstrap pointer)
+2. **Read `rules/manifest.json`** - Check the `bootstrap` section for reading order and preferences
+3. **Read ARCH-000** - Primary Directive is absolute
+4. **Read this rule (ARCH-006)** - This explains how the rule system works
+5. **Read ALL rules** - The manifest indexes them, but you must read the actual `.md` files
 
 ### Before Each Task
 
@@ -67,11 +69,20 @@ Primary Directive: Verified
 
 | Location | Purpose | Do NOT duplicate here |
 |----------|---------|----------------------|
-| `replit.md` | Bootstrap pointer only | Rule details, red flags, reading order |
-| `rules/manifest.json` | Machine index + routing | Human explanations |
+| `replit.md` | Bootstrap pointer only | Rule details, red flags |
+| `rules/manifest.json` | Machine index + routing + bootstrap metadata | Human explanations |
 | `rules/**/*.md` | Specific governance guidance | Content from other rules |
 | `agents/manifest.json` | Agent/persona registry | Rule governance |
 | `agents/*.md` | AI personas for tasks | Governance rules |
+
+### Manifest Bootstrap Section
+
+The `rules/manifest.json` contains a `bootstrap` section with:
+- `readingOrder`: Priority files to load first
+- `preferences`: User working preferences  
+- `stack`: Technology summary
+
+This is machine-readable bootstrap metadata, not rule content.
 
 ### Rules vs Agents
 
