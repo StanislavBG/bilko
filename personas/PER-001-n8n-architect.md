@@ -2,7 +2,7 @@
 
 Rule ID: PER-001
 Priority: HIGH
-Version: 3.1.0
+Version: 3.2.0
 Type: Persona
 
 ## Purpose
@@ -24,12 +24,12 @@ READ: rules/integration/n8n/index.md
 
 | Task Type | Required Rules |
 |-----------|----------------|
-| Calling n8n webhooks | INT-001, INT-002, ENV-002 |
-| Managing workflows via API | INT-002 (Known Issues Registry), ENV-002 |
-| Building/modifying workflows | INT-002 (Directives D1-D14+), ENV-002 |
-| Setting up n8n instance | INT-004 |
-| **Debugging workflow failures** | **INT-002 (Known Issues FIRST), ENV-002, INT-005** |
-| Implementing callbacks/memory | INT-005 (Callback Persistence) |
+| Calling n8n webhooks | INT-001, INT-002, ENV-001, ENV-002 |
+| Managing workflows via API | INT-002 (Known Issues Registry), ENV-001, ENV-002 |
+| Building/modifying workflows | INT-002 (Directives D1-D14+), ENV-002, Workflow Artifact |
+| Setting up n8n instance | INT-004, ENV-001 |
+| **Debugging workflow failures** | **INT-002 (Known Issues FIRST), ENV-001, ENV-002, Workflow Artifact** |
+| Implementing callbacks/memory | INT-005 (Callback Persistence), ENV-001 |
 
 ### Step 3: Extract Critical Content from INT-002
 
@@ -330,7 +330,9 @@ DEBUGGING GATE
 ├── 3. SEARCH: Does current error match ISSUE-001 through ISSUE-013+?
 │   ├── YES → Apply documented workaround, skip to VERIFY
 │   └── NO → Proceed to ANALYZE phase
-└── 4. READ: rules/env/002-n8n-workflow-registry.md → Get workflow ID, webhook URL
+├── 4. READ: rules/env/001-n8n-instance.md → Get n8n instance URLs
+├── 5. READ: rules/env/002-n8n-workflow-registry.md → Get workflow ID, webhook path
+└── 6. READ: rules/env/artifacts/workflows/{n8n-id}-{workflow-id}.md → Get objectives, prompts
 ```
 
 ### Known Issues Quick Reference
@@ -387,9 +389,32 @@ Before debugging, always load:
 
 | Resource | Purpose |
 |----------|---------|
-| ENV-002 | Workflow registry - n8n IDs, webhook URLs |
+| ENV-001 | n8n instance URLs, webhook base, API base |
+| ENV-002 | Workflow registry - n8n IDs, webhook paths |
+| Workflow Artifact | Objectives, prompts, JSON definition (see Artifact Pattern below) |
 | INT-005 | Callback persistence - how memory/traces work |
 | INT-002 | Known Issues Registry - documented problems |
+
+### Artifact Pattern
+
+Workflow artifacts are stored with objectives + JSON definition in a single file:
+
+```
+rules/env/artifacts/workflows/{n8n-id}-{workflow-id}.md
+```
+
+**Example**: `oV6WGX5uBeTZ9tRa-european-football-daily.md`
+
+**Contents**:
+- Objectives and success criteria
+- Key nodes with prompt guidelines
+- Changelog
+- Full JSON definition (collapsible)
+
+**Usage**: When debugging or modifying a workflow, read its artifact FIRST to understand:
+1. What the workflow is supposed to achieve (objectives)
+2. How key nodes should behave (prompt guidelines)
+3. Current JSON structure (definition)
 
 ### Debug Logging
 
@@ -415,15 +440,30 @@ return [{
 
 ## Cross-References
 
+### n8n Integration Rules
 - **rules/integration/n8n/index.md**: Entry point for all n8n rules (load this first)
 - **rules/integration/n8n/001-overview.md** (INT-001): Quick reference overview
 - **rules/integration/n8n/002-api-practices.md** (INT-002): Comprehensive practices, Known Issues, Directives
 - **rules/integration/n8n/004-setup.md** (INT-004): Self-hosting setup guide
-- **rules/env/002-n8n-workflow-registry.md** (ENV-002): n8n workflow registry with IDs and URLs
 - **rules/integration/005-callback-persistence.md** (INT-005): Callback persistence for memory/traces
+
+### Environment Configuration
+- **rules/env/001-n8n-instance.md** (ENV-001): n8n instance URLs, webhook base, API base
+- **rules/env/002-n8n-workflow-registry.md** (ENV-002): Workflow registry with n8n IDs and webhook paths
+- **rules/env/artifacts/workflows/**: Workflow artifacts with objectives + JSON definitions
+
+### Architecture
 - ARCH-000-B: Headless Operation
 
 ## Changelog
+
+### v3.2.0 (2026-02-01)
+- Added ENV-001 to task table and debugging protocol
+- Added Workflow Artifact to task table for building/modifying/debugging
+- Added Artifact Pattern section with location and usage guidance
+- Expanded Workflow Context Loading table with ENV-001 and artifact
+- Reorganized cross-references into categorized sections
+- Updated DEBUGGING GATE to include ENV-001 and artifact steps
 
 ### v3.1.0 (2026-02-01)
 - Added DEBUGGING PROTOCOL section with mandatory Known Issues gate
