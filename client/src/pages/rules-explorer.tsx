@@ -553,7 +553,7 @@ function CatalogView({
             {/* Mobile: show partitions as cards */}
             <div className="md:hidden flex-1 p-4 overflow-auto">
               <h2 className="text-lg font-semibold mb-4" data-testid="text-rules-heading">Rules Explorer</h2>
-              {isCatalogLoading ? (
+              {isLoading ? (
                 <div className="space-y-3" data-testid="status-loading-partitions-mobile">
                   <Skeleton className="h-20 w-full" />
                   <Skeleton className="h-20 w-full" />
