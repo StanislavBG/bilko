@@ -2,84 +2,72 @@
 
 Rule ID: INT-001
 Priority: HIGH
-Version: 2.0.0
+Version: 2.1.0
+
+**CONSOLIDATED**: This rule now serves as a brief overview. See INT-002 for comprehensive n8n API practices, known issues, and detailed directives.
 
 ## Context
 These rules apply when building integrations with n8n workflows. All n8n communication flows through the Orchestration Layer (see ARCH-003).
 
-## Directives
+## Quick Reference
 
-### D1: Webhook URL Storage
-Store n8n webhook URLs in environment variables, never hardcode them.
-
-Pattern: `N8N_WEBHOOK_<WORKFLOW_NAME>` (e.g., `N8N_WEBHOOK_BILKO_AGENT`)
-
-### D2: Orchestrator Endpoint
-All n8n requests flow through the single orchestrator endpoint:
-
+### Orchestrator Endpoint
+All n8n requests flow through:
 ```
 POST /api/orchestrate/:workflowId
 ```
 
-The orchestrator:
-1. Logs the request
-2. Maps `workflowId` to the appropriate webhook URL
-3. Forwards to n8n with context headers
-4. Logs the response
-5. Handles retries on failure
-6. Returns result with trace ID
+### Request/Response Contract
+See INT-003 for the full contract. Quick summary:
 
-### D3: Request/Response Contract
-All n8n communication follows the contract in INT-003:
-
-**Request to orchestrator:**
+**Request:**
 ```typescript
 interface OrchestrateRequest {
   action: string;
   payload: Record<string, unknown>;
-  options?: {
-    maxRetries?: number;
-    timeoutMs?: number;
-  };
+  options?: { maxRetries?: number; timeoutMs?: number; };
 }
 ```
 
-**Response from orchestrator:**
+**Response:**
 ```typescript
 interface OrchestrateResponse {
   success: boolean;
   data?: Record<string, unknown>;
-  error?: {
-    code: string;
-    message: string;
-  };
-  trace: {
-    traceId: string;
-    attempts: number;
-    totalDurationMs: number;
-  };
+  error?: { code: string; message: string; };
+  trace: { traceId: string; attempts: number; totalDurationMs: number; };
 }
 ```
 
-### D4: Error Handling
-The orchestrator transforms n8n errors into user-friendly messages:
-- Never expose n8n URLs or internal errors to the frontend
-- Return trace ID for debugging
-- Log full error details in trace record
+### Key Principles
+1. **Never hardcode webhook URLs** - Use registry.json (D9 in INT-002)
+2. **All requests are logged** - Full trace storage for debugging
+3. **Authentication required** - No unauthenticated n8n access
+4. **Errors are transformed** - Never expose raw n8n errors to frontend
 
-### D5: Authentication Required
-All orchestrator endpoints require authentication. Never allow unauthenticated access to n8n workflows.
+## Detailed Practices
 
-### D6: Trace Correlation
-Every request generates a trace ID that correlates:
-- All retry attempts
-- The n8n execution ID
-- Error details if any
+For comprehensive coverage including:
+- Recency protocol and version awareness
+- Known issues registry (ISSUE-001 through ISSUE-013)
+- API authentication patterns
+- Webhook URL management (D1)
+- Rate limiting compliance (D6, D11)
+- Security practices (D10, D12)
 
-Use trace ID for debugging and agent learning.
+See **INT-002: n8n API Best Practices**.
 
-## Additional Practices
-See INT-002 for n8n API best practices and documentation references.
+## Cross-References
+- ARCH-003: Orchestration Layer
+- INT-002: n8n API Best Practices (detailed directives)
+- INT-003: Orchestrator Communication Contract
+- INT-004: n8n Self-Hosting Setup Guide
 
-## Rationale
-The orchestrator pattern ensures all n8n communication is logged, errors are handled intelligently, and the system can scale to many workflows without per-workflow code changes.
+## Changelog
+
+### v2.1.0 (2026-02-01)
+- Consolidated with INT-002; this rule now serves as brief overview
+- Detailed directives moved to INT-002
+
+### v2.0.0 (2026-01-25)
+- Initial detailed version

@@ -2,7 +2,9 @@
 
 Rule ID: INT-002
 Priority: HIGH
-Version: 1.9.0
+Version: 2.0.0
+
+**PRIMARY REFERENCE**: This is the comprehensive n8n integration rule. INT-001 provides a brief overview; this rule contains all detailed practices, known issues, and directives.
 
 ## Context
 These rules apply when integrating with n8n via API, whether using n8n cloud or self-hosted. The Replit coding agent should follow these practices for consistent, reliable integration.

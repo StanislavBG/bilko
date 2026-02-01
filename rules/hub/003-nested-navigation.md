@@ -2,10 +2,10 @@
 
 Rule ID: HUB-003
 Priority: HIGH
-Version: 2.0.0
+Version: 2.1.0
 
 ## Context
-Complex applications may require navigation beyond the main hub sidebar. This rule defines the optional nested navigation pattern supporting up to 3 levels.
+Complex applications may require navigation beyond the main hub sidebar. This rule defines the optional nested navigation pattern supporting up to 3 levels, including collapsible behavior.
 
 ## Navigation Levels
 
@@ -145,6 +145,113 @@ All navigation columns have headers with fixed heights for visual alignment.
 **DO**: Use h-11 for L1 header, h-8 for L2/L3 headers, flex-1 for scrollable content
 **DON'T**: Use different heights that cause misalignment
 
+## Collapsible Behavior
+
+### Collapsibility by Nav Level
+
+| Level | Example | Collapsible | Rationale |
+|-------|---------|-------------|-----------|
+| Primary | Main sidebar | Required | Always visible, user needs space control |
+| Secondary | Rules Explorer nav (Catalog/Audit) | Required | Persistent nav that benefits from minimizing |
+| Tertiary | Partitions list, rules list | Recommended | Contextual panels benefit from consistent behavior |
+
+### Collapsed State Appearance
+
+When collapsed:
+- Width reduces to minimal width (flex-based or min-content)
+- Navigation items show abbreviated text (single letter or short code)
+- Tooltips appear on hover showing full label
+
+### Expanded State Appearance
+
+When expanded:
+- Flex to fill available space within layout constraints
+- Navigation items show full text labels
+- No tooltips needed (labels visible)
+
+### Collapse Trigger
+
+- Trigger uses PanelLeft icon
+- Click toggles between expanded/collapsed
+- Position: footer zone of each nav column (per D10)
+- Centered within footer with border-t styling
+
+### State Persistence
+
+- Collapse state persists within session
+- Primary sidebar uses SidebarProvider context
+- Secondary/tertiary navs manage local state (useState)
+
+### When to Skip Collapsibility
+
+Tertiary navs may skip collapsibility when:
+- They only appear contextually (after a selection)
+- Collapsing would provide minimal space savings
+- The panel content is already minimal (< 5 items)
+
+### Nav Column Structure
+
+Navigation columns follow this recommended structure:
+
+```
++------------------+
+|                  |
+|   Nav Items      |  <- Content area with nav buttons
+|   (full height)  |
+|                  |
+|------------------|  <- border-t
+|     [ < ]        |  <- Centered collapse toggle
++------------------+
+```
+
+### Collapse Implementation Pattern
+
+```tsx
+const [isCollapsed, setIsCollapsed] = useState(false);
+
+<div className={`shrink-0 border-r bg-sidebar flex flex-col h-full transition-all ${
+  isCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
+}`}>
+  {/* Content area - no header */}
+  <div className="flex-1 p-2 space-y-1 overflow-y-auto">
+    {isCollapsed ? (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" className="w-full justify-center">
+            <span>C</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="right">Catalog</TooltipContent>
+      </Tooltip>
+    ) : (
+      <Button variant="ghost" className="w-full justify-start">
+        Catalog
+      </Button>
+    )}
+  </div>
+  
+  {/* Footer with collapse toggle */}
+  <div className="border-t p-2 flex justify-center">
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          <PanelLeft className="h-4 w-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="right">
+        {isCollapsed ? "Expand" : "Collapse"}
+      </TooltipContent>
+    </Tooltip>
+  </div>
+</div>
+```
+
+Note: Action icons (like PanelLeft for collapse toggle) are permitted per UI-005 scope.
+
 ## Implementation Notes
 - GlobalHeader: Rendered in App.tsx, contains sidebar toggle and action buttons (theme, logout)
 - Level 1: Use main Shadcn Sidebar with h-11 header showing "Bilko Bibitkov AI Academy" (or "B" when collapsed)
@@ -152,7 +259,7 @@ All navigation columns have headers with fixed heights for visual alignment.
 - Use relative sizing (flex, min-width) so panels expand to fill available space
 - All levels remain fixed; only the content area scrolls
 - GlobalHeader renders at App.tsx level, above sidebar+main flex container
-- Level 2/3 nav column footers contain collapse toggles (see UI-004)
+- Level 2/3 nav column footers contain collapse toggles
 
 ## Examples
 
@@ -176,3 +283,20 @@ See UI-006: Mobile Layout for full mobile specifications.
 
 ## Rationale
 This pattern balances navigation depth with usability. Three levels allow complex applications to organize content without overwhelming users with too many choices at once.
+
+## Changelog
+
+### v2.1.0 (2026-02-01)
+- Merged UI-004 (Left-Nav Collapsible Behavior) into this rule
+- Added Collapsible Behavior section with implementation patterns
+- UI-004 deprecated
+
+### v2.0.0 (2026-01-29)
+- Added GlobalHeader at App.tsx level
+- Added nav column height specifications
+
+## Cross-References
+
+- HUB-001: Hub Layout (primary sidebar)
+- UI-003: Secondary Navigation Pattern
+- UI-006: Mobile Layout (user-controlled collapse on mobile)

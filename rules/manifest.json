@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "1.0.0",
-  "lastUpdated": "2026-01-30T00:00:00Z",
+  "lastUpdated": "2026-02-01T00:00:00Z",
   "primaryDirective": "ARCH-000",
   "rules": {
     "ARCH-000": {
@@ -134,24 +134,21 @@
       "path": "rules/architecture/005-system-boundaries.md",
       "partition": "architecture",
       "priority": "HIGH",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "triggers": [
         "boundary",
-        "replit",
-        "n8n",
-        "separation",
-        "owns",
-        "ownership"
+        "separation"
       ],
       "dependencies": [
         "ARCH-000",
         "ARCH-008"
       ],
       "crossReferences": [
-        "ARCH-007",
-        "ARCH-008"
+        "ARCH-008",
+        "ARCH-003",
+        "INT-003"
       ],
-      "description": "Defines boundaries between Replit app and external systems."
+      "description": "Quick reference for system boundaries. See ARCH-008 for detailed ownership."
     },
     "ARCH-007": {
       "id": "ARCH-007",
@@ -295,13 +292,16 @@
       "path": "rules/hub/003-nested-navigation.md",
       "partition": "hub",
       "priority": "HIGH",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "triggers": [
         "nested nav",
         "secondary nav",
         "tertiary nav",
         "multi-level",
-        "navigation levels"
+        "navigation levels",
+        "collapse",
+        "collapsible",
+        "left nav"
       ],
       "dependencies": [
         "HUB-001",
@@ -309,10 +309,9 @@
       ],
       "crossReferences": [
         "UI-003",
-        "UI-004",
         "UI-006"
       ],
-      "description": "Defines optional 2nd and 3rd level navigation within applications (max 3 levels). Includes header pinning, collapse button placement, and user-controlled mobile collapse."
+      "description": "Defines optional 2nd and 3rd level navigation within applications (max 3 levels). Includes header pinning, collapsible behavior, and mobile collapse. Merged UI-004."
     },
     "APP-LANDING-001": {
       "id": "APP-LANDING-001",
@@ -529,31 +528,18 @@
     },
     "UI-004": {
       "id": "UI-004",
-      "title": "Left-Nav Collapsible Behavior",
+      "title": "Left-Nav Collapsible Behavior (DEPRECATED)",
       "path": "rules/ui/004-left-nav-collapsible.md",
       "partition": "ui",
-      "priority": "HIGH",
-      "version": "1.4.0",
-      "triggers": [
-        "collapse",
-        "collapsible",
-        "left nav",
-        "sidebar collapse",
-        "single letter",
-        "minimize nav",
-        "footer toggle"
-      ],
-      "dependencies": [
-        "UI-001",
-        "HUB-001"
-      ],
+      "priority": "LOW",
+      "version": "2.0.0",
+      "deprecated": true,
+      "triggers": [],
+      "dependencies": [],
       "crossReferences": [
-        "UI-003",
-        "HUB-003",
-        "UI-005",
-        "UI-006"
+        "HUB-003"
       ],
-      "description": "Consistent collapsible behavior for all left navigation panels with footer-based toggles."
+      "description": "DEPRECATED: Merged into HUB-003 v2.1.0. See HUB-003 for collapsible behavior."
     },
     "UI-005": {
       "id": "UI-005",
@@ -575,7 +561,6 @@
         "UI-001"
       ],
       "crossReferences": [
-        "UI-004",
         "HUB-003",
         "UI-006"
       ],
@@ -638,17 +623,14 @@
     },
     "INT-001": {
       "id": "INT-001",
-      "title": "n8n Integration Rules",
+      "title": "n8n Integration Rules (Overview)",
       "path": "rules/integration/001-n8n-integration.md",
       "partition": "integration",
       "priority": "HIGH",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "triggers": [
-        "n8n",
-        "webhook",
-        "integration",
-        "workflow",
-        "external"
+        "orchestrate",
+        "orchestrator"
       ],
       "dependencies": [
         "ARCH-003",
@@ -660,7 +642,7 @@
         "INT-002",
         "INT-004"
       ],
-      "description": "Rules for building integrations with n8n workflows."
+      "description": "Brief overview of n8n integration. See INT-002 for comprehensive practices."
     },
     "INT-002": {
       "id": "INT-002",
@@ -668,26 +650,31 @@
       "path": "rules/integration/002-n8n-api-practices.md",
       "partition": "integration",
       "priority": "HIGH",
-      "version": "1.4.0",
+      "version": "2.0.0",
       "triggers": [
+        "n8n",
         "n8n api",
         "api key",
         "n8n cloud",
         "recency",
         "known issues",
+        "webhook",
         "webhook bug",
         "headless",
         "webhook path",
-        "single source of truth"
+        "single source of truth",
+        "integration"
       ],
       "dependencies": [
-        "INT-001",
         "ARCH-003"
       ],
       "crossReferences": [
-        "ARCH-003"
+        "ARCH-003",
+        "INT-001",
+        "INT-003",
+        "INT-004"
       ],
-      "description": "API practices, recency protocol, known issues registry, and D9 single source of truth for workflow definitions."
+      "description": "PRIMARY n8n integration reference. Includes recency protocol, known issues registry, all directives D1-D13. INT-001 provides overview."
     },
     "ARCH-006": {
       "id": "ARCH-006",
