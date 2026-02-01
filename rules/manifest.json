@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
-  "version": "1.0.0",
-  "lastUpdated": "2026-02-01T00:00:00Z",
+  "version": "1.1.0",
+  "lastUpdated": "2026-02-01T05:30:00Z",
   "primaryDirective": "ARCH-000",
   "rules": {
     "ARCH-000": {
@@ -221,7 +221,7 @@
     "INT-004": {
       "id": "INT-004",
       "title": "n8n Self-Hosting Setup Guide",
-      "path": "rules/integration/004-n8n-setup.md",
+      "path": "rules/integration/n8n/004-setup.md",
       "partition": "integration",
       "priority": "HIGH",
       "version": "1.1.0",
@@ -236,7 +236,8 @@
       ],
       "crossReferences": [
         "INT-003",
-        "ARCH-008"
+        "ARCH-008",
+        "INT-N8N-INDEX"
       ],
       "description": "Complete setup guide for self-hosting n8n on Replit."
     },
@@ -621,13 +622,35 @@
       ],
       "description": "Consistent pattern for application-level actions separate from navigation."
     },
+    "INT-N8N-INDEX": {
+      "id": "INT-N8N-INDEX",
+      "title": "n8n Integration Rules Index",
+      "path": "rules/integration/n8n/index.md",
+      "partition": "integration",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": [
+        "n8n",
+        "n8n index",
+        "n8n rules",
+        "load n8n"
+      ],
+      "dependencies": [],
+      "crossReferences": [
+        "INT-001",
+        "INT-002",
+        "INT-004",
+        "PER-001"
+      ],
+      "description": "Entry point for all n8n rules. Load this first for dynamic context loading."
+    },
     "INT-001": {
       "id": "INT-001",
       "title": "n8n Integration Rules (Overview)",
-      "path": "rules/integration/001-n8n-integration.md",
+      "path": "rules/integration/n8n/001-overview.md",
       "partition": "integration",
       "priority": "HIGH",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "triggers": [
         "orchestrate",
         "orchestrator"
@@ -640,14 +663,15 @@
         "ARCH-003",
         "INT-003",
         "INT-002",
-        "INT-004"
+        "INT-004",
+        "INT-N8N-INDEX"
       ],
       "description": "Brief overview of n8n integration. See INT-002 for comprehensive practices."
     },
     "INT-002": {
       "id": "INT-002",
       "title": "n8n API Best Practices",
-      "path": "rules/integration/002-n8n-api-practices.md",
+      "path": "rules/integration/n8n/002-api-practices.md",
       "partition": "integration",
       "priority": "HIGH",
       "version": "2.0.0",
@@ -672,9 +696,10 @@
         "ARCH-003",
         "INT-001",
         "INT-003",
-        "INT-004"
+        "INT-004",
+        "INT-N8N-INDEX"
       ],
-      "description": "PRIMARY n8n integration reference. Includes recency protocol, known issues registry, all directives D1-D13. INT-001 provides overview."
+      "description": "PRIMARY n8n integration reference. Includes recency protocol, known issues registry, all directives D1-D14. INT-001 provides overview."
     },
     "ARCH-006": {
       "id": "ARCH-006",

@@ -2,9 +2,12 @@
 
 Rule ID: INT-001
 Priority: HIGH
-Version: 2.1.0
+Version: 2.2.0
+Location: `rules/integration/n8n/001-overview.md`
 
-**CONSOLIDATED**: This rule now serves as a brief overview. See INT-002 for comprehensive n8n API practices, known issues, and detailed directives.
+**CONSOLIDATED**: This directory (`rules/integration/n8n/`) contains all n8n-related rules. Start with `index.md` for dynamic loading protocol.
+
+**For AI Agents**: Before any n8n work, load `rules/integration/n8n/index.md` first. See also PER-001 (n8n Architect Persona).
 
 ## Context
 These rules apply when building integrations with n8n workflows. All n8n communication flows through the Orchestration Layer (see ARCH-003).
@@ -58,12 +61,19 @@ For comprehensive coverage including:
 See **INT-002: n8n API Best Practices**.
 
 ## Cross-References
+- **index.md**: n8n rules index (load first for dynamic context)
+- **002-api-practices.md** (INT-002): Comprehensive practices, Known Issues, Directives
+- **004-setup.md** (INT-004): Self-hosting setup guide
 - ARCH-003: Orchestration Layer
-- INT-002: n8n API Best Practices (detailed directives)
 - INT-003: Orchestrator Communication Contract
-- INT-004: n8n Self-Hosting Setup Guide
+- PER-001: n8n Architect Persona
 
 ## Changelog
+
+### v2.2.0 (2026-02-01)
+- Moved to `rules/integration/n8n/` subfolder
+- Added reference to index.md for dynamic loading
+- Added reference to PER-001 persona
 
 ### v2.1.0 (2026-02-01)
 - Consolidated with INT-002; this rule now serves as brief overview
