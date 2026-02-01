@@ -105,7 +105,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are a European football social media manager. Create an informative Facebook post.\\n\\nTOPIC: {{ $json.selectedTopic.headline }}\\nEVENT: {{ $json.selectedTopic.event }}\\nTEAMS: {{ ($json.selectedTopic.teams || []).join(', ') }}\\nHAS SCORE: {{ $json.selectedTopic.hasScore || false }}\\nHASHTAGS TO USE: {{ $json.hashtagString }}\\n\\nCreate an informative Facebook post (2-3 short paragraphs) that:\\n1. Leads with the key facts - scores, numbers, team names\\n2. Provides context about what this means for the league/tournament\\n3. Ends with a question to drive engagement\\n4. MUST end with these EXACT hashtags: {{ $json.hashtagString }}\\n\\nStyle guidelines:\\n- Be factual and informative, not sensational\\n- Highlight scores, statistics, and numbers prominently\\n- Mention team and league names for brand recognition\\n- Do NOT mention specific player or coach names\\n- Keep tone professional but accessible\\n\\nReturn ONLY a JSON object with postContent (the text including hashtags) and sentiment (positive/neutral/negative)\"\n    }]\n  }]\n}",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"You are a European football social media manager. Create an INFORMATIVE, DATA-RICH Facebook post.\\n\\nTOPIC: {{ $json.selectedTopic.headline }}\\nEVENT: {{ $json.selectedTopic.event }}\\nTEAMS: {{ ($json.selectedTopic.teams || []).join(', ') }}\\nHASHTAGS TO USE: {{ $json.hashtagString }}\\n\\nEXTRACTED STATISTICS (INCLUDE THESE):\\n- Score: {{ $json.selectedTopic?.extractedStats?.score || \\\"not available\\\" }}\\n- Possession: {{ JSON.stringify($json.selectedTopic?.extractedStats?.possession) || \\\"not available\\\" }}\\n- Shots: {{ JSON.stringify($json.selectedTopic?.extractedStats?.shots) || \\\"not available\\\" }}\\n- Transfer Fee: {{ $json.selectedTopic?.extractedStats?.transferFee || \\\"not available\\\" }}\\n- League Position: {{ $json.selectedTopic?.extractedStats?.leaguePosition || \\\"not available\\\" }}\\n- Points: {{ $json.selectedTopic?.extractedStats?.points || \\\"not available\\\" }}\\n- Key Statistic: {{ $json.selectedTopic?.extractedStats?.keyStatistic || \\\"not available\\\" }}\\n\\nCreate an informative Facebook post (2-3 short paragraphs) that:\\n1. LEADS WITH SPECIFIC DATA - scores, percentages, transfer fees, standings\\n2. Include ALL available statistics in the post\\n3. Provides context about what this means for the league/tournament\\n4. Ends with a question to drive engagement\\n5. MUST end with these EXACT hashtags: {{ $json.hashtagString }}\\n\\nStyle guidelines:\\n- Be factual and NUMBERS-FOCUSED\\n- Highlight every statistic available\\n- NO generic filler - pack it with data\\n- Do NOT mention specific player or coach names\\n\\nReturn ONLY a JSON object with postContent (the text including hashtags) and sentiment (positive/neutral/negative)\"\n    }]\n  }]\n}",
         "options": {},
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
@@ -130,7 +130,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Aggregate Compliant Topics\").first().json;\nconst hashtagData = $(\"Parse Hashtags\").first().json;\n\n// Get Gemini response\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const post = JSON.parse(cleaned);\n  return [{\n    json: {\n      postContent: post.postContent,\n      sentiment: post.sentiment || \"positive\",\n      safeImagePrompt: prevData.selectedTopic.safeImagePrompt,\n      anonymizedDescriptions: prevData.selectedTopic.anonymizedDescriptions || hashtagData.anonymizedDescriptions || {},\n      selectedTopic: prevData.selectedTopic,\n      sourceLink: prevData.selectedTopic?.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      postContent: \"Football news update! Exciting developments in European football today.\",\n      sentiment: \"positive\",\n      safeImagePrompt: prevData.selectedTopic?.safeImagePrompt || \"Exciting football stadium scene with cheering fans\",\n      anonymizedDescriptions: prevData.selectedTopic?.anonymizedDescriptions || {},\n      selectedTopic: prevData.selectedTopic,\n      sourceLink: prevData.selectedTopic?.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
+        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Statistics\").first().json;\nconst hashtagData = $(\"Parse Hashtags\").first().json;\n\n// Get Gemini response\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const post = JSON.parse(cleaned);\n  return [{\n    json: {\n      postContent: post.postContent,\n      sentiment: post.sentiment || \"positive\",\n      safeImagePrompt: prevData.selectedTopic.safeImagePrompt,\n      anonymizedDescriptions: prevData.selectedTopic.anonymizedDescriptions || hashtagData.anonymizedDescriptions || {},\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.selectedTopic.extractedStats || {},\n      sourceLink: prevData.selectedTopic?.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      postContent: \"Football news update! Exciting developments in European football today.\",\n      sentiment: \"positive\",\n      safeImagePrompt: prevData.selectedTopic?.safeImagePrompt || \"Exciting football stadium scene with cheering fans\",\n      anonymizedDescriptions: prevData.selectedTopic?.anonymizedDescriptions || {},\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.selectedTopic?.extractedStats || {},\n      sourceLink: prevData.selectedTopic?.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
       },
       "name": "Parse Post",
       "type": "n8n-nodes-base.code",
@@ -186,7 +186,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Post\").first().json;\n\n// Get Gemini response\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const imageData = JSON.parse(cleaned);\n  return [{\n    json: {\n      imagePrompt: imageData.imagePrompt,\n      style: imageData.style || \"photorealistic\",\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      imagePrompt: \"Exciting football celebration scene in a modern stadium\",\n      style: \"photorealistic\",\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
+        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Post\").first().json;\n\n// Get Gemini response\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const imageData = JSON.parse(cleaned);\n  return [{\n    json: {\n      imagePrompt: imageData.imagePrompt,\n      style: imageData.style || \"photorealistic\",\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      imagePrompt: \"Exciting football celebration scene in a modern stadium\",\n      style: \"photorealistic\",\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
       },
       "name": "Parse Image Prompt",
       "type": "n8n-nodes-base.code",
@@ -199,7 +199,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const brandingResult = $input.first().json;\nconst prevData = $(\"Parse Imagen Response\").first().json;\nconst aggregateData = $(\"Aggregate Compliant Topics\").first().json;\n\nconst postContent = prevData.postContent || \"Football news update!\";\nconst imagePrompt = prevData.imagePrompt || \"European football celebration\";\nconst sourceLink = prevData.sourceLink || \"\";\n\n// Get the selected topic from aggregation step (includes sourceHeadline)\nconst selectedTopic = aggregateData.selectedTopic || {};\n\n// Use branded image if available, otherwise fallback to original\nlet imageDataUri = prevData.imageDataUri || null;\nif (brandingResult.success && brandingResult.brandedImageBase64) {\n  imageDataUri = \"data:image/png;base64,\" + brandingResult.brandedImageBase64;\n}\n\n// Create transparency/disclosure post\nlet transparencyPost = \"I've developed this AI-driven system to efficiently curate European football news, serving as a professional 'proof of work' for AI integration. Grounded in transparency and the human-in-the-loop principle, this project demonstrates how AI can enhance specialized content. Follow for updates, or visit my bio to learn how to build similar systems.\\n\\nBilko Bibitkov Human-Centric AI Curation\";\n\nif (sourceLink) {\n  transparencyPost += \"\\n\\nSource: \" + sourceLink;\n}\n\nconst output = {\n  success: true,\n  selectedTopic: {\n    headline: selectedTopic.headline || \"\",\n    sourceHeadline: selectedTopic.sourceHeadline || selectedTopic.headline || \"\",\n    sourceHeadlineHash: selectedTopic.sourceHeadlineHash || \"\",\n    teams: selectedTopic.teams || [],\n    event: selectedTopic.event || \"\",\n    dataRichness: selectedTopic.dataRichness || 0,\n    brandValue: selectedTopic.brandValue || 0\n  },\n  data: {\n    postContent: postContent,\n    imagePrompt: imagePrompt,\n    imageUrl: imageDataUri,\n    transparencyPost: transparencyPost,\n    sourceLink: sourceLink,\n    contentFiltered: !imageDataUri,\n    brandingApplied: brandingResult.success === true\n  },\n  metadata: {\n    workflowId: \"european-football-daily\",\n    executedAt: new Date().toISOString(),\n    aiGenerated: true\n  }\n};\nreturn [{ json: output }];"
+        "jsCode": "const brandingResult = $input.first().json;\n// Now use data from Parse Brand Response which has the full chain data\nconst postContent = brandingResult.postContent || \"Football news update!\";\nconst imagePrompt = brandingResult.imagePrompt || \"European football celebration\";\nconst sourceLink = brandingResult.sourceLink || \"\";\nconst extractedStats = brandingResult.extractedStats || {};\nconst selectedTopic = brandingResult.selectedTopic || {};\n\n// Use branded image if available, otherwise fallback to original\nlet imageDataUri = brandingResult.imageDataUri || null;\nif (brandingResult.success && brandingResult.brandedImageBase64) {\n  imageDataUri = \"data:image/png;base64,\" + brandingResult.brandedImageBase64;\n}\n\n// Create transparency/disclosure post\nlet transparencyPost = \"I've developed this AI-driven system to efficiently curate European football news, serving as a professional 'proof of work' for AI integration. Grounded in transparency and the human-in-the-loop principle, this project demonstrates how AI can enhance specialized content. Follow for updates, or visit my bio to learn how to build similar systems.\\n\\nBilko Bibitkov Human-Centric AI Curation\";\n\nif (sourceLink) {\n  transparencyPost += \"\\n\\nSource: \" + sourceLink;\n}\n\nconst output = {\n  success: true,\n  selectedTopic: {\n    headline: selectedTopic.headline || \"\",\n    sourceHeadline: selectedTopic.sourceHeadline || selectedTopic.headline || \"\",\n    sourceHeadlineHash: selectedTopic.sourceHeadlineHash || \"\",\n    teams: selectedTopic.teams || [],\n    event: selectedTopic.event || \"\",\n    dataRichness: extractedStats.dataRichness || selectedTopic.dataRichness || 0,\n    brandValue: selectedTopic.brandValue || 0,\n    extractedStats: extractedStats,\n    enhancedTagline: selectedTopic.enhancedTagline || \"\"\n  },\n  data: {\n    postContent: postContent,\n    imagePrompt: imagePrompt,\n    imageUrl: imageDataUri,\n    tagline: brandingResult.tagline || \"\",\n    transparencyPost: transparencyPost,\n    sourceLink: sourceLink,\n    contentFiltered: !imageDataUri,\n    extractedStats: extractedStats\n  }\n};\n\nreturn [{ json: output }];"
       },
       "name": "Build Final Output",
       "type": "n8n-nodes-base.code",
@@ -304,7 +304,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Tagline\").first().json;\n\n// Get image from Nano Banana Pro response format\nconst parts = input?.candidates?.[0]?.content?.parts || [];\nconst imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith(\"image/\"));\n\nif (imagePart && imagePart.inlineData?.data) {\n  const mimeType = imagePart.inlineData.mimeType;\n  const base64Data = imagePart.inlineData.data;\n  const imageDataUri = \"data:\" + mimeType + \";base64,\" + base64Data;\n\n  return [{\n    json: {\n      imageDataUri: imageDataUri,\n      imagePrompt: prevData.imagePrompt,\n      tagline: prevData.tagline,\n      postContent: prevData.postContent,\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} else {\n  // Fallback when image generation fails\n  return [{\n    json: {\n      imageDataUri: null,\n      imagePrompt: prevData.imagePrompt,\n      tagline: prevData.tagline,\n      postContent: prevData.postContent,\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      imagenError: \"No image data in response\"\n    }\n  }];\n}"
+        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Tagline\").first().json;\n\n// Get image from Nano Banana Pro response format\nconst parts = input?.candidates?.[0]?.content?.parts || [];\nconst imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith(\"image/\"));\n\nif (imagePart && imagePart.inlineData?.data) {\n  const mimeType = imagePart.inlineData.mimeType;\n  const base64Data = imagePart.inlineData.data;\n  const imageDataUri = \"data:\" + mimeType + \";base64,\" + base64Data;\n\n  return [{\n    json: {\n      imageDataUri: imageDataUri,\n      imagePrompt: prevData.imagePrompt,\n      tagline: prevData.tagline,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} else {\n  // Fallback when image generation fails\n  return [{\n    json: {\n      imageDataUri: null,\n      imagePrompt: prevData.imagePrompt,\n      tagline: prevData.tagline,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      imagenError: \"No image data in response\"\n    }\n  }];\n}"
       },
       "id": "ec694419-9c45-4f5d-b2a9-56f136492315",
       "name": "Parse Imagen Response",
@@ -470,7 +470,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Find the 3 most relevant, high-reach hashtags for this European football topic.\\n\\nTOPIC: {{ $json.selectedTopic.headline }}\\nEVENT: {{ $json.selectedTopic.event }}\\nTEAMS: {{ ($json.selectedTopic.teams || []).join(', ') }}\\n\\nRules:\\n- Return EXACTLY 3 hashtags\\n- Must be real, widely-used hashtags on social media\\n- Must be directly relevant to this specific topic/teams/event\\n- Include the # symbol\\n- Prefer hashtags with high engagement (millions of posts)\\n\\nReturn ONLY a JSON object: {\\\"hashtags\\\": [\\\"#tag1\\\", \\\"#tag2\\\", \\\"#tag3\\\"]}\"\n    }]\n  }]\n}",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Find the 3 most relevant, high-reach hashtags for this European football topic.\\n\\nTOPIC: {{ $json.selectedTopic.headline }}\\nEVENT: {{ $json.selectedTopic.event }}\\nTEAMS: {{ ($json.selectedTopic.teams || []).join(', ') }}\\nKEY DATA: {{ $json.selectedTopic?.extractedStats?.keyStatistic || 'general football news' }}\\n\\nRules:\\n- Return EXACTLY 3 hashtags\\n- Must be real, widely-used hashtags on social media\\n- Must be directly relevant to this specific topic/teams/event\\n- Include the # symbol\\n- Prefer hashtags with high engagement (millions of posts)\\n\\nReturn ONLY a JSON object: {\\\"hashtags\\\": [\\\"#tag1\\\", \\\"#tag2\\\", \\\"#tag3\\\"]}\"\n    }]\n  }]\n}",
         "options": {},
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth"
@@ -492,7 +492,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Get Gemini response from HTTP Request\nconst geminiResponse = $input.first().json;\n\n// Get original data from Aggregate Compliant Topics (2 nodes back)\nconst originalData = $(\"Aggregate Compliant Topics\").first().json;\nconst geminiApiKey = originalData.geminiApiKey;\nconst callbackUrl = originalData.callbackUrl;\nconst selectedTopic = originalData.selectedTopic;\n\n// Parse hashtags from Gemini response\nlet hashtags = [\"#football\", \"#soccer\", \"#UEFA\"]; // fallback\ntry {\n  const candidates = geminiResponse.candidates || [];\n  if (candidates.length > 0) {\n    let text = candidates[0].content?.parts?.[0]?.text || \"\";\n    text = text.replace(/```json\\n?/g, \"\").replace(/```/g, \"\").trim();\n    const parsed = JSON.parse(text);\n    if (parsed.hashtags && Array.isArray(parsed.hashtags)) {\n      hashtags = parsed.hashtags.slice(0, 3);\n    }\n  }\n} catch (e) {\n  // Keep fallback\n}\n\nreturn [{\n  json: {\n    selectedTopic: selectedTopic,\n    sourceLink: selectedTopic.sourceLink || \"\",\n    anonymizedDescriptions: selectedTopic.anonymizedDescriptions || {},\n    hashtags: hashtags,\n    hashtagString: hashtags.join(\" \"),\n    geminiApiKey: geminiApiKey,\n    callbackUrl: callbackUrl\n  }\n}];"
+        "jsCode": "// Get Gemini response from HTTP Request\nconst geminiResponse = $input.first().json;\n\n// Get original data from Parse Statistics (now has extractedStats)\nconst originalData = $(\"Parse Statistics\").first().json;\nconst geminiApiKey = originalData.geminiApiKey;\nconst callbackUrl = originalData.callbackUrl;\nconst selectedTopic = originalData.selectedTopic;\n\n// Parse hashtags from Gemini response\nlet hashtags = [\"#football\", \"#soccer\", \"#UEFA\"]; // fallback\ntry {\n  const candidates = geminiResponse.candidates || [];\n  if (candidates.length > 0) {\n    let text = candidates[0].content?.parts?.[0]?.text || \"\";\n    text = text.replace(/```json\\n?/g, \"\").replace(/```/g, \"\").trim();\n    const parsed = JSON.parse(text);\n    if (parsed.hashtags && Array.isArray(parsed.hashtags)) {\n      hashtags = parsed.hashtags.slice(0, 3);\n    }\n  }\n} catch (e) {\n  // Keep fallback\n}\n\nreturn [{\n  json: {\n    selectedTopic: selectedTopic,\n    sourceLink: selectedTopic.sourceLink || \"\",\n    anonymizedDescriptions: selectedTopic.anonymizedDescriptions || {},\n    hashtags: hashtags,\n    hashtagString: hashtags.join(\" \"),\n    geminiApiKey: geminiApiKey,\n    callbackUrl: callbackUrl\n  }\n}];"
       },
       "id": "parse-hashtags-1769380010487",
       "name": "Parse Hashtags",
@@ -522,7 +522,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create an informative headline for a European football image.\\n\\nTOPIC: {{ $json.selectedTopic?.headline || \\\"Football news\\\" }}\\nTEAMS: {{ ($json.selectedTopic?.teams || []).join(' vs ') }}\\nEVENT: {{ $json.selectedTopic?.event || \\\"update\\\" }}\\nHAS SCORE: {{ $json.selectedTopic?.hasScore || false }}\\nHAS NUMBERS: {{ $json.selectedTopic?.hasNumbers || false }}\\n\\nRules:\\n- 3-6 words maximum\\n- If HAS SCORE is true, INCLUDE the actual score from the headline (e.g., \\\"Barcelona 3-0 Madrid\\\")\\n- If HAS NUMBERS is true, include the key number (transfer fee, points, goals)\\n- Prioritize team names and factual information\\n- NO generic phrases like \\\"Game On\\\", \\\"Breaking News\\\", \\\"Big Win\\\", \\\"What A Match\\\"\\n- Should inform the viewer of WHAT happened, not just generate excitement\\n\\nGood examples:\\n- \\\"Barcelona 3-0 Real Madrid\\\"\\n- \\\"Man City Clinches Title\\\"\\n- \\\"£80M Transfer Complete\\\"\\n- \\\"Liverpool Top After Win\\\"\\n\\nBad examples (DO NOT USE):\\n- \\\"Game On!\\\"\\n- \\\"What A Match!\\\"\\n- \\\"Football Fever\\\"\\n- \\\"Big News Today\\\"\\n\\nReturn ONLY a JSON object: {\\\"tagline\\\": \\\"your informative headline here\\\"}\"\n    }]\n  }]\n}",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": \"Create a DATA-RICH headline for a European football image.\\n\\nTOPIC: {{ $json.selectedTopic?.headline || \\\"Football news\\\" }}\\nTEAMS: {{ ($json.selectedTopic?.teams || []).join(' vs ') }}\\nEVENT: {{ $json.selectedTopic?.event || \\\"update\\\" }}\\n\\nEXTRACTED REAL DATA (USE THIS IF AVAILABLE):\\n- Score: {{ $json.selectedTopic?.extractedStats?.score || \\\"not found\\\" }}\\n- Home Team: {{ $json.selectedTopic?.extractedStats?.homeTeam || \\\"unknown\\\" }}\\n- Away Team: {{ $json.selectedTopic?.extractedStats?.awayTeam || \\\"unknown\\\" }}\\n- Possession: {{ JSON.stringify($json.selectedTopic?.extractedStats?.possession) || \\\"not found\\\" }}\\n- Transfer Fee: {{ $json.selectedTopic?.extractedStats?.transferFee || \\\"not found\\\" }}\\n- League Position: {{ $json.selectedTopic?.extractedStats?.leaguePosition || \\\"not found\\\" }}\\n- Points: {{ $json.selectedTopic?.extractedStats?.points || \\\"not found\\\" }}\\n- Key Statistic: {{ $json.selectedTopic?.extractedStats?.keyStatistic || \\\"none\\\" }}\\n- Enhanced Tagline (pre-computed): {{ $json.selectedTopic?.enhancedTagline || \\\"none\\\" }}\\n\\nRules:\\n- 3-6 words maximum\\n- PRIORITIZE REAL DATA: If we have a score, USE IT (e.g., \\\"Barcelona 3-0 Madrid\\\")\\n- If transfer fee exists, use it (e.g., \\\"£80M Transfer Done\\\")\\n- If league position/points exist, use them\\n- The Enhanced Tagline is already computed from real data - consider using it directly\\n- DO NOT use generic phrases like \\\"Game On\\\", \\\"What A Match\\\"\\n\\nReturn ONLY a JSON object: {\\\"tagline\\\": \\\"your data-rich headline here\\\"}\"\n    }]\n  }]\n}",
         "options": {
           "response": {
             "response": {}
@@ -548,7 +548,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Image Prompt\").first().json;\n\n// Get Gemini response\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const taglineData = JSON.parse(cleaned);\n  return [{\n    json: {\n      tagline: taglineData.tagline || \"Game On!\",\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      tagline: \"Game On!\",\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
+        "jsCode": "const input = $input.first().json;\nconst prevData = $(\"Parse Image Prompt\").first().json;\n\n// Get Gemini response\nconst text = input?.candidates?.[0]?.content?.parts?.[0]?.text || \"{}\";\nconst cleaned = text.replace(/^```[a-zA-Z]*\\n?/, \"\").replace(/\\n?```\\s*$/, \"\");\n\ntry {\n  const taglineData = JSON.parse(cleaned);\n  return [{\n    json: {\n      tagline: taglineData.tagline || \"Game On!\",\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl\n    }\n  }];\n} catch (e) {\n  return [{\n    json: {\n      tagline: \"Game On!\",\n      imagePrompt: prevData.imagePrompt,\n      style: prevData.style,\n      postContent: prevData.postContent,\n      selectedTopic: prevData.selectedTopic,\n      extractedStats: prevData.extractedStats || {},\n      sourceLink: prevData.sourceLink || \"\",\n      geminiApiKey: prevData.geminiApiKey,\n      callbackUrl: prevData.callbackUrl,\n      parseError: e.message\n    }\n  }];\n}"
       },
       "name": "Parse Tagline",
       "type": "n8n-nodes-base.code",
@@ -587,7 +587,7 @@
         112
       ],
       "parameters": {
-        "jsCode": "const brandingResponse = $input.first().json;\nconst prevData = $(\"Parse Imagen Response\").first().json;\n\n// Pass through branding response with original data\nreturn [{\n  json: {\n    // Branding response fields\n    success: brandingResponse.success === true,\n    brandedImageBase64: brandingResponse.brandedImageBase64 || null,\n    \n    // Original data from Parse Imagen Response\n    imageDataUri: prevData.imageDataUri,\n    imagePrompt: prevData.imagePrompt,\n    tagline: prevData.tagline,\n    postContent: prevData.postContent,\n    sourceLink: prevData.sourceLink || \"\",\n    geminiApiKey: prevData.geminiApiKey,\n    callbackUrl: prevData.callbackUrl\n  }\n}];"
+        "jsCode": "const brandingResponse = $input.first().json;\nconst prevData = $(\"Parse Imagen Response\").first().json;\n\n// Pass through branding response with original data including extractedStats\nreturn [{\n  json: {\n    // Branding response fields\n    success: brandingResponse.success === true,\n    brandedImageBase64: brandingResponse.brandedImageBase64 || null,\n    \n    // Original data from Parse Imagen Response\n    imageDataUri: prevData.imageDataUri,\n    imagePrompt: prevData.imagePrompt,\n    tagline: prevData.tagline,\n    postContent: prevData.postContent,\n    selectedTopic: prevData.selectedTopic,\n    extractedStats: prevData.extractedStats || {},\n    sourceLink: prevData.sourceLink || \"\",\n    geminiApiKey: prevData.geminiApiKey,\n    callbackUrl: prevData.callbackUrl\n  }\n}];"
       }
     },
     {
@@ -613,7 +613,90 @@
         112
       ],
       "parameters": {
-        "jsCode": "// Build the Gemini API request body for image prompt generation\nconst item = $input.first().json;\nconst safeImagePrompt = item.safeImagePrompt || '';\nconst anonymizedDescriptions = item.anonymizedDescriptions || {};\nconst geminiApiKey = item.geminiApiKey;\n\nconst prompt = `Create an image prompt for AI image generation based on this concept: ${safeImagePrompt}. \nInclude any people descriptions: ${JSON.stringify(anonymizedDescriptions)}.\nCreate a detailed, cinematic prompt. Focus on action and atmosphere. NO real person names.\nReturn ONLY valid JSON with: imagePrompt (your detailed prompt), style (photorealistic)`;\n\nreturn {\n  json: {\n    ...item,\n    requestBody: {\n      contents: [{\n        parts: [{ text: prompt }]\n      }]\n    }\n  }\n};\n"
+        "jsCode": "// Build the Gemini API request body for image prompt generation\nconst item = $input.first().json;\nconst safeImagePrompt = item.safeImagePrompt || '';\nconst anonymizedDescriptions = item.anonymizedDescriptions || {};\nconst extractedStats = item.extractedStats || {};\nconst geminiApiKey = item.geminiApiKey;\n\n// Build stats string for infographic elements\nlet statsElements = [];\nif (extractedStats.score) statsElements.push(\"Score overlay: \" + extractedStats.score);\nif (extractedStats.possession?.home) statsElements.push(\"Possession bar: \" + extractedStats.possession.home + \"% vs \" + extractedStats.possession.away + \"%\");\nif (extractedStats.transferFee) statsElements.push(\"Transfer fee badge: \" + extractedStats.transferFee);\nif (extractedStats.leaguePosition) statsElements.push(\"League position: #\" + extractedStats.leaguePosition);\nif (extractedStats.points) statsElements.push(\"Points total: \" + extractedStats.points);\n\nconst infographicElements = statsElements.length > 0 \n  ? \"Include these INFOGRAPHIC ELEMENTS as styled overlays: \" + statsElements.join(\", \") + \".\" \n  : \"\";\n\nconst prompt = `Create an INFOGRAPHIC-STYLE image prompt for European football content.\nBase concept: ${safeImagePrompt}\nPeople descriptions: ${JSON.stringify(anonymizedDescriptions)}\n\n${infographicElements}\n\nStyle requirements:\n- Modern sports broadcast aesthetic\n- Clean data visualization overlays (score boxes, stat bars)\n- Professional sports graphics with team colors\n- Dynamic composition with space for text overlays\n- NO real person faces or recognizable individuals\n\nReturn ONLY valid JSON with: imagePrompt (detailed infographic-style prompt), style (photorealistic)`;\n\nreturn {\n  json: {\n    ...item,\n    requestBody: {\n      contents: [{\n        parts: [{ text: prompt }]\n      }]\n    }\n  }\n};\n"
+      }
+    },
+    {
+      "id": "fetch-article-content-1769975476415",
+      "name": "Fetch Article Content",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2600,
+        -150
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.selectedTopic.sourceLink }}",
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": true,
+              "maxRedirects": 5
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "extract-statistics-1769975476415",
+      "name": "Extract Statistics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2750,
+        -150
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (compatible; BilkoBibitkov/1.0)"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [{\n      text: \"Extract SPECIFIC STATISTICS from this football article. Look for:\\n\\n1. MATCH SCORES (e.g., 3-0, 2-1)\\n2. POSSESSION PERCENTAGES\\n3. SHOT COUNTS\\n4. TRANSFER FEES (in millions)\\n5. LEAGUE STANDINGS/POINTS\\n6. GOAL SCORERS (without names, just counts)\\n7. ANY OTHER NUMERICAL DATA\\n\\nARTICLE CONTENT:\\n\" + ($('Fetch Article Content').first().json.data || \"No content\").substring(0, 8000) + \"\\n\\nHEADLINE: \" + $json.selectedTopic.headline + \"\\n\\nReturn ONLY valid JSON:\\n{\\n  \\\"score\\\": \\\"3-0\\\" or null,\\n  \\\"homeTeam\\\": \\\"Team A\\\" or null,\\n  \\\"awayTeam\\\": \\\"Team B\\\" or null,\\n  \\\"possession\\\": { \\\"home\\\": 65, \\\"away\\\": 35 } or null,\\n  \\\"shots\\\": { \\\"home\\\": 15, \\\"away\\\": 8 } or null,\\n  \\\"transferFee\\\": \\\"80M\\\" or null,\\n  \\\"leaguePosition\\\": 1 or null,\\n  \\\"points\\\": 45 or null,\\n  \\\"goalCount\\\": 3 or null,\\n  \\\"keyStatistic\\\": \\\"most important number/stat found\\\",\\n  \\\"dataRichness\\\": 1-10 (how much real data found)\\n}\"\n    }]\n  }]\n}) }}",
+        "options": {},
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "K9oPxIngg8rE26T6",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "parse-statistics-1769975476415",
+      "name": "Parse Statistics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2900,
+        -150
+      ],
+      "parameters": {
+        "jsCode": "const geminiResponse = $input.first().json;\nconst aggregateData = $(\"Aggregate Compliant Topics\").first().json;\nconst geminiApiKey = aggregateData.geminiApiKey;\nconst callbackUrl = aggregateData.callbackUrl;\nconst selectedTopic = aggregateData.selectedTopic;\n\nlet extractedStats = {\n  score: null,\n  homeTeam: null,\n  awayTeam: null,\n  possession: null,\n  shots: null,\n  transferFee: null,\n  leaguePosition: null,\n  points: null,\n  goalCount: null,\n  keyStatistic: null,\n  dataRichness: 1\n};\n\ntry {\n  const candidates = geminiResponse.candidates || [];\n  if (candidates.length > 0) {\n    let text = candidates[0].content?.parts?.[0]?.text || \"\";\n    text = text.replace(/```json\\n?/g, \"\").replace(/```/g, \"\").trim();\n    const parsed = JSON.parse(text);\n    extractedStats = { ...extractedStats, ...parsed };\n  }\n} catch (e) {\n  // Keep defaults\n}\n\n// Build enhanced tagline based on extracted data\nlet enhancedTagline = selectedTopic.headline;\nif (extractedStats.score && extractedStats.homeTeam && extractedStats.awayTeam) {\n  enhancedTagline = extractedStats.homeTeam + \" \" + extractedStats.score + \" \" + extractedStats.awayTeam;\n} else if (extractedStats.score) {\n  enhancedTagline = selectedTopic.teams?.[0] + \" \" + extractedStats.score + \" \" + (selectedTopic.teams?.[1] || \"\");\n} else if (extractedStats.transferFee) {\n  enhancedTagline = extractedStats.transferFee + \" Transfer Complete\";\n} else if (extractedStats.leaguePosition && extractedStats.points) {\n  enhancedTagline = selectedTopic.teams?.[0] + \" #\" + extractedStats.leaguePosition + \" (\" + extractedStats.points + \" pts)\";\n}\n\nreturn [{\n  json: {\n    selectedTopic: {\n      ...selectedTopic,\n      extractedStats: extractedStats,\n      enhancedTagline: enhancedTagline.trim(),\n      hasRealData: extractedStats.dataRichness >= 5\n    },\n    sourceLink: selectedTopic.sourceLink || \"\",\n    anonymizedDescriptions: selectedTopic.anonymizedDescriptions || {},\n    geminiApiKey: geminiApiKey,\n    callbackUrl: callbackUrl\n  }\n}];"
       }
     }
   ],
@@ -781,7 +864,7 @@
       "main": [
         [
           {
-            "node": "Hashtag Researcher",
+            "node": "Fetch Article Content",
             "type": "main",
             "index": 0
           }
@@ -892,6 +975,39 @@
         [
           {
             "node": "Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Article Content": {
+      "main": [
+        [
+          {
+            "node": "Extract Statistics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Statistics": {
+      "main": [
+        [
+          {
+            "node": "Parse Statistics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Statistics": {
+      "main": [
+        [
+          {
+            "node": "Hashtag Researcher",
             "type": "main",
             "index": 0
           }
