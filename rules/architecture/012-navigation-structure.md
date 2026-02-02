@@ -99,5 +99,5 @@ For mobile drill-down behavior, see UI-006 D6.
 ## Cross-References
 
 - UI-006: Mobile Layout (D6 for stack-based drill-down)
-- UI-004: Left-Nav Collapsible Behavior
+- HUB-003: Nested Navigation Pattern (includes collapsible behavior, merged from UI-004)
 - HUB-001: Hub Layout (primary sidebar)
