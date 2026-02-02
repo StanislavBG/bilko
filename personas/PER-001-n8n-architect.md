@@ -247,7 +247,7 @@ CHECKPOINT 4: PUSH complete
 **Objective**: Persist the workflow definition to codebase for version control.
 
 **Actions**:
-1. Save to `server/workflows/backups/{n8n-id}.json`
+1. Save to `rules/env/artifacts/workflows/backups/{n8n-id}.json`
 2. Add metadata header with backup timestamp and change description
 
 **Checkpoint Gate**:
