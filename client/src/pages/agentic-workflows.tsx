@@ -184,9 +184,9 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
         </Button>
       </div>
 
-      <div className="flex gap-4">
-        {/* Left: Image */}
-        <div className="w-[280px] flex-shrink-0">
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Image - full width on mobile, fixed width on desktop */}
+        <div className="w-full md:w-[280px] flex-shrink-0">
           {(imageUrl || imagePrompt) && (
             <Card data-testid="card-infographic" className="h-full">
               <CardHeader className="py-2 px-3">
@@ -252,8 +252,8 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
           )}
         </div>
 
-        {/* Right: Posts */}
-        <div className="flex-1 space-y-3 min-w-0">
+        {/* Posts - full width on mobile */}
+        <div className="flex-1 space-y-3 min-w-0 w-full">
           {postContent && (
             <Card data-testid="card-facebook-post">
               <CardHeader className="py-2 px-3">
@@ -537,10 +537,14 @@ export default function AgenticWorkflows() {
       ]
     : [];
 
-  const handleWorkflowSelect = (workflow: WorkflowDefinition) => {
+  const handleWorkflowSelect = (workflow: WorkflowDefinition | null) => {
     setSelectedWorkflow(workflow);
     setSelectedExecution(null);
     setViewMode("latest");
+    // Expand ActionPanel on mobile when a workflow is selected (so execute button is visible)
+    if (workflow && isMobile) {
+      setIsActionPanelCollapsed(false);
+    }
   };
 
   // Desktop nav - shows all workflows flat
