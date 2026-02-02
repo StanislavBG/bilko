@@ -1,14 +1,15 @@
 {
-  "version": "1.1.0",
+  "version": "3.0.0",
   "workflows": [
     {
       "id": "european-football-daily",
       "name": "[EFD] European Football Daily",
       "mode": "n8n",
       "webhookPath": "european-football-daily",
-      "description": "PRODUCTION workflow. Daily automated European football news aggregation. Runs at 00:00 to search the last 24 hours of European football news, identifies the most positive/cheerful event using sentiment analysis, generates an AI image, and publishes a congratulatory post with AI transparency disclosure.",
-      "instructions": "This is the PRODUCTION workflow. It runs automatically at 00:00 daily via n8n Schedule Trigger. Uses fixed callback URL to bilkobibitkov.replit.app.",
-      "category": "content"
+      "description": "v3.0.0 - AI-powered European football news automation using Gemini with Google Search grounding. Two-stage discovery: (1) searches trending topics from last 24 hours, (2) deep researches selected topic for stats and sources. Generates cinematic infographics with team logos and stat overlays, plus Facebook posts with numbered source citations.",
+      "instructions": "Runs daily at 00:00 via n8n Schedule Trigger. Uses Gemini 2.0 Flash with google_search tool for real-time news discovery. Produces image with text overlay and FB post with [1], [2] style citations linking to sources.",
+      "category": "content",
+      "architecture": "Webhook → Discover Topics (Gemini+GoogleSearch) → Topic Analyst → Compliance Checker → Research Topic → Stats Extraction → Post Generation → Image Pipeline → Imagen API → Callback"
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { Play, RefreshCw, Workflow, Image, FileText, History, Shield, Copy, Download, Check, ChevronDown, ChevronRight, Info } from "lucide-react";
+import { Play, RefreshCw, Workflow, Image, FileText, History, Copy, Download, Check, ChevronDown, ChevronRight, Info, Clock, Activity, ExternalLink, Maximize2, X, Link } from "lucide-react";
 import { ActionBar } from "@/components/action-bar";
 import { ActionPanel } from "@/components/action-panel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -96,10 +96,31 @@ interface ExecutionStatus {
   };
 }
 
+interface ExecutionStats {
+  id: string;
+  status: string;
+  startedAt: string;
+  completedAt: string | null;
+  durationMs: number | null;
+  stepCount: number;
+}
+
+interface TraceItem {
+  id: string;
+  action: string | null;
+  status: string;
+  stepIndex: number;
+  timestamp: string;
+  durationMs: number | null;
+}
+
 interface WorkflowOutput {
   hasOutput: boolean;
   message?: string;
   fb2DisclosureText?: string;
+  executionStats?: ExecutionStats | null;
+  traces?: TraceItem[];
+  sourceUrls?: string[];
   outputs?: {
     final: {
       traceId: string;
@@ -111,6 +132,7 @@ interface WorkflowOutput {
           imagePrompt?: string;
           imageUrl?: string | null;
           transparencyPost?: string;
+          sourceUrls?: string[];
         };
       };
     } | null;
@@ -130,9 +152,31 @@ interface WorkflowOutput {
   };
 }
 
+function formatDuration(ms: number | null | undefined): string {
+  if (!ms) return "-";
+  if (ms < 1000) return `${ms}ms`;
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSec = seconds % 60;
+  return `${minutes}m ${remainingSec}s`;
+}
+
+function formatTimestamp(ts: string | null | undefined): string {
+  if (!ts) return "-";
+  const date = new Date(ts);
+  return date.toLocaleString("en-US", { 
+    month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" 
+  });
+}
+
 function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
   const { toast } = useToast();
   const { copy, isCopied } = useCopyToClipboard();
+  const [showFullscreenImage, setShowFullscreenImage] = useState(false);
+  const [showFullPost, setShowFullPost] = useState(false);
+  const [showTraces, setShowTraces] = useState(false);
+  
   const { data, isLoading, refetch, isRefetching } = useQuery<WorkflowOutput>({
     queryKey: ["/api/workflows", workflowId, "output"],
     queryFn: async () => {
@@ -166,10 +210,13 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
   const postContent = finalData?.postContent;
   const imagePrompt = finalData?.imagePrompt;
   const imageUrl = finalData?.imageUrl;
-  const transparencyPost = finalData?.transparencyPost;
+  const stats = data.executionStats;
+  const traces = data.traces || [];
+  const sourceUrls = data.sourceUrls || finalData?.sourceUrls || [];
 
   return (
     <div className="space-y-3">
+      {/* Header with Refresh */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="text-sm font-medium">Latest Output</h3>
         <Button
@@ -184,6 +231,77 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
         </Button>
       </div>
 
+      {/* Execution Stats Bar */}
+      {stats && (
+        <Card className="bg-muted/30" data-testid="card-execution-stats">
+          <CardContent className="py-2 px-3">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">Started:</span>
+                <span className="font-medium">{formatTimestamp(stats.startedAt)}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Activity className="h-3 w-3 text-muted-foreground" />
+                <span className="text-muted-foreground">Duration:</span>
+                <span className="font-medium">{formatDuration(stats.durationMs)}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground">Steps:</span>
+                <span className="font-medium">{stats.stepCount}</span>
+              </div>
+              <Badge 
+                variant={stats.status === "completed" ? "default" : "secondary"}
+                className="text-[10px]"
+              >
+                {stats.status}
+              </Badge>
+              {traces.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 px-2 text-[10px]"
+                  onClick={() => setShowTraces(!showTraces)}
+                  data-testid="button-toggle-traces"
+                >
+                  {showTraces ? "Hide" : "Show"} Traces
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Traces Panel (collapsible) */}
+      {showTraces && traces.length > 0 && (
+        <Card data-testid="card-traces">
+          <CardHeader className="py-2 px-3">
+            <CardTitle className="text-xs">Memory Communications</CardTitle>
+          </CardHeader>
+          <CardContent className="p-2 pt-0 max-h-48 overflow-auto">
+            <div className="space-y-1">
+              {traces.map((trace, idx) => (
+                <div 
+                  key={trace.id} 
+                  className="flex items-center gap-2 text-[10px] py-1 border-b last:border-b-0"
+                  data-testid={`trace-item-${idx}`}
+                >
+                  <span className="text-muted-foreground w-4">{trace.stepIndex}</span>
+                  <Badge 
+                    variant={trace.status === "success" ? "default" : "secondary"}
+                    className="text-[8px] px-1"
+                  >
+                    {trace.status === "success" ? "OK" : trace.status}
+                  </Badge>
+                  <span className="font-medium truncate flex-1">{trace.action || "unknown"}</span>
+                  <span className="text-muted-foreground">{formatDuration(trace.durationMs)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex flex-col md:flex-row gap-4">
         {/* Image - full width on mobile, fixed width on desktop */}
         <div className="w-full md:w-[280px] flex-shrink-0">
@@ -197,6 +315,20 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
                   </div>
                   {imageUrl && (
                     <div className="flex items-center">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => setShowFullscreenImage(true)}
+                            data-testid="button-fullscreen-image"
+                          >
+                            <Maximize2 className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Fullscreen</TooltipContent>
+                      </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
@@ -231,7 +363,10 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
               </CardHeader>
               <CardContent className="p-2 pt-0">
                 {imageUrl ? (
-                  <div className="rounded overflow-hidden">
+                  <div 
+                    className="rounded overflow-hidden cursor-pointer"
+                    onClick={() => setShowFullscreenImage(true)}
+                  >
                     <img 
                       src={imageUrl} 
                       alt="Generated infographic" 
@@ -252,7 +387,7 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
           )}
         </div>
 
-        {/* Posts - full width on mobile */}
+        {/* Post and Sources */}
         <div className="flex-1 space-y-3 min-w-0 w-full">
           {postContent && (
             <Card data-testid="card-facebook-post">
@@ -260,9 +395,23 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
                 <div className="flex items-center justify-between gap-1">
                   <div className="flex items-center gap-1">
                     <FileText className="h-3 w-3 text-muted-foreground" />
-                    <CardTitle className="text-xs">Post 1: Main</CardTitle>
+                    <CardTitle className="text-xs">Facebook Post</CardTitle>
                   </div>
                   <div className="flex items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setShowFullPost(true)}
+                          data-testid="button-expand-post"
+                        >
+                          <Maximize2 className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>View full post</TooltipContent>
+                    </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -277,48 +426,45 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
                       </TooltipTrigger>
                       <TooltipContent>Copy post</TooltipContent>
                     </Tooltip>
-                    <Badge variant="outline" className="text-[10px] px-1">Primary</Badge>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="p-2 pt-0">
-                <div className="bg-muted rounded p-2">
+                <div 
+                  className="bg-muted rounded p-2 cursor-pointer"
+                  onClick={() => setShowFullPost(true)}
+                >
                   <p className="text-xs line-clamp-4" data-testid="text-post-content">{postContent}</p>
                 </div>
               </CardContent>
             </Card>
           )}
 
-          {data.fb2DisclosureText && (
-            <Card data-testid="card-fb2-disclosure">
+          {/* Source Links */}
+          {sourceUrls.length > 0 && (
+            <Card data-testid="card-sources">
               <CardHeader className="py-2 px-3">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="flex items-center gap-1">
-                    <Shield className="h-3 w-3 text-muted-foreground" />
-                    <CardTitle className="text-xs">Post 2: Professional Disclosure</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => copy(data.fb2DisclosureText!, "fb2-disclosure", "Disclosure copied")}
-                          data-testid="button-copy-fb2"
-                        >
-                          {isCopied("fb2-disclosure") ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Copy disclosure</TooltipContent>
-                    </Tooltip>
-                    <Badge variant="secondary" className="text-[10px] px-1">FB Post 2</Badge>
-                  </div>
+                <div className="flex items-center gap-1">
+                  <Link className="h-3 w-3 text-muted-foreground" />
+                  <CardTitle className="text-xs">Sources ({sourceUrls.length})</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="p-2 pt-0">
-                <div className="bg-muted/50 rounded p-2">
-                  <p className="text-xs text-muted-foreground whitespace-pre-line" data-testid="text-fb2-disclosure">{data.fb2DisclosureText}</p>
+                <div className="space-y-1">
+                  {sourceUrls.map((url, idx) => (
+                    <a
+                      key={idx}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-[10px] text-primary hover:underline truncate"
+                      data-testid={`source-link-${idx + 1}`}
+                    >
+                      <span className="font-medium">[{idx + 1}]</span>
+                      <ExternalLink className="h-2 w-2 flex-shrink-0" />
+                      <span className="truncate">{url.replace(/^https?:\/\//, "").substring(0, 50)}...</span>
+                    </a>
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -333,6 +479,70 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
             <p className="text-xs mt-1">The workflow may still be processing</p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Fullscreen Image Modal */}
+      {showFullscreenImage && imageUrl && (
+        <div 
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer"
+          onClick={() => setShowFullscreenImage(false)}
+          data-testid="modal-fullscreen-image"
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-white hover:bg-white/20"
+            onClick={() => setShowFullscreenImage(false)}
+            data-testid="button-close-fullscreen"
+          >
+            <X className="h-6 w-6" />
+          </Button>
+          <img 
+            src={imageUrl} 
+            alt="Generated infographic" 
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      {/* Full Post Modal */}
+      {showFullPost && postContent && (
+        <div 
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowFullPost(false)}
+          data-testid="modal-full-post"
+        >
+          <Card 
+            className="max-w-2xl w-full max-h-[80vh] overflow-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-sm">Facebook Post</CardTitle>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => copy(postContent, "modal-post", "Post copied")}
+                  data-testid="button-copy-modal-post"
+                >
+                  {isCopied("modal-post") ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowFullPost(false)}
+                  data-testid="button-close-post-modal"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm whitespace-pre-wrap" data-testid="text-full-post">{postContent}</p>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );

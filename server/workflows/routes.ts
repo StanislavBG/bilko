@@ -202,9 +202,47 @@ Bilko Bibitkov Human-Centric AI Curation`;
         });
       }
 
+      // Get execution stats for this workflow
+      const execution = finalOutput?.executionId 
+        ? await orchestratorStorage.getExecution(finalOutput.executionId)
+        : null;
+      
+      // Get all traces for this execution to show communication flow
+      const executionTraces = execution 
+        ? await orchestratorStorage.getExecutionTraces(execution.id)
+        : [];
+      
+      // Calculate execution duration
+      const startTime = execution?.startedAt ? new Date(execution.startedAt) : null;
+      const endTime = execution?.completedAt ? new Date(execution.completedAt) : null;
+      const durationMs = startTime && endTime ? endTime.getTime() - startTime.getTime() : null;
+
+      // Extract source URLs from final output for citations
+      const finalData = finalOutput?.responsePayload as Record<string, unknown> | undefined;
+      const sourceUrls = finalData?.data 
+        ? (finalData.data as Record<string, unknown>).sourceUrls as string[] | undefined
+        : undefined;
+
       res.json({
         hasOutput: true,
         fb2DisclosureText: FB2_DISCLOSURE_TEXT, // Always available for copy-paste
+        executionStats: execution ? {
+          id: execution.id,
+          status: execution.status,
+          startedAt: execution.startedAt,
+          completedAt: execution.completedAt,
+          durationMs,
+          stepCount: executionTraces.length,
+        } : null,
+        traces: executionTraces.map((t: { id: string; action: string | null; overallStatus: string; attemptNumber: number; requestedAt: Date; durationMs: number | null }) => ({
+          id: t.id,
+          action: t.action,
+          status: t.overallStatus,
+          stepIndex: t.attemptNumber,
+          timestamp: t.requestedAt,
+          durationMs: t.durationMs,
+        })),
+        sourceUrls,
         outputs: {
           final: finalOutput ? {
             traceId: finalOutput.traceId,
