@@ -319,8 +319,7 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
+                            size="sm"
                             onClick={() => setShowFullscreenImage(true)}
                             data-testid="button-fullscreen-image"
                           >
@@ -333,8 +332,7 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
+                            size="sm"
                             onClick={() => downloadImage(imageUrl, `infographic-${workflowId}.png`)}
                             data-testid="button-download-image"
                           >
@@ -347,8 +345,7 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
+                            size="sm"
                             onClick={() => copyImageToClipboard(imageUrl, toast)}
                             data-testid="button-copy-image"
                           >
@@ -402,8 +399,7 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
                       <TooltipTrigger asChild>
                         <Button
                           variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
+                          size="sm"
                           onClick={() => setShowFullPost(true)}
                           data-testid="button-expand-post"
                         >
@@ -416,8 +412,7 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
                       <TooltipTrigger asChild>
                         <Button
                           variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
+                          size="sm"
                           onClick={() => copy(postContent, "post-content", "Post copied")}
                           data-testid="button-copy-post"
                         >
@@ -457,7 +452,7 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-primary hover:underline truncate"
+                      className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground hover:underline truncate"
                       data-testid={`source-link-${idx + 1}`}
                     >
                       <span className="font-medium">[{idx + 1}]</span>
