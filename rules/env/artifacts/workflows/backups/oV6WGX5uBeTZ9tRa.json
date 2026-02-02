@@ -670,7 +670,7 @@
         -150
       ],
       "parameters": {
-        "jsCode": "// Sanitize article content to prevent JSON serialization issues\nconst articleData = $('Fetch Article Content').first().json;\nconst aggregateData = $('Aggregate Compliant Topics').first().json;\nconst selectedTopic = aggregateData.selectedTopic || {};\n\n// Get raw content and sanitize it\nlet rawContent = articleData?.data || 'No content available';\n\n// Remove problematic characters and limit length\nrawContent = rawContent\n  .replace(/[\\x00-\\x1F\\x7F]/g, ' ')  // Remove control characters\n  .replace(/\\\\n/g, ' ')  // Replace escaped newlines\n  .replace(/\\n/g, ' ')   // Replace actual newlines\n  .replace(/\\r/g, ' ')   // Replace carriage returns\n  .replace(/\\t/g, ' ')   // Replace tabs\n  .replace(/\\\\/g, ' ')   // Remove backslashes\n  .replace(/\"/g, \"'\")    // Replace double quotes with single\n  .substring(0, 6000)    // Limit content length\n  .trim();\n\n// Build the prompt text\nconst promptText = `Extract SPECIFIC STATISTICS from this football article. Look for:\n\n1. MATCH SCORES (e.g., 3-0, 2-1)\n2. POSSESSION PERCENTAGES\n3. SHOT COUNTS\n4. TRANSFER FEES (in millions)\n5. LEAGUE STANDINGS/POINTS\n6. GOAL SCORERS (without names, just counts)\n7. ANY OTHER NUMERICAL DATA\n\nARTICLE CONTENT:\n${rawContent}\n\nHEADLINE: ${selectedTopic.headline || 'No headline'}\n\nReturn ONLY valid JSON:\n{\n  \"score\": \"3-0\" or null,\n  \"homeTeam\": \"Team A\" or null,\n  \"awayTeam\": \"Team B\" or null,\n  \"possession\": { \"home\": 65, \"away\": 35 } or null,\n  \"shots\": { \"home\": 15, \"away\": 8 } or null,\n  \"transferFee\": \"80M\" or null,\n  \"leaguePosition\": 1 or null,\n  \"points\": 45 or null,\n  \"goalCount\": 3 or null,\n  \"keyStatistic\": \"most important number/stat found\",\n  \"dataRichness\": 1-10 (how much real data found)\n}`;\n\n// Build the Gemini request body\nconst requestBody = {\n  contents: [{\n    parts: [{\n      text: promptText\n    }]\n  }]\n};\n\nreturn [{\n  json: {\n    geminiRequestBody: requestBody,\n    selectedTopic: selectedTopic,\n    geminiApiKey: aggregateData.geminiApiKey,\n    callbackUrl: aggregateData.callbackUrl\n  }\n}];"
+        "jsCode": "// Get merged content from source collection\nconst mergedData = $input.first().json;\nconst selectedTopic = mergedData.selectedTopic || {};\n\n// Use the combined articles text from all sources\nlet rawContent = mergedData?.articlesText || \"No content available\";\n\n// Sanitize content for JSON\nrawContent = rawContent\n  .replace(/[\\x00-\\x1F\\x7F]/g, \" \")\n  .replace(/\\\\n/g, \" \")\n  .replace(/\\n/g, \" \")\n  .replace(/\\r/g, \" \")\n  .replace(/\\t/g, \" \")\n  .replace(/\\\\/g, \" \")\n  .replace(/\"/g, \"'\")\n  .substring(0, 8000)\n  .trim();\n\nconst sourceCount = mergedData.sourceCount || 1;\n\n// Build the prompt text\nconst promptText = `Extract SPECIFIC STATISTICS from these football articles. Look for:\n\n1. MATCH SCORES (e.g., 3-0, 2-1)\n2. POSSESSION PERCENTAGES\n3. SHOT COUNTS\n4. TRANSFER FEES (in millions)\n5. LEAGUE STANDINGS/POINTS\n6. GOAL SCORERS (without names, just counts)\n7. ANY OTHER NUMERICAL DATA\n\nCOMBINED ARTICLE CONTENT (from ${sourceCount} sources):\n${rawContent}\n\nHEADLINE: ${selectedTopic.headline || \"No headline\"}\n\nReturn ONLY valid JSON:\n{\n  \"score\": \"3-0\" or null,\n  \"homeTeam\": \"Team A\" or null,\n  \"awayTeam\": \"Team B\" or null,\n  \"possession\": { \"home\": 65, \"away\": 35 } or null,\n  \"shots\": { \"home\": 15, \"away\": 8 } or null,\n  \"transferFee\": \"80M\" or null,\n  \"leaguePosition\": 1 or null,\n  \"points\": 45 or null,\n  \"goalCount\": 3 or null,\n  \"keyStatistic\": \"most important number/stat found\",\n  \"dataRichness\": 1-10 (how much real data found)\n}`;\n\n// Build the Gemini request body\nconst requestBody = {\n  contents: [{\n    parts: [{\n      text: promptText\n    }]\n  }]\n};\n\nreturn [{\n  json: {\n    geminiRequestBody: requestBody,\n    selectedTopic: selectedTopic,\n    sourceUrls: mergedData.sourceUrls || [],\n    sourceCount: sourceCount,\n    geminiApiKey: mergedData.geminiApiKey,\n    callbackUrl: mergedData.callbackUrl\n  }\n}];\n"
       }
     },
     {
@@ -722,12 +722,12 @@
         -150
       ],
       "parameters": {
-        "jsCode": "const geminiResponse = $input.first().json;\nconst aggregateData = $(\"Aggregate Compliant Topics\").first().json;\nconst geminiApiKey = aggregateData.geminiApiKey;\nconst callbackUrl = aggregateData.callbackUrl;\nconst selectedTopic = aggregateData.selectedTopic;\n\nlet extractedStats = {\n  score: null,\n  homeTeam: null,\n  awayTeam: null,\n  possession: null,\n  shots: null,\n  transferFee: null,\n  leaguePosition: null,\n  points: null,\n  goalCount: null,\n  keyStatistic: null,\n  dataRichness: 1\n};\n\ntry {\n  const candidates = geminiResponse.candidates || [];\n  if (candidates.length > 0) {\n    let text = candidates[0].content?.parts?.[0]?.text || \"\";\n    text = text.replace(/```json\\n?/g, \"\").replace(/```/g, \"\").trim();\n    const parsed = JSON.parse(text);\n    extractedStats = { ...extractedStats, ...parsed };\n  }\n} catch (e) {\n  // Keep defaults\n}\n\n// Build enhanced tagline based on extracted data\nlet enhancedTagline = selectedTopic.headline;\nif (extractedStats.score && extractedStats.homeTeam && extractedStats.awayTeam) {\n  enhancedTagline = extractedStats.homeTeam + \" \" + extractedStats.score + \" \" + extractedStats.awayTeam;\n} else if (extractedStats.score) {\n  enhancedTagline = selectedTopic.teams?.[0] + \" \" + extractedStats.score + \" \" + (selectedTopic.teams?.[1] || \"\");\n} else if (extractedStats.transferFee) {\n  enhancedTagline = extractedStats.transferFee + \" Transfer Complete\";\n} else if (extractedStats.leaguePosition && extractedStats.points) {\n  enhancedTagline = selectedTopic.teams?.[0] + \" #\" + extractedStats.leaguePosition + \" (\" + extractedStats.points + \" pts)\";\n}\n\nreturn [{\n  json: {\n    selectedTopic: {\n      ...selectedTopic,\n      extractedStats: extractedStats,\n      enhancedTagline: enhancedTagline.trim(),\n      hasRealData: extractedStats.dataRichness >= 5\n    },\n    sourceLink: selectedTopic.sourceLink || \"\",\n    anonymizedDescriptions: selectedTopic.anonymizedDescriptions || {},\n    geminiApiKey: geminiApiKey,\n    callbackUrl: callbackUrl\n  }\n}];"
+        "jsCode": "const geminiResponse = $input.first().json;\nconst prevData = $(\"Prepare Stats Request\").first().json;\nconst geminiApiKey = prevData.geminiApiKey;\nconst callbackUrl = prevData.callbackUrl;\nconst selectedTopic = prevData.selectedTopic || {};\nconst sourceUrls = prevData.sourceUrls || [];\nconst sourceCount = prevData.sourceCount || 1;\n\nlet extractedStats = {\n  score: null,\n  homeTeam: null,\n  awayTeam: null,\n  possession: null,\n  shots: null,\n  transferFee: null,\n  leaguePosition: null,\n  points: null,\n  goalCount: null,\n  keyStatistic: null,\n  dataRichness: 1\n};\n\ntry {\n  const candidates = geminiResponse.candidates || [];\n  if (candidates.length > 0) {\n    let text = candidates[0].content?.parts?.[0]?.text || \"\";\n    text = text.replace(/```json\\n?/g, \"\").replace(/```/g, \"\").trim();\n    const parsed = JSON.parse(text);\n    extractedStats = { ...extractedStats, ...parsed };\n  }\n} catch (e) {\n  // Keep defaults\n}\n\n// Build enhanced tagline based on extracted data - with null checks\nlet enhancedTagline = selectedTopic.headline || \"Football Update\";\nconst teams = selectedTopic.teams || [];\n\nif (extractedStats.score && extractedStats.homeTeam && extractedStats.awayTeam) {\n  enhancedTagline = extractedStats.homeTeam + \" \" + extractedStats.score + \" \" + extractedStats.awayTeam;\n} else if (extractedStats.score && teams.length >= 2) {\n  enhancedTagline = (teams[0] || \"\") + \" \" + extractedStats.score + \" \" + (teams[1] || \"\");\n} else if (extractedStats.score && teams.length >= 1) {\n  enhancedTagline = (teams[0] || \"\") + \" \" + extractedStats.score;\n} else if (extractedStats.transferFee) {\n  enhancedTagline = extractedStats.transferFee + \" Transfer Complete\";\n} else if (extractedStats.leaguePosition && extractedStats.points && teams.length > 0) {\n  enhancedTagline = (teams[0] || \"Team\") + \" #\" + extractedStats.leaguePosition + \" (\" + extractedStats.points + \" pts)\";\n}\n\n// Ensure enhancedTagline is a string before trim\nenhancedTagline = String(enhancedTagline || \"Football Update\").trim();\n\nreturn [{\n  json: {\n    selectedTopic: {\n      ...selectedTopic,\n      extractedStats: extractedStats,\n      enhancedTagline: enhancedTagline,\n      hasRealData: extractedStats.dataRichness >= 5\n    },\n    sourceUrls: sourceUrls,\n    sourceCount: sourceCount,\n    sourceLink: selectedTopic.sourceLink || \"\",\n    anonymizedDescriptions: selectedTopic.anonymizedDescriptions || {},\n    geminiApiKey: geminiApiKey,\n    callbackUrl: callbackUrl\n  }\n}];\n"
       }
     },
     {
       "parameters": {
-        "jsCode": "const prevData = $input.first().json;\nconst selectedTopic = prevData.selectedTopic || {};\nconst headline = selectedTopic.headline || '';\nconst teams = selectedTopic.teams || [];\n\n// Build search query from topic\nconst searchTerms = [];\nif (teams.length > 0) {\n  searchTerms.push(...teams.slice(0, 2));\n}\n\n// Extract key words from headline\nconst keyWords = headline\n  .replace(/[^a-zA-Z0-9\\s]/g, '')\n  .split(/\\s+/)\n  .filter(w => w.length > 4 && !['about', 'after', 'before', 'their', 'there', 'where', 'which', 'would', 'could', 'should'].includes(w.toLowerCase()))\n  .slice(0, 3);\n\nsearchTerms.push(...keyWords);\nconst searchQuery = searchTerms.join(' ');\n\n// Build Google News RSS URL for topic-specific search\nconst encodedQuery = encodeURIComponent(searchQuery + ' football');\nconst searchUrl = 'https://news.google.com/rss/search?q=' + encodedQuery + '&hl=en-US&gl=US&ceid=US:en';\n\nreturn [{\n  json: {\n    ...prevData,\n    searchQuery: searchQuery,\n    searchUrl: searchUrl,\n    primarySource: {\n      url: selectedTopic.sourceLink || '',\n      headline: selectedTopic.sourceHeadline || headline\n    }\n  }\n}];"
+        "jsCode": "const prevData = $input.first().json;\nconst selectedTopic = prevData.selectedTopic || {};\nconst headline = selectedTopic.headline || \"\";\nconst teams = selectedTopic.teams || [];\n\n// Build search query from topic - prioritize team names and key data\nconst searchTerms = [];\n\n// Add teams first (most specific)\nif (teams.length > 0) {\n  searchTerms.push(...teams.slice(0, 2));\n}\n\n// Extract key data-rich words from headline (numbers, proper nouns)\nconst dataWords = headline\n  .replace(/[^a-zA-Z0-9\\s€$£%-]/g, \" \")\n  .split(/\\s+/)\n  .filter(w => {\n    // Keep numbers (scores, fees, etc.)\n    if (/\\d/.test(w)) return true;\n    // Keep likely proper nouns (capitalized, 4+ chars)\n    if (w.length >= 4 && w[0] === w[0].toUpperCase()) return true;\n    return false;\n  })\n  .slice(0, 4);\n\nsearchTerms.push(...dataWords);\n\n// Build the final query\nlet searchQuery = searchTerms.join(\" \");\nif (!searchQuery || searchQuery.length < 5) {\n  // Fallback: use first meaningful words from headline\n  searchQuery = headline.split(/\\s+/).slice(0, 4).join(\" \");\n}\n\n// Append football context\nconst encodedQuery = encodeURIComponent(searchQuery + \" football news\");\nconst searchUrl = \"https://news.google.com/rss/search?q=\" + encodedQuery + \"&hl=en-US&gl=US&ceid=US:en\";\n\n// Primary source comes from the selected topic\nconst primarySource = {\n  url: selectedTopic.sourceLink || selectedTopic.url || \"\",\n  headline: selectedTopic.sourceHeadline || selectedTopic.headline || headline\n};\n\nreturn [{\n  json: {\n    ...prevData,\n    searchQuery: searchQuery,\n    searchUrl: searchUrl,\n    primarySource: primarySource,\n    selectedTopic: selectedTopic\n  }\n}];"
       },
       "name": "Build Search Query",
       "type": "n8n-nodes-base.code",
@@ -741,7 +741,26 @@
     {
       "parameters": {
         "url": "={{ $json.searchUrl }}",
-        "options": {}
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            },
+            {
+              "name": "Accept",
+              "value": "application/rss+xml, application/xml, text/xml"
+            }
+          ]
+        }
       },
       "name": "Search Related Sources",
       "type": "n8n-nodes-base.httpRequest",
@@ -767,7 +786,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const rssData = $input.first().json;\nconst prevData = $(\"Build Search Query\").first().json;\nconst primarySource = prevData.primarySource || {};\n\n// Extract articles from RSS\nconst items = rssData?.rss?.channel?.item || [];\n\n// Collect up to 5 sources (including primary)\nconst sources = [];\n\n// Add primary source first\nif (primarySource.url) {\n  sources.push({\n    url: primarySource.url,\n    headline: primarySource.headline,\n    isPrimary: true\n  });\n}\n\n// Add related sources (skip duplicates)\nconst seenUrls = new Set([primarySource.url?.toLowerCase()]);\n\nfor (const item of items.slice(0, 10)) {\n  if (sources.length >= 5) break;\n  \n  const link = item.link || '';\n  const title = item.title || '';\n  \n  // Skip if duplicate or same domain as primary\n  if (seenUrls.has(link.toLowerCase())) continue;\n  \n  // Skip Google News redirect wrapper - extract actual URL\n  let actualUrl = link;\n  if (link.includes('news.google.com')) {\n    // Keep the redirect link as-is for now\n    actualUrl = link;\n  }\n  \n  seenUrls.add(actualUrl.toLowerCase());\n  sources.push({\n    url: actualUrl,\n    headline: title,\n    isPrimary: false\n  });\n}\n\nreturn [{\n  json: {\n    ...prevData,\n    sources: sources,\n    sourceCount: sources.length\n  }\n}];"
+        "jsCode": "const rssData = $input.first().json;\nconst prevData = $(\"Build Search Query\").first().json;\nconst primarySource = prevData.primarySource || {};\n\n// Debug: log what we received\nconsole.log(\"RSS data keys:\", Object.keys(rssData || {}));\nconsole.log(\"Has rss:\", !!rssData?.rss);\nconsole.log(\"Has channel:\", !!rssData?.rss?.channel);\n\n// Extract articles from RSS\nconst items = rssData?.rss?.channel?.item || [];\nconsole.log(\"Found items count:\", items.length);\n\n// Collect up to 5 sources (including primary)\nconst sources = [];\n\n// Add primary source first\nif (primarySource.url) {\n  sources.push({\n    url: primarySource.url,\n    headline: primarySource.headline,\n    isPrimary: true\n  });\n}\n\n// Add related sources (skip duplicates)\nconst seenUrls = new Set([primarySource.url?.toLowerCase()]);\n\nfor (const item of items.slice(0, 10)) {\n  if (sources.length >= 5) break;\n  \n  const link = item.link || \"\";\n  const title = item.title || \"\";\n  \n  // Skip if no link\n  if (!link) continue;\n  \n  // Skip if duplicate URL\n  if (seenUrls.has(link.toLowerCase())) continue;\n  \n  seenUrls.add(link.toLowerCase());\n  sources.push({\n    url: link,\n    headline: title,\n    isPrimary: false\n  });\n}\n\nconsole.log(\"Final source count:\", sources.length);\n\nreturn [{\n  json: {\n    ...prevData,\n    sources: sources,\n    sourceCount: sources.length,\n    debugItemCount: items.length\n  }\n}];\n"
       },
       "name": "Collect Sources",
       "type": "n8n-nodes-base.code",
@@ -816,7 +835,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const htmlContent = $input.first().json.data || $input.first().json || '';\nconst prevItem = $input.first().json;\nconst sourceIndex = prevItem.sourceIndex ?? 0;\nconst sourceUrl = prevItem.sourceUrl || '';\nconst sourceHeadline = prevItem.sourceHeadline || '';\nconst isPrimary = prevItem.isPrimary || false;\nconst allSources = prevItem.allSources || [];\n\n// Extract text from HTML (basic extraction)\nlet text = '';\nif (typeof htmlContent === 'string') {\n  // Remove scripts and styles\n  text = htmlContent\n    .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, '')\n    .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, '')\n    .replace(/<nav[^>]*>[\\s\\S]*?<\\/nav>/gi, '')\n    .replace(/<header[^>]*>[\\s\\S]*?<\\/header>/gi, '')\n    .replace(/<footer[^>]*>[\\s\\S]*?<\\/footer>/gi, '')\n    .replace(/<aside[^>]*>[\\s\\S]*?<\\/aside>/gi, '')\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/&nbsp;/g, ' ')\n    .replace(/&amp;/g, '&')\n    .replace(/&lt;/g, '<')\n    .replace(/&gt;/g, '>')\n    .replace(/\\s+/g, ' ')\n    .trim()\n    .slice(0, 8000);\n}\n\nreturn [{\n  json: {\n    sourceIndex,\n    sourceUrl,\n    sourceHeadline,\n    isPrimary,\n    content: text,\n    allSources,\n    selectedTopic: prevItem.selectedTopic,\n    geminiApiKey: prevItem.geminiApiKey,\n    callbackUrl: prevItem.callbackUrl\n  }\n}];"
+        "jsCode": "// Get HTML content from HTTP Request and metadata from Split Sources\nconst httpItems = $input.all();  // HTTP Response items (just { data: \"html\" })\nconst splitItems = $(\"Split Sources\").all();  // Original items with metadata\n\nconst results = [];\n\nfor (let i = 0; i < httpItems.length; i++) {\n  const htmlContent = httpItems[i]?.json?.data || \"\";\n  const metadata = splitItems[i]?.json || {};\n  \n  const sourceIndex = metadata.sourceIndex ?? i;\n  const sourceUrl = metadata.sourceUrl || \"\";\n  const sourceHeadline = metadata.sourceHeadline || \"\";\n  const isPrimary = metadata.isPrimary || false;\n  const allSources = metadata.allSources || [];\n  const selectedTopic = metadata.selectedTopic;\n  const geminiApiKey = metadata.geminiApiKey;\n  const callbackUrl = metadata.callbackUrl;\n\n  // Extract text from HTML (basic extraction)\n  let text = \"\";\n  if (typeof htmlContent === \"string\") {\n    text = htmlContent\n      .replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi, \"\")\n      .replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi, \"\")\n      .replace(/<nav[^>]*>[\\s\\S]*?<\\/nav>/gi, \"\")\n      .replace(/<header[^>]*>[\\s\\S]*?<\\/header>/gi, \"\")\n      .replace(/<footer[^>]*>[\\s\\S]*?<\\/footer>/gi, \"\")\n      .replace(/<aside[^>]*>[\\s\\S]*?<\\/aside>/gi, \"\")\n      .replace(/<[^>]+>/g, \" \")\n      .replace(/&nbsp;/g, \" \")\n      .replace(/&amp;/g, \"&\")\n      .replace(/&lt;/g, \"<\")\n      .replace(/&gt;/g, \">\")\n      .replace(/\\s+/g, \" \")\n      .trim()\n      .slice(0, 8000);\n  }\n\n  results.push({\n    json: {\n      sourceIndex,\n      sourceUrl,\n      sourceHeadline,\n      isPrimary,\n      content: text,\n      allSources,\n      selectedTopic,\n      geminiApiKey,\n      callbackUrl\n    }\n  });\n}\n\nreturn results;\n"
       },
       "name": "Parse Source Content",
       "type": "n8n-nodes-base.code",
@@ -1109,7 +1128,7 @@
       "main": [
         [
           {
-            "node": "Fetch Article Content",
+            "node": "Build Search Query",
             "type": "main",
             "index": 0
           }
@@ -1242,17 +1261,6 @@
         ]
       ]
     },
-    "Fetch Article Content": {
-      "main": [
-        [
-          {
-            "node": "Prepare Stats Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Prepare Stats Request": {
       "main": [
         [
@@ -1378,7 +1386,7 @@
       "main": [
         [
           {
-            "node": "Comprehensive Summary",
+            "node": "Prepare Stats Request",
             "type": "main",
             "index": 0
           }

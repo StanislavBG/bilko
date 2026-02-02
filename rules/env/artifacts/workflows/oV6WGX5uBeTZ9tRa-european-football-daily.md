@@ -2,7 +2,7 @@
 
 **n8n ID**: `oV6WGX5uBeTZ9tRa`  
 **Webhook Path**: `european-football-daily`  
-**Version**: 2.5.1  
+**Version**: 2.6.0  
 **Last Updated**: 2026-02-02
 
 ## Objectives
@@ -216,6 +216,23 @@ Style: Epic scenery, dramatic lighting, professional sports broadcast quality.
 ---
 
 ## Changelog
+
+### v2.6.0 (2026-02-02)
+- **MAJOR**: Fixed source collection to properly gather 3-5 sources per topic
+  - **Problem**: Workflow had a disconnected source collection chain - `Build Search Query`, `Search Related Sources`, `Parse Search Results`, `Collect Sources`, etc. were never connected to the main flow
+  - **Root cause**: Main flow went directly from `Aggregate Compliant Topics` → `Fetch Article Content` (single article), bypassing the entire source collection chain
+  - **Solution**: Rewired workflow connections:
+    - `Aggregate Compliant Topics` → `Build Search Query` (starts source collection)
+    - `Merge All Content` → `Prepare Stats Request` (after sources are collected)
+  - **Additional fixes**:
+    - Added User-Agent and Accept headers to `Search Related Sources` HTTP node (Google News was blocking requests)
+    - Fixed `Parse Source Content` to use `$input.all()` for processing all items
+    - Fixed `Parse Source Content` to reference `$("Split Sources")` for metadata (HTTP Request node was losing metadata)
+    - Fixed `Parse Statistics` null safety for `.trim()` call
+    - Removed `URL` constructor usage (not available in n8n Code nodes)
+  - **Result**: Posts now include 5 numbered source citations in format `Sources: [1](url) [2](url) ...`
+- **VERIFIED**: Execution #190 produced post with 5 source citations
+- **BACKUP**: Updated `backups/oV6WGX5uBeTZ9tRa.json`
 
 ### v2.5.1 (2026-02-02)
 - **IMPROVEMENT**: Smarter pre-filter for Extract Articles node
