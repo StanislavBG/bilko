@@ -1,6 +1,6 @@
 # European Football Daily Workflow
 
-## Version: 3.0.0 (2026-02-02)
+## Version: 3.0.1 (2026-02-02)
 
 ## Workflow ID
 `oV6WGX5uBeTZ9tRa`
@@ -13,6 +13,11 @@ Webhook → Discover Topics (Gemini+GoogleSearch) → Parse Discovered Topics �
   → Research Topic (Gemini+GoogleSearch) → Parse Research → Stats Extraction Pipeline
   → Post Generation → Image Pipeline → Imagen API → Callback
 ```
+
+## Key Changes (v3.0.1)
+
+- **Fixed empty box artifact in generated images** - Removed "30% negative space" composition instruction that caused Imagen to render a literal dark placeholder rectangle in the top-right corner
+- Removed unused `teamLogos` variable from Build Image Request node
 
 ## Key Changes (v3.0.0)
 
@@ -51,5 +56,6 @@ Execution 200 (2026-02-02): SUCCESS in 60.5s
 - Created image with overlay text "City Swoop for Semenyo and Guehi in Deadline Day Transfer Blitz"
 
 ## Source Files
-- Backup: `backups/oV6WGX5uBeTZ9tRa-v300-search-grounding.json`
+- Backup: `backups/oV6WGX5uBeTZ9tRa-v301-image-fix.json`
+- v3.0.0 Backup: `backups/oV6WGX5uBeTZ9tRa-v300-search-grounding.json`
 - Pre-v3 Backup: `backups/oV6WGX5uBeTZ9tRa-v263-pre-search.json`
