@@ -2,8 +2,8 @@
 
 **n8n ID**: `oV6WGX5uBeTZ9tRa`  
 **Webhook Path**: `european-football-daily`  
-**Version**: 2.3.0  
-**Last Updated**: 2026-02-01
+**Version**: 2.4.0  
+**Last Updated**: 2026-02-02
 
 ## Objectives
 
@@ -222,6 +222,16 @@ Style: Epic scenery, dramatic lighting, professional sports broadcast quality.
 
 ## Changelog
 
+### v2.4.0 (2026-02-02)
+- **BUGFIX**: Parse Brand Response was looking for Gemini API format instead of Replit endpoint format
+  - Changed from `candidates[0].content.parts` to direct `brandedImageBase64` extraction
+  - This was causing the black branding line to never appear on final images
+- **IMPROVEMENT**: Reduced max stat overlays from 5 to 3 for cleaner visual aesthetic
+  - Changed formula: `Math.min(3, Math.max(1, Math.ceil(dataRichness / 3)))`
+  - Prevents visual clutter while still showing key stats
+- **STATUS**: APPLIED to live n8n workflow (2026-02-02T04:57:59.603Z)
+- **BACKUP**: Updated `backups/oV6WGX5uBeTZ9tRa.json`
+
 ### v2.3.0 (2026-02-01)
 - **PER-001 ANALYSIS**: Added n8n Implementation Changes section with specific node updates
 - **STATUS**: APPLIED to live n8n workflow (2026-02-01T22:47:10.229Z)
@@ -267,4 +277,4 @@ Style: Epic scenery, dramatic lighting, professional sports broadcast quality.
 The live workflow definition is always fetched from the n8n instance. Do not maintain workflow JSON in this document.
 
 **Local Backup**: `rules/env/artifacts/workflows/backups/oV6WGX5uBeTZ9tRa.json`  
-**Backup Date**: 2026-02-01
+**Backup Date**: 2026-02-02
