@@ -2,7 +2,7 @@
 
 **n8n ID**: `oV6WGX5uBeTZ9tRa`  
 **Webhook Path**: `european-football-daily`  
-**Version**: 2.6.0  
+**Version**: 2.6.1  
 **Last Updated**: 2026-02-02
 
 ## Objectives
@@ -52,26 +52,22 @@ A descriptive post accompanying the infographic:
 
 Creates the text overlay for AI-generated infographic images.
 
-**Prompt Guidelines** (v2.1.0):
-- Complete, easy-to-read sentence describing the event facts
-- Include all key data: scores, teams, competition, key statistics
-- Must be readable as a standalone statement
+**Prompt Guidelines** (v2.6.1):
+- **8-13 words** - punchy headline that gives context
+- Names teams/players and includes key context
+- Leaves detailed numbers for separate stat overlays
 - NO generic phrases: "Game On", "Breaking News", "Big Win", "What A Match"
-- Should inform the viewer of exactly WHAT happened
 
-**Good Examples**:
-- "Barcelona defeated Real Madrid 3-0 in El Clásico with Lewandowski scoring twice"
-- "Manchester City secured the Premier League title with 2 games remaining after Arsenal dropped points"
-- "Kylian Mbappé completes €180M transfer to Real Madrid on a 5-year contract"
-- "Liverpool moved top of the table after a 2-1 victory over Chelsea at Anfield"
-- "Bayern Munich eliminated Arsenal from Champions League with 3-2 aggregate win"
+**Good Examples** (8-13 words):
+- "Barcelona crush Real Madrid 3-0 in dominant El Clásico victory"
+- "Manchester City clinch Premier League title with two games remaining"
+- "Mbappé seals record-breaking move to Real Madrid"
+- "Liverpool surge to top after thrilling Chelsea win at Anfield"
 
 **Bad Examples** (prohibited):
+- "Barcelona defeated Real Madrid 3-0 in El Clásico with Lewandowski scoring twice and the team dominating possession" (too long - 18 words)
 - "Game On!" (generic, no facts)
-- "What A Match!" (generic, no facts)
-- "Football Fever" (generic, no facts)
-- "Big News Today" (generic, no facts)
-- "Barcelona 3-0 Real Madrid" (too short, missing context)
+- "Big Match Results" (vague)
 
 ### Topic Analyst
 
@@ -216,6 +212,14 @@ Style: Epic scenery, dramatic lighting, professional sports broadcast quality.
 ---
 
 ## Changelog
+
+### v2.6.1 (2026-02-02)
+- **IMPROVEMENT**: Shortened eventSummary headline from 15-25 words to 8-13 words
+  - **Problem**: Headlines were too long for infographic overlay, making them hard to read
+  - **Solution**: Updated Generate Event Summary prompt to request punchy 8-13 word headlines
+  - **Rationale**: Short headline + separate stat overlays = better visual hierarchy
+  - **Verified**: Execution #192 produced "English Clubs' Tactical Shift: The Secret Behind Champions League Dominance" (10 words)
+- **BACKUP**: Updated `backups/oV6WGX5uBeTZ9tRa.json`
 
 ### v2.6.0 (2026-02-02)
 - **MAJOR**: Fixed source collection to properly gather 3-5 sources per topic
