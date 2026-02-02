@@ -15,8 +15,9 @@ A cinematic, wallpaper-style, epic scenery image that functions as a sports info
 
 - **Visual Style**: Cinematic/wallpaper/epic scenery composition
 - **Team Identity**: Features logos of teams or leagues participating in the event
-- **Data Overlays**: 1-5 key statistics about the match/event displayed as succinct, readable overlays
+- **Data Overlays**: 1-3 key statistics about the match/event displayed as succinct, readable overlays (max 3 for visual clarity)
 - **Infographic Treatment**: Statistics presented clearly within the visual composition
+- **Branding**: Black footer bar with "Bilko Bibitkov AI Academy" text (applied via Brand Image node)
 
 ### Output 2: Facebook Post
 
@@ -163,23 +164,17 @@ Return ONLY JSON: { "eventSummary": "your complete sentence here" }
 - `Parse Brand Response` → change `tagline:` to `eventSummary:`
 - `Build Final Output` → change all `tagline` references to `eventSummary`
 
-### Change 3: Update "Build Image Request" for Team Logos and 1-5 Stats
+### Change 3: Update "Build Image Request" for Team Logos and 1-3 Stats
 
 **Node**: `Build Image Request` (id: `gi_body_builder`)  
 **Action**: Update stat selection logic and add team logo instruction
 
-**Current Logic** (INCORRECT):
+**Current Logic** (v2.4.0):
 ```javascript
-// Limit to MAX 2 overlay elements for clean aesthetic
-const selectedStats = statPriority.slice(0, 2);
-```
-
-**New Logic** (CORRECT):
-```javascript
-// Allow 1-5 stat overlays based on data richness
-// dataRichness is from Topic Analyst (selectedTopic), not extractedStats
+// REDUCED from 5 to 3 max overlays for cleaner visual aesthetic
+// High dataRichness still gets 2-3 overlays, but never more
 const dataRichness = selectedTopic.dataRichness || extractedStats.dataConfidence || 3;
-const maxOverlays = Math.min(5, Math.max(1, Math.ceil(dataRichness / 2)));
+const maxOverlays = Math.min(3, Math.max(1, Math.ceil(dataRichness / 3)));
 const selectedStats = statPriority.slice(0, maxOverlays);
 ```
 
@@ -193,7 +188,7 @@ const teamLogos = teams.length > 0
 // Image prompt must include:
 // 1. Cinematic/wallpaper style
 // 2. Team/league logos
-// 3. 1-5 stat overlays
+// 3. 1-3 stat overlays (max 3 for visual clarity)
 const imagePromptInstructions = `
 Create a cinematic, wallpaper-style sports infographic.
 ${teamLogos}
@@ -229,6 +224,8 @@ Style: Epic scenery, dramatic lighting, professional sports broadcast quality.
 - **IMPROVEMENT**: Reduced max stat overlays from 5 to 3 for cleaner visual aesthetic
   - Changed formula: `Math.min(3, Math.max(1, Math.ceil(dataRichness / 3)))`
   - Prevents visual clutter while still showing key stats
+- **DOCUMENTED**: Updated Objectives to reflect 1-3 overlay limit and branding requirement
+- **NOTE**: Stats/scores presence is content-dependent - Extract Statistics node extracts from source articles; if source lacks stats, extractedStats will be empty. PER-001 Production Checklist includes diagnostic for this.
 - **STATUS**: APPLIED to live n8n workflow (2026-02-02T04:57:59.603Z)
 - **BACKUP**: Updated `backups/oV6WGX5uBeTZ9tRa.json`
 
