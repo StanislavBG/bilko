@@ -45,6 +45,5 @@ This rule does NOT prohibit:
 ## Cross-References
 
 - UI-001: UI Principles
-- UI-004: Left-Nav Collapsible Behavior
-- HUB-003: Nested Navigation Pattern
+- HUB-003: Nested Navigation Pattern (includes collapsible behavior)
 - UI-006: Mobile Layout

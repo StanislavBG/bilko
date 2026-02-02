@@ -562,21 +562,6 @@
       ],
       "description": "Defines when and how to implement secondary navigation within applications."
     },
-    "UI-004": {
-      "id": "UI-004",
-      "title": "Left-Nav Collapsible Behavior (DEPRECATED)",
-      "path": "rules/ui/004-left-nav-collapsible.md",
-      "partition": "ui",
-      "priority": "LOW",
-      "version": "2.0.0",
-      "deprecated": true,
-      "triggers": [],
-      "dependencies": [],
-      "crossReferences": [
-        "HUB-003"
-      ],
-      "description": "DEPRECATED: Merged into HUB-003 v2.1.0. See HUB-003 for collapsible behavior."
-    },
     "UI-005": {
       "id": "UI-005",
       "title": "Minimal Design Principles",
@@ -627,7 +612,6 @@
         "HUB-003"
       ],
       "crossReferences": [
-        "UI-004",
         "UI-005",
         "HUB-003",
         "APP-WORKFLOWS-001"
@@ -824,7 +808,7 @@
       ],
       "crossReferences": [
         "UI-006",
-        "UI-004",
+        "HUB-003",
         "HUB-001"
       ],
       "description": "Unified recursive NavItem interface for N-level navigation. Data-driven approach with stack-based mobile drill-down."
@@ -978,7 +962,7 @@
     },
     "ui": {
       "path": "rules/ui/",
-      "description": "User interface patterns and components",
+      "description": "User interface patterns and components. Note: Individual UI components follow partition-level rules (UI-001) generically; component-specific rules are only created when patterns diverge significantly.",
       "readOrder": 2
     },
     "data": {
@@ -1005,44 +989,44 @@
   "routing": {
     "redFlags": [
       {
-        "pattern": "n8n|stripe|external service",
+        "pattern": "n8n|stripe|external service|webhook|integration",
         "partitions": [
           "integration"
         ]
       },
       {
-        "pattern": "database|table|schema|migrate",
+        "pattern": "database|table|schema|migrate|trace|storage|persistence",
         "partitions": [
           "data"
         ]
       },
       {
-        "pattern": "user sees|layout|page|component",
+        "pattern": "user sees|layout|page|component|mobile|responsive|minimal|design",
         "partitions": [
           "ui"
         ]
       },
       {
-        "pattern": "hub|sidebar|navigation|access control",
+        "pattern": "hub|sidebar|navigation|access control|nested nav",
         "partitions": [
           "hub"
         ]
       },
       {
-        "pattern": "endpoint|api route|authentication",
+        "pattern": "endpoint|api route|authentication|principle|pacing|architecture|rule",
         "partitions": [
           "architecture"
         ]
       },
       {
-        "pattern": "new app|new feature",
+        "pattern": "home|dashboard|landing|workflow page|memory explorer|new app|new feature",
         "partitions": [
           "apps",
           "architecture"
         ]
       },
       {
-        "pattern": "headless|auto-sync|programmatic|api-first",
+        "pattern": "headless|auto-sync|programmatic|api-first|orchestrat",
         "partitions": [
           "architecture",
           "integration"
