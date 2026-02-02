@@ -2,7 +2,7 @@
 
 **n8n ID**: `oV6WGX5uBeTZ9tRa`  
 **Webhook Path**: `european-football-daily`  
-**Version**: 2.6.1  
+**Version**: 2.6.3  
 **Last Updated**: 2026-02-02
 
 ## Objectives
@@ -212,6 +212,16 @@ Style: Epic scenery, dramatic lighting, professional sports broadcast quality.
 ---
 
 ## Changelog
+
+### v2.6.3 (2026-02-02)
+- Fixed placeholder text in posts - Prepare Post Request now only includes stats with actual values
+- Removed `|| '?'` fallback patterns that caused "Home ?% - Away ?%" in output
+- Added explicit instructions to AI: never invent data, never use placeholder text
+- Stats section now shows "NOTE: No specific match statistics available" when no stats extracted
+
+### v2.6.2 (2026-02-02)
+- Debugging: Identified root cause of empty stats - Google News redirect URLs return JavaScript pages instead of article content
+- Impact chain documented: Fetch Source → JS redirect page → articleText empty → all stats null
 
 ### v2.6.1 (2026-02-02)
 - **IMPROVEMENT**: Shortened eventSummary headline from 15-25 words to 8-13 words
