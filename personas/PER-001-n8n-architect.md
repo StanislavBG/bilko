@@ -438,6 +438,38 @@ return [{
 
 ---
 
+## Production Checklist
+
+Before marking any image-generating workflow as complete, verify these common oversights:
+
+### Image Output Quality
+
+| Check | Issue Pattern | Fix |
+|-------|---------------|-----|
+| **Black branding line** | Final image missing "Bilko Bibitkov AI Academy" footer | Verify Brand Image node is connected and executing after image generation |
+| **Text overlay density** | Too much text obscuring the image | eventSummary should be 15-25 words MAX; limit stat overlays to 1-3 for visual clarity |
+| **Stats/scores present** | No numerical data displayed on infographic | Verify dataRichness flows from Topic Analyst → Build Image Request; check extractedStats contains actual values |
+
+### Workflow Output Verification
+
+After each change, verify the FINAL output includes:
+1. **Image**: Cinematic style + team/league logos + stat overlays + branding line
+2. **Post**: Descriptive text + numbered source citations + relevant hashtags
+
+### Quick Diagnostic
+
+If branding is missing:
+```
+Check nodes: Build Image Request → Call Imagen API → Brand Image → final output
+```
+
+If stats are missing:
+```
+Check fields: selectedTopic.dataRichness, extractedStats.score, extractedStats.transferFee
+```
+
+---
+
 ## Cross-References
 
 ### n8n Integration Rules
@@ -456,6 +488,13 @@ return [{
 - ARCH-000-B: Headless Operation
 
 ## Changelog
+
+### v3.3.0 (2026-02-02)
+- Added Production Checklist section with common oversight verification
+- Branding line reminder: verify Brand Image node executes after image generation
+- Text density guidance: eventSummary 15-25 words, limit stat overlays to 1-3
+- Stats/scores diagnostic: verify dataRichness and extractedStats flow
+- Quick diagnostic patterns for branding and stats issues
 
 ### v3.2.0 (2026-02-01)
 - Added ENV-001 to task table and debugging protocol
