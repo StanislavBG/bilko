@@ -40,6 +40,7 @@ export interface IOrchestratorStorage {
   getExecution(id: string): Promise<WorkflowExecution | undefined>;
   getExecutionByTriggerTrace(traceId: string): Promise<WorkflowExecution | undefined>;
   getWorkflowExecutions(workflowId: string, limit?: number): Promise<ExecutionListItem[]>;
+  getRunningExecutions(workflowId: string): Promise<WorkflowExecution[]>;
   getExecutionTraces(executionId: string): Promise<TraceListItem[]>;
   getExecutionTracesWithPayloads(executionId: string): Promise<CommunicationTrace[]>;
   
@@ -137,6 +138,17 @@ class OrchestratorStorage implements IOrchestratorStorage {
       .where(eq(workflowExecutions.workflowId, workflowId))
       .orderBy(desc(workflowExecutions.startedAt))
       .limit(limit);
+  }
+
+  async getRunningExecutions(workflowId: string): Promise<WorkflowExecution[]> {
+    return db
+      .select()
+      .from(workflowExecutions)
+      .where(and(
+        eq(workflowExecutions.workflowId, workflowId),
+        eq(workflowExecutions.status, "running")
+      ))
+      .orderBy(desc(workflowExecutions.startedAt));
   }
 
   async getExecutionTraces(executionId: string): Promise<TraceListItem[]> {

@@ -39,6 +39,31 @@ export interface N8nListResponse {
   nextCursor?: string | null;
 }
 
+export interface N8nExecution {
+  id: string;
+  finished: boolean;
+  mode: string;
+  status: "error" | "success" | "running" | "waiting" | "unknown";
+  startedAt: string;
+  stoppedAt?: string;
+  workflowId: string;
+  data?: {
+    resultData?: {
+      error?: {
+        message: string;
+        name?: string;
+        node?: { name: string };
+      };
+      lastNodeExecuted?: string;
+    };
+  };
+}
+
+export interface N8nExecutionListResponse {
+  data: N8nExecution[];
+  nextCursor?: string | null;
+}
+
 export interface N8nApiError {
   code: string;
   message: string;
@@ -205,6 +230,23 @@ export class N8nClient {
   async findWorkflowByName(name: string): Promise<N8nWorkflow | undefined> {
     const workflows = await this.listWorkflows();
     return workflows.find((w) => w.name === name);
+  }
+
+  async getRecentExecutions(workflowId: string, limit = 5): Promise<N8nExecution[]> {
+    const response = await this.request<N8nExecutionListResponse>(
+      "GET",
+      `/executions?workflowId=${workflowId}&limit=${limit}`
+    );
+    return response.data;
+  }
+
+  async getExecution(executionId: string): Promise<N8nExecution> {
+    return this.request<N8nExecution>("GET", `/executions/${executionId}`);
+  }
+
+  async getMostRecentExecution(workflowId: string): Promise<N8nExecution | null> {
+    const executions = await this.getRecentExecutions(workflowId, 1);
+    return executions.length > 0 ? executions[0] : null;
   }
 }
 

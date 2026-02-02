@@ -1,7 +1,8 @@
 import type { WorkflowInput, WorkflowOutput, WorkflowDefinition, WorkflowRegistry } from "./types";
 import { executeLocal } from "./local-executor";
 import { orchestratorStorage } from "../orchestrator/storage";
-import { getWebhookUrl } from "../n8n/webhook-cache";
+import { getWebhookUrl, getN8nWorkflowId } from "../n8n/webhook-cache";
+import { pollExecutionStatus } from "../n8n/execution-monitor";
 import registry from "./registry.json";
 import { createLogger } from "../logger";
 
@@ -245,6 +246,15 @@ async function executeN8nWorkflow(
     }
 
     // Webhook trigger succeeded - workflow is now running in n8n
+    // Start background polling to detect completion/failure
+    const n8nWorkflowId = getN8nWorkflowId(workflow.id);
+    const triggerTime = new Date();
+    if (n8nWorkflowId) {
+      startBackgroundPolling(n8nWorkflowId, input.context.traceId, execution.id, triggerTime);
+    } else {
+      log.warn(`No n8n workflow ID cached for ${workflow.id}, execution monitoring disabled`);
+    }
+    
     // Return "running" status with execution ID for polling
     return {
       success: true,
@@ -284,4 +294,30 @@ async function executeN8nWorkflow(
       },
     };
   }
+}
+
+function startBackgroundPolling(
+  n8nWorkflowId: string,
+  traceId: string,
+  executionId: string,
+  triggerTime: Date
+): void {
+  setTimeout(async () => {
+    try {
+      log.info(`Starting execution monitor for trace ${traceId}`);
+      const report = await pollExecutionStatus(n8nWorkflowId, traceId, executionId, triggerTime, {
+        maxAttempts: 20,
+        intervalMs: 5000,
+        timeoutMs: 120000,
+      });
+      log.info(`Execution monitor completed: ${report.status}`, {
+        traceId,
+        executionId: report.n8nExecutionId,
+        lastNode: report.lastNodeExecuted,
+        error: report.errorMessage,
+      });
+    } catch (error) {
+      log.error(`Background polling failed for trace ${traceId}`, error);
+    }
+  }, 2000);
 }

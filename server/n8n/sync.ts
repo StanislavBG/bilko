@@ -1,5 +1,5 @@
 import { createN8nClient, buildWorkflowNodes, type N8nWorkflow, type N8nNode } from "./client";
-import { setWebhookUrl } from "./webhook-cache";
+import { setWebhookUrl, setN8nWorkflowId } from "./webhook-cache";
 import registry from "../workflows/registry.json";
 import type { WorkflowDefinition, WorkflowRegistry } from "../workflows/types";
 import { createLogger } from "../logger";
@@ -111,6 +111,8 @@ async function syncWorkflow(
     if (webhookUrl) {
       setWebhookUrl(workflow.id, webhookUrl);
     }
+    
+    setN8nWorkflowId(workflow.id, existing.id);
 
     return {
       id: workflow.id,
@@ -143,6 +145,8 @@ async function syncWorkflow(
   if (webhookUrl) {
     setWebhookUrl(workflow.id, webhookUrl);
   }
+  
+  setN8nWorkflowId(workflow.id, created.id);
 
   return {
     id: workflow.id,
