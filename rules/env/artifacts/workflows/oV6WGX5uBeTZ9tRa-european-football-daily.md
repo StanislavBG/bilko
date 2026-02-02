@@ -2,7 +2,7 @@
 
 **n8n ID**: `oV6WGX5uBeTZ9tRa`  
 **Webhook Path**: `european-football-daily`  
-**Version**: 2.4.0  
+**Version**: 2.5.1  
 **Last Updated**: 2026-02-02
 
 ## Objectives
@@ -216,6 +216,34 @@ Style: Epic scenery, dramatic lighting, professional sports broadcast quality.
 ---
 
 ## Changelog
+
+### v2.5.1 (2026-02-02)
+- **IMPROVEMENT**: Smarter pre-filter for Extract Articles node
+  - **Problem solved**: v2.5.0 filter was too aggressive and could skip valid headlines like "How did Barcelona beat Madrid 3-0?"
+  - **Solution**: Added DATA_SIGNALS whitelist - headlines with these patterns are NEVER skipped:
+    - Score patterns: `3-0`, `2:1`
+    - Transfer fees: `€180M`, `$50k`
+    - Match results: `beat`, `defeated`, `won`, `lost`, `drew`
+    - Transfer news: `signs`, `transfer`, `deal`, `fee`
+  - **Logic**: Only skip headline if (1) matches generic pattern AND (2) has NO data signals
+- **STATUS**: APPLIED to live n8n workflow (2026-02-02T06:11:00.047Z)
+
+### v2.5.0 (2026-02-02)
+- **IMPROVEMENT**: Increased article pool and added pre-filtering for data-rich topic selection
+  - **Extract Articles node** changes:
+    - Increased initial RSS pool from 20 to 50 articles
+    - Added pre-filter to skip generic explainer headlines before processing
+    - Increased final output from 10 to 20 articles for Topic Analyst
+  - **Pre-filter patterns** (skipped before analysis):
+    - `How can/does/do/will...` - explainer questions
+    - `What is/are/does...` - definitions
+    - `Why is/are/does...` - analysis pieces
+    - `Competition format` - static content
+    - `Explained:`, `Guide:`, `Understanding` - tutorials
+    - `Everything you need to know` - generic primers
+- **ROOT CAUSE**: Previous executions showed 18/20 topics with dataRichness=1 because RSS feed was dominated by explainer articles, not match results
+- **EXPECTED OUTCOME**: Higher probability of data-rich topics (scores, transfer fees) reaching Topic Analyst
+- **BACKUP**: Updated `backups/oV6WGX5uBeTZ9tRa.json`
 
 ### v2.4.0 (2026-02-02)
 - **BUGFIX**: Parse Brand Response was looking for Gemini API format instead of Replit endpoint format
