@@ -36,7 +36,7 @@ Browse rules by partition:
 
 ### V2: Audit View
 Manage rule audits:
-- **Protocol Guide** - Display AGT-002-RULES auditor protocol instructions
+- **Protocol Guide** - Display AGT-002 (Rule Audit) protocol instructions
 - **New Audit** - Textarea for pasting audit reports
 - **History** - List of saved audits with detail view
 

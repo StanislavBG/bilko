@@ -1,6 +1,6 @@
-# AGT-002-CODE: Code Audit Protocol
+# AGT-001: Code Audit Protocol
 
-**Version:** 3.0.0  
+**Version:** 4.0.0  
 **Priority:** HIGH  
 **Partition:** agent  
 **Dependencies:** ARCH-000, ARCH-001
@@ -99,7 +99,9 @@ Triggered when:
 - User says "run a code audit"
 - User says "check code compliance"
 - User says "verify code against rules"
-- User says "run the rules audit agent"
+- User says "find orphan code" or "cleanup audit"
+- User says "check for rogue elements"
+- User says "validate implementation"
 
 ---
 
@@ -244,7 +246,63 @@ Search for known violations:
 
 ---
 
-## CHECK 6: Redundancy Detection
+## CHECK 6: Orphan & Rogue Detection
+
+**Purpose:** Find ghost folders, orphaned files, and remnants left by other developers or AI agents that no longer serve the architecture.
+
+### 6.1 Directory Structure Audit
+
+Scan for folders/files that shouldn't exist:
+
+| Target | Expected State | If Found |
+|--------|----------------|----------|
+| `server/auditor/` | Should NOT exist | CRITICAL - delete |
+| `server/models/` | Should NOT exist (use shared/) | CRITICAL - migrate or delete |
+| `client/src/temp/` | Should NOT exist | WARNING - cleanup |
+| `*.bak`, `*.backup` files | Should NOT exist | WARNING - delete |
+| `__tests__/` without tests | Empty test folders | INFO - delete |
+
+### 6.2 Legacy Remnant Detection
+
+Search for artifacts from previous features or experiments:
+
+**Search Patterns:**
+```
+grep -r "TODO: remove" --include="*.ts" --include="*.tsx"
+grep -r "DEPRECATED" --include="*.ts" --include="*.tsx"
+grep -r "temp" --include="*.ts" --include="*.tsx" (in variable names)
+```
+
+**Known Remnants to Check:**
+- Test workflows (e.g., "Echo Test", "DEV" suffix workflows)
+- Backup files in unexpected locations
+- Commented-out feature flags
+- Unused environment variables in code
+
+### 6.3 Orphaned Exports
+
+Detect exports that nothing imports:
+
+- Components exported but never used
+- Utility functions defined but never called
+- Types exported but never referenced
+
+### 6.4 Rogue Agent Artifacts
+
+Look for patterns indicating incomplete AI agent work:
+
+| Pattern | Indicates |
+|---------|-----------|
+| `// TODO: implement` with no implementation | Abandoned task |
+| Empty function bodies | Incomplete work |
+| Duplicate files with numeric suffixes (`file-2.ts`) | Failed merge |
+| Commented-out imports at file top | Removed but not cleaned |
+
+**Action**: Flag all orphans as CRITICAL or WARNING based on impact.
+
+---
+
+## CHECK 7: Redundancy Detection
 
 **Purpose:** Identify duplicate code, dead code, and consolidation opportunities.
 
@@ -286,7 +344,7 @@ Identify:
 
 ---
 
-## CHECK 7: Performance Patterns
+## CHECK 8: Performance Patterns
 
 **Purpose:** Identify performance anti-patterns and optimization opportunities.
 
@@ -316,7 +374,7 @@ Check for:
 
 ---
 
-## CHECK 8: Security Patterns
+## CHECK 9: Security Patterns
 
 **Purpose:** Identify security vulnerabilities and unsafe patterns.
 
@@ -367,7 +425,7 @@ All audit reports use this structure:
 ===========================================
 CODE AUDIT REPORT
 Date: [ISO date]
-Auditor: Principal Software Engineer (AGT-002 v3.0.0)
+Auditor: Principal Software Engineer (AGT-001 v4.0.0)
 ===========================================
 
 EXECUTIVE SUMMARY
@@ -390,6 +448,10 @@ Total Findings: [count]
 CHECKS PERFORMED
 ----------------
 [List of checks with findings or "No issues"]
+
+ORPHAN/ROGUE LOG
+----------------
+[Status of orphan detection - folders checked, remnants found]
 
 RECOMMENDED ACTIONS
 -------------------

@@ -12,7 +12,6 @@ import { GlobalHeader } from "@/components/global-header";
 import Landing from "@/pages/landing";
 import HomeDashboard from "@/pages/home-dashboard";
 import Projects from "@/pages/projects";
-import ProjectDetail from "@/pages/project-detail";
 import AgenticWorkflows from "@/pages/agentic-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
 import RulesExplorer from "@/pages/rules-explorer";
@@ -49,8 +48,7 @@ function AuthenticatedApp() {
             <main className="flex-1 flex overflow-hidden">
               <Switch>
                 <Route path="/" component={() => <HomeDashboard user={user} />} />
-                <Route path="/projects" component={Projects} />
-                <Route path="/projects/:projectId" component={ProjectDetail} />
+                <Route path="/projects/:projectId?" component={Projects} />
                 <Route path="/workflows" component={AgenticWorkflows} />
                 <Route path="/memory" component={MemoryExplorer} />
                 <Route path="/rules" component={RulesExplorer} />
