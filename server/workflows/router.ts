@@ -5,14 +5,11 @@ import { getWebhookUrl, getN8nWorkflowId } from "../n8n/webhook-cache";
 import { pollExecutionStatus } from "../n8n/execution-monitor";
 import registry from "./registry.json";
 import { createLogger } from "../logger";
+import { generateTraceId, getCallbackUrl } from "../lib/utils";
 
 const log = createLogger("router");
 
 const workflowRegistry = registry as WorkflowRegistry;
-
-function generateTraceId(): string {
-  return `trace_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-}
 
 export function getWorkflow(workflowId: string): WorkflowDefinition | undefined {
   return workflowRegistry.workflows.find(w => w.id === workflowId);
@@ -165,21 +162,8 @@ async function executeN8nWorkflow(
     const timeout = setTimeout(() => controller.abort(), 30000);
 
     // Construct callback URL per ENV-001
-    // Priority: Explicit env var > Dynamic domain detection > Prod fallback
-    let callbackUrl: string;
-    const PROD_CALLBACK_URL = 'https://bilkobibitkov.replit.app/api/workflows/callback';
-    
-    if (process.env.CALLBACK_URL_OVERRIDE) {
-      callbackUrl = process.env.CALLBACK_URL_OVERRIDE;
-      log.debug(`Using override callback URL: ${callbackUrl}`);
-    } else if (process.env.REPLIT_DOMAINS) {
-      const currentDomain = process.env.REPLIT_DOMAINS.split(',')[0];
-      callbackUrl = `https://${currentDomain}/api/workflows/callback`;
-      log.debug(`Using dev callback URL: ${callbackUrl}`);
-    } else {
-      callbackUrl = PROD_CALLBACK_URL;
-      log.debug(`Using prod callback URL: ${callbackUrl}`);
-    }
+    const callbackUrl = getCallbackUrl();
+    log.debug(`Using callback URL: ${callbackUrl}`);
 
     // Fetch recent topics for deduplication (per ARCH-000)
     const recentTopicsRaw = await orchestratorStorage.getRecentTopics(workflow.id, 48);
