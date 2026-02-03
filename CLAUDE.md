@@ -240,9 +240,8 @@ Applied:
 
 Located in `/agents/` and `/personas/`:
 
-- **AGT-001**: Code Audit Protocol - Validates codebase against rules
+- **AGT-001**: Code Audit Protocol - Comprehensive codebase validation (rules, orphans, anti-patterns, security)
 - **AGT-002**: Rule Audit Protocol - Validates rule structural integrity
-- **AGT-003**: Dynamic Code Audit - Detects orphan folders, implementation drift
 - **PER-001**: n8n Architect - Expert persona for workflow development
 
 ## Key Files
