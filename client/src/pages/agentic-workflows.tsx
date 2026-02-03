@@ -76,13 +76,15 @@ interface TraceItem {
   durationMs: number | null;
 }
 
+type SourceUrl = string | { url: string; title?: string };
+
 interface WorkflowOutput {
   hasOutput: boolean;
   message?: string;
   fb2DisclosureText?: string;
   executionStats?: ExecutionStats | null;
   traces?: TraceItem[];
-  sourceUrls?: string[];
+  sourceUrls?: SourceUrl[];
   outputs?: {
     final: {
       traceId: string;
@@ -94,7 +96,7 @@ interface WorkflowOutput {
           imagePrompt?: string;
           imageUrl?: string | null;
           transparencyPost?: string;
-          sourceUrls?: string[];
+          sourceUrls?: SourceUrl[];
         };
       };
     } | null;
@@ -390,20 +392,25 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
               </CardHeader>
               <CardContent className="p-2 pt-0">
                 <div className="space-y-1">
-                  {sourceUrls.map((url, idx) => (
-                    <a
-                      key={idx}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground hover:underline truncate"
-                      data-testid={`source-link-${idx + 1}`}
-                    >
-                      <span className="font-medium">[{idx + 1}]</span>
-                      <ExternalLink className="h-2 w-2 flex-shrink-0" />
-                      <span className="truncate">{url.replace(/^https?:\/\//, "").substring(0, 50)}...</span>
-                    </a>
-                  ))}
+                  {sourceUrls.map((item, idx) => {
+                    // Handle both string URLs and {url, title} objects
+                    const url = typeof item === "string" ? item : item?.url;
+                    if (!url) return null;
+                    return (
+                      <a
+                        key={idx}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground hover:underline truncate"
+                        data-testid={`source-link-${idx + 1}`}
+                      >
+                        <span className="font-medium">[{idx + 1}]</span>
+                        <ExternalLink className="h-2 w-2 flex-shrink-0" />
+                        <span className="truncate">{url.replace(/^https?:\/\//, "").substring(0, 50)}...</span>
+                      </a>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
