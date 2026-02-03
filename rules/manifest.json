@@ -1,14 +1,13 @@
 {
   "$schema": "./manifest.schema.json",
-  "version": "1.5.0",
-  "lastUpdated": "2026-02-01T23:00:00Z",
+  "version": "2.0.0",
+  "lastUpdated": "2026-02-03T00:00:00Z",
   "bootstrap": {
     "_instruction": "AI developers: READ ALL RULES in the /rules/ directory. This manifest indexes them for routing, but you must read the actual .md files.",
     "primaryDirective": "ARCH-000",
     "readingOrder": [
       "rules/architecture/000-primary-directive.md",
-      "rules/architecture/006-agent-bootstrap.md",
-      "rules/architecture/010-exit-directive.md"
+      "rules/architecture/002-agent-protocol.md"
     ],
     "preferences": {
       "pacing": "Move slowly, verify before building",
@@ -60,64 +59,70 @@
       ],
       "dependencies": [],
       "crossReferences": [
+        "ARCH-002",
         "ARCH-003",
-        "ARCH-010",
         "INT-002"
       ],
       "description": "Primary directive with founding principles: Rules-First, Orchestrator Pattern, and Headless Operation."
     },
     "ARCH-001": {
       "id": "ARCH-001",
-      "title": "Core Architecture Principles",
-      "path": "rules/architecture/001-core-principles.md",
+      "title": "System Overview",
+      "path": "rules/architecture/001-system-overview.md",
       "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "2.0.0",
+      "version": "1.0.0",
       "triggers": [
-        "architecture",
-        "principle",
-        "core",
-        "express",
-        "react",
-        "tailwind",
-        "dark mode"
-      ],
-      "dependencies": [
-        "ARCH-000"
-      ],
-      "crossReferences": [],
-      "description": "Foundational technology choices and architectural patterns."
-    },
-    "ARCH-002": {
-      "id": "ARCH-002",
-      "title": "Rule Maintenance",
-      "path": "rules/architecture/002-rule-maintenance.md",
-      "partition": "architecture",
-      "priority": "CRITICAL",
-      "version": "1.1.0",
-      "triggers": [
-        "rule",
-        "rules",
-        "modify rule",
-        "create rule",
-        "new rule",
-        "update rule"
+        "system",
+        "overview",
+        "purpose",
+        "mission",
+        "what is",
+        "architecture"
       ],
       "dependencies": [
         "ARCH-000"
       ],
       "crossReferences": [
-        "ARCH-010"
+        "ARCH-002",
+        "ARCH-003"
       ],
-      "description": "How to create, modify, and version rules."
+      "description": "System overview including purpose, mission, and high-level architecture."
+    },
+    "ARCH-002": {
+      "id": "ARCH-002",
+      "title": "Agent Protocol",
+      "path": "rules/architecture/002-agent-protocol.md",
+      "partition": "architecture",
+      "priority": "CRITICAL",
+      "version": "1.0.0",
+      "triggers": [
+        "agent",
+        "protocol",
+        "bootstrap",
+        "session start",
+        "new session",
+        "how to use rules",
+        "exit",
+        "complete",
+        "finish",
+        "done"
+      ],
+      "dependencies": [
+        "ARCH-000"
+      ],
+      "crossReferences": [
+        "ARCH-004"
+      ],
+      "description": "Agent bootstrap and exit protocols for AI developers using the rule system."
     },
     "ARCH-003": {
       "id": "ARCH-003",
-      "title": "Orchestration Layer",
-      "path": "rules/architecture/003-orchestration-layer.md",
+      "title": "System Architecture",
+      "path": "rules/architecture/003-system-architecture.md",
       "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "2.0.0",
+      "version": "1.0.0",
       "triggers": [
         "orchestrat",
         "proxy",
@@ -127,105 +132,45 @@
         "trace",
         "logging",
         "dispatch",
-        "n8n call",
-        "external call",
-        "app-to-app"
+        "boundary",
+        "coordination",
+        "ownership"
       ],
       "dependencies": [
-        "ARCH-000"
+        "ARCH-000",
+        "ARCH-001"
       ],
       "crossReferences": [
         "DATA-002",
         "INT-001",
         "INT-003"
       ],
-      "description": "The intelligent proxy between web app and external services, including dispatch protocol."
+      "description": "System architecture including orchestration layer, agent coordination, and system boundaries."
     },
     "ARCH-004": {
       "id": "ARCH-004",
-      "title": "Development Pacing",
-      "path": "rules/architecture/004-development-pacing.md",
+      "title": "Rule Maintenance",
+      "path": "rules/architecture/004-rule-maintenance.md",
       "partition": "architecture",
       "priority": "CRITICAL",
       "version": "1.0.0",
       "triggers": [
-        "slow",
-        "incremental",
-        "verify",
-        "consult",
-        "explain",
-        "go slow",
-        "pacing"
+        "rule",
+        "rules",
+        "modify rule",
+        "create rule",
+        "new rule",
+        "update rule",
+        "replit.md",
+        "documentation"
       ],
       "dependencies": [
         "ARCH-000"
       ],
-      "crossReferences": [],
-      "description": "Move slowly, build incrementally, verify before building."
-    },
-    "ARCH-005": {
-      "id": "ARCH-005",
-      "title": "System Boundaries",
-      "path": "rules/architecture/005-system-boundaries.md",
-      "partition": "architecture",
-      "priority": "HIGH",
-      "version": "1.1.0",
-      "triggers": [
-        "boundary",
-        "separation"
-      ],
-      "dependencies": [
-        "ARCH-000",
-        "ARCH-008"
-      ],
       "crossReferences": [
-        "ARCH-008",
-        "ARCH-003",
-        "INT-003"
+        "ARCH-002"
       ],
-      "description": "Quick reference for system boundaries. See ARCH-008 for detailed ownership."
-    },
-    "ARCH-007": {
-      "id": "ARCH-007",
-      "title": "System Purpose",
-      "path": "rules/architecture/007-system-purpose.md",
-      "partition": "architecture",
-      "priority": "CRITICAL",
-      "version": "1.1.0",
-      "triggers": [
-        "purpose",
-        "mission",
-        "overview",
-        "system",
-        "what is"
-      ],
-      "dependencies": [],
-      "crossReferences": [],
-      "description": "Defines the overall system purpose and mission."
-    },
-    "ARCH-008": {
-      "id": "ARCH-008",
-      "title": "Agent Coordination",
-      "path": "rules/architecture/008-agent-coordination.md",
-      "partition": "architecture",
-      "priority": "CRITICAL",
-      "version": "2.1.0",
-      "triggers": [
-        "agent",
-        "coordination",
-        "ownership",
-        "project",
-        "replit",
-        "n8n"
-      ],
-      "dependencies": [
-        "ARCH-007"
-      ],
-      "crossReferences": [
-        "ARCH-003",
-        "INT-003"
-      ],
-      "description": "Defines ownership boundaries between Replit and n8n agents."
+      "description": "How to create, modify, and version rules. Includes replit.md governance."
     },
     "INT-003": {
       "id": "INT-003",
@@ -243,7 +188,7 @@
         "format"
       ],
       "dependencies": [
-        "ARCH-007",
+        "ARCH-001",
         "ARCH-003"
       ],
       "crossReferences": [
@@ -267,11 +212,10 @@
         "deploy n8n"
       ],
       "dependencies": [
-        "ARCH-007"
+        "ARCH-001"
       ],
       "crossReferences": [
         "INT-003",
-        "ARCH-008",
         "INT-N8N-INDEX"
       ],
       "description": "Complete setup guide for self-hosting n8n on Replit."
@@ -348,6 +292,32 @@
         "UI-006"
       ],
       "description": "Defines optional 2nd and 3rd level navigation within applications (max 3 levels). Includes header pinning, collapsible behavior, and mobile collapse. Merged UI-004."
+    },
+    "HUB-004": {
+      "id": "HUB-004",
+      "title": "Unified Navigation",
+      "path": "rules/hub/004-unified-navigation.md",
+      "partition": "hub",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": [
+        "navigation",
+        "NavItem",
+        "sidebar nav",
+        "drill-down",
+        "nav stack",
+        "navigation data",
+        "unified nav"
+      ],
+      "dependencies": [
+        "HUB-001",
+        "UI-006"
+      ],
+      "crossReferences": [
+        "UI-006",
+        "HUB-003"
+      ],
+      "description": "Unified recursive NavItem interface for N-level navigation. Data-driven approach with stack-based mobile drill-down."
     },
     "APP-LANDING-001": {
       "id": "APP-LANDING-001",
@@ -429,13 +399,11 @@
       "dependencies": [
         "HUB-001",
         "UI-006",
-        "ARCH-012",
         "DATA-002",
         "INT-005"
       ],
       "crossReferences": [
         "UI-006",
-        "ARCH-012",
         "INT-005",
         "DATA-002",
         "HUB-003"
@@ -720,99 +688,6 @@
       ],
       "description": "PRIMARY n8n integration reference. Includes recency protocol, known issues registry, all directives D1-D14. INT-001 provides overview."
     },
-    "ARCH-006": {
-      "id": "ARCH-006",
-      "title": "Agent Bootstrap Protocol",
-      "path": "rules/architecture/006-agent-bootstrap.md",
-      "partition": "architecture",
-      "priority": "CRITICAL",
-      "version": "1.2.0",
-      "triggers": [
-        "bootstrap",
-        "session start",
-        "new session",
-        "how to use rules"
-      ],
-      "dependencies": [
-        "ARCH-000"
-      ],
-      "crossReferences": [],
-      "description": "How AI developers should bootstrap and use the rule system."
-    },
-    "ARCH-010": {
-      "id": "ARCH-010",
-      "title": "Exit Directive",
-      "path": "rules/architecture/010-exit-directive.md",
-      "partition": "architecture",
-      "priority": "CRITICAL",
-      "version": "2.0.0",
-      "triggers": [
-        "exit",
-        "complete",
-        "finish",
-        "done",
-        "validate rules",
-        "update rules",
-        "before completing"
-      ],
-      "dependencies": [
-        "ARCH-000",
-        "ARCH-002"
-      ],
-      "crossReferences": [
-        "ARCH-000"
-      ],
-      "description": "Validate rule compliance and propose rule updates before completing any task."
-    },
-    "ARCH-011": {
-      "id": "ARCH-011",
-      "title": "replit.md Governance",
-      "path": "rules/architecture/011-documentation-brevity.md",
-      "partition": "architecture",
-      "priority": "CRITICAL",
-      "version": "2.0.0",
-      "triggers": [
-        "replit.md",
-        "documentation",
-        "readme",
-        "bootstrap",
-        "grounding"
-      ],
-      "dependencies": [
-        "ARCH-000"
-      ],
-      "crossReferences": [
-        "ARCH-002",
-        "ARCH-006"
-      ],
-      "description": "replit.md is a bootstrap pointer only. 15 lines max. No implementation details."
-    },
-    "ARCH-012": {
-      "id": "ARCH-012",
-      "title": "Unified Navigation Structure",
-      "path": "rules/architecture/012-navigation-structure.md",
-      "partition": "architecture",
-      "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": [
-        "navigation",
-        "NavItem",
-        "sidebar nav",
-        "drill-down",
-        "nav stack",
-        "navigation data"
-      ],
-      "dependencies": [
-        "ARCH-000",
-        "UI-006"
-      ],
-      "crossReferences": [
-        "UI-006",
-        "HUB-003",
-        "HUB-001"
-      ],
-      "description": "Unified recursive NavItem interface for N-level navigation. Data-driven approach with stack-based mobile drill-down."
-    },
     "APP-RULES-001": {
       "id": "APP-RULES-001",
       "title": "Rules Explorer",
@@ -1041,8 +916,7 @@
     ],
     "alwaysInclude": [
       "ARCH-000",
-      "ARCH-006",
-      "ARCH-011"
+      "ARCH-002"
     ]
   }
 }
