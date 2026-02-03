@@ -1,34 +1,25 @@
 {
-  "version": "1.4.0",
-  "lastUpdated": "2026-01-30T14:00:00Z",
+  "version": "2.0.0",
+  "lastUpdated": "2026-02-03T00:00:00Z",
   "description": "Registry of executable agent protocols for development tasks",
   "agents": {
+    "AGT-001": {
+      "id": "AGT-001",
+      "title": "Code Audit Protocol",
+      "path": "agents/AGT-001-code-audit.md",
+      "category": "audit",
+      "version": "4.0.0",
+      "triggers": ["code audit", "code compliance", "verify code", "anti-pattern", "orphan audit", "cleanup audit", "find rogue", "validate implementation"],
+      "description": "Comprehensive codebase validation: rule compliance, orphan/rogue detection, anti-patterns, redundancy, performance, and security."
+    },
     "AGT-002": {
       "id": "AGT-002",
-      "title": "Code Audit Protocol",
-      "path": "agents/AGT-002-code-audit.md",
-      "category": "audit",
-      "version": "2.0.0",
-      "triggers": ["code audit", "code compliance", "verify code", "anti-pattern"],
-      "description": "Validates that the codebase correctly implements documented rules."
-    },
-    "AGT-003": {
-      "id": "AGT-003",
       "title": "Rule Audit Protocol",
-      "path": "agents/AGT-003-rules-audit.md",
+      "path": "agents/AGT-002-rules-audit.md",
       "category": "audit",
-      "version": "2.1.0",
+      "version": "2.2.0",
       "triggers": ["rule audit", "validate rules", "check rules", "structural integrity"],
       "description": "Validates rule files for structural integrity, consistency, and coverage."
-    },
-    "AGT-004": {
-      "id": "AGT-004",
-      "title": "Dynamic Code Audit Protocol",
-      "path": "agents/AGT-004-dynamic-audit.md",
-      "category": "audit",
-      "version": "1.0.0",
-      "triggers": ["dynamic audit", "check code against rules", "validate implementation", "orphan audit", "cleanup audit"],
-      "description": "Dynamically validates the codebase against active rules in /rules. Detects orphan folders, implementation drift, and anti-patterns."
     }
   },
   "categories": {

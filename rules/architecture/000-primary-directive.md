@@ -45,7 +45,7 @@ Why this matters:
 
 **DO**: Create/update n8n workflows via REST API
 **DON'T**: Manually create workflows in n8n UI
-**DON'T**: Ask users to manually modify external systems (see ARCH-001 D7)
+**DON'T**: Ask users to manually modify external systems (see ARCH-001 D6)
 
 ---
 
