@@ -1,5 +1,4 @@
 import { Home, Activity, BookOpen, Workflow, FolderOpen, type LucideIcon } from "lucide-react";
-import { projects } from "./projects";
 
 export interface NavItem {
   id: string;
@@ -21,20 +20,9 @@ export const navigationItems: NavItem[] = [
   {
     id: "projects",
     title: "Projects",
+    url: "/projects",
     icon: FolderOpen,
     adminOnly: false,
-    children: [
-      {
-        id: "projects-all",
-        title: "All Projects",
-        url: "/projects",
-      },
-      ...projects.map((project) => ({
-        id: `project-${project.id}`,
-        title: project.title,
-        url: `/projects/${project.id}`,
-      })),
-    ],
   },
   {
     id: "workflows",
