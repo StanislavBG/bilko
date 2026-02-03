@@ -105,7 +105,7 @@ For routine tasks:
 For major features or refactors:
 - Full Rules Context block with all directives
 - Document changes in commit message
-- Consider running full audit (AGT-002-RULES, AGT-002-CODE in /agents/)
+- Consider running full audit (AGT-001 Code Audit, AGT-002 Rule Audit in /agents/)
 - Update replit.md if architecture changed
 
 ## Integration with Development Flow
@@ -132,4 +132,4 @@ For major features or refactors:
 
 - ARCH-000: Primary Directive (entry counterpart, defines Rules Context format)
 - ARCH-002: Rule Maintenance (how to update rules)
-- AGT-002-RULES, AGT-002-CODE: Auditor protocols (in /agents/)
+- AGT-001, AGT-002: Auditor protocols (Code Audit, Rule Audit in /agents/)

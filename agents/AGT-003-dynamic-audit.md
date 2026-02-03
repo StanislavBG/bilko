@@ -1,4 +1,4 @@
-# AGT-004: Dynamic Code Audit Protocol
+# AGT-003: Dynamic Code Audit Protocol
 
 **Version:** 1.0.0  
 **Priority:** HIGH  

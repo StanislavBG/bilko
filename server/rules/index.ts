@@ -24,7 +24,7 @@ export class RulesService {
     }
     
     log.info(`Loaded ${this.ruleCount} rules`);
-    log.debug("Validation is agentic - see AGT-002-RULES (agents/002-rules-audit.md)");
+    log.debug("Validation is agentic - see AGT-002 (agents/AGT-002-rules-audit.md)");
     
     this.initialized = true;
   }

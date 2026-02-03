@@ -1,4 +1,4 @@
-# AGT-003-RULES: Rule Audit Protocol
+# AGT-002: Rule Audit Protocol
 
 **Version:** 2.2.0  
 **Priority:** HIGH  

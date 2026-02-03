@@ -1,4 +1,4 @@
-# AGT-002-CODE: Code Audit Protocol
+# AGT-001: Code Audit Protocol
 
 **Version:** 3.0.0  
 **Priority:** HIGH  
@@ -367,7 +367,7 @@ All audit reports use this structure:
 ===========================================
 CODE AUDIT REPORT
 Date: [ISO date]
-Auditor: Principal Software Engineer (AGT-002 v3.0.0)
+Auditor: Principal Software Engineer (AGT-001 v3.0.0)
 ===========================================
 
 EXECUTIVE SUMMARY

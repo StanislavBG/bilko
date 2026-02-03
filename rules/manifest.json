@@ -26,7 +26,7 @@
   "subManifests": {
     "_description": "Sub-manifests and index files provide domain-specific rule groupings. Load these first when working in their domain.",
     "_usage": "Before working in a domain (e.g., n8n), load its index.md first to get current context and cross-references.",
-    "_auditCheck": "AGT-003 CHECK 7 validates all subManifests exist and are properly referenced.",
+    "_auditCheck": "AGT-002 CHECK 7 validates all subManifests exist and are properly referenced.",
     "entries": [
       {
         "id": "INT-N8N-INDEX",

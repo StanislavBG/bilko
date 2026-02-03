@@ -4,7 +4,7 @@ Rule ID: INT-005
 Priority: HIGH
 Version: 1.0.0
 Partition: integration
-Dependencies: INT-003, AGT-003, DATA-002
+Dependencies: INT-003, DATA-002
 
 ## Purpose
 
@@ -191,6 +191,5 @@ return [{ json: finalData }];
 ## Cross-References
 
 - INT-003: Orchestrator Communication Contract
-- AGT-003: Workflow Contract (standard I/O schemas, in /agents/)
 - DATA-002: Communication Trace Storage
 - INT-002: n8n API Practices (User-Agent, data flow)
