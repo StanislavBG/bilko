@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useRoute } from "wouter";
-import { ExternalLink, Check, PanelLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useRoute, useLocation } from "wouter";
+import { ExternalLink, Check, PanelLeft, ChevronLeft } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,8 +66,9 @@ function ProjectDetailPanel({
         {/* Mobile back button */}
         {onBack && (
           <div className="md:hidden mb-3">
-            <Button variant="ghost" size="sm" onClick={onBack} data-testid="button-back-to-projects">
-              Back
+            <Button variant="ghost" size="sm" onClick={onBack} data-testid="button-back-to-projects" className="gap-1">
+              <ChevronLeft className="h-4 w-4" />
+              Projects
             </Button>
           </div>
         )}
@@ -133,11 +134,20 @@ function ProjectDetailPanel({
 }
 
 export default function Projects() {
+  const [location] = useLocation();
   const [, params] = useRoute("/projects/:projectId");
   const urlProjectId = params?.projectId;
 
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(urlProjectId || null);
   const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+
+  // Sync state with URL on browser back/forward navigation
+  useEffect(() => {
+    const projectIdFromUrl = location.startsWith("/projects/")
+      ? location.replace("/projects/", "")
+      : null;
+    setSelectedProjectId(projectIdFromUrl);
+  }, [location]);
 
   const selectedProject = selectedProjectId ? getProjectById(selectedProjectId) : null;
 
