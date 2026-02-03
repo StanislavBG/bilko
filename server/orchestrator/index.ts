@@ -1,12 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { orchestratorStorage } from "./storage";
-import { randomUUID } from "crypto";
 import { authStorage } from "../replit_integrations/auth/storage";
 import { getWebhookUrl } from "../n8n/webhook-cache";
-
-function generateTraceId(): string {
-  return `trace_${randomUUID().replace(/-/g, "").substring(0, 16)}`;
-}
+import { generateTraceId, getCallbackUrl } from "../lib/utils";
 
 interface OrchestrateRequest {
   action?: string;
@@ -90,18 +86,8 @@ export function registerOrchestratorRoutes(app: Express) {
         const startTime = Date.now();
 
         let enrichedPayload = { ...payload };
-        
-        const PROD_CALLBACK_URL = 'https://bilkobibitkov.replit.app/api/workflows/callback';
-        let callbackUrl: string;
-        if (process.env.CALLBACK_URL_OVERRIDE) {
-          callbackUrl = process.env.CALLBACK_URL_OVERRIDE;
-        } else if (process.env.REPLIT_DOMAINS) {
-          const currentDomain = process.env.REPLIT_DOMAINS.split(',')[0];
-          callbackUrl = `https://${currentDomain}/api/workflows/callback`;
-        } else {
-          callbackUrl = PROD_CALLBACK_URL;
-        }
-        
+        const callbackUrl = getCallbackUrl();
+
         if (workflowId === "european-football-daily") {
           const recentTopics = await orchestratorStorage.getRecentTopics(workflowId, 24);
           enrichedPayload = {
