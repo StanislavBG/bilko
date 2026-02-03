@@ -65,7 +65,7 @@ Before ANY development task, the agent MUST:
 ### 1. Identify Applicable Rules
 Use the manifest routing system to find relevant rules:
 - Check `routing.redFlags` patterns against the task
-- Always include `routing.alwaysInclude` rules (ARCH-000, ARCH-006)
+- Always include `routing.alwaysInclude` rules (ARCH-000, ARCH-002)
 - Follow dependency chains from matched rules
 
 ### 2. Read and Apply Directives
@@ -84,24 +84,24 @@ Every task completion MUST include a Rules Context block documenting which rules
 **Format:**
 ```
 ## Rules Context
-Primary: ARCH-000 (entry), ARCH-010 (exit)
+Primary: ARCH-000 (entry), ARCH-002 (exit)
 Applied:
 - [RULE-ID] [Directive]: "[Key guidance applied]"
 - [RULE-ID] [Directive]: "[Key guidance applied]"
 ```
 
-**Enforcement:** ARCH-010 (Exit Directive) requires this block before task completion. Tasks without Rules Context cannot be marked complete.
+**Enforcement:** ARCH-002 (Exit Protocol) requires this block before task completion. Tasks without Rules Context cannot be marked complete.
 
 ## The Development Loop
 
 ARCH-000 is the **entry directive** - consult rules before writing code.
-ARCH-010 is the **exit directive** - validate compliance and document rules applied.
+ARCH-002 is the **exit directive** - validate compliance and document rules applied.
 
 Together they form a complete development loop:
 1. **Entry**: Consult rules → write code
 2. **Exit**: Validate compliance → document Rules Context → update rules if needed
 
-See ARCH-010 for the exit protocol.
+See ARCH-002 for the exit protocol.
 
 ## Hierarchy
 

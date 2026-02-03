@@ -363,5 +363,5 @@ After completing an audit:
 
 ## Cross-References
 
-- ARCH-002: Rule Maintenance
+- ARCH-004: Rule Maintenance
 - APP-RULES-001: Rules Explorer (audit storage UI)
