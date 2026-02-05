@@ -53,6 +53,20 @@ function ProjectNavItem({
   );
 }
 
+function StatusBadge({ status }: { status: Project["status"] }) {
+  const statusConfig = {
+    live: { label: "Live", className: "bg-green-500/10 text-green-600 border-green-500/20" },
+    beta: { label: "Beta", className: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" },
+    development: { label: "In Development", className: "bg-blue-500/10 text-blue-600 border-blue-500/20" }
+  };
+  const config = statusConfig[status];
+  return (
+    <Badge variant="outline" className={config.className} data-testid="badge-project-status">
+      {config.label}
+    </Badge>
+  );
+}
+
 function ProjectDetailPanel({
   project,
   onBack
@@ -62,20 +76,48 @@ function ProjectDetailPanel({
 }) {
   return (
     <div className="flex-1 overflow-auto bg-background" data-testid={`detail-project-${project.id}`}>
-      <div className="p-4 border-b bg-muted/30">
-        {/* Mobile back button */}
-        {onBack && (
-          <div className="md:hidden mb-3">
-            <Button variant="ghost" size="sm" onClick={onBack} data-testid="button-back-to-projects" className="gap-1">
-              <ChevronLeft className="h-4 w-4" />
-              Projects
-            </Button>
+      {/* Mobile back button */}
+      {onBack && (
+        <div className="md:hidden p-2 border-b bg-muted/30">
+          <Button variant="ghost" size="sm" onClick={onBack} data-testid="button-back-to-projects" className="gap-1">
+            <ChevronLeft className="h-4 w-4" />
+            Projects
+          </Button>
+        </div>
+      )}
+
+      {/* Hero Image - Clickable to open app */}
+      <a
+        href={project.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block relative group"
+        data-testid="link-project-hero"
+      >
+        <div className="aspect-square max-h-[320px] w-full overflow-hidden bg-muted">
+          <img
+            src={project.imageUrl}
+            alt={project.title}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            data-testid="img-project-hero"
+          />
+        </div>
+        {/* Overlay on hover */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-white font-medium">
+            <ExternalLink className="h-5 w-5" />
+            <span>Open Application</span>
           </div>
-        )}
-        <div className="flex items-center gap-3 flex-wrap mb-2">
+        </div>
+      </a>
+
+      {/* Header with title, badges */}
+      <div className="p-4 border-b bg-muted/30">
+        <div className="flex items-center gap-2 flex-wrap mb-2">
           <h2 className="text-lg font-semibold" data-testid="text-project-title">
             {project.title}
           </h2>
+          <StatusBadge status={project.status} />
           <Badge variant="secondary" data-testid="badge-project-category">{project.category}</Badge>
         </div>
         <p className="text-sm text-muted-foreground italic" data-testid="text-project-tagline">
@@ -83,28 +125,36 @@ function ProjectDetailPanel({
         </p>
       </div>
 
-      <div className="p-4 space-y-6">
-        <Card data-testid="card-project-about">
-          <CardHeader>
-            <CardTitle className="text-base">About</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-project-description">
-              {project.description}
-            </p>
-          </CardContent>
-        </Card>
+      <div className="p-4 space-y-4">
+        {/* About section - simplified */}
+        <div data-testid="card-project-about">
+          <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-project-description">
+            {project.description}
+          </p>
+        </div>
 
+        {/* Tech Stack - compact inline */}
+        {project.techStack && project.techStack.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap" data-testid="section-tech-stack">
+            <span className="text-xs font-medium text-muted-foreground">Built with:</span>
+            {project.techStack.map((tech) => (
+              <Badge key={tech} variant="outline" className="text-xs" data-testid={`badge-tech-${tech}`}>
+                {tech}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Features */}
         <Card data-testid="card-project-features">
-          <CardHeader>
-            <CardTitle className="text-base">Features</CardTitle>
-            <CardDescription>Key capabilities of this application</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Features</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
+          <CardContent className="pt-0">
+            <ul className="space-y-1.5">
               {project.features.map((feature, index) => (
                 <li key={feature} className="flex items-center gap-2" data-testid={`text-feature-${index}`}>
-                  <Check className="h-4 w-4 text-primary" />
+                  <Check className="h-3.5 w-3.5 text-primary shrink-0" />
                   <span className="text-sm">{feature}</span>
                 </li>
               ))}
@@ -112,22 +162,13 @@ function ProjectDetailPanel({
           </CardContent>
         </Card>
 
-        <Card data-testid="card-project-visit">
-          <CardContent className="py-6">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div className="space-y-1">
-                <p className="font-medium text-sm" data-testid="text-visit-label">Visit Application</p>
-                <p className="text-xs text-muted-foreground" data-testid="text-project-url">{project.url}</p>
-              </div>
-              <Button asChild data-testid="button-visit-project">
-                <a href={project.url} target="_blank" rel="noopener noreferrer">
-                  Open
-                  <ExternalLink className="h-4 w-4 ml-2" />
-                </a>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Quick action button */}
+        <Button asChild className="w-full" size="lg" data-testid="button-visit-project">
+          <a href={project.url} target="_blank" rel="noopener noreferrer">
+            Launch {project.title}
+            <ExternalLink className="h-4 w-4 ml-2" />
+          </a>
+        </Button>
       </div>
     </div>
   );
@@ -221,30 +262,71 @@ export default function Projects() {
           />
         ) : (
           <>
-            {/* Desktop: prompt to select project from nav */}
-            <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground bg-background">
-              <p className="text-sm">Select a project to view details</p>
-            </div>
-            {/* Mobile: show projects as cards */}
-            <div className="md:hidden flex-1 p-4 overflow-auto">
-              <h2 className="text-lg font-semibold mb-4" data-testid="text-projects-heading">Projects</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                A curated collection of applications built with purpose and care
-              </p>
-              <div className="space-y-3">
+            {/* Desktop: project grid gallery */}
+            <div className="hidden md:flex flex-1 flex-col bg-background overflow-auto">
+              <div className="p-6 border-b bg-muted/30">
+                <h2 className="text-lg font-semibold mb-1" data-testid="text-projects-heading-desktop">Projects</h2>
+                <p className="text-sm text-muted-foreground">
+                  A curated collection of applications built with purpose and care
+                </p>
+              </div>
+              <div className="p-6 grid grid-cols-2 lg:grid-cols-3 gap-4">
                 {projects.map((project) => (
                   <Card
                     key={project.id}
-                    className="p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                    className="overflow-hidden cursor-pointer group hover:ring-2 hover:ring-primary/50 transition-all"
+                    onClick={() => handleSelectProject(project.id)}
+                    data-testid={`card-desktop-project-${project.id}`}
+                  >
+                    <div className="aspect-square overflow-hidden bg-muted">
+                      <img
+                        src={project.imageUrl}
+                        alt={project.title}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-medium text-sm truncate">{project.title}</span>
+                        <StatusBadge status={project.status} />
+                      </div>
+                      <div className="text-xs text-muted-foreground italic truncate">{project.tagline}</div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+            {/* Mobile: show projects as cards with images */}
+            <div className="md:hidden flex-1 p-4 overflow-auto">
+              <h2 className="text-lg font-semibold mb-1" data-testid="text-projects-heading">Projects</h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                A curated collection of applications built with purpose and care
+              </p>
+              <div className="space-y-4">
+                {projects.map((project) => (
+                  <Card
+                    key={project.id}
+                    className="overflow-hidden cursor-pointer hover:bg-accent/50 transition-colors"
                     onClick={() => handleSelectProject(project.id)}
                     data-testid={`card-project-${project.id}`}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-medium text-sm">{project.title}</span>
-                      <Badge variant="secondary" className="text-[10px]">{project.category}</Badge>
+                    {/* Project thumbnail */}
+                    <div className="aspect-video overflow-hidden bg-muted">
+                      <img
+                        src={project.imageUrl}
+                        alt={project.title}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    <div className="text-xs text-muted-foreground italic mb-2">{project.tagline}</div>
-                    <div className="text-xs text-muted-foreground line-clamp-2">{project.description}</div>
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="font-medium text-sm">{project.title}</span>
+                        <StatusBadge status={project.status} />
+                        <Badge variant="secondary" className="text-[10px]">{project.category}</Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground italic mb-2">{project.tagline}</div>
+                      <div className="text-xs text-muted-foreground line-clamp-2">{project.description}</div>
+                    </div>
                   </Card>
                 ))}
               </div>
