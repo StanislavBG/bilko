@@ -11,6 +11,7 @@ import { CheckCircle, XCircle, Clock, RefreshCw, Activity, Loader2, ArrowRight, 
 import { useToast } from "@/hooks/use-toast";
 import type { CommunicationTrace } from "@shared/schema";
 import { Button } from "@/components/ui/button";
+import { formatDuration, formatTimestampFull } from "@/lib/format";
 
 interface TracesResponse {
   traces: CommunicationTrace[];
@@ -20,17 +21,6 @@ interface TracesResponse {
     offset: number;
     hasMore: boolean;
   };
-}
-
-function formatDuration(ms: number | null): string {
-  if (ms === null) return "-";
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(2)}s`;
-}
-
-function formatTimestamp(date: string | Date): string {
-  const d = new Date(date);
-  return d.toLocaleString();
 }
 
 function JsonDisplay({ data }: { data: unknown }) {
@@ -146,11 +136,11 @@ function TraceDetailModal({
             </div>
             <div>
               <span className="text-muted-foreground">Requested At</span>
-              <p>{formatTimestamp(trace.requestedAt)}</p>
+              <p>{formatTimestampFull(trace.requestedAt)}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Responded At</span>
-              <p>{trace.respondedAt ? formatTimestamp(trace.respondedAt) : "-"}</p>
+              <p>{trace.respondedAt ? formatTimestampFull(trace.respondedAt) : "-"}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Attempt</span>
@@ -308,7 +298,7 @@ export default function MemoryExplorer() {
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               <Clock className="h-3 w-3 text-muted-foreground" />
-                              <span>{formatTimestamp(trace.requestedAt)}</span>
+                              <span>{formatTimestampFull(trace.requestedAt)}</span>
                             </div>
                           </td>
                           <td className="p-3">
