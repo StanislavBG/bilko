@@ -49,12 +49,6 @@ interface RuleContent {
   content: string;
 }
 
-
-function formatTimestamp(date: string): string {
-  const d = new Date(date);
-  return d.toLocaleString();
-}
-
 const PRIORITY_DESCRIPTIONS: Record<string, string> = {
   ABSOLUTE: "Must always be followed without exception",
   CRITICAL: "Essential for system integrity",

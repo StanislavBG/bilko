@@ -88,7 +88,7 @@ No new backend APIs or data persistence required:
 
 For pages with deep hierarchy, use stack-based drill-down within the Shadcn Sidebar Sheet. This supports N levels of depth with a consistent interface.
 
-**Data Structure** (see ARCH-012):
+**Data Structure** (see HUB-004):
 ```typescript
 interface NavItem {
   id: string;
@@ -155,7 +155,7 @@ const handleNavigate = (url: string) => {
 - Clicking leaf item (has `url`) → navigates, closes Sheet, resets stack
 - Adding new levels is data-only, no component changes needed
 
-**Cross-Reference:** See ARCH-012 for NavItem interface and navigation data location.
+**Cross-Reference:** See HUB-004 for NavItem interface and navigation data location.
 
 ### D7: Mobile Swipeable Carousel
 
@@ -217,4 +217,4 @@ useEffect(() => {
 - UI-005: Minimal Design Principles (sizing, aesthetics)
 - HUB-001: Hub Layout (primary sidebar)
 - APP-WORKFLOWS-001: Agentic Workflows (uses D6, D7 patterns)
-- ARCH-012: Unified Navigation Structure (NavItem interface, navigation data)
+- HUB-004: Unified Navigation Structure (NavItem interface, navigation data)

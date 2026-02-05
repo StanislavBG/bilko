@@ -13,7 +13,7 @@ This is a **rules-first** codebase where governance documents in `/rules/` defin
 
 1. **Read `rules/manifest.json`** - Contains bootstrap metadata and full rule index
 2. **Read ARCH-000** (`rules/architecture/000-primary-directive.md`) - The Primary Directive is absolute
-3. **Read ARCH-006** (`rules/architecture/006-agent-bootstrap.md`) - Explains how to use the rule system
+3. **Read ARCH-002** (`rules/architecture/002-agent-protocol.md`) - Explains how to use the rule system
 4. **Read ALL applicable rules** before writing any code
 
 ## Project Structure
@@ -226,11 +226,11 @@ Optional:
 
 ## Task Completion Protocol
 
-Per ARCH-010 (Exit Directive), every task completion MUST include:
+Per ARCH-002 (Exit Protocol), every task completion MUST include:
 
 ```
 ## Rules Context
-Primary: ARCH-000 (entry), ARCH-010 (exit)
+Primary: ARCH-000 (entry), ARCH-002 (exit)
 Applied:
 - [RULE-ID] [Directive]: "[Key guidance applied]"
 - [RULE-ID] [Directive]: "[Key guidance applied]"

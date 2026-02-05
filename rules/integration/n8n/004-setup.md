@@ -113,8 +113,8 @@ N8N_BASIC_AUTH_PASSWORD=<strong-password>
 ## Copy Core Rules
 
 After project creation, copy the following rules from the web application project:
-- ARCH-007: System Purpose (rules/architecture/)
-- ARCH-008: Agent Coordination (rules/architecture/)
+- ARCH-001: System Overview (rules/architecture/)
+- ARCH-003: System Architecture (rules/architecture/)
 - INT-003: Orchestrator Communication Contract (rules/integration/)
 - INT-004: This setup guide (rules/integration/)
 
@@ -189,4 +189,4 @@ The credential ID (from URL `credentials/xxxxx`) is used in workflow JSON:
 - **Used by**: All Gemini API nodes in PROD workflow (7 nodes)
 
 ## Rationale
-Self-hosting n8n on Replit provides full control over AI workflows while maintaining the separation of concerns defined in ARCH-008. The Reserved VM deployment ensures reliable webhook operation.
+Self-hosting n8n on Replit provides full control over AI workflows while maintaining the separation of concerns defined in ARCH-003. The Reserved VM deployment ensures reliable webhook operation.

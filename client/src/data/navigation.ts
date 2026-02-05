@@ -1,4 +1,4 @@
-import { Home, Activity, BookOpen, Workflow, FolderOpen, type LucideIcon } from "lucide-react";
+import { Home, Activity, BookOpen, Workflow, FolderOpen, GraduationCap, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
   id: string;
@@ -22,6 +22,13 @@ export const navigationItems: NavItem[] = [
     title: "Projects",
     url: "/projects",
     icon: FolderOpen,
+    adminOnly: false,
+  },
+  {
+    id: "academy",
+    title: "AI Academy",
+    url: "/academy",
+    icon: GraduationCap,
     adminOnly: false,
   },
   {

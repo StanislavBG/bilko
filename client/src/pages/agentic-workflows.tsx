@@ -7,53 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useCopyToClipboard, copyImageToClipboard, downloadImage } from "@/hooks/use-clipboard";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatDuration, formatTimestamp } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { ExecutionsList } from "@/components/executions-list";
 import { ExecutionDetail } from "@/components/execution-detail";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-
-function useCopyToClipboard() {
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const { toast } = useToast();
-  
-  const copy = async (text: string, id: string, label?: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedId(id);
-      toast({ title: "Copied!", description: label || "Text copied to clipboard" });
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch {
-      toast({ title: "Failed to copy", variant: "destructive" });
-    }
-  };
-  
-  return { copy, isCopied: (id: string) => copiedId === id };
-}
-
-async function copyImageToClipboard(imageUrl: string, toast: ReturnType<typeof useToast>["toast"]) {
-  try {
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
-    await navigator.clipboard.write([
-      new ClipboardItem({ [blob.type]: blob })
-    ]);
-    toast({ title: "Copied!", description: "Image copied to clipboard" });
-  } catch {
-    toast({ title: "Failed to copy image", description: "Your browser may not support this feature", variant: "destructive" });
-  }
-}
-
-function downloadImage(imageUrl: string, filename: string = "infographic.png") {
-  const link = document.createElement("a");
-  link.href = imageUrl;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
 
 interface WorkflowDefinition {
   id: string;
@@ -114,13 +76,15 @@ interface TraceItem {
   durationMs: number | null;
 }
 
+type SourceUrl = string | { url: string; title?: string };
+
 interface WorkflowOutput {
   hasOutput: boolean;
   message?: string;
   fb2DisclosureText?: string;
   executionStats?: ExecutionStats | null;
   traces?: TraceItem[];
-  sourceUrls?: string[];
+  sourceUrls?: SourceUrl[];
   outputs?: {
     final: {
       traceId: string;
@@ -132,7 +96,7 @@ interface WorkflowOutput {
           imagePrompt?: string;
           imageUrl?: string | null;
           transparencyPost?: string;
-          sourceUrls?: string[];
+          sourceUrls?: SourceUrl[];
         };
       };
     } | null;
@@ -150,24 +114,6 @@ interface WorkflowOutput {
       };
     } | null;
   };
-}
-
-function formatDuration(ms: number | null | undefined): string {
-  if (!ms) return "-";
-  if (ms < 1000) return `${ms}ms`;
-  const seconds = Math.round(ms / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSec = seconds % 60;
-  return `${minutes}m ${remainingSec}s`;
-}
-
-function formatTimestamp(ts: string | null | undefined): string {
-  if (!ts) return "-";
-  const date = new Date(ts);
-  return date.toLocaleString("en-US", { 
-    month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" 
-  });
 }
 
 function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
@@ -446,20 +392,25 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
               </CardHeader>
               <CardContent className="p-2 pt-0">
                 <div className="space-y-1">
-                  {sourceUrls.map((url, idx) => (
-                    <a
-                      key={idx}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground hover:underline truncate"
-                      data-testid={`source-link-${idx + 1}`}
-                    >
-                      <span className="font-medium">[{idx + 1}]</span>
-                      <ExternalLink className="h-2 w-2 flex-shrink-0" />
-                      <span className="truncate">{url.replace(/^https?:\/\//, "").substring(0, 50)}...</span>
-                    </a>
-                  ))}
+                  {sourceUrls.map((item, idx) => {
+                    // Handle both string URLs and {url, title} objects
+                    const url = typeof item === "string" ? item : item?.url;
+                    if (!url) return null;
+                    return (
+                      <a
+                        key={idx}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground hover:underline truncate"
+                        data-testid={`source-link-${idx + 1}`}
+                      >
+                        <span className="font-medium">[{idx + 1}]</span>
+                        <ExternalLink className="h-2 w-2 flex-shrink-0" />
+                        <span className="truncate">{url.replace(/^https?:\/\//, "").substring(0, 50)}...</span>
+                      </a>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

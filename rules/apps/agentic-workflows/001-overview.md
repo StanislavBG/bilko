@@ -3,7 +3,7 @@
 **Version**: 1.1.0  
 **Priority**: HIGH  
 **Partition**: apps  
-**Dependencies**: HUB-001, UI-006, ARCH-012, DATA-002, INT-005
+**Dependencies**: HUB-001, UI-006, HUB-004, DATA-002, INT-005
 
 ## Purpose
 
@@ -48,7 +48,7 @@ Step 3: Execution Detail (Main content)
 
 ### D1: Stack-Based Mobile Drill-Down Navigation
 
-On mobile, use Sheet component with stack-based navigation (per UI-006 D6, ARCH-012):
+On mobile, use Sheet component with stack-based navigation (per UI-006 D6, HUB-004):
 
 ```tsx
 interface WorkflowNavLevel {
@@ -84,7 +84,7 @@ useEffect(() => {
 
 **Pattern:** Push/pop stack operations, not boolean/enum toggles.
 
-**Note:** WorkflowNavLevel is an app-specific adaptation of the NavLevel pattern from ARCH-012. It follows the same stack-based mechanics but includes workflow-specific fields (workflow?: WorkflowDefinition). The main sidebar uses NavItem/NavLevel; individual apps may define domain-specific level interfaces while maintaining the push/pop/reset behavior.
+**Note:** WorkflowNavLevel is an app-specific adaptation of the NavLevel pattern from HUB-004. It follows the same stack-based mechanics but includes workflow-specific fields (workflow?: WorkflowDefinition). The main sidebar uses NavItem/NavLevel; individual apps may define domain-specific level interfaces while maintaining the push/pop/reset behavior.
 
 ### D2: Execution Detail Views
 
@@ -143,7 +143,7 @@ Workflow Registry (n8n) → API → Frontend
 ## Cross-References
 
 - UI-006: Mobile Layout (carousel pattern, Sheet overlays, D6 stack-based drill-down)
-- ARCH-012: Unified Navigation Structure (WorkflowNavLevel interface pattern)
+- HUB-004: Unified Navigation Structure (WorkflowNavLevel interface pattern)
 - INT-005: Callback Persistence Contract (execution data)
 - DATA-002: Communication Traces (trace linkage)
 - HUB-003: Nested Navigation Pattern (column layout)
