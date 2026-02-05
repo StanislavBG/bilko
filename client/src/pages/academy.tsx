@@ -1354,7 +1354,7 @@ function DictionaryTermView({
 
 export default function Academy() {
   const [location] = useLocation();
-  const [, params] = useRoute("/academy/:levelId");
+  const [, params] = useRoute("/:levelId");
 
   // State
   const [activeSection, setActiveSection] = useState<AcademySection>("levels");
@@ -1375,13 +1375,11 @@ export default function Academy() {
 
   // URL sync
   useEffect(() => {
-    if (location.startsWith("/academy/")) {
-      const levelId = location.replace("/academy/", "");
-      if (levelId.startsWith("level-")) {
-        setSelectedLevelId(levelId);
-        setActiveSection("levels");
-      }
-    } else if (location === "/academy") {
+    if (location.startsWith("/level-")) {
+      const levelId = location.replace("/", "");
+      setSelectedLevelId(levelId);
+      setActiveSection("levels");
+    } else if (location === "/") {
       setSelectedLevelId(null);
     }
   }, [location]);
@@ -1403,9 +1401,9 @@ export default function Academy() {
   const handleSelectLevel = (levelId: string | null) => {
     setSelectedLevelId(levelId);
     if (levelId) {
-      window.history.pushState({}, "", `/academy/${levelId}`);
+      window.history.pushState({}, "", `/${levelId}`);
     } else {
-      window.history.pushState({}, "", "/academy");
+      window.history.pushState({}, "", "/");
     }
   };
 
@@ -1414,7 +1412,7 @@ export default function Academy() {
     setSelectedLevelId(null);
     setSelectedCategoryId(null);
     setSelectedTermId(null);
-    window.history.pushState({}, "", "/academy");
+    window.history.pushState({}, "", "/");
   };
 
   const handleSelectCategory = (categoryId: string | null) => {
