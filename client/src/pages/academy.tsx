@@ -752,6 +752,8 @@ function LevelDetailPanel({
 // DICTIONARY SECTION COMPONENTS
 // ============================================
 
+import { getAllTerms } from "@/data/academy-dictionary";
+
 function DictionaryL3Nav({
   selectedCategoryId,
   onSelectCategory,
@@ -842,6 +844,99 @@ function DictionaryL3Nav({
   );
 }
 
+// L4 Navigation - Terms within a category
+function DictionaryL4Nav({
+  category,
+  selectedTermId,
+  onSelectTerm,
+  isCollapsed,
+  onToggleCollapse,
+}: {
+  category: DictionaryCategory;
+  selectedTermId: string | null;
+  onSelectTerm: (id: string | null) => void;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+}) {
+  return (
+    <div
+      className={`hidden md:flex shrink-0 border-r bg-muted/5 flex-col transition-all duration-200 ${
+        isCollapsed ? "min-w-8 max-w-8" : "min-w-[8rem] max-w-[9rem]"
+      }`}
+    >
+      <div className="border-b px-2 h-8 flex items-center shrink-0">
+        {isCollapsed ? (
+          <span className="text-xs font-medium text-muted-foreground block w-full text-center">
+            T
+          </span>
+        ) : (
+          <span className="text-xs font-medium text-muted-foreground truncate">
+            Terms
+          </span>
+        )}
+      </div>
+      <div className="flex-1 overflow-auto p-1 space-y-0.5">
+        {category.terms.map((term) =>
+          isCollapsed ? (
+            <Tooltip key={term.id}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={`w-full justify-center h-6 text-xs ${
+                    selectedTermId === term.id
+                      ? "bg-accent text-accent-foreground"
+                      : ""
+                  }`}
+                  onClick={() => onSelectTerm(term.id)}
+                >
+                  {term.abbreviation || term.term.charAt(0)}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">{term.term}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              key={term.id}
+              variant="ghost"
+              className={`w-full justify-start h-auto py-1 px-2 ${
+                selectedTermId === term.id
+                  ? "bg-accent text-accent-foreground"
+                  : ""
+              }`}
+              onClick={() => onSelectTerm(term.id)}
+            >
+              <span className="text-xs truncate">
+                {term.abbreviation ? `${term.abbreviation}` : term.term}
+              </span>
+            </Button>
+          )
+        )}
+      </div>
+      <div className="border-t h-8 flex items-center justify-center shrink-0">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={onToggleCollapse}
+            >
+              <PanelLeft
+                className={`h-3 w-3 transition-transform ${
+                  isCollapsed ? "rotate-180" : ""
+                }`}
+              />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {isCollapsed ? "Expand" : "Collapse"}
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </div>
+  );
+}
+
 function DictionaryOverview({
   onSelectCategory,
   onSelectTerm,
@@ -851,15 +946,31 @@ function DictionaryOverview({
 }) {
   const [searchQuery, setSearchQuery] = useState("");
 
+  const allTerms = useMemo(() => getAllTerms(), []);
+
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     return searchTerms(searchQuery);
   }, [searchQuery]);
 
-  const totalTerms = dictionaryCategories.reduce(
-    (sum, cat) => sum + cat.terms.length,
-    0
-  );
+  // Group terms by first letter for A-Z index
+  const termsByLetter = useMemo(() => {
+    const grouped: Record<string, DictionaryTerm[]> = {};
+    allTerms.forEach((term) => {
+      const letter = term.term.charAt(0).toUpperCase();
+      if (!grouped[letter]) grouped[letter] = [];
+      grouped[letter].push(term);
+    });
+    // Sort terms within each letter
+    Object.keys(grouped).forEach((letter) => {
+      grouped[letter].sort((a, b) => a.term.localeCompare(b.term));
+    });
+    return grouped;
+  }, [allTerms]);
+
+  const sortedLetters = Object.keys(termsByLetter).sort();
+
+  const totalTerms = allTerms.length;
 
   return (
     <div className="flex-1 overflow-auto bg-background">
@@ -904,7 +1015,7 @@ function DictionaryOverview({
 
       <div className="p-6 space-y-6">
         {/* Search Results */}
-        {searchQuery.trim() && (
+        {searchQuery.trim() ? (
           <section>
             <h2 className="text-lg font-semibold mb-4">
               Search Results ({searchResults.length})
@@ -939,51 +1050,95 @@ function DictionaryOverview({
               </p>
             )}
           </section>
-        )}
-
-        {/* Categories Grid */}
-        {!searchQuery.trim() && (
-          <section>
-            <h2 className="text-lg font-semibold mb-4">Browse by Category</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {dictionaryCategories.map((cat) => {
-                const IconComponent = categoryIcons[cat.icon] || Brain;
-                return (
-                  <Card
-                    key={cat.id}
-                    className="cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => onSelectCategory(cat.id)}
+        ) : (
+          <>
+            {/* A-Z Letter Navigation */}
+            <section>
+              <div className="flex flex-wrap gap-1 mb-4">
+                {sortedLetters.map((letter) => (
+                  <a
+                    key={letter}
+                    href={`#letter-${letter}`}
+                    className="w-8 h-8 flex items-center justify-center rounded bg-muted hover:bg-primary hover:text-primary-foreground transition-colors text-sm font-medium"
                   >
-                    <CardHeader>
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <IconComponent className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-base">{cat.title}</CardTitle>
-                          <CardDescription className="text-xs">
-                            {cat.terms.length} terms
-                          </CardDescription>
+                    {letter}
+                  </a>
+                ))}
+              </div>
+            </section>
+
+            {/* Browse by Category */}
+            <section>
+              <h2 className="text-lg font-semibold mb-4">Browse by Category</h2>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {dictionaryCategories.map((cat) => {
+                  const IconComponent = categoryIcons[cat.icon] || Brain;
+                  return (
+                    <button
+                      key={cat.id}
+                      className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-muted/50 hover:border-primary/50 transition-colors text-left"
+                      onClick={() => onSelectCategory(cat.id)}
+                    >
+                      <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                        <IconComponent className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-medium text-sm">{cat.title}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {cat.terms.length} terms
                         </div>
                       </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <p className="text-sm text-muted-foreground">
-                        {cat.description}
-                      </p>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </section>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {/* All Terms A-Z */}
+            <section>
+              <h2 className="text-lg font-semibold mb-4">All Terms A-Z</h2>
+              <div className="space-y-6">
+                {sortedLetters.map((letter) => (
+                  <div key={letter} id={`letter-${letter}`}>
+                    <h3 className="text-xl font-bold text-primary mb-3 sticky top-0 bg-background py-1">
+                      {letter}
+                    </h3>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                      {termsByLetter[letter].map((term) => (
+                        <button
+                          key={term.id}
+                          className="flex items-start gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors text-left group"
+                          onClick={() => onSelectTerm(term.id)}
+                        >
+                          <ChevronRight className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0 group-hover:text-primary" />
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm group-hover:text-primary">
+                              {term.term}
+                              {term.abbreviation && (
+                                <span className="text-muted-foreground font-normal ml-1">
+                                  ({term.abbreviation})
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground line-clamp-1">
+                              {term.definition}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
         )}
       </div>
     </div>
   );
 }
 
-function DictionaryCategoryView({
+function DictionaryCategoryOverview({
   category,
   onSelectTerm,
   onBack,
@@ -1007,10 +1162,10 @@ function DictionaryCategoryView({
         )}
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10">
-            <IconComponent className="h-5 w-5 text-primary" />
+            <IconComponent className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">{category.title}</h2>
+            <h2 className="text-xl font-semibold">{category.title}</h2>
             <p className="text-sm text-muted-foreground">
               {category.terms.length} terms
             </p>
@@ -1018,29 +1173,47 @@ function DictionaryCategoryView({
         </div>
       </div>
 
-      <div className="p-4 space-y-3">
-        {category.terms.map((term) => (
-          <Card
-            key={term.id}
-            className="cursor-pointer hover:bg-muted/50 transition-colors"
-            onClick={() => onSelectTerm(term.id)}
-          >
-            <CardHeader className="py-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-base">{term.term}</CardTitle>
-                  {term.abbreviation && (
-                    <Badge variant="outline" className="text-xs">
-                      {term.abbreviation}
-                    </Badge>
-                  )}
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <CardDescription>{term.definition}</CardDescription>
-            </CardHeader>
-          </Card>
-        ))}
+      <div className="p-6 space-y-6">
+        {/* Category Description */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">About This Category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {category.description}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Terms in this category */}
+        <section>
+          <h3 className="text-lg font-semibold mb-4">Terms in {category.title}</h3>
+          <div className="space-y-3">
+            {category.terms.map((term) => (
+              <Card
+                key={term.id}
+                className="cursor-pointer hover:bg-muted/50 hover:border-primary/50 transition-colors"
+                onClick={() => onSelectTerm(term.id)}
+              >
+                <CardHeader className="py-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-base">{term.term}</CardTitle>
+                      {term.abbreviation && (
+                        <Badge variant="outline" className="text-xs">
+                          {term.abbreviation}
+                        </Badge>
+                      )}
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <CardDescription>{term.definition}</CardDescription>
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );
@@ -1048,49 +1221,88 @@ function DictionaryCategoryView({
 
 function DictionaryTermView({
   term,
+  category,
+  onSelectRelatedTerm,
   onBack,
 }: {
   term: DictionaryTerm;
+  category?: DictionaryCategory;
+  onSelectRelatedTerm?: (termName: string) => void;
   onBack: () => void;
 }) {
+  const CategoryIcon = category ? categoryIcons[category.icon] || Brain : Brain;
+
   return (
     <div className="flex-1 overflow-auto bg-background">
-      <div className="p-4 border-b bg-muted/30">
-        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1 mb-3">
-          <ChevronLeft className="h-4 w-4" />
-          Back
-        </Button>
-        <div className="flex items-center gap-2 flex-wrap">
-          <h2 className="text-xl font-bold">{term.term}</h2>
-          {term.abbreviation && (
-            <Badge variant="outline">{term.abbreviation}</Badge>
-          )}
+      {/* Header */}
+      <div className="p-4 border-b bg-gradient-to-br from-primary/5 via-background to-primary/10">
+        <div className="md:hidden mb-3">
+          <Button variant="ghost" size="sm" onClick={onBack} className="gap-1">
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </Button>
         </div>
-        <p className="text-muted-foreground mt-1">{term.definition}</p>
+
+        <div className="flex items-start gap-4">
+          {category && (
+            <div className="p-3 rounded-xl bg-primary/10 shrink-0">
+              <CategoryIcon className="h-6 w-6 text-primary" />
+            </div>
+          )}
+          <div>
+            <div className="flex items-center gap-2 flex-wrap mb-2">
+              <h1 className="text-2xl font-bold">{term.term}</h1>
+              {term.abbreviation && (
+                <Badge variant="outline" className="text-sm">
+                  {term.abbreviation}
+                </Badge>
+              )}
+            </div>
+            {category && (
+              <Badge variant="secondary" className="text-xs mb-2">
+                {category.title}
+              </Badge>
+            )}
+            <p className="text-muted-foreground">{term.definition}</p>
+          </div>
+        </div>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="p-6 space-y-6">
+        {/* Full Explanation */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Explanation</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" />
+              Deep Dive
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
               {term.explanation}
             </p>
           </CardContent>
         </Card>
 
+        {/* Examples */}
         {term.examples && term.examples.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Examples</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Layers className="h-5 w-5 text-primary" />
+                Examples
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {term.examples.map((example, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm">
-                    <span className="text-primary">•</span>
+                  <li
+                    key={idx}
+                    className="flex items-start gap-3 text-sm p-2 rounded-lg bg-muted/30"
+                  >
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
+                      {idx + 1}
+                    </span>
                     <span className="text-muted-foreground">{example}</span>
                   </li>
                 ))}
@@ -1099,15 +1311,31 @@ function DictionaryTermView({
           </Card>
         )}
 
+        {/* Related Terms */}
         {term.relatedTerms && term.relatedTerms.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Related Terms</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                <ChevronRight className="h-5 w-5 text-primary" />
+                Related Terms
+              </CardTitle>
+              <CardDescription>
+                Explore connected concepts to deepen your understanding
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 {term.relatedTerms.map((related) => (
-                  <Badge key={related} variant="secondary">
+                  <Badge
+                    key={related}
+                    variant="secondary"
+                    className={`${
+                      onSelectRelatedTerm
+                        ? "cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                        : ""
+                    }`}
+                    onClick={() => onSelectRelatedTerm?.(related)}
+                  >
                     {related}
                   </Badge>
                 ))}
@@ -1132,6 +1360,7 @@ export default function Academy() {
   const [activeSection, setActiveSection] = useState<AcademySection>("levels");
   const [isL2Collapsed, setIsL2Collapsed] = useState(false);
   const [isL3Collapsed, setIsL3Collapsed] = useState(false);
+  const [isL4Collapsed, setIsL4Collapsed] = useState(false);
 
   // Levels state
   const [selectedLevelId, setSelectedLevelId] = useState<string | null>(
@@ -1148,9 +1377,11 @@ export default function Academy() {
   useEffect(() => {
     if (location.startsWith("/academy/")) {
       const levelId = location.replace("/academy/", "");
-      setSelectedLevelId(levelId);
-      setActiveSection("levels");
-    } else {
+      if (levelId.startsWith("level-")) {
+        setSelectedLevelId(levelId);
+        setActiveSection("levels");
+      }
+    } else if (location === "/academy") {
       setSelectedLevelId(null);
     }
   }, [location]);
@@ -1160,6 +1391,14 @@ export default function Academy() {
     ? getCategoryById(selectedCategoryId)
     : null;
   const selectedTerm = selectedTermId ? getTermById(selectedTermId) : null;
+
+  // Find the category that contains the selected term
+  const termCategory = useMemo(() => {
+    if (!selectedTermId) return null;
+    return dictionaryCategories.find((cat) =>
+      cat.terms.some((t) => t.id === selectedTermId)
+    );
+  }, [selectedTermId]);
 
   const handleSelectLevel = (levelId: string | null) => {
     setSelectedLevelId(levelId);
@@ -1183,8 +1422,28 @@ export default function Academy() {
     setSelectedTermId(null);
   };
 
-  const handleSelectTerm = (termId: string) => {
+  const handleSelectTerm = (termId: string | null) => {
     setSelectedTermId(termId);
+    // Auto-select the category if not already selected
+    if (termId && !selectedCategoryId) {
+      const cat = dictionaryCategories.find((c) =>
+        c.terms.some((t) => t.id === termId)
+      );
+      if (cat) setSelectedCategoryId(cat.id);
+    }
+  };
+
+  const handleSelectRelatedTerm = (termName: string) => {
+    // Find term by name
+    const allTerms = getAllTerms();
+    const foundTerm = allTerms.find(
+      (t) =>
+        t.term.toLowerCase() === termName.toLowerCase() ||
+        t.abbreviation?.toLowerCase() === termName.toLowerCase()
+    );
+    if (foundTerm) {
+      handleSelectTerm(foundTerm.id);
+    }
   };
 
   const handleBackFromTerm = () => {
@@ -1193,6 +1452,7 @@ export default function Academy() {
 
   const handleBackFromCategory = () => {
     setSelectedCategoryId(null);
+    setSelectedTermId(null);
   };
 
   // Mobile back handlers
@@ -1221,13 +1481,24 @@ export default function Academy() {
         />
       )}
 
-      {/* L3 Navigation - Dictionary */}
-      {activeSection === "dictionary" && !selectedTermId && (
+      {/* L3 Navigation - Dictionary Categories */}
+      {activeSection === "dictionary" && (
         <DictionaryL3Nav
           selectedCategoryId={selectedCategoryId}
           onSelectCategory={handleSelectCategory}
           isCollapsed={isL3Collapsed}
           onToggleCollapse={() => setIsL3Collapsed(!isL3Collapsed)}
+        />
+      )}
+
+      {/* L4 Navigation - Dictionary Terms (when category selected) */}
+      {activeSection === "dictionary" && selectedCategory && (
+        <DictionaryL4Nav
+          category={selectedCategory}
+          selectedTermId={selectedTermId}
+          onSelectTerm={handleSelectTerm}
+          isCollapsed={isL4Collapsed}
+          onToggleCollapse={() => setIsL4Collapsed(!isL4Collapsed)}
         />
       )}
 
@@ -1245,9 +1516,14 @@ export default function Academy() {
       {activeSection === "dictionary" && (
         <>
           {selectedTerm ? (
-            <DictionaryTermView term={selectedTerm} onBack={handleBackFromTerm} />
+            <DictionaryTermView
+              term={selectedTerm}
+              category={termCategory || undefined}
+              onSelectRelatedTerm={handleSelectRelatedTerm}
+              onBack={handleBackFromTerm}
+            />
           ) : selectedCategory ? (
-            <DictionaryCategoryView
+            <DictionaryCategoryOverview
               category={selectedCategory}
               onSelectTerm={handleSelectTerm}
               onBack={handleBackFromCategory}
