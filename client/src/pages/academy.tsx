@@ -1198,7 +1198,7 @@ export default function Academy() {
   // Mobile back handlers
   const handleLevelBack = () => {
     setSelectedLevelId(null);
-    window.history.pushState({}, "", "/academy");
+    window.history.pushState({}, "", "/");
   };
 
   return (
