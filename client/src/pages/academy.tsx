@@ -162,7 +162,7 @@ function LevelDetailPanel({
 
 export default function Academy() {
   const [location] = useLocation();
-  const [, params] = useRoute("/academy/:levelId");
+  const [, params] = useRoute("/:levelId");
   const urlLevelId = params?.levelId;
 
   const [selectedLevelId, setSelectedLevelId] = useState<string | null>(
@@ -172,22 +172,22 @@ export default function Academy() {
 
   // Sync state with URL on browser back/forward navigation
   useEffect(() => {
-    const levelIdFromUrl = location.startsWith("/academy/")
-      ? location.replace("/academy/", "")
-      : null;
-    setSelectedLevelId(levelIdFromUrl);
+    // Extract levelId from URL - check if it's a valid level ID
+    const pathSegment = location.startsWith("/") ? location.slice(1) : location;
+    const levelId = pathSegment && getLevelById(pathSegment) ? pathSegment : null;
+    setSelectedLevelId(levelId);
   }, [location]);
 
   const selectedLevel = selectedLevelId ? getLevelById(selectedLevelId) : null;
 
   const handleSelectLevel = (levelId: string) => {
     setSelectedLevelId(levelId);
-    window.history.pushState({}, "", `/academy/${levelId}`);
+    window.history.pushState({}, "", `/${levelId}`);
   };
 
   const handleBack = () => {
     setSelectedLevelId(null);
-    window.history.pushState({}, "", "/academy");
+    window.history.pushState({}, "", "/");
   };
 
   return (
