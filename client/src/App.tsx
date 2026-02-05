@@ -15,6 +15,7 @@ import Projects from "@/pages/projects";
 import AgenticWorkflows from "@/pages/agentic-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
 import RulesExplorer from "@/pages/rules-explorer";
+import Academy from "@/pages/academy";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -52,6 +53,7 @@ function AuthenticatedApp() {
                 <Route path="/workflows" component={AgenticWorkflows} />
                 <Route path="/memory" component={MemoryExplorer} />
                 <Route path="/rules" component={RulesExplorer} />
+                <Route path="/academy/:levelId?" component={Academy} />
                 <Route component={NotFound} />
               </Switch>
             </main>
