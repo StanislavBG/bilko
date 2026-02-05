@@ -10,7 +10,6 @@ import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
 import Landing from "@/pages/landing";
-import HomeDashboard from "@/pages/home-dashboard";
 import Projects from "@/pages/projects";
 import AgenticWorkflows from "@/pages/agentic-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
@@ -48,12 +47,12 @@ function AuthenticatedApp() {
             <AppSidebar />
             <main className="flex-1 flex overflow-hidden">
               <Switch>
-                <Route path="/" component={() => <HomeDashboard user={user} />} />
+                <Route path="/" component={Academy} />
+                <Route path="/:levelId" component={Academy} />
                 <Route path="/projects/:projectId?" component={Projects} />
                 <Route path="/workflows" component={AgenticWorkflows} />
                 <Route path="/memory" component={MemoryExplorer} />
                 <Route path="/rules" component={RulesExplorer} />
-                <Route path="/academy/:levelId?" component={Academy} />
                 <Route component={NotFound} />
               </Switch>
             </main>
