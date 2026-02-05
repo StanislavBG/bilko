@@ -1384,6 +1384,22 @@ export default function Academy() {
     }
   }, [location]);
 
+  // Auto-collapse L2 when L3 has a selection (level or category selected)
+  useEffect(() => {
+    const hasL3Selection = selectedLevelId || selectedCategoryId;
+    if (hasL3Selection) {
+      setIsL2Collapsed(true);
+    }
+  }, [selectedLevelId, selectedCategoryId]);
+
+  // Auto-collapse L2 and L3 when L4 has a selection (term selected)
+  useEffect(() => {
+    if (selectedTermId) {
+      setIsL2Collapsed(true);
+      setIsL3Collapsed(true);
+    }
+  }, [selectedTermId]);
+
   const selectedLevel = selectedLevelId ? getLevelById(selectedLevelId) : null;
   const selectedCategory = selectedCategoryId
     ? getCategoryById(selectedCategoryId)
@@ -1412,6 +1428,10 @@ export default function Academy() {
     setSelectedLevelId(null);
     setSelectedCategoryId(null);
     setSelectedTermId(null);
+    // Reset collapsed states when switching sections
+    setIsL2Collapsed(false);
+    setIsL3Collapsed(false);
+    setIsL4Collapsed(false);
     window.history.pushState({}, "", "/");
   };
 
@@ -1446,17 +1466,23 @@ export default function Academy() {
 
   const handleBackFromTerm = () => {
     setSelectedTermId(null);
+    // Restore L3 when going back from term view
+    setIsL3Collapsed(false);
   };
 
   const handleBackFromCategory = () => {
     setSelectedCategoryId(null);
     setSelectedTermId(null);
+    // Restore L2 when going back to dictionary root
+    setIsL2Collapsed(false);
   };
 
   // Mobile back handlers
   const handleLevelBack = () => {
     setSelectedLevelId(null);
-    window.history.pushState({}, "", "/academy");
+    // Restore L2 when going back to levels root
+    setIsL2Collapsed(false);
+    window.history.pushState({}, "", "/");
   };
 
   return (
