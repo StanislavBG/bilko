@@ -216,12 +216,12 @@ export default function Projects() {
           {isNavCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="text-xs font-medium text-muted-foreground block w-full text-center cursor-default">P</span>
+                <span className="text-xs font-medium text-muted-foreground block w-full text-center cursor-default">B</span>
               </TooltipTrigger>
-              <TooltipContent side="right">Projects</TooltipContent>
+              <TooltipContent side="right">Bilko's Projects</TooltipContent>
             </Tooltip>
           ) : (
-            <span className="text-xs font-medium text-muted-foreground">Projects</span>
+            <span className="text-xs font-medium text-muted-foreground">Bilko's Projects</span>
           )}
         </div>
         <div className="flex-1 overflow-auto p-1 space-y-0.5">
@@ -265,9 +265,9 @@ export default function Projects() {
             {/* Desktop: project grid gallery */}
             <div className="hidden md:flex flex-1 flex-col bg-background overflow-auto">
               <div className="p-6 border-b bg-muted/30">
-                <h2 className="text-lg font-semibold mb-1" data-testid="text-projects-heading-desktop">Projects</h2>
-                <p className="text-sm text-muted-foreground">
-                  A curated collection of applications built with purpose and care
+                <h2 className="text-lg font-semibold mb-2" data-testid="text-projects-heading-desktop">Bilko's Projects</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
+                  These projects represent stepping stones in a learning journey—each one exploring different aspects of AI, automation, and connected experiences. Through building these applications, patterns emerged that eventually converged into the vision for Bilko and the AI Academy.
                 </p>
               </div>
               <div className="p-6 grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -298,9 +298,9 @@ export default function Projects() {
             </div>
             {/* Mobile: show projects as cards with images */}
             <div className="md:hidden flex-1 p-4 overflow-auto">
-              <h2 className="text-lg font-semibold mb-1" data-testid="text-projects-heading">Projects</h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                A curated collection of applications built with purpose and care
+              <h2 className="text-lg font-semibold mb-2" data-testid="text-projects-heading">Bilko's Projects</h2>
+              <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                These projects represent stepping stones in a learning journey—each one exploring AI, automation, and connected experiences. Through building them, the vision for Bilko and the AI Academy emerged.
               </p>
               <div className="space-y-4">
                 {projects.map((project) => (
