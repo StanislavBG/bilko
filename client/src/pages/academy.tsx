@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import {
   Target,
-  Award,
   Zap,
   PanelLeft,
   ChevronLeft,
@@ -10,6 +9,12 @@ import {
   CheckCircle2,
   Layers,
   ExternalLink,
+  GraduationCap,
+  Rocket,
+  Brain,
+  TrendingUp,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import {
   Card,
@@ -25,6 +30,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   academyLevels,
   getLevelById,
@@ -151,6 +164,352 @@ function SubTopicDetail({ subTopic }: { subTopic: SubTopic }) {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function AcademyOverview({
+  onSelectLevel,
+}: {
+  onSelectLevel: (levelId: string) => void;
+}) {
+  const totalQuests = academyLevels.reduce(
+    (sum, level) => sum + level.quests.length,
+    0
+  );
+  const totalSubTopics = academyLevels.reduce(
+    (sum, level) => sum + (level.subTopics?.length || 0),
+    0
+  );
+
+  return (
+    <div className="flex-1 overflow-auto bg-background">
+      {/* Hero Header */}
+      <div className="p-6 border-b bg-gradient-to-br from-primary/5 via-background to-primary/10">
+        <div className="flex items-start gap-4 mb-4">
+          <div className="p-3 rounded-xl bg-primary/10">
+            <GraduationCap className="h-8 w-8 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold mb-1">AI Academy</h1>
+            <p className="text-muted-foreground">
+              A structured curriculum to transform you from AI-curious to
+              AI-autonomous
+            </p>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4 mt-6">
+          <div className="text-center p-3 rounded-lg bg-background/50 border">
+            <div className="text-2xl font-bold text-primary">10</div>
+            <div className="text-xs text-muted-foreground">Levels</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-background/50 border">
+            <div className="text-2xl font-bold text-primary">{totalQuests}</div>
+            <div className="text-xs text-muted-foreground">Quests</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-background/50 border">
+            <div className="text-2xl font-bold text-primary">
+              {totalSubTopics}
+            </div>
+            <div className="text-xs text-muted-foreground">Deep Dives</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-8">
+        {/* Philosophy Section */}
+        <section>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Brain className="h-5 w-5 text-primary" />
+            The Philosophy
+          </h2>
+          <Card>
+            <CardContent className="pt-6 space-y-4">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                The AI Academy is built on a simple premise:{" "}
+                <strong className="text-foreground">
+                  AI literacy is the new literacy
+                </strong>
+                . Just as reading and writing transformed human capability, the
+                ability to direct AI systems will define the next generation of
+                builders, creators, and entrepreneurs.
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                This curriculum is{" "}
+                <strong className="text-foreground">progressive</strong>—each
+                level builds on the last. You cannot orchestrate multi-agent
+                systems (Level 7) without first understanding function calling
+                (Level 6). You cannot build autonomous businesses (Level 9)
+                without mastering all the layers beneath.
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Most importantly, this curriculum is{" "}
+                <strong className="text-foreground">practical</strong>. Every
+                level has quests—real projects you must ship to prove mastery.
+                Theory without execution is entertainment. We're here to build.
+              </p>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Journey Overview */}
+        <section>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            The Journey
+          </h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card className="border-green-500/30 bg-green-500/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Rocket className="h-4 w-4 text-green-500" />
+                  Foundation (0-30)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground">
+                  Learn to speak AI's language. Generate interfaces, automate
+                  workflows, and master prompting across text, image, video, and
+                  audio. These are your building blocks.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-blue-500/30 bg-blue-500/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-blue-500" />
+                  Integration (31-60)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground">
+                  Connect AI to the real world. Extract data from anywhere, give
+                  AI long-term memory with RAG, and build intelligent routing
+                  systems that direct traffic to specialists.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-purple-500/30 bg-purple-500/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-purple-500" />
+                  Mastery (61-100)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-xs text-muted-foreground">
+                  Build autonomous systems. Give AI hands with function calling,
+                  orchestrate agent teams, develop full applications, and
+                  ultimately create self-sustaining business systems.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        {/* Full Curriculum Table */}
+        <section>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-primary" />
+            Full Curriculum
+          </h2>
+          <Card>
+            <CardContent className="pt-6 overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[80px]">Level</TableHead>
+                    <TableHead className="w-[140px]">Rank</TableHead>
+                    <TableHead>Core Skill</TableHead>
+                    <TableHead className="w-[80px] text-center">
+                      Quests
+                    </TableHead>
+                    <TableHead className="w-[100px] text-center">
+                      Deep Dives
+                    </TableHead>
+                    <TableHead className="w-[60px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {academyLevels.map((level) => (
+                    <TableRow
+                      key={level.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => onSelectLevel(level.id)}
+                    >
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {level.levelRange}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {level.rank}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium text-sm">
+                            {level.coreSkill}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {level.skillSummary}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary" className="text-xs">
+                          {level.quests.length}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {level.subTopics && level.subTopics.length > 0 ? (
+                          <Badge variant="secondary" className="text-xs">
+                            {level.subTopics.length}
+                          </Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Detailed Level Descriptions */}
+        <section>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Layers className="h-5 w-5 text-primary" />
+            Level Breakdown
+          </h2>
+          <div className="space-y-4">
+            {academyLevels.map((level) => (
+              <Card
+                key={level.id}
+                className="cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => onSelectLevel(level.id)}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline">{level.levelRange}</Badge>
+                      <CardTitle className="text-base">{level.rank}</CardTitle>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <CardDescription className="font-medium">
+                    {level.coreSkill}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    {level.skillSummary}
+                  </p>
+
+                  {/* Key Principles Preview */}
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2">
+                      KEY PRINCIPLES
+                    </h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {level.keyPrinciples.slice(0, 3).map((principle, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="secondary"
+                          className="text-xs font-normal"
+                        >
+                          {principle.length > 40
+                            ? principle.substring(0, 40) + "..."
+                            : principle}
+                        </Badge>
+                      ))}
+                      {level.keyPrinciples.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{level.keyPrinciples.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Sub-topics if any */}
+                  {level.subTopics && level.subTopics.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-medium text-muted-foreground mb-2">
+                        DEEP DIVES
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {level.subTopics.map((st) => (
+                          <Badge
+                            key={st.id}
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            {st.title}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quest preview */}
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground mb-2">
+                      SAMPLE QUESTS
+                    </h4>
+                    <div className="space-y-1">
+                      {level.quests.slice(0, 2).map((quest) => (
+                        <div
+                          key={quest.id}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <Target className="h-3 w-3 text-primary" />
+                          <span>{quest.title}</span>
+                          <Badge variant="secondary" className="text-xs ml-auto">
+                            {quest.platform}
+                          </Badge>
+                        </div>
+                      ))}
+                      {level.quests.length > 2 && (
+                        <div className="text-xs text-muted-foreground pl-5">
+                          +{level.quests.length - 2} more quests
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* Call to Action */}
+        <section className="text-center py-6">
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="pt-6">
+              <GraduationCap className="h-12 w-12 text-primary mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Ready to Begin?</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Select Level 0-10 from the sidebar to start your journey as The
+                Drifter.
+              </p>
+              <Button onClick={() => onSelectLevel("level-0")}>
+                Start with The Drifter
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
     </div>
   );
 }
@@ -465,70 +824,7 @@ export default function Academy() {
       {selectedLevel ? (
         <LevelDetailPanel level={selectedLevel} onBack={handleBack} />
       ) : (
-        <div className="flex-1 overflow-auto bg-background">
-          <div className="p-4 border-b bg-muted/30">
-            <h2
-              className="text-lg font-semibold"
-              data-testid="text-academy-title"
-            >
-              AI Academy
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Master the art of AI automation in 10 progressive levels
-            </p>
-          </div>
-
-          <div className="p-4">
-            {/* Mobile: Show level list as cards */}
-            <div className="md:hidden space-y-3">
-              {academyLevels.map((level) => (
-                <Card
-                  key={level.id}
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleSelectLevel(level.id)}
-                  data-testid={`card-level-${level.id}`}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <Badge variant="outline" className="text-xs">
-                        Lvl {level.levelRange}
-                      </Badge>
-                      <CardTitle className="text-base flex-1">
-                        {level.rank}
-                      </CardTitle>
-                    </div>
-                    <CardDescription className="text-sm">
-                      {level.coreSkill}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {level.skillSummary}
-                    </p>
-                    <div className="flex gap-1 mt-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {level.quests.length} quests
-                      </Badge>
-                      {level.subTopics && level.subTopics.length > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {level.subTopics.length} deep dives
-                        </Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Desktop: Prompt to select */}
-            <div className="hidden md:flex items-center justify-center h-[50vh] text-muted-foreground">
-              <div className="text-center">
-                <Target className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p>Select a level to view details</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <AcademyOverview onSelectLevel={handleSelectLevel} />
       )}
     </>
   );
