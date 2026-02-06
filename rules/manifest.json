@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "2.0.0",
-  "lastUpdated": "2026-02-03T00:00:00Z",
+  "lastUpdated": "2026-02-06T00:00:00Z",
   "bootstrap": {
     "_instruction": "AI developers: READ ALL RULES in the /rules/ directory. This manifest indexes them for routing, but you must read the actual .md files.",
     "primaryDirective": "ARCH-000",
@@ -67,18 +67,22 @@
     },
     "ARCH-001": {
       "id": "ARCH-001",
-      "title": "System Overview",
+      "title": "System Overview — Dual-Layer AI Architecture",
       "path": "rules/architecture/001-system-overview.md",
       "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "triggers": [
         "system",
         "overview",
         "purpose",
         "mission",
         "what is",
-        "architecture"
+        "architecture",
+        "llm",
+        "gemini",
+        "in-platform",
+        "dual layer"
       ],
       "dependencies": [
         "ARCH-000"
@@ -321,23 +325,30 @@
     },
     "APP-LANDING-001": {
       "id": "APP-LANDING-001",
-      "title": "Landing Page",
+      "title": "Landing Page — Agentic Discovery Experience",
       "path": "rules/apps/landing/001-overview.md",
       "partition": "apps",
       "priority": "HIGH",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "triggers": [
         "landing",
         "public",
         "sign in",
         "login page",
-        "unauthenticated"
+        "unauthenticated",
+        "video discovery",
+        "voice command",
+        "learning mode",
+        "agentic flow",
+        "welcome experience"
       ],
       "dependencies": [
         "ARCH-001"
       ],
-      "crossReferences": [],
-      "description": "The public entry point for unauthenticated users."
+      "crossReferences": [
+        "PER-002"
+      ],
+      "description": "The public entry point with AI-powered, voice-enabled discovery experience. 6 learning modes, auto-starting AI flows, and voice navigation."
     },
     "APP-HOME-001": {
       "id": "APP-HOME-001",
@@ -895,6 +906,13 @@
       },
       {
         "pattern": "home|dashboard|landing|workflow page|memory explorer|new app|new feature",
+        "partitions": [
+          "apps",
+          "architecture"
+        ]
+      },
+      {
+        "pattern": "agentic|llm|gemini|voice|speech|video discovery|learning mode|chat tutor|in-platform",
         "partitions": [
           "apps",
           "architecture"
