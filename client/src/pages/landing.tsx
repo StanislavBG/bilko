@@ -5,22 +5,27 @@
  * It welcomes unknown users and helps them discover how they want to learn.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { GlobalHeader } from "@/components/global-header";
 import { LearningModeSelector } from "@/components/learning-mode-selector";
 import { PromptPlayground } from "@/components/prompt-playground";
+import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ArrowRight,
   Play,
   Sparkles,
   GraduationCap,
   Trophy,
   ChevronRight,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
+import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
+import { useVoiceRecognition } from "@/hooks/use-voice-recognition";
 
 // Flow states for the welcome experience
 type FlowState =
@@ -38,6 +43,25 @@ export default function Landing() {
   const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
   const [showWelcome, setShowWelcome] = useState(true);
 
+  const handleModeSelect = useCallback((modeId: LearningModeId) => {
+    setSelectedMode(modeId);
+    setFlowState(modeId);
+  }, []);
+
+  // Voice recognition for learning mode selection
+  const {
+    isListening,
+    isSupported: isVoiceSupported,
+    permissionDenied: voicePermissionDenied,
+    transcript,
+    toggleListening,
+    stopListening,
+  } = useVoiceRecognition<LearningModeId>({
+    options: LEARNING_MODES,
+    onMatch: handleModeSelect,
+    continuous: true,
+  });
+
   // Auto-advance from welcome to mode selection
   useEffect(() => {
     if (flowState === "welcome") {
@@ -49,10 +73,12 @@ export default function Landing() {
     }
   }, [flowState]);
 
-  const handleModeSelect = (modeId: LearningModeId) => {
-    setSelectedMode(modeId);
-    setFlowState(modeId);
-  };
+  // Stop listening when leaving choose-mode state
+  useEffect(() => {
+    if (flowState !== "choose-mode" && isListening) {
+      stopListening();
+    }
+  }, [flowState, isListening, stopListening]);
 
   const handleBack = () => {
     setFlowState("choose-mode");
@@ -89,53 +115,68 @@ export default function Landing() {
               <h1 className="text-3xl md:text-4xl font-bold mb-4">
                 How would you like to learn today?
               </h1>
-              <p className="text-lg text-muted-foreground">
-                Choose your adventure - no login required to get started
-              </p>
+
+              {/* Voice Control */}
+              {isVoiceSupported && (
+                <div className="mt-6 flex flex-col items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={isListening ? "default" : "outline"}
+                        size="lg"
+                        onClick={toggleListening}
+                        className={`gap-2 ${
+                          isListening
+                            ? "bg-red-500 hover:bg-red-600 animate-pulse"
+                            : ""
+                        }`}
+                      >
+                        {isListening ? (
+                          <>
+                            <Mic className="h-5 w-5" />
+                            Listening...
+                          </>
+                        ) : (
+                          <>
+                            <MicOff className="h-5 w-5" />
+                            Use Voice Command
+                          </>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {voicePermissionDenied
+                        ? "Microphone permission denied - check browser settings"
+                        : isListening
+                        ? 'Say "video", "quiz", "prompt", "explore", "chat", or "quick"'
+                        : "Click to enable voice commands"}
+                    </TooltipContent>
+                  </Tooltip>
+                  {isListening && transcript && (
+                    <p className="text-sm text-muted-foreground italic">
+                      "{transcript}"
+                    </p>
+                  )}
+                  {isListening && !transcript && (
+                    <p className="text-sm text-muted-foreground">
+                      Try saying: "video", "quiz", "chat", "explore"...
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <LearningModeSelector
               onSelect={handleModeSelect}
               selectedMode={selectedMode}
             />
-
-            <div className="mt-12 text-center">
-              <p className="text-sm text-muted-foreground mb-4">
-                Ready to save your progress?
-              </p>
-              <Button asChild>
-                <a href="/api/login">
-                  Create Free Account <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-            </div>
           </div>
         )}
 
         {/* Video Experience */}
         {flowState === "video" && (
           <ExperienceWrapper title="Watch & Learn" onBack={handleBack}>
-            <Card className="max-w-3xl mx-auto">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Play className="h-5 w-5 text-primary" />
-                  <CardTitle>Introduction to AI</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <Play className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">
-                      Video player coming soon
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Sign up to access our full video library
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <VideoDiscoveryFlow />
           </ExperienceWrapper>
         )}
 
@@ -174,7 +215,7 @@ export default function Landing() {
               <PromptPlayground
                 title="AI Tutor"
                 description="I'm your AI tutor! Ask me anything about AI, machine learning, or what you can learn at the Academy."
-                systemPrompt="You are Bilko, a friendly AI tutor at Bilko Bibitkov's AI Academy. Help the user understand what they can learn here. Be encouraging and guide them toward signing up."
+                systemPrompt="You are Bilko, a friendly AI tutor at Bilko Bibitkov's AI Academy. Help the user understand AI concepts and answer their questions. Be encouraging and helpful."
                 placeholder="Ask me anything about AI..."
                 showModelSelector={false}
               />
@@ -213,16 +254,6 @@ function ExperienceWrapper({
           <h1 className="text-2xl font-bold">{title}</h1>
         </div>
         {children}
-        <div className="mt-8 text-center border-t pt-8">
-          <p className="text-muted-foreground mb-4">
-            Sign up to save your progress and unlock all features
-          </p>
-          <Button asChild>
-            <a href="/api/login">
-              Create Free Account <ArrowRight className="ml-2 h-4 w-4" />
-            </a>
-          </Button>
-        </div>
       </div>
     </div>
   );
@@ -332,9 +363,6 @@ function QuizExperience() {
             <h3 className="text-2xl font-bold mb-2">Quiz Complete!</h3>
             <p className="text-lg text-muted-foreground">
               You scored {score} out of {questions.length}
-            </p>
-            <p className="mt-4 text-muted-foreground">
-              Sign up to unlock more quizzes and track your progress!
             </p>
           </div>
         )}

@@ -39,11 +39,8 @@ export function GlobalHeader({ variant = "authenticated" }: GlobalHeaderProps) {
         <div className="flex-1" />
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="ghost" size="sm" asChild>
             <a href="/api/login">Sign In</a>
-          </Button>
-          <Button size="sm" asChild>
-            <a href="/api/login">Get Started</a>
           </Button>
         </div>
       </header>
