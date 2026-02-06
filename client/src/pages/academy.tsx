@@ -2124,7 +2124,7 @@ function DictionaryTermView({
 
 export default function Academy() {
   const [location] = useLocation();
-  const [, params] = useRoute("/:levelId");
+  const [, params] = useRoute("/academy/:levelId");
 
   // Use unified navigation framework for collapse management
   const nav = useNavigation();
@@ -2155,8 +2155,8 @@ export default function Academy() {
 
   // URL sync
   useEffect(() => {
-    if (location.startsWith("/recruit-level-") || location.startsWith("/specialist-level-") || location.startsWith("/architect-level-")) {
-      const levelId = location.replace("/", "");
+    if (location.startsWith("/academy/recruit-level-") || location.startsWith("/academy/specialist-level-") || location.startsWith("/academy/architect-level-")) {
+      const levelId = location.replace("/academy/", "");
       setSelectedLevelId(levelId);
       // Auto-select the track based on level
       const track = getTrackForLevel(levelId);
@@ -2164,7 +2164,7 @@ export default function Academy() {
       setActiveSection("levels");
       // Apply L4 collapse rules (expands L3, collapses L1+L2)
       nav.selectAtLevel(4, levelId);
-    } else if (location === "/") {
+    } else if (location === "/academy") {
       setSelectedLevelId(null);
     }
   }, [location, nav]);
