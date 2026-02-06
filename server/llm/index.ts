@@ -11,10 +11,24 @@
 
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+let _openai: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+  if (!_openai) {
+    const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+    const baseURL = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+
+    if (!apiKey) {
+      throw new Error(
+        "AI_INTEGRATIONS_OPENAI_API_KEY is not configured. " +
+        "Go to your Replit project → Tools → AI Integrations and add it."
+      );
+    }
+
+    _openai = new OpenAI({ apiKey, baseURL });
+  }
+  return _openai;
+}
 
 export interface LLMModel {
   id: string;
@@ -89,11 +103,9 @@ export async function chat(request: ChatRequest): Promise<ChatResponse> {
 }
 
 async function chatOpenAI(request: ChatRequest): Promise<ChatResponse> {
-  if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
-    throw new Error("AI_INTEGRATIONS_OPENAI_API_KEY is not configured. Add the AI Integrations integration in Replit.");
-  }
+  const client = getOpenAIClient();
 
-  const response = await openai.chat.completions.create({
+  const response = await client.chat.completions.create({
     model: request.model,
     messages: request.messages,
     temperature: request.temperature ?? 0.7,
