@@ -11,7 +11,7 @@ import { VoiceProvider } from "@/contexts/voice-context";
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
-import Landing from "@/pages/landing";
+import Landing, { LandingContent } from "@/pages/landing";
 import Projects from "@/pages/projects";
 import AgenticWorkflows from "@/pages/agentic-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
@@ -52,8 +52,11 @@ function AuthenticatedApp() {
               <AppSidebar />
               <main className="flex-1 flex overflow-hidden">
                 <Switch>
-                  <Route path="/" component={Academy} />
-                  <Route path="/:levelId" component={Academy} />
+                  <Route path="/">
+                    <LandingContent skipWelcome />
+                  </Route>
+                  <Route path="/academy" component={Academy} />
+                  <Route path="/academy/:levelId" component={Academy} />
                   <Route path="/projects/:projectId?" component={Projects} />
                   <Route path="/workflows" component={AgenticWorkflows} />
                   <Route path="/memory" component={MemoryExplorer} />

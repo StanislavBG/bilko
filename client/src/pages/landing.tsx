@@ -3,6 +3,9 @@
  *
  * This is the face of Bilko Bibitkov's AI Academy.
  * It welcomes unknown users and helps them discover how they want to learn.
+ *
+ * LandingContent is exported separately so the authenticated home page
+ * can reuse the same experience without the landing shell (header, etc.).
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -35,8 +38,13 @@ type FlowState =
   | "chat"
   | "quick";
 
-export default function Landing() {
-  const [flowState, setFlowState] = useState<FlowState>("welcome");
+/**
+ * Reusable landing experience content.
+ * skipWelcome=true skips the welcome animation and goes straight to mode selection
+ * (used for authenticated users who already know the app).
+ */
+export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean }) {
+  const [flowState, setFlowState] = useState<FlowState>(skipWelcome ? "choose-mode" : "welcome");
   const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
   const [showWelcome, setShowWelcome] = useState(true);
   const { isListening, isSupported: isVoiceSupported } = useVoice();
@@ -71,107 +79,115 @@ export default function Landing() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <GlobalHeader variant="landing" />
-
-      <main className="flex-1 flex flex-col pt-14">
-        {/* Welcome State */}
-        {flowState === "welcome" && (
-          <div
-            className={`flex-1 flex flex-col items-center justify-center transition-opacity duration-500 ${
-              showWelcome ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <div className="text-center space-y-4">
-              <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
-                Welcome
-              </h1>
-              <p className="text-xl text-muted-foreground">
-                to Bilko Bibitkov's AI Academy
-              </p>
-            </div>
+    <div className="flex-1 flex flex-col overflow-auto">
+      {/* Welcome State */}
+      {flowState === "welcome" && (
+        <div
+          className={`flex-1 flex flex-col items-center justify-center transition-opacity duration-500 ${
+            showWelcome ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <div className="text-center space-y-4">
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
+              Welcome
+            </h1>
+            <p className="text-xl text-muted-foreground">
+              to Bilko Bibitkov's AI Academy
+            </p>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Choose Mode State */}
-        {flowState === "choose-mode" && (
-          <div className="flex-1 flex flex-col items-center px-4 py-12">
-            <div className="text-center mb-8">
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">
-                How would you like to learn today?
-              </h1>
-              {isVoiceSupported && (
-                <p className="text-sm text-muted-foreground">
-                  {isListening
-                    ? 'Say "video", "quiz", "chat", "explore", "prompt", or "quick start"'
-                    : "Click the Voice button in the header to use voice commands"}
-                </p>
-              )}
-            </div>
+      {/* Choose Mode State */}
+      {flowState === "choose-mode" && (
+        <div className="flex-1 flex flex-col items-center px-4 py-12">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold mb-4">
+              How would you like to learn today?
+            </h1>
+            {isVoiceSupported && (
+              <p className="text-sm text-muted-foreground">
+                {isListening
+                  ? 'Say "video", "quiz", "chat", "explore", "prompt", or "quick start"'
+                  : "Click the Voice button in the header to use voice commands"}
+              </p>
+            )}
+          </div>
 
-            <LearningModeSelector
-              onSelect={handleModeSelect}
-              selectedMode={selectedMode}
+          <LearningModeSelector
+            onSelect={handleModeSelect}
+            selectedMode={selectedMode}
+          />
+        </div>
+      )}
+
+      {/* Video Experience */}
+      {flowState === "video" && (
+        <ExperienceWrapper title="Watch & Learn" onBack={handleBack}>
+          <VideoDiscoveryFlow />
+        </ExperienceWrapper>
+      )}
+
+      {/* Quiz Experience */}
+      {flowState === "quiz" && (
+        <ExperienceWrapper title="Challenge Mode" onBack={handleBack}>
+          <QuizExperience />
+        </ExperienceWrapper>
+      )}
+
+      {/* Prompt Experience */}
+      {flowState === "prompt" && (
+        <ExperienceWrapper title="Try a Prompt" onBack={handleBack}>
+          <div className="max-w-3xl mx-auto">
+            <PromptPlayground
+              title="Your First AI Prompt"
+              description="Try asking AI anything! Start with something simple like 'Explain AI to a 5 year old' or 'Write a haiku about coding'."
+              placeholder="Type your prompt here and press Enter..."
+              showModelSelector={true}
             />
           </div>
-        )}
+        </ExperienceWrapper>
+      )}
 
-        {/* Video Experience */}
-        {flowState === "video" && (
-          <ExperienceWrapper title="Watch & Learn" onBack={handleBack}>
-            <VideoDiscoveryFlow />
-          </ExperienceWrapper>
-        )}
+      {/* Explore Experience */}
+      {flowState === "explore" && (
+        <ExperienceWrapper title="Explore the Academy" onBack={handleBack}>
+          <ExploreExperience />
+        </ExperienceWrapper>
+      )}
 
-        {/* Quiz Experience */}
-        {flowState === "quiz" && (
-          <ExperienceWrapper title="Challenge Mode" onBack={handleBack}>
-            <QuizExperience />
-          </ExperienceWrapper>
-        )}
+      {/* Chat Experience */}
+      {flowState === "chat" && (
+        <ExperienceWrapper title="Chat with AI Tutor" onBack={handleBack}>
+          <div className="max-w-3xl mx-auto">
+            <PromptPlayground
+              title="AI Tutor"
+              description="I'm your AI tutor! Ask me anything about AI, machine learning, or what you can learn at the Academy."
+              systemPrompt="You are Bilko, a friendly AI tutor at Bilko Bibitkov's AI Academy. Help the user understand AI concepts and answer their questions. Be encouraging and helpful."
+              placeholder="Ask me anything about AI..."
+              showModelSelector={false}
+            />
+          </div>
+        </ExperienceWrapper>
+      )}
 
-        {/* Prompt Experience */}
-        {flowState === "prompt" && (
-          <ExperienceWrapper title="Try a Prompt" onBack={handleBack}>
-            <div className="max-w-3xl mx-auto">
-              <PromptPlayground
-                title="Your First AI Prompt"
-                description="Try asking AI anything! Start with something simple like 'Explain AI to a 5 year old' or 'Write a haiku about coding'."
-                placeholder="Type your prompt here and press Enter..."
-                showModelSelector={true}
-              />
-            </div>
-          </ExperienceWrapper>
-        )}
+      {/* Quick Start Experience */}
+      {flowState === "quick" && (
+        <ExperienceWrapper title="Quick Start Guide" onBack={handleBack}>
+          <QuickStartGuide />
+        </ExperienceWrapper>
+      )}
+    </div>
+  );
+}
 
-        {/* Explore Experience */}
-        {flowState === "explore" && (
-          <ExperienceWrapper title="Explore the Academy" onBack={handleBack}>
-            <ExploreExperience />
-          </ExperienceWrapper>
-        )}
-
-        {/* Chat Experience */}
-        {flowState === "chat" && (
-          <ExperienceWrapper title="Chat with AI Tutor" onBack={handleBack}>
-            <div className="max-w-3xl mx-auto">
-              <PromptPlayground
-                title="AI Tutor"
-                description="I'm your AI tutor! Ask me anything about AI, machine learning, or what you can learn at the Academy."
-                systemPrompt="You are Bilko, a friendly AI tutor at Bilko Bibitkov's AI Academy. Help the user understand AI concepts and answer their questions. Be encouraging and helpful."
-                placeholder="Ask me anything about AI..."
-                showModelSelector={false}
-              />
-            </div>
-          </ExperienceWrapper>
-        )}
-
-        {/* Quick Start Experience */}
-        {flowState === "quick" && (
-          <ExperienceWrapper title="Quick Start Guide" onBack={handleBack}>
-            <QuickStartGuide />
-          </ExperienceWrapper>
-        )}
+/** Landing page shell for unauthenticated users */
+export default function Landing() {
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <GlobalHeader variant="landing" />
+      <main className="flex-1 flex flex-col pt-14">
+        <LandingContent />
       </main>
     </div>
   );
