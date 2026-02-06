@@ -1,4 +1,5 @@
 import { LogOut, Eye, EyeOff, Settings, Mic, MicOff } from "lucide-react";
+import { Link } from "wouter";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { useVoice } from "@/contexts/voice-context";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -90,9 +91,9 @@ function AuthenticatedHeader() {
     <header className="h-11 shrink-0 border-b bg-sidebar flex items-center gap-2 px-2" data-testid="global-header">
       <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
       {!isCollapsed && (
-        <span className="font-semibold text-sm shrink-0" data-testid="logo-text">
+        <Link href="/" className="font-semibold text-sm shrink-0 hover:opacity-80 transition-opacity cursor-pointer" data-testid="logo-text">
           Bilko Bibitkov
-        </span>
+        </Link>
       )}
       <VoiceWidget />
       <div className="flex-1" />

@@ -64,7 +64,7 @@ export function AppSidebar() {
 
   const isActive = (item: NavItem): boolean => {
     if (item.url) {
-      return item.url === "/" ? location === "/" : location.startsWith(item.url);
+      return location === item.url || location.startsWith(item.url + "/");
     }
     if (item.children) {
       return item.children.some(child => isActive(child));
