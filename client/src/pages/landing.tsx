@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from "react";
 import { GlobalHeader } from "@/components/global-header";
 import { LearningModeSelector } from "@/components/learning-mode-selector";
 import { PromptPlayground } from "@/components/prompt-playground";
+import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -175,24 +176,7 @@ export default function Landing() {
         {/* Video Experience */}
         {flowState === "video" && (
           <ExperienceWrapper title="Watch & Learn" onBack={handleBack}>
-            <Card className="max-w-3xl mx-auto">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Play className="h-5 w-5 text-primary" />
-                  <CardTitle>Introduction to AI</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                  <div className="text-center">
-                    <Play className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground">
-                      Video player coming soon
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <VideoDiscoveryFlow />
           </ExperienceWrapper>
         )}
 
