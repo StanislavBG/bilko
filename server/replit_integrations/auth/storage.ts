@@ -1,5 +1,5 @@
 import { users, type User, type UpsertUser } from "@shared/models/auth";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
@@ -29,9 +29,20 @@ class AuthStorage implements IAuthStorage {
   }
 
   async upsertUser(userData: UpsertUser, hasAdminRole: boolean = false): Promise<User> {
-    const isAdminByEnv = userData.id === process.env.ADMIN_USER_ID;
-    const isAdmin = isAdminByEnv || hasAdminRole;
-    
+    const isAdminByEnv = Boolean(process.env.ADMIN_USER_ID) && userData.id === process.env.ADMIN_USER_ID;
+    let isAdmin = isAdminByEnv || hasAdminRole;
+
+    // Single-user phase: when ADMIN_USER_ID is not configured,
+    // auto-promote if this is the only user in the system.
+    if (!isAdmin && !process.env.ADMIN_USER_ID) {
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users);
+      if (count <= 1) {
+        isAdmin = true;
+      }
+    }
+
     const [user] = await db
       .insert(users)
       .values({
@@ -42,7 +53,8 @@ class AuthStorage implements IAuthStorage {
         target: users.id,
         set: {
           ...userData,
-          isAdmin: isAdmin ? true : undefined,
+          // Always write the computed value — never skip the update
+          isAdmin: isAdmin,
           updatedAt: new Date(),
         },
       })
