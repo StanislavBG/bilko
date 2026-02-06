@@ -207,7 +207,7 @@ function L2Navigation({
           </Button>
         )}
       </div>
-      <div className="border-t h-11 flex items-center justify-center shrink-0">
+      <div className="border-t h-9 flex items-center justify-center shrink-0">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -1279,7 +1279,7 @@ function DictionaryL4Nav({
           )
         )}
       </div>
-      <div className="border-t h-8 flex items-center justify-center shrink-0">
+      <div className="border-t h-9 flex items-center justify-center shrink-0">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
