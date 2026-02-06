@@ -56,7 +56,7 @@ export function PromptPlayground({
   systemPrompt,
   title = "Prompt Playground",
   description,
-  defaultModel = "gemini-2.5-flash-preview-05-20",
+  defaultModel = "gemini-2.5-flash",
   showModelSelector = true,
   placeholder = "Enter your prompt here...",
   onResponse,
@@ -84,7 +84,7 @@ export function PromptPlayground({
         // Fallback models if API fails
         setModels([
           {
-            id: "gemini-2.5-flash-preview-05-20",
+            id: "gemini-2.5-flash",
             name: "Gemini 2.5 Flash",
             provider: "google",
             description: "Fast and free",
