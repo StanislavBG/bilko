@@ -24,6 +24,12 @@ import {
   Building,
   Shield,
   Workflow,
+  Lightbulb,
+  Hammer,
+  HelpCircle,
+  Gamepad2,
+  Trophy,
+  ListChecks,
 } from "lucide-react";
 import {
   Card,
@@ -56,6 +62,7 @@ import {
   type AcademyLevel,
   type SubTopic,
   type Track,
+  type QuestType,
 } from "@/data/academy-levels";
 import {
   dictionaryCategories,
@@ -949,6 +956,9 @@ function LevelDetailPanel({
                 <div className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-primary" />
                   <CardTitle className="text-base">Quests</CardTitle>
+                  <Badge variant="outline" className="ml-auto">
+                    {level.quests.length} total
+                  </Badge>
                 </div>
                 <CardDescription>
                   Complete these challenges to level up
@@ -956,27 +966,60 @@ function LevelDetailPanel({
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {level.quests.map((quest, idx) => (
-                    <div key={quest.id} className="p-3 rounded-lg border bg-card">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
-                          {idx + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h4 className="font-medium text-sm">{quest.title}</h4>
-                            <Badge variant="secondary" className="text-xs">
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              {quest.platform}
-                            </Badge>
+                  {level.quests.map((quest) => {
+                    const questTypeConfig: Record<QuestType, { icon: React.ElementType; color: string; label: string }> = {
+                      prompt: { icon: Lightbulb, color: "text-yellow-500", label: "Prompt Exercise" },
+                      build: { icon: Hammer, color: "text-blue-500", label: "Build Challenge" },
+                      quiz: { icon: HelpCircle, color: "text-purple-500", label: "Quiz" },
+                      game: { icon: Gamepad2, color: "text-green-500", label: "Mini-Game" },
+                      capstone: { icon: Trophy, color: "text-amber-500", label: "Capstone" },
+                    };
+                    const config = questTypeConfig[quest.type];
+                    const QuestIcon = config.icon;
+
+                    return (
+                      <div key={quest.id} className="p-3 rounded-lg border bg-card">
+                        <div className="flex items-start gap-3">
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center ${config.color}`}>
+                            <QuestIcon className="h-4 w-4" />
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {quest.description}
-                          </p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <Badge variant="outline" className={`text-xs ${config.color} border-current`}>
+                                {config.label}
+                              </Badge>
+                              {quest.platform && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  {quest.platform}
+                                </Badge>
+                              )}
+                            </div>
+                            <h4 className="font-medium text-sm mb-1">{quest.title}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {quest.description}
+                            </p>
+                            {quest.tasks && quest.tasks.length > 0 && (
+                              <div className="mt-2 pl-3 border-l-2 border-muted">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                                  <ListChecks className="h-3 w-3" />
+                                  Tasks
+                                </div>
+                                <ul className="space-y-1">
+                                  {quest.tasks.map((task, taskIdx) => (
+                                    <li key={taskIdx} className="text-xs text-muted-foreground flex items-start gap-1">
+                                      <span className="text-muted-foreground/50">•</span>
+                                      {task}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

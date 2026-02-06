@@ -1,8 +1,12 @@
+export type QuestType = "prompt" | "build" | "quiz" | "game" | "capstone";
+
 export interface Quest {
   id: string;
   title: string;
-  platform: string;
+  type: QuestType;
+  platform?: string;
   description: string;
+  tasks?: string[]; // For quizzes or multi-step quests
 }
 
 export interface SubTopic {
@@ -72,10 +76,50 @@ Start with creative tasks. Names, logos, taglines, descriptions. These have no w
     quests: [
       {
         id: "recruit-q0-1",
+        type: "prompt",
+        title: "Name That Business",
+        platform: "ChatGPT",
+        description: "Generate 5 business names for each of these: a pet grooming service, a tech startup, and a bakery. Compare the results and note which prompts gave better names.",
+      },
+      {
+        id: "recruit-q0-2",
+        type: "prompt",
+        title: "Logo Descriptions",
+        platform: "DALL-E 3",
+        description: "Write 3 different prompts for the same business logo. Start vague, then add specificity. Compare how detail level changes the output quality.",
+      },
+      {
+        id: "recruit-q0-3",
+        type: "prompt",
+        title: "The Rewrite Game",
+        platform: "ChatGPT",
+        description: "Take a boring product description and prompt AI to rewrite it three ways: as luxury, budget-friendly, and eco-friendly. See how tone shifts the message.",
+      },
+      {
+        id: "recruit-q0-4",
+        type: "prompt",
+        title: "Emoji Translator",
+        platform: "ChatGPT",
+        description: "Prompt AI to explain complex topics (blockchain, photosynthesis, economics) using only emojis, then translate the emojis back to text.",
+      },
+      {
+        id: "recruit-q0-5",
+        type: "quiz",
+        title: "Prompting Basics Quiz",
+        description: "Test your understanding of prompting fundamentals.",
+        tasks: [
+          "What makes a good prompt? (specificity, context, examples)",
+          "Match the prompt to likely output",
+          "Identify what's missing from weak prompts",
+          "Rank prompts from worst to best",
+        ],
+      },
+      {
+        id: "recruit-q0-6",
+        type: "capstone",
         title: "The Brand Kit",
         platform: "ChatGPT + DALL-E 3",
-        description:
-          "Use ChatGPT to generate a business name for a fictional company. Then use DALL-E 3 to create a logo for it. No automation yet—just raw creation and conversation.",
+        description: "Create a complete brand kit: business name + tagline + logo + 3 social media bio variations. Document your prompts and show your iteration process.",
       },
     ],
     order: 0,
@@ -103,10 +147,64 @@ This is your first real "ship"—something you create that exists on the interne
     quests: [
       {
         id: "recruit-q1-1",
-        title: "The Link-in-Bio",
+        type: "prompt",
+        title: "The One-Liner",
+        platform: "Lovable.dev",
+        description: "Describe a website in just one sentence and see what you get. Try: 'A portfolio for a photographer' and note what the AI assumes.",
+      },
+      {
+        id: "recruit-q1-2",
+        type: "prompt",
+        title: "The Detail Test",
+        platform: "Bolt.new",
+        description: "Take your one-liner and add 5 specific details (colors, sections, features). Compare the results to see how specificity improves output.",
+      },
+      {
+        id: "recruit-q1-3",
+        type: "prompt",
+        title: "Copy That Style",
+        platform: "Lovable.dev",
+        description: "Use style references like 'Make it look like Apple's website' or 'Notion-style minimalism'. Test how well AI interprets style references.",
+      },
+      {
+        id: "recruit-q1-4",
+        type: "build",
+        title: "Personal Link Page",
         platform: "Lovable.dev or Bolt.new",
-        description:
-          "Describe and publish a personal 'Linktree' style page with your name, photo, short bio, and working buttons that link to your social profiles. No coding—just describing.",
+        description: "Build and deploy a Linktree-style page with your name, photo, bio, and 5+ working links to your social profiles. Share the live URL.",
+      },
+      {
+        id: "recruit-q1-5",
+        type: "build",
+        title: "Event Countdown",
+        platform: "Bolt.new",
+        description: "Create a single page for an upcoming event with: event name, date, description, countdown timer, and RSVP button. Deploy it live.",
+      },
+      {
+        id: "recruit-q1-6",
+        type: "build",
+        title: "Mini Portfolio",
+        platform: "Lovable.dev",
+        description: "Build a portfolio with: About section, 3 project cards with images, and a contact button. Each project card should link somewhere.",
+      },
+      {
+        id: "recruit-q1-7",
+        type: "quiz",
+        title: "How Websites Work",
+        description: "Test your understanding of web basics.",
+        tasks: [
+          "What's the difference between a button and a link?",
+          "What happens when you 'deploy' a website?",
+          "Match components to their purposes (header, footer, CTA)",
+          "What makes a website 'responsive'?",
+        ],
+      },
+      {
+        id: "recruit-q1-8",
+        type: "capstone",
+        title: "Ship Something Real",
+        platform: "Any vibe coding tool",
+        description: "Build and deploy a page that solves a real problem for someone else. Share the link with 3 people and collect their feedback. Iterate based on what they say.",
       },
     ],
     order: 1,
@@ -134,10 +232,70 @@ The workflow is simple: Input (a topic) → AI Processing (write the email) → 
     quests: [
       {
         id: "recruit-q2-1",
-        title: "The Email Drafter",
+        type: "prompt",
+        title: "Tone Shifter",
+        platform: "ChatGPT",
+        description: "Write the same message in 4 different tones: formal, casual, urgent, and apologetic. Use these as templates for your automation.",
+      },
+      {
+        id: "recruit-q2-2",
+        type: "prompt",
+        title: "The Template Maker",
+        platform: "ChatGPT",
+        description: "Create a reusable email template with [BLANKS] for variable content. Test filling in different values to see how it adapts.",
+      },
+      {
+        id: "recruit-q2-3",
+        type: "prompt",
+        title: "Summary Ladder",
+        platform: "ChatGPT",
+        description: "Take a long article and summarize it at 4 lengths: 100 words, 50 words, 25 words, and 1 sentence. Notice what gets cut at each level.",
+      },
+      {
+        id: "recruit-q2-4",
+        type: "build",
+        title: "Email Drafter v1",
         platform: "n8n",
-        description:
-          "Create a simple n8n workflow that takes a topic as input and uses ChatGPT to write a polite, professional email draft for you. Trigger it manually and see your draft appear.",
+        description: "Create an n8n workflow: input a topic → AI writes an email draft → output appears. Trigger it manually and verify the draft quality.",
+      },
+      {
+        id: "recruit-q2-5",
+        type: "build",
+        title: "Meeting Notes Cleaner",
+        platform: "n8n",
+        description: "Build a workflow that takes messy meeting notes as input and outputs clean action items with owners and due dates.",
+      },
+      {
+        id: "recruit-q2-6",
+        type: "build",
+        title: "Social Post Generator",
+        platform: "n8n",
+        description: "Create a workflow: input a topic → output 3 social posts (Twitter, LinkedIn, Instagram) each optimized for that platform's style.",
+      },
+      {
+        id: "recruit-q2-7",
+        type: "game",
+        title: "Prompt Golf",
+        description: "Achieve a specific AI output using the fewest words possible. Challenge: Get AI to write a professional apology email in under 15 words of prompting.",
+      },
+      {
+        id: "recruit-q2-8",
+        type: "quiz",
+        title: "Automation Basics",
+        description: "Test your understanding of automation concepts.",
+        tasks: [
+          "What is a trigger?",
+          "What's the difference between input and output?",
+          "Put these workflow steps in the correct order",
+          "What makes a workflow 'idempotent'?",
+        ],
+      },
+      {
+        id: "recruit-q2-9",
+        type: "capstone",
+        title: "Your First Automation",
+        platform: "n8n",
+        description: "Build a workflow you'll actually use weekly. Run it 5 times with real inputs. Document: What time does it save? What could be improved?",
       },
     ],
     order: 2,
@@ -165,10 +323,70 @@ This teaches a crucial pattern: AI can understand what you say and structure it 
     quests: [
       {
         id: "recruit-q3-1",
-        title: "The Smart To-Do List",
+        type: "prompt",
+        title: "Structure This",
+        platform: "ChatGPT",
+        description: "Convert natural language to structured data. 'Buy milk tomorrow' → JSON with task, date, category. Try 10 different inputs.",
+      },
+      {
+        id: "recruit-q3-2",
+        type: "prompt",
+        title: "Extract the Facts",
+        platform: "ChatGPT",
+        description: "From a paragraph of text, extract all: names, dates, numbers, and locations. Test with news articles and meeting notes.",
+      },
+      {
+        id: "recruit-q3-3",
+        type: "prompt",
+        title: "Normalize This",
+        platform: "ChatGPT",
+        description: "Take messy address formats and normalize them to a consistent structure. Handle variations like 'St.' vs 'Street', missing zip codes, etc.",
+      },
+      {
+        id: "recruit-q3-4",
+        type: "build",
+        title: "Smart To-Do",
         platform: "n8n + Google Sheets",
-        description:
-          "Build an n8n workflow where you type a task into a chat interface, and it automatically adds a row to a Google Sheet with the task name, date added, and status column.",
+        description: "Build: chat input → AI extracts task details → adds row to Google Sheet with columns for task, due date, priority, and status.",
+      },
+      {
+        id: "recruit-q3-5",
+        type: "build",
+        title: "Expense Logger",
+        platform: "n8n + Google Sheets",
+        description: "Build: 'Spent $45 on dinner with clients' → Spreadsheet row with amount ($45), category (meals), date (today), notes (with clients).",
+      },
+      {
+        id: "recruit-q3-6",
+        type: "build",
+        title: "Contact Saver",
+        platform: "n8n + Google Sheets",
+        description: "Build: paste business card text or meeting intro → extract name, company, email, phone → add to contacts spreadsheet.",
+      },
+      {
+        id: "recruit-q3-7",
+        type: "game",
+        title: "Data Detective",
+        description: "Given messy input, predict exactly what the AI will extract. Score points for correct predictions. Lose points for wrong guesses.",
+      },
+      {
+        id: "recruit-q3-8",
+        type: "quiz",
+        title: "Spreadsheet Basics",
+        description: "Test your understanding of data organization.",
+        tasks: [
+          "What's a row vs a column?",
+          "Why do consistent formats matter?",
+          "What makes data 'queryable'?",
+          "When should you use multiple sheets vs one sheet?",
+        ],
+      },
+      {
+        id: "recruit-q3-9",
+        type: "capstone",
+        title: "Personal Database",
+        platform: "n8n + Google Sheets",
+        description: "Choose something you track (books read, recipes tried, ideas). Build a system that captures it from natural language. Add 20 real entries over a week.",
       },
     ],
     order: 3,
@@ -196,10 +414,70 @@ This is your first taste of leverage. You built something once, and it works for
     quests: [
       {
         id: "recruit-q4-1",
-        title: "The Daily Briefing",
+        type: "prompt",
+        title: "Summary Styles",
+        platform: "ChatGPT",
+        description: "Summarize the same article 3 ways: bullet points, one paragraph, and tweet thread. Note which format works best for which content.",
+      },
+      {
+        id: "recruit-q4-2",
+        type: "prompt",
+        title: "Source Comparison",
+        platform: "ChatGPT",
+        description: "Find the same news story from 3 different sources. Have AI create a unified summary that notes where sources agree and disagree.",
+      },
+      {
+        id: "recruit-q4-3",
+        type: "prompt",
+        title: "The Filter",
+        platform: "ChatGPT",
+        description: "From 10 headlines, have AI identify the 3 most relevant to a specific topic. Test with different topics to see how filtering improves.",
+      },
+      {
+        id: "recruit-q4-4",
+        type: "build",
+        title: "Morning Briefing",
         platform: "n8n",
-        description:
-          "Set up a scheduled n8n trigger that runs every morning at 8 AM. It should fetch the weather forecast and one news headline, summarize them, and send the briefing to your email.",
+        description: "Build: scheduled trigger (8 AM) → fetch weather + 3 news headlines → AI summarizes → email to yourself. Run for 5 days.",
+      },
+      {
+        id: "recruit-q4-5",
+        type: "build",
+        title: "Price Watcher",
+        platform: "n8n",
+        description: "Build: daily trigger → check a product page → extract price → if lower than threshold, send alert email.",
+      },
+      {
+        id: "recruit-q4-6",
+        type: "build",
+        title: "Content Radar",
+        platform: "n8n",
+        description: "Build: monitor an RSS feed or blog → when new post appears → AI summarizes → add to your reading list spreadsheet.",
+      },
+      {
+        id: "recruit-q4-7",
+        type: "game",
+        title: "Forecast Roulette",
+        description: "Use your weather automation to predict tomorrow's weather. Compare to actual weather. Track accuracy over a week. Can you beat the AI's summary?",
+      },
+      {
+        id: "recruit-q4-8",
+        type: "quiz",
+        title: "Scheduled Automations",
+        description: "Test your understanding of triggers and timing.",
+        tasks: [
+          "What's a cron schedule?",
+          "When should automations NOT run (rate limits, costs)?",
+          "What's the difference between polling and webhooks?",
+          "How do you handle timezone differences?",
+        ],
+      },
+      {
+        id: "recruit-q4-9",
+        type: "capstone",
+        title: "Information Diet",
+        platform: "n8n",
+        description: "Build a daily briefing you actually want to read. Include 3+ sources relevant to your interests. Run for a week, iterate based on what's useful.",
       },
     ],
     order: 4,
@@ -227,10 +505,70 @@ This transforms your automations from simple conveyor belts into smart systems t
     quests: [
       {
         id: "recruit-q5-1",
-        title: "The Inbox Cleaner",
+        type: "prompt",
+        title: "Binary Classifier",
+        platform: "ChatGPT",
+        description: "Classify 10 emails as Spam or Not Spam. Note which ones are ambiguous and why. How would you improve the classification?",
+      },
+      {
+        id: "recruit-q5-2",
+        type: "prompt",
+        title: "Sentiment Scanner",
+        platform: "ChatGPT",
+        description: "Classify 10 customer reviews as Positive, Negative, or Neutral. Include a confidence score (high/medium/low) for each.",
+      },
+      {
+        id: "recruit-q5-3",
+        type: "prompt",
+        title: "Priority Ranker",
+        platform: "ChatGPT",
+        description: "Classify 10 task descriptions as Urgent, Normal, or Low priority. Test edge cases: what makes something 'urgent'?",
+      },
+      {
+        id: "recruit-q5-4",
+        type: "build",
+        title: "Inbox Triage",
         platform: "n8n",
-        description:
-          "Build an automation that reads incoming messages, uses AI to decide if each is 'Urgent', 'Normal', or 'Spam', and adds an appropriate label. Start with your email or a test inbox.",
+        description: "Build: incoming message → AI classifies (Urgent/Normal/Spam) → add appropriate label → if Urgent, send notification.",
+      },
+      {
+        id: "recruit-q5-5",
+        type: "build",
+        title: "Feedback Sorter",
+        platform: "n8n",
+        description: "Build: customer feedback input → AI classifies (Bug, Feature Request, Praise, Complaint) → route to appropriate spreadsheet tab.",
+      },
+      {
+        id: "recruit-q5-6",
+        type: "build",
+        title: "Lead Scorer",
+        platform: "n8n",
+        description: "Build: inquiry form submission → AI analyzes → classify as Hot/Warm/Cold lead → add score and reasoning to CRM sheet.",
+      },
+      {
+        id: "recruit-q5-7",
+        type: "game",
+        title: "Beat the Bot",
+        description: "You and AI both classify the same 10 items. Compare accuracy and speed. Where does AI do better? Where do you?",
+      },
+      {
+        id: "recruit-q5-8",
+        type: "quiz",
+        title: "Classification Concepts",
+        description: "Test your understanding of categorization.",
+        tasks: [
+          "What's a confidence score and why does it matter?",
+          "When should AI defer to humans?",
+          "What's the difference between categories and tags?",
+          "How do you handle items that fit multiple categories?",
+        ],
+      },
+      {
+        id: "recruit-q5-9",
+        type: "capstone",
+        title: "Smart Router",
+        platform: "n8n",
+        description: "Build a system that classifies AND routes to different actions based on category. Process 20 real items. Measure accuracy and fix misclassifications.",
       },
     ],
     order: 5,
@@ -258,10 +596,70 @@ This is composition—combining simple capabilities into powerful outputs. One A
     quests: [
       {
         id: "recruit-q6-1",
-        title: "The Insta-Post Generator",
+        type: "prompt",
+        title: "Caption + Image Match",
+        platform: "ChatGPT + DALL-E",
+        description: "Write a caption first, then generate an image that matches. Then reverse: generate image first, write caption to match. Compare results.",
+      },
+      {
+        id: "recruit-q6-2",
+        type: "prompt",
+        title: "Style Lock",
+        platform: "DALL-E or Midjourney",
+        description: "Generate 5 images for a fictional brand that look like they belong together. Document your style prompt that creates consistency.",
+      },
+      {
+        id: "recruit-q6-3",
+        type: "prompt",
+        title: "The Remix",
+        platform: "ChatGPT",
+        description: "Take one piece of content and format it 3 ways: carousel post (5 slides), single image post, and story format. Same message, different structures.",
+      },
+      {
+        id: "recruit-q6-4",
+        type: "build",
+        title: "Post Generator",
         platform: "n8n + DALL-E",
-        description:
-          "Create a workflow that takes a topic, writes an Instagram caption using an LLM, generates a matching image with DALL-E, and saves both to a Google Drive folder or spreadsheet.",
+        description: "Build: topic input → AI writes caption → AI generates matching image → save both to Google Drive with consistent naming.",
+      },
+      {
+        id: "recruit-q6-5",
+        type: "build",
+        title: "Thumbnail Factory",
+        platform: "n8n + DALL-E",
+        description: "Build: video title input → AI generates 3 thumbnail options → save all to folder for review.",
+      },
+      {
+        id: "recruit-q6-6",
+        type: "build",
+        title: "Quote Cards",
+        platform: "n8n + DALL-E",
+        description: "Build: quote text input → AI creates beautiful background image → overlay quote text → save shareable image.",
+      },
+      {
+        id: "recruit-q6-7",
+        type: "game",
+        title: "A/B Tester",
+        description: "Generate 2 versions of the same post. Predict which would perform better and explain why. (Engagement, clarity, visual appeal)",
+      },
+      {
+        id: "recruit-q6-8",
+        type: "quiz",
+        title: "Content Strategy Basics",
+        description: "Test your understanding of content creation.",
+        tasks: [
+          "What makes an image 'scroll-stopping'?",
+          "Why do captions need hooks?",
+          "What's the ideal content:promotion ratio?",
+          "How do different platforms favor different formats?",
+        ],
+      },
+      {
+        id: "recruit-q6-9",
+        type: "capstone",
+        title: "Content Week",
+        platform: "n8n",
+        description: "Generate a week's worth of content (7 posts). Each must have: caption, image, hashtags. Maintain visual consistency across all 7.",
       },
     ],
     order: 6,
@@ -289,10 +687,70 @@ This shifts your mindset from "tools for me" to "systems for others." You're bui
     quests: [
       {
         id: "recruit-q7-1",
-        title: "The Feedback Form",
-        platform: "Typeform/Tally + n8n",
-        description:
-          "Build a feedback form using Typeform or Tally. When someone submits feedback, your n8n workflow should use AI to write a personalized thank-you email using their name and send it automatically.",
+        type: "prompt",
+        title: "Thank You Variations",
+        platform: "ChatGPT",
+        description: "Write 5 different personalized thank-you messages that use the person's name and reference what they submitted. Test with different submission types.",
+      },
+      {
+        id: "recruit-q7-2",
+        type: "prompt",
+        title: "The Follow-Up",
+        platform: "ChatGPT",
+        description: "Based on form responses, generate relevant follow-up content. Job application → interview tips. Feedback → related resources.",
+      },
+      {
+        id: "recruit-q7-3",
+        type: "prompt",
+        title: "Conditional Responses",
+        platform: "ChatGPT",
+        description: "Design response templates that change based on input. Satisfied customer → upsell. Unsatisfied → support escalation.",
+      },
+      {
+        id: "recruit-q7-4",
+        type: "build",
+        title: "Feedback Form",
+        platform: "Typeform + n8n",
+        description: "Build: form submission → AI writes personalized thank-you → send email → notify you in Slack → log to spreadsheet.",
+      },
+      {
+        id: "recruit-q7-5",
+        type: "build",
+        title: "Quiz Form",
+        platform: "Tally + n8n",
+        description: "Build: quiz answers submitted → AI grades responses → calculates score → sends personalized results email with feedback.",
+      },
+      {
+        id: "recruit-q7-6",
+        type: "build",
+        title: "Booking Request",
+        platform: "Cal.com + n8n",
+        description: "Build: booking request → AI confirms details → checks availability → sends confirmation or suggests alternatives.",
+      },
+      {
+        id: "recruit-q7-7",
+        type: "game",
+        title: "Response Time Challenge",
+        description: "How fast can your automation respond? Measure from form submit to email received. Optimize for speed while maintaining quality.",
+      },
+      {
+        id: "recruit-q7-8",
+        type: "quiz",
+        title: "Webhooks & Triggers",
+        description: "Test your understanding of external triggers.",
+        tasks: [
+          "What's a webhook?",
+          "What's the difference between sync and async responses?",
+          "When should you use forms vs chat?",
+          "How do you handle webhook failures?",
+        ],
+      },
+      {
+        id: "recruit-q7-9",
+        type: "capstone",
+        title: "Public Tool",
+        platform: "Form + n8n",
+        description: "Build a form-based tool someone else can use. Share it publicly. Get 5 real submissions. Review responses and improve based on feedback.",
       },
     ],
     order: 7,
@@ -320,10 +778,70 @@ This is your first AI-powered interface. Not buttons. Not forms. Conversation. T
     quests: [
       {
         id: "recruit-q8-1",
-        title: "The FAQ Bot",
+        type: "prompt",
+        title: "Persona Design",
+        platform: "ChatGPT",
+        description: "Write system prompts for 3 different personas: helpful assistant, strict teacher, friendly guide. Test how persona affects responses.",
+      },
+      {
+        id: "recruit-q8-2",
+        type: "prompt",
+        title: "Boundary Setting",
+        platform: "ChatGPT",
+        description: "Create a system prompt that politely refuses off-topic questions. Test with various off-topic attempts. How gracefully does it redirect?",
+      },
+      {
+        id: "recruit-q8-3",
+        type: "prompt",
+        title: "Knowledge Grounding",
+        platform: "ChatGPT",
+        description: "Give AI a document (menu, FAQ, policy). Test if it stays within the document or makes things up. How do you prevent hallucination?",
+      },
+      {
+        id: "recruit-q8-4",
+        type: "build",
+        title: "FAQ Bot",
         platform: "n8n or Flowise",
-        description:
-          "Build a simple chatbot that answers questions about a specific topic (like a pizza shop's hours, menu, and location). Give it a text document with the information and test with 10 different questions.",
+        description: "Build: message received → find relevant FAQ → AI generates answer → send response. Test with 10 common questions.",
+      },
+      {
+        id: "recruit-q8-5",
+        type: "build",
+        title: "Menu Helper",
+        platform: "n8n or Flowise",
+        description: "Build a chatbot that knows a restaurant menu. It should answer: What's vegetarian? What's spicy? Prices? Ingredients?",
+      },
+      {
+        id: "recruit-q8-6",
+        type: "build",
+        title: "Onboarding Guide",
+        platform: "n8n or Flowise",
+        description: "Build a chatbot that walks new users through a product or service. It should answer common questions and guide next steps.",
+      },
+      {
+        id: "recruit-q8-7",
+        type: "game",
+        title: "Stump the Bot",
+        description: "Try to make your chatbot give wrong answers. Find edge cases, trick questions, ambiguous queries. Fix each vulnerability you find.",
+      },
+      {
+        id: "recruit-q8-8",
+        type: "quiz",
+        title: "Conversational AI",
+        description: "Test your understanding of chatbot design.",
+        tasks: [
+          "What's a system prompt vs user prompt?",
+          "Why does conversation history matter?",
+          "How do you handle 'I don't know'?",
+          "What's the difference between retrieval and generation?",
+        ],
+      },
+      {
+        id: "recruit-q8-9",
+        type: "capstone",
+        title: "Expert Bot",
+        platform: "n8n or Flowise",
+        description: "Build a chatbot that's an expert on something you know well. Give it real documentation. Test with 20 real questions from other people.",
       },
     ],
     order: 8,
@@ -351,10 +869,70 @@ Congratulations. You started as someone who had never written code. Now you're b
     quests: [
       {
         id: "recruit-q9-1",
-        title: "The Full App",
+        type: "prompt",
+        title: "API Response Formatting",
+        platform: "ChatGPT",
+        description: "Make AI output responses that match a specific JSON schema. Practice with different schemas. How precise can you get?",
+      },
+      {
+        id: "recruit-q9-2",
+        type: "prompt",
+        title: "Error Message Writing",
+        platform: "ChatGPT",
+        description: "Write friendly, helpful error messages for 5 scenarios: network failure, invalid input, rate limit, server error, not found.",
+      },
+      {
+        id: "recruit-q9-3",
+        type: "prompt",
+        title: "Loading State Copy",
+        platform: "ChatGPT",
+        description: "Write engaging messages to show while users wait. Make waiting feel shorter through good copywriting.",
+      },
+      {
+        id: "recruit-q9-4",
+        type: "build",
+        title: "Idea Generator App",
         platform: "Lovable + n8n",
-        description:
-          "Use Lovable to build a simple interface (like an 'Idea Generator' with a text input and button). Connect it to an n8n workflow that processes the input with AI and displays the result back on the screen.",
+        description: "Build: UI with input field → sends to n8n → AI generates ideas → display results on screen. Full round-trip.",
+      },
+      {
+        id: "recruit-q9-5",
+        type: "build",
+        title: "Name Validator",
+        platform: "Bolt.new + n8n",
+        description: "Build: UI to check business name → n8n checks availability (mock) → returns available/taken with suggestions.",
+      },
+      {
+        id: "recruit-q9-6",
+        type: "build",
+        title: "Content Preview Tool",
+        platform: "Lovable + n8n",
+        description: "Build: input content → show how it would look on Twitter, LinkedIn, and Instagram (formatted previews).",
+      },
+      {
+        id: "recruit-q9-7",
+        type: "game",
+        title: "Latency Olympics",
+        description: "Optimize your app for the fastest response time. Track: API call time, processing time, display time. How low can you go?",
+      },
+      {
+        id: "recruit-q9-8",
+        type: "quiz",
+        title: "Full-Stack Basics",
+        description: "Test your understanding of application architecture.",
+        tasks: [
+          "What's frontend vs backend?",
+          "What's an API?",
+          "What's the request-response cycle?",
+          "How do you handle errors gracefully?",
+        ],
+      },
+      {
+        id: "recruit-q9-9",
+        type: "capstone",
+        title: "Ship an App",
+        platform: "Lovable + n8n",
+        description: "Build a complete tool with UI + backend. Get 10 real users to try it. Collect feedback and make one improvement based on what they say.",
       },
     ],
     order: 9,
@@ -388,6 +966,7 @@ The platforms differ in their strengths: Bolt.new excels at full-stack apps with
     quests: [
       {
         id: "spec-q0-1",
+        type: "build",
         title: "5-Minute Landing Page",
         platform: "Bolt.new",
         description:
@@ -395,6 +974,7 @@ The platforms differ in their strengths: Bolt.new excels at full-stack apps with
       },
       {
         id: "spec-q0-2",
+        type: "build",
         title: "Component Library Starter",
         platform: "v0.dev",
         description:
@@ -402,6 +982,7 @@ The platforms differ in their strengths: Bolt.new excels at full-stack apps with
       },
       {
         id: "spec-q0-3",
+        type: "build",
         title: "Personal Portfolio",
         platform: "Lovable",
         description:
@@ -409,6 +990,7 @@ The platforms differ in their strengths: Bolt.new excels at full-stack apps with
       },
       {
         id: "spec-q0-4",
+        type: "build",
         title: "Internal Tool Dashboard",
         platform: "Replit",
         description:
@@ -440,6 +1022,7 @@ Start with low-stakes automations. Notifications, data syncing, simple transform
     quests: [
       {
         id: "spec-q1-1",
+        type: "build",
         title: "YouTube to LinkedIn Pipeline",
         platform: "n8n",
         description:
@@ -447,6 +1030,7 @@ Start with low-stakes automations. Notifications, data syncing, simple transform
       },
       {
         id: "spec-q1-2",
+        type: "build",
         title: "Email to Task Converter",
         platform: "Make",
         description:
@@ -454,6 +1038,7 @@ Start with low-stakes automations. Notifications, data syncing, simple transform
       },
       {
         id: "spec-q1-3",
+        type: "build",
         title: "Content Repurposing Chain",
         platform: "n8n",
         description:
@@ -513,6 +1098,7 @@ Different modalities require different approaches. Text prompting rewards specif
     quests: [
       {
         id: "spec-q2-1",
+        type: "build",
         title: "Data Sanitizer",
         platform: "n8n + OpenAI",
         description:
@@ -520,6 +1106,7 @@ Different modalities require different approaches. Text prompting rewards specif
       },
       {
         id: "spec-q2-2",
+        type: "build",
         title: "Brand Image Generator",
         platform: "Midjourney",
         description:
@@ -551,6 +1138,7 @@ Build for resilience. Websites change. APIs get deprecated. Your extraction pipe
     quests: [
       {
         id: "spec-q3-1",
+        type: "build",
         title: "Competitor Price Monitor",
         platform: "Firecrawl + n8n",
         description:
@@ -558,6 +1146,7 @@ Build for resilience. Websites change. APIs get deprecated. Your extraction pipe
       },
       {
         id: "spec-q3-2",
+        type: "build",
         title: "Job Board Aggregator",
         platform: "Apify",
         description:
@@ -603,6 +1192,7 @@ Quality in, quality out. RAG is only as good as your knowledge base. Curate ruth
     quests: [
       {
         id: "spec-q4-1",
+        type: "build",
         title: "Technical Manual Chatbot",
         platform: "Pinecone + OpenAI",
         description:
@@ -610,6 +1200,7 @@ Quality in, quality out. RAG is only as good as your knowledge base. Curate ruth
       },
       {
         id: "spec-q4-2",
+        type: "build",
         title: "Codebase Q&A System",
         platform: "LlamaIndex",
         description:
@@ -641,6 +1232,7 @@ Fallback gracefully. Not every input fits a category. Build explicit "unknown" h
     quests: [
       {
         id: "spec-q5-1",
+        type: "build",
         title: "Inbox Zero Engine",
         platform: "n8n + OpenAI",
         description:
@@ -648,6 +1240,7 @@ Fallback gracefully. Not every input fits a category. Build explicit "unknown" h
       },
       {
         id: "spec-q5-2",
+        type: "build",
         title: "Multi-Lingual Intent Handler",
         platform: "LangChain",
         description:
@@ -679,6 +1272,7 @@ Security is non-negotiable. AI should never have unbounded capabilities. Sandbox
     quests: [
       {
         id: "spec-q6-1",
+        type: "build",
         title: "Calendar Agent",
         platform: "OpenAI + Google Calendar API",
         description:
@@ -686,6 +1280,7 @@ Security is non-negotiable. AI should never have unbounded capabilities. Sandbox
       },
       {
         id: "spec-q6-2",
+        type: "build",
         title: "Database Query Agent",
         platform: "Claude + PostgreSQL",
         description:
@@ -717,6 +1312,7 @@ The failure modes are subtle. Agents can loop infinitely. Workers can produce co
     quests: [
       {
         id: "spec-q7-1",
+        type: "build",
         title: "Content Factory",
         platform: "CrewAI",
         description:
@@ -724,6 +1320,7 @@ The failure modes are subtle. Agents can loop infinitely. Workers can produce co
       },
       {
         id: "spec-q7-2",
+        type: "build",
         title: "Software Dev Team",
         platform: "n8n + Multiple LLMs",
         description:
@@ -755,6 +1352,7 @@ Production readiness is not optional. Authentication, error handling, data valid
     quests: [
       {
         id: "spec-q8-1",
+        type: "build",
         title: "SaaS MVP",
         platform: "Cursor + Supabase",
         description:
@@ -762,6 +1360,7 @@ Production readiness is not optional. Authentication, error handling, data valid
       },
       {
         id: "spec-q8-2",
+        type: "build",
         title: "Realtime Collaboration Tool",
         platform: "v0 + Supabase Realtime",
         description:
@@ -793,6 +1392,7 @@ The human role evolves. You become the architect and monitor, not the operator. 
     quests: [
       {
         id: "spec-q9-1",
+        type: "build",
         title: "Headless SaaS",
         platform: "n8n + Stripe + Multiple APIs",
         description:
@@ -800,6 +1400,7 @@ The human role evolves. You become the architect and monitor, not the operator. 
       },
       {
         id: "spec-q9-2",
+        type: "build",
         title: "Content Empire",
         platform: "Multi-platform Automation",
         description:
