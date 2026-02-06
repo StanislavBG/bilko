@@ -56,7 +56,7 @@ export function PromptPlayground({
   systemPrompt,
   title = "Prompt Playground",
   description,
-  defaultModel = "gpt-4o-mini",
+  defaultModel = "gemini-2.5-flash-preview-05-20",
   showModelSelector = true,
   placeholder = "Enter your prompt here...",
   onResponse,
@@ -84,10 +84,10 @@ export function PromptPlayground({
         // Fallback models if API fails
         setModels([
           {
-            id: "gpt-4o-mini",
-            name: "GPT-4o Mini",
-            provider: "openai",
-            description: "Fast and affordable",
+            id: "gemini-2.5-flash-preview-05-20",
+            name: "Gemini 2.5 Flash",
+            provider: "google",
+            description: "Fast and free",
           },
         ]);
       });
