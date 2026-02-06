@@ -17,6 +17,11 @@ export const flowRegistry: FlowDefinition[] = [
     location: "landing",
     componentPath: "client/src/components/video-discovery-flow.tsx",
     tags: ["landing", "ai", "video", "youtube", "gemini"],
+    output: {
+      name: "selectedVideo",
+      type: "object",
+      description: "The YouTube video the user chose to watch, with embed ID, metadata, and engagement stats",
+    },
     steps: [
       {
         id: "research-topics",
