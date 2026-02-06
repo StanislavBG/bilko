@@ -63,7 +63,7 @@ export interface AgentNode extends WorkflowNode {
   task: "generate" | "decide" | "converse" | "analyze";
   // Prompt template or instruction
   prompt: string;
-  // Model to use (optional, defaults to gpt-4o-mini)
+  // Model to use (optional, defaults to gemini-2.5-flash)
   model?: string;
   // For 'decide' tasks - possible outcomes
   outcomes?: string[];

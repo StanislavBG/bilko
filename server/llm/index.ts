@@ -1,29 +1,40 @@
 /**
- * LLM Service - Unified interface for multiple LLM providers
+ * LLM Service - Gemini via OpenAI-compatible endpoint
  *
- * Uses Replit's AI Integrations which provides:
- * - AI_INTEGRATIONS_OPENAI_API_KEY: the API key
- * - AI_INTEGRATIONS_OPENAI_BASE_URL: the base URL endpoint
- *
- * Currently supported:
- * - OpenAI: gpt-4o-mini (fast, affordable, 128K context)
+ * Uses GEMINI_API_KEY with Google's OpenAI-compatible API.
+ * Model: gemini-2.5-flash (free tier)
  */
 
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+let _client: OpenAI | null = null;
+
+function getClient(): OpenAI {
+  if (!_client) {
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      throw new Error(
+        "GEMINI_API_KEY is not configured. Add it to your Replit Secrets."
+      );
+    }
+
+    _client = new OpenAI({
+      apiKey,
+      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    });
+  }
+  return _client;
+}
 
 export interface LLMModel {
   id: string;
   name: string;
-  provider: "openai" | "google" | "anthropic";
+  provider: "google";
   description: string;
   contextWindow: number;
-  inputPrice: number;  // per 1M tokens
-  outputPrice: number; // per 1M tokens
+  inputPrice: number;
+  outputPrice: number;
 }
 
 export interface ChatMessage {
@@ -48,25 +59,15 @@ export interface ChatResponse {
   };
 }
 
-// Available models with explicit specifications
 export const AVAILABLE_MODELS: LLMModel[] = [
   {
-    id: "gpt-4o-mini",
-    name: "GPT-4o Mini",
-    provider: "openai",
-    description: "Fast and affordable. Great for most tasks.",
-    contextWindow: 128000,
-    inputPrice: 0.15,   // $0.15 per 1M input tokens
-    outputPrice: 0.60,  // $0.60 per 1M output tokens
-  },
-  {
-    id: "gpt-4o",
-    name: "GPT-4o",
-    provider: "openai",
-    description: "Most capable. Better for complex reasoning.",
-    contextWindow: 128000,
-    inputPrice: 2.50,   // $2.50 per 1M input tokens
-    outputPrice: 10.00, // $10.00 per 1M output tokens
+    id: "gemini-2.5-flash-preview-05-20",
+    name: "Gemini 2.5 Flash",
+    provider: "google",
+    description: "Fast and free. Great for most tasks.",
+    contextWindow: 1048576,
+    inputPrice: 0,
+    outputPrice: 0,
   },
 ];
 
@@ -75,25 +76,9 @@ export function getModelById(modelId: string): LLMModel | undefined {
 }
 
 export async function chat(request: ChatRequest): Promise<ChatResponse> {
-  const model = getModelById(request.model);
-  if (!model) {
-    throw new Error(`Unknown model: ${request.model}`);
-  }
+  const client = getClient();
 
-  switch (model.provider) {
-    case "openai":
-      return chatOpenAI(request);
-    default:
-      throw new Error(`Provider not implemented: ${model.provider}`);
-  }
-}
-
-async function chatOpenAI(request: ChatRequest): Promise<ChatResponse> {
-  if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
-    throw new Error("AI_INTEGRATIONS_OPENAI_API_KEY is not configured. Add the AI Integrations integration in Replit.");
-  }
-
-  const response = await openai.chat.completions.create({
+  const response = await client.chat.completions.create({
     model: request.model,
     messages: request.messages,
     temperature: request.temperature ?? 0.7,
