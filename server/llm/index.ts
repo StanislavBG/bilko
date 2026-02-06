@@ -1,13 +1,20 @@
 /**
  * LLM Service - Unified interface for multiple LLM providers
  *
- * Environment variables:
- * - AI_INTEGRATIONS_OPENAI_API_KEY: API key for OpenAI-compatible endpoint
- * - AI_INTEGRATIONS_OPENAI_BASE_URL: Base URL (defaults to https://api.openai.com)
+ * Uses Replit's AI Integrations which provides:
+ * - AI_INTEGRATIONS_OPENAI_API_KEY: the API key
+ * - AI_INTEGRATIONS_OPENAI_BASE_URL: the base URL endpoint
  *
  * Currently supported:
  * - OpenAI: gpt-4o-mini (fast, affordable, 128K context)
  */
+
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
 
 export interface LLMModel {
   id: string;
@@ -75,50 +82,33 @@ export async function chat(request: ChatRequest): Promise<ChatResponse> {
 
   switch (model.provider) {
     case "openai":
-      return chatOpenAI(request, model);
+      return chatOpenAI(request);
     default:
       throw new Error(`Provider not implemented: ${model.provider}`);
   }
 }
 
-async function chatOpenAI(request: ChatRequest, model: LLMModel): Promise<ChatResponse> {
-  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-  const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com";
-
-  if (!apiKey) {
-    throw new Error("AI_INTEGRATIONS_OPENAI_API_KEY is not configured");
+async function chatOpenAI(request: ChatRequest): Promise<ChatResponse> {
+  if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
+    throw new Error("AI_INTEGRATIONS_OPENAI_API_KEY is not configured. Add the AI Integrations integration in Replit.");
   }
 
-  const url = `${baseUrl}/v1/chat/completions`;
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: request.model,
-      messages: request.messages,
-      temperature: request.temperature ?? 0.7,
-      max_tokens: request.maxTokens ?? 2048,
-    }),
+  const response = await openai.chat.completions.create({
+    model: request.model,
+    messages: request.messages,
+    temperature: request.temperature ?? 0.7,
+    max_tokens: request.maxTokens ?? 2048,
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenAI API error: ${response.status} - ${error}`);
-  }
-
-  const data = await response.json();
+  const content = response.choices[0]?.message?.content || "";
 
   return {
-    content: data.choices[0]?.message?.content || "",
-    model: data.model,
-    usage: data.usage ? {
-      promptTokens: data.usage.prompt_tokens,
-      completionTokens: data.usage.completion_tokens,
-      totalTokens: data.usage.total_tokens,
+    content,
+    model: response.model,
+    usage: response.usage ? {
+      promptTokens: response.usage.prompt_tokens,
+      completionTokens: response.usage.completion_tokens,
+      totalTokens: response.usage.total_tokens,
     } : undefined,
   };
 }
