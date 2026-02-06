@@ -75,6 +75,10 @@ export function getModelById(modelId: string): LLMModel | undefined {
   return AVAILABLE_MODELS.find(m => m.id === modelId);
 }
 
+function stripCodeFences(text: string): string {
+  return text.replace(/```(?:json|[\w]*)?\s*/gi, "").trim();
+}
+
 export async function chat(request: ChatRequest): Promise<ChatResponse> {
   const client = getClient();
 
@@ -82,10 +86,11 @@ export async function chat(request: ChatRequest): Promise<ChatResponse> {
     model: request.model,
     messages: request.messages,
     temperature: request.temperature ?? 0.7,
-    max_tokens: request.maxTokens ?? 2048,
+    max_tokens: request.maxTokens ?? 8192,
   });
 
-  const content = response.choices[0]?.message?.content || "";
+  const raw = response.choices[0]?.message?.content || "";
+  const content = stripCodeFences(raw);
 
   return {
     content,
