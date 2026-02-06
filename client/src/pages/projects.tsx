@@ -267,7 +267,7 @@ export default function Projects() {
               <div className="p-6 border-b bg-muted/30">
                 <h2 className="text-lg font-semibold mb-2" data-testid="text-projects-heading-desktop">Bilko's Projects</h2>
                 <p className="text-sm text-muted-foreground leading-relaxed max-w-2xl">
-                  These projects represent stepping stones in a learning journey—each one exploring different aspects of AI, automation, and connected experiences. Through building these applications, patterns emerged that eventually converged into the vision for Bilko and the AI Academy.
+                  These projects represent stepping stones in a learning journey—each one exploring different aspects of AI, automation, and connected experiences. Through building these applications, patterns emerged that eventually converged into the vision for Bilko's Mental Gym.
                 </p>
               </div>
               <div className="p-6 grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -300,7 +300,7 @@ export default function Projects() {
             <div className="md:hidden flex-1 p-4 overflow-auto">
               <h2 className="text-lg font-semibold mb-2" data-testid="text-projects-heading">Bilko's Projects</h2>
               <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
-                These projects represent stepping stones in a learning journey—each one exploring AI, automation, and connected experiences. Through building them, the vision for Bilko and the AI Academy emerged.
+                These projects represent stepping stones in a learning journey—each one exploring AI, automation, and connected experiences. Through building them, the vision for Bilko's Mental Gym emerged.
               </p>
               <div className="space-y-4">
                 {projects.map((project) => (

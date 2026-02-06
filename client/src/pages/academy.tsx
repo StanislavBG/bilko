@@ -132,7 +132,7 @@ function L2Navigation({
                 A
               </span>
             </TooltipTrigger>
-            <TooltipContent side="right">AI Academy</TooltipContent>
+            <TooltipContent side="right">Mental Gym</TooltipContent>
           </Tooltip>
         ) : (
           <span className="text-xs font-medium text-muted-foreground">
@@ -639,7 +639,7 @@ function LevelsOverview({
             <Target className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold mb-1">AI Academy</h1>
+            <h1 className="text-2xl font-bold mb-1">Mental Gym</h1>
             <p className="text-muted-foreground">
               Three paths to AI mastery. Choose your journey based on your experience level.
             </p>

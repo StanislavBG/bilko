@@ -1,7 +1,7 @@
 /**
  * Landing Page - Dynamic, agentic welcome experience
  *
- * This is the face of Bilko Bibitkov's AI Academy.
+ * This is the face of Bilko's Mental Gym.
  * It welcomes unknown users and helps them discover how they want to learn.
  *
  * LandingContent is exported separately so the authenticated home page
@@ -92,7 +92,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
               Welcome
             </h1>
             <p className="text-xl text-muted-foreground">
-              to Bilko Bibitkov's AI Academy
+              to Bilko's Mental Gym
             </p>
           </div>
         </div>
@@ -163,7 +163,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
             <PromptPlayground
               title="AI Tutor"
               description="I'm your AI tutor! Ask me anything about AI, machine learning, or what you can learn at the Academy."
-              systemPrompt="You are Bilko, a friendly AI tutor at Bilko Bibitkov's AI Academy. Help the user understand AI concepts and answer their questions. Be encouraging and helpful."
+              systemPrompt="You are Bilko, a friendly AI tutor at Bilko's Mental Gym. Help the user understand AI concepts and answer their questions. Be encouraging and helpful."
               placeholder="Ask me anything about AI..."
               showModelSelector={false}
             />
