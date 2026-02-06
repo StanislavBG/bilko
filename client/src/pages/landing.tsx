@@ -14,7 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ArrowRight,
   Play,
   Sparkles,
   GraduationCap,
@@ -115,9 +114,6 @@ export default function Landing() {
               <h1 className="text-3xl md:text-4xl font-bold mb-4">
                 How would you like to learn today?
               </h1>
-              <p className="text-lg text-muted-foreground">
-                Choose your adventure - no login required to get started
-              </p>
 
               {/* Voice Control */}
               {isVoiceSupported && (
@@ -173,17 +169,6 @@ export default function Landing() {
               onSelect={handleModeSelect}
               selectedMode={selectedMode}
             />
-
-            <div className="mt-12 text-center">
-              <p className="text-sm text-muted-foreground mb-4">
-                Ready to save your progress?
-              </p>
-              <Button asChild>
-                <a href="/api/login">
-                  Create Free Account <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
-            </div>
           </div>
         )}
 
@@ -203,9 +188,6 @@ export default function Landing() {
                     <Play className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-muted-foreground">
                       Video player coming soon
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Sign up to access our full video library
                     </p>
                   </div>
                 </div>
@@ -249,7 +231,7 @@ export default function Landing() {
               <PromptPlayground
                 title="AI Tutor"
                 description="I'm your AI tutor! Ask me anything about AI, machine learning, or what you can learn at the Academy."
-                systemPrompt="You are Bilko, a friendly AI tutor at Bilko Bibitkov's AI Academy. Help the user understand what they can learn here. Be encouraging and guide them toward signing up."
+                systemPrompt="You are Bilko, a friendly AI tutor at Bilko Bibitkov's AI Academy. Help the user understand AI concepts and answer their questions. Be encouraging and helpful."
                 placeholder="Ask me anything about AI..."
                 showModelSelector={false}
               />
@@ -288,16 +270,6 @@ function ExperienceWrapper({
           <h1 className="text-2xl font-bold">{title}</h1>
         </div>
         {children}
-        <div className="mt-8 text-center border-t pt-8">
-          <p className="text-muted-foreground mb-4">
-            Sign up to save your progress and unlock all features
-          </p>
-          <Button asChild>
-            <a href="/api/login">
-              Create Free Account <ArrowRight className="ml-2 h-4 w-4" />
-            </a>
-          </Button>
-        </div>
       </div>
     </div>
   );
@@ -407,9 +379,6 @@ function QuizExperience() {
             <h3 className="text-2xl font-bold mb-2">Quiz Complete!</h3>
             <p className="text-lg text-muted-foreground">
               You scored {score} out of {questions.length}
-            </p>
-            <p className="mt-4 text-muted-foreground">
-              Sign up to unlock more quizzes and track your progress!
             </p>
           </div>
         )}
