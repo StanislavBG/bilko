@@ -288,21 +288,134 @@ function LevelNavItem({
 
 function LevelsL3Nav({
   selectedTrackId,
-  selectedLevelId,
   onSelectTrack,
-  onSelectLevel,
   isCollapsed,
   onToggleCollapse,
 }: {
   selectedTrackId: string | null;
-  selectedLevelId: string | null;
   onSelectTrack: (id: string) => void;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+}) {
+  return (
+    <div
+      className={`hidden md:flex shrink-0 border-r bg-muted/10 flex-col transition-all duration-200 ${
+        isCollapsed ? "min-w-10 max-w-10" : "min-w-[9rem] max-w-[10rem]"
+      }`}
+    >
+      <div className="border-b px-2 h-8 flex items-center shrink-0">
+        {isCollapsed ? (
+          <span className="text-xs font-medium text-muted-foreground block w-full text-center">
+            T
+          </span>
+        ) : (
+          <span className="text-xs font-medium text-muted-foreground">
+            Tracks
+          </span>
+        )}
+      </div>
+      <div className="flex-1 overflow-auto p-1 space-y-0.5">
+        {academyTracks.map((track) => (
+          <Tooltip key={track.id}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                className={`w-full h-auto py-2 px-2 ${
+                  isCollapsed ? "justify-center" : "justify-start"
+                } ${
+                  selectedTrackId === track.id
+                    ? track.difficulty === "beginner"
+                      ? "bg-emerald-500/20"
+                      : track.difficulty === "intermediate"
+                      ? "bg-blue-500/20"
+                      : "bg-purple-500/20"
+                    : track.difficulty === "beginner"
+                    ? "hover:bg-emerald-500/10"
+                    : track.difficulty === "intermediate"
+                    ? "hover:bg-blue-500/10"
+                    : "hover:bg-purple-500/10"
+                }`}
+                onClick={() => onSelectTrack(track.id)}
+              >
+                {isCollapsed ? (
+                  <span
+                    className={`text-sm font-medium ${
+                      track.difficulty === "beginner"
+                        ? "text-emerald-500"
+                        : track.difficulty === "intermediate"
+                        ? "text-blue-500"
+                        : "text-purple-500"
+                    }`}
+                  >
+                    {track.name[0]}
+                  </span>
+                ) : (
+                  <div className="flex flex-col items-start gap-0.5 w-full">
+                    <span
+                      className={`text-sm font-medium ${
+                        track.difficulty === "beginner"
+                          ? "text-emerald-500"
+                          : track.difficulty === "intermediate"
+                          ? "text-blue-500"
+                          : "text-purple-500"
+                      }`}
+                    >
+                      {track.name.split(" ")[0]}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {track.tagline}
+                    </span>
+                  </div>
+                )}
+              </Button>
+            </TooltipTrigger>
+            {isCollapsed && (
+              <TooltipContent side="right">
+                {track.name}: {track.tagline}
+              </TooltipContent>
+            )}
+          </Tooltip>
+        ))}
+      </div>
+      <div className="border-t h-9 flex items-center justify-center shrink-0">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onToggleCollapse}
+            >
+              <PanelLeft
+                className={`h-3 w-3 transition-transform ${
+                  isCollapsed ? "rotate-180" : ""
+                }`}
+              />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {isCollapsed ? "Expand" : "Collapse"}
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </div>
+  );
+}
+
+// L4 Navigation for levels within a track
+function LevelsL4Nav({
+  track,
+  selectedLevelId,
+  onSelectLevel,
+  isCollapsed,
+  onToggleCollapse,
+}: {
+  track: Track;
+  selectedLevelId: string | null;
   onSelectLevel: (id: string | null) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }) {
-  const selectedTrack = selectedTrackId ? getTrackById(selectedTrackId) : null;
-
   return (
     <div
       className={`hidden md:flex shrink-0 border-r bg-muted/10 flex-col transition-all duration-200 ${
@@ -316,93 +429,20 @@ function LevelsL3Nav({
           </span>
         ) : (
           <span className="text-xs font-medium text-muted-foreground">
-            {selectedTrack ? selectedTrack.name.split(" ")[0] : "Tracks"}
+            Levels
           </span>
         )}
       </div>
       <div className="flex-1 overflow-auto p-1 space-y-0.5">
-        {selectedTrack ? (
-          <>
-            {/* Back to tracks button */}
-            {!isCollapsed && (
-              <Button
-                variant="ghost"
-                className="w-full justify-start h-auto py-1 px-2 text-muted-foreground hover:text-foreground mb-1"
-                onClick={() => onSelectLevel(null)}
-              >
-                <ChevronLeft className="h-3 w-3 mr-1" />
-                <span className="text-xs">All Tracks</span>
-              </Button>
-            )}
-            {/* Levels in selected track */}
-            {selectedTrack.levels.map((level) => (
-              <LevelNavItem
-                key={level.id}
-                level={level}
-                isSelected={selectedLevelId === level.id}
-                onSelect={() => onSelectLevel(level.id)}
-                isCollapsed={isCollapsed}
-              />
-            ))}
-          </>
-        ) : (
-          /* Track selection */
-          academyTracks.map((track) => (
-            <Tooltip key={track.id}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={`w-full h-auto py-2 px-2 ${
-                    isCollapsed ? "justify-center" : "justify-start"
-                  } ${
-                    track.difficulty === "beginner"
-                      ? "hover:bg-emerald-500/10"
-                      : track.difficulty === "intermediate"
-                      ? "hover:bg-blue-500/10"
-                      : "hover:bg-purple-500/10"
-                  }`}
-                  onClick={() => onSelectTrack(track.id)}
-                >
-                  {isCollapsed ? (
-                    <span
-                      className={`text-sm font-medium ${
-                        track.difficulty === "beginner"
-                          ? "text-emerald-500"
-                          : track.difficulty === "intermediate"
-                          ? "text-blue-500"
-                          : "text-purple-500"
-                      }`}
-                    >
-                      {track.name[0]}
-                    </span>
-                  ) : (
-                    <div className="flex flex-col items-start gap-0.5 w-full">
-                      <span
-                        className={`text-sm font-medium ${
-                          track.difficulty === "beginner"
-                            ? "text-emerald-500"
-                            : track.difficulty === "intermediate"
-                            ? "text-blue-500"
-                            : "text-purple-500"
-                        }`}
-                      >
-                        {track.name.split(" ")[0]}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {track.tagline}
-                      </span>
-                    </div>
-                  )}
-                </Button>
-              </TooltipTrigger>
-              {isCollapsed && (
-                <TooltipContent side="right">
-                  {track.name}: {track.tagline}
-                </TooltipContent>
-              )}
-            </Tooltip>
-          ))
-        )}
+        {track.levels.map((level) => (
+          <LevelNavItem
+            key={level.id}
+            level={level}
+            isSelected={selectedLevelId === level.id}
+            onSelect={() => onSelectLevel(level.id)}
+            isCollapsed={isCollapsed}
+          />
+        ))}
       </div>
       <div className="border-t h-9 flex items-center justify-center shrink-0">
         <Tooltip>
@@ -1718,23 +1758,23 @@ export default function Academy() {
     }
   }, [location]);
 
-  // Auto-collapse L1 when L3 has a selection (track, level, or category selected)
-  // Rule: clicking level X collapses X-2 and X+2, NOT adjacent levels
+  // Auto-collapse L1 when L3 has a selection (track or category selected)
+  // Rule: clicking level X collapses X-2, NOT adjacent levels
   useEffect(() => {
-    const hasL3Selection = selectedTrackId || selectedLevelId || selectedCategoryId;
+    const hasL3Selection = selectedTrackId || selectedCategoryId;
     if (hasL3Selection) {
       setL1Open(false); // Collapse L1 (2 steps away from L3)
     }
-  }, [selectedTrackId, selectedLevelId, selectedCategoryId, setL1Open]);
+  }, [selectedTrackId, selectedCategoryId, setL1Open]);
 
-  // Auto-collapse L1 and L2 when L4 has a selection (term selected)
+  // Auto-collapse L1 and L2 when L4 has a selection (level within track or term selected)
   // L4 click: collapse L2 (2 away), L1 (3 away), but NOT L3 (adjacent)
   useEffect(() => {
-    if (selectedTermId) {
+    if (selectedLevelId || selectedTermId) {
       setL1Open(false); // Collapse L1
       setIsL2Collapsed(true); // Collapse L2
     }
-  }, [selectedTermId, setL1Open]);
+  }, [selectedLevelId, selectedTermId, setL1Open]);
 
   const selectedTrack = selectedTrackId ? getTrackById(selectedTrackId) : null;
   const selectedLevel = selectedLevelId ? getLevelById(selectedLevelId) : null;
@@ -1853,15 +1893,24 @@ export default function Academy() {
         onToggleCollapse={() => setIsL2Collapsed(!isL2Collapsed)}
       />
 
-      {/* L3 Navigation - Levels */}
+      {/* L3 Navigation - Tracks */}
       {activeSection === "levels" && (
         <LevelsL3Nav
           selectedTrackId={selectedTrackId}
-          selectedLevelId={selectedLevelId}
           onSelectTrack={handleSelectTrack}
-          onSelectLevel={handleSelectLevel}
           isCollapsed={isL3Collapsed}
           onToggleCollapse={() => setIsL3Collapsed(!isL3Collapsed)}
+        />
+      )}
+
+      {/* L4 Navigation - Levels within track */}
+      {activeSection === "levels" && selectedTrack && (
+        <LevelsL4Nav
+          track={selectedTrack}
+          selectedLevelId={selectedLevelId}
+          onSelectLevel={handleSelectLevel}
+          isCollapsed={isL4Collapsed}
+          onToggleCollapse={() => setIsL4Collapsed(!isL4Collapsed)}
         />
       )}
 
