@@ -1,28 +1,31 @@
 /**
  * Video Discovery Flow - Agentic workflow for finding AI learning videos
  *
+ * Auto-starts immediately when rendered.
  * Node 1: Research 10 trending AI topics from the last 6 months
  * Node 2: Find a high-quality YouTube video for the selected topic
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2,
-  Search,
   Play,
   CheckCircle2,
   Circle,
   Sparkles,
   Youtube,
   ExternalLink,
+  Brain,
+  TrendingUp,
+  ListChecks,
+  Tv,
 } from "lucide-react";
 
 // Workflow states
 type FlowState =
-  | "idle"
   | "researching-topics"
   | "select-topic"
   | "searching-video"
@@ -55,14 +58,33 @@ interface WorkflowStep {
   detail?: string;
 }
 
+// Rotating status messages for the research phase
+const RESEARCH_STATUS_MESSAGES = [
+  "Scanning AI news from the last 6 months...",
+  "Analyzing trending topics across research papers...",
+  "Identifying beginner-friendly breakthroughs...",
+  "Ranking topics by relevance and accessibility...",
+  "Preparing your personalized topic list...",
+];
+
+// Rotating status messages for the video search phase
+const VIDEO_SEARCH_MESSAGES = [
+  "Searching top AI education channels...",
+  "Evaluating video quality and production value...",
+  "Checking for beginner-friendly explanations...",
+  "Finding the best match for your topic...",
+];
+
 export function VideoDiscoveryFlow() {
-  const [flowState, setFlowState] = useState<FlowState>("idle");
+  const [flowState, setFlowState] = useState<FlowState>("researching-topics");
   const [topics, setTopics] = useState<AITopic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<AITopic | null>(null);
   const [video, setVideo] = useState<VideoResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState(RESEARCH_STATUS_MESSAGES[0]);
+  const hasStarted = useRef(false);
   const [steps, setSteps] = useState<WorkflowStep[]>([
-    { id: "research", name: "Researching AI Trends", status: "pending" },
+    { id: "research", name: "Researching AI Trends", status: "active", detail: "Our AI agent is scanning the latest developments..." },
     { id: "select", name: "Topic Selection", status: "pending" },
     { id: "video", name: "Finding Best Video", status: "pending" },
     { id: "ready", name: "Video Ready", status: "pending" },
@@ -78,11 +100,27 @@ export function VideoDiscoveryFlow() {
     );
   };
 
+  // Rotate status messages during loading phases
+  useEffect(() => {
+    if (flowState !== "researching-topics" && flowState !== "searching-video") return;
+
+    const messages = flowState === "researching-topics" ? RESEARCH_STATUS_MESSAGES : VIDEO_SEARCH_MESSAGES;
+    let index = 0;
+
+    const interval = setInterval(() => {
+      index = (index + 1) % messages.length;
+      setStatusMessage(messages[index]);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [flowState]);
+
   // Node 1: Research trending AI topics
   const researchTopics = useCallback(async () => {
     setFlowState("researching-topics");
     setError(null);
-    updateStep("research", "active", "Analyzing recent AI trends...");
+    setStatusMessage(RESEARCH_STATUS_MESSAGES[0]);
+    updateStep("research", "active", "Our AI agent is scanning the latest developments...");
 
     try {
       const response = await fetch("/api/llm/chat", {
@@ -123,11 +161,12 @@ Focus on:
       });
 
       if (!response.ok) {
-        throw new Error("Failed to research topics");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to research topics");
       }
 
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "";
+      const content = data.content || "";
 
       // Parse JSON from response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -138,21 +177,34 @@ Focus on:
       const parsed = JSON.parse(jsonMatch[0]);
       setTopics(parsed.topics);
 
-      updateStep("research", "complete", "Found 10 trending topics");
-      updateStep("select", "active", "Choose a topic to explore");
+      updateStep("research", "complete", `Found ${parsed.topics.length} trending topics`);
+      updateStep("select", "active", "Pick a topic that interests you");
       setFlowState("select-topic");
     } catch (err) {
       console.error("Topic research error:", err);
-      setError("Failed to research topics. Please try again.");
-      updateStep("research", "error");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to research topics. Please try again."
+      );
+      updateStep("research", "error", "Something went wrong");
       setFlowState("error");
     }
   }, []);
+
+  // Auto-start research immediately on mount
+  useEffect(() => {
+    if (!hasStarted.current) {
+      hasStarted.current = true;
+      researchTopics();
+    }
+  }, [researchTopics]);
 
   // Node 2: Find YouTube video for topic
   const findVideo = useCallback(async (topic: AITopic) => {
     setSelectedTopic(topic);
     setFlowState("searching-video");
+    setStatusMessage(VIDEO_SEARCH_MESSAGES[0]);
     updateStep("select", "complete", topic.title);
     updateStep("video", "active", "Searching for the best video...");
 
@@ -202,11 +254,12 @@ The learner is wondering: "${topic.beginnerQuestion}"`,
       });
 
       if (!response.ok) {
-        throw new Error("Failed to find video");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to find video");
       }
 
       const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "";
+      const content = data.content || "";
 
       // Parse JSON from response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -218,28 +271,37 @@ The learner is wondering: "${topic.beginnerQuestion}"`,
       setVideo(parsed.video);
 
       updateStep("video", "complete", `Found: ${parsed.video.creator}`);
-      updateStep("ready", "complete", "Ready to watch");
+      updateStep("ready", "complete", "Ready to watch!");
       setFlowState("ready");
     } catch (err) {
       console.error("Video search error:", err);
-      setError("Failed to find a video. Please try again.");
-      updateStep("video", "error");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to find a video. Please try again."
+      );
+      updateStep("video", "error", "Something went wrong");
       setFlowState("error");
     }
   }, []);
 
   const reset = () => {
-    setFlowState("idle");
+    hasStarted.current = false;
     setTopics([]);
     setSelectedTopic(null);
     setVideo(null);
     setError(null);
     setSteps([
-      { id: "research", name: "Researching AI Trends", status: "pending" },
+      { id: "research", name: "Researching AI Trends", status: "active", detail: "Our AI agent is scanning the latest developments..." },
       { id: "select", name: "Topic Selection", status: "pending" },
       { id: "video", name: "Finding Best Video", status: "pending" },
       { id: "ready", name: "Video Ready", status: "pending" },
     ]);
+    // Re-trigger on next tick so the ref resets
+    setTimeout(() => {
+      hasStarted.current = true;
+      researchTopics();
+    }, 0);
   };
 
   return (
@@ -251,6 +313,9 @@ The learner is wondering: "${topic.beginnerQuestion}"`,
             <Sparkles className="h-5 w-5 text-primary" />
             AI Video Discovery
           </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Our AI agent is finding the perfect video for you — sit back and let it work.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -302,45 +367,50 @@ The learner is wondering: "${topic.beginnerQuestion}"`,
         </CardContent>
       </Card>
 
-      {/* Idle State - Start Button */}
-      {flowState === "idle" && (
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <Search className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">Discover AI Videos</h3>
-            <p className="text-muted-foreground mb-6">
-              Let AI find the perfect learning video for you based on trending
-              topics
-            </p>
-            <Button onClick={researchTopics} size="lg">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Start Discovery
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Researching Topics State */}
       {flowState === "researching-topics" && (
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <Loader2 className="h-12 w-12 mx-auto mb-4 text-primary animate-spin" />
-            <h3 className="text-lg font-semibold mb-2">
-              Researching AI Trends...
-            </h3>
-            <p className="text-muted-foreground">
-              Analyzing the latest developments in AI from the past 6 months
-            </p>
+        <Card className="border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Brain className="h-6 w-6 text-primary animate-pulse" />
+              </div>
+              <div className="flex-1 space-y-3">
+                <h3 className="text-lg font-semibold">
+                  AI Agent Working...
+                </h3>
+                <p className="text-muted-foreground text-sm">
+                  {statusMessage}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>Analyzing trends from the past 6 months to find what matters most for beginners</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                  <div className="bg-primary h-full rounded-full animate-pulse" style={{ width: "60%" }} />
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
 
       {/* Select Topic State */}
       {flowState === "select-topic" && topics.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold">
-            Select a topic to explore:
-          </h3>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="shrink-0 w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+              <ListChecks className="h-5 w-5 text-green-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">
+                Pick a topic that interests you
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Our AI found {topics.length} trending topics. Tap one to find the best video.
+              </p>
+            </div>
+          </div>
           <div className="grid gap-3">
             {topics.map((topic) => (
               <Card
@@ -373,16 +443,29 @@ The learner is wondering: "${topic.beginnerQuestion}"`,
 
       {/* Searching Video State */}
       {flowState === "searching-video" && selectedTopic && (
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <Youtube className="h-12 w-12 mx-auto mb-4 text-red-500 animate-pulse" />
-            <h3 className="text-lg font-semibold mb-2">Finding the Best Video</h3>
-            <p className="text-muted-foreground mb-2">
-              Topic: <span className="font-medium">{selectedTopic.title}</span>
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Searching for high-quality content from respected creators...
-            </p>
+        <Card className="border-red-500/20">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                <Tv className="h-6 w-6 text-red-500 animate-pulse" />
+              </div>
+              <div className="flex-1 space-y-3">
+                <h3 className="text-lg font-semibold">Finding the Perfect Video</h3>
+                <p className="text-sm text-muted-foreground">
+                  Topic: <span className="font-medium text-foreground">{selectedTopic.title}</span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {statusMessage}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Youtube className="h-3 w-3 text-red-500" />
+                  <span>Looking through channels like 3Blue1Brown, Fireship, Two Minute Papers...</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                  <div className="bg-red-500 h-full rounded-full animate-pulse" style={{ width: "50%" }} />
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -447,7 +530,8 @@ The learner is wondering: "${topic.beginnerQuestion}"`,
       {flowState === "error" && (
         <Card className="border-red-200">
           <CardContent className="pt-6 text-center">
-            <p className="text-red-500 mb-4">{error}</p>
+            <p className="text-red-500 mb-2 font-medium">Something went wrong</p>
+            <p className="text-sm text-muted-foreground mb-4">{error}</p>
             <Button onClick={reset} variant="outline">
               Try Again
             </Button>
