@@ -5,7 +5,7 @@
  * It welcomes unknown users and helps them discover how they want to learn.
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { GlobalHeader } from "@/components/global-header";
 import { LearningModeSelector } from "@/components/learning-mode-selector";
 import { PromptPlayground } from "@/components/prompt-playground";
@@ -22,9 +22,7 @@ import {
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
-import { useVoiceRecognition } from "@/hooks/use-voice-recognition";
-
-const VOICE_STORAGE_KEY = "bilko-voice-enabled";
+import { useVoice, useVoiceCommands } from "@/contexts/voice-context";
 
 // Flow states for the welcome experience
 type FlowState =
@@ -41,50 +39,20 @@ export default function Landing() {
   const [flowState, setFlowState] = useState<FlowState>("welcome");
   const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
   const [showWelcome, setShowWelcome] = useState(true);
-  const autoStartedVoice = useRef(false);
+  const { isListening, isSupported: isVoiceSupported } = useVoice();
 
   const handleModeSelect = useCallback((modeId: LearningModeId) => {
     setSelectedMode(modeId);
     setFlowState(modeId);
   }, []);
 
-  // Voice recognition for learning mode selection
-  const {
-    isListening,
-    isSupported: isVoiceSupported,
-    permissionDenied: voicePermissionDenied,
-    transcript,
-    startListening,
-    toggleListening,
-    stopListening,
-  } = useVoiceRecognition<LearningModeId>({
-    options: LEARNING_MODES,
-    onMatch: handleModeSelect,
-    continuous: true,
-  });
-
-  // Persist voice preference to localStorage
-  const handleVoiceToggle = useCallback(async () => {
-    if (isListening) {
-      localStorage.setItem(VOICE_STORAGE_KEY, "false");
-    } else {
-      localStorage.setItem(VOICE_STORAGE_KEY, "true");
-    }
-    await toggleListening();
-  }, [isListening, toggleListening]);
-
-  // Auto-enable voice on revisit if previously enabled
-  useEffect(() => {
-    if (
-      !autoStartedVoice.current &&
-      isVoiceSupported &&
-      flowState === "choose-mode" &&
-      localStorage.getItem(VOICE_STORAGE_KEY) === "true"
-    ) {
-      autoStartedVoice.current = true;
-      startListening();
-    }
-  }, [flowState, isVoiceSupported, startListening]);
+  // Register voice commands only when on the choose-mode screen
+  useVoiceCommands(
+    "landing-modes",
+    LEARNING_MODES,
+    handleModeSelect as (id: string) => void,
+    flowState === "choose-mode"
+  );
 
   // Auto-advance from welcome to mode selection
   useEffect(() => {
@@ -97,13 +65,6 @@ export default function Landing() {
     }
   }, [flowState]);
 
-  // Stop listening when leaving choose-mode state
-  useEffect(() => {
-    if (flowState !== "choose-mode" && isListening) {
-      stopListening();
-    }
-  }, [flowState, isListening, stopListening]);
-
   const handleBack = () => {
     setFlowState("choose-mode");
     setSelectedMode(null);
@@ -111,16 +72,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <GlobalHeader
-        variant="landing"
-        voice={{
-          isListening,
-          isSupported: isVoiceSupported,
-          permissionDenied: voicePermissionDenied,
-          transcript,
-          onToggle: handleVoiceToggle,
-        }}
-      />
+      <GlobalHeader variant="landing" />
 
       <main className="flex-1 flex flex-col pt-14">
         {/* Welcome State */}

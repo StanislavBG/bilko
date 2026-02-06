@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
 import { NavigationProvider } from "@/contexts/navigation-context";
+import { VoiceProvider } from "@/contexts/voice-context";
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
@@ -75,8 +76,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="system" storageKey="bilko-ui-theme">
         <TooltipProvider>
-          <Toaster />
-          <AuthenticatedApp />
+          <VoiceProvider>
+            <Toaster />
+            <AuthenticatedApp />
+          </VoiceProvider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
