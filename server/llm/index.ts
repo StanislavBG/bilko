@@ -75,8 +75,18 @@ export function getModelById(modelId: string): LLMModel | undefined {
   return AVAILABLE_MODELS.find(m => m.id === modelId);
 }
 
-function stripCodeFences(text: string): string {
-  return text.replace(/```(?:json|[\w]*)?\s*/gi, "").trim();
+function cleanLLMResponse(text: string): string {
+  let cleaned = text.replace(/```(?:json|[\w]*)?\n?/gi, "").trim();
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const candidate = cleaned.substring(firstBrace, lastBrace + 1);
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {}
+  }
+  return cleaned;
 }
 
 export async function chat(request: ChatRequest): Promise<ChatResponse> {
@@ -90,7 +100,7 @@ export async function chat(request: ChatRequest): Promise<ChatResponse> {
   });
 
   const raw = response.choices[0]?.message?.content || "";
-  const content = stripCodeFences(raw);
+  const content = cleanLLMResponse(raw);
 
   return {
     content,
