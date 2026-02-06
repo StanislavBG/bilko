@@ -14,14 +14,12 @@ import {
   ArrowLeft,
   Workflow,
   Play,
-  ExternalLink,
   GitBranch,
   MapPin,
 } from "lucide-react";
 import { getFlowById } from "@/lib/flow-inspector/registry";
-import { FlowTimeline } from "@/components/flow-inspector";
-import { StepDetail } from "@/components/flow-inspector";
-import type { FlowExecution, StepExecution } from "@/lib/flow-inspector/types";
+import { FlowTimeline, StepDetail } from "@/components/flow-inspector";
+import { useExecutionStore } from "@/lib/flow-engine";
 
 export default function FlowDetail() {
   const [, setLocation] = useLocation();
@@ -31,7 +29,9 @@ export default function FlowDetail() {
   const flow = flowId ? getFlowById(flowId) : undefined;
 
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
-  const [execution, setExecution] = useState<FlowExecution | null>(null);
+
+  // Read live execution data from the global store
+  const execution = useExecutionStore(flowId ?? "");
 
   if (!match || !flow) {
     return (
