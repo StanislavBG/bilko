@@ -64,4 +64,33 @@ router.post("/chat", async (req: Request, res: Response) => {
   }
 });
 
+router.post("/validate-videos", async (req: Request, res: Response) => {
+  try {
+    const { videos } = req.body;
+    if (!Array.isArray(videos)) {
+      res.status(400).json({ error: "videos array is required" });
+      return;
+    }
+
+    const results = await Promise.all(
+      videos.map(async (video: { embedId?: string }) => {
+        if (!video.embedId) return null;
+        try {
+          const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${encodeURIComponent(video.embedId)}&format=json`;
+          const resp = await fetch(oembedUrl, { signal: AbortSignal.timeout(5000) });
+          if (resp.ok) return video;
+          return null;
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    res.json({ videos: results.filter(Boolean) });
+  } catch (error) {
+    console.error("Video validation error:", error);
+    res.status(500).json({ error: "Failed to validate videos" });
+  }
+});
+
 export default router;

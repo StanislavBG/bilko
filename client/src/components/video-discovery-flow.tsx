@@ -145,7 +145,23 @@ Rules:
 
       const data = await response.json();
       const parsed = JSON.parse(data.content || "{}");
-      videoCache.current[key] = parsed.videos || [];
+      const candidates = parsed.videos || [];
+
+      if (candidates.length > 0) {
+        const validateResp = await fetch("/api/llm/validate-videos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ videos: candidates }),
+        });
+        if (validateResp.ok) {
+          const validated = await validateResp.json();
+          videoCache.current[key] = validated.videos || [];
+        } else {
+          videoCache.current[key] = candidates;
+        }
+      } else {
+        videoCache.current[key] = [];
+      }
       videoCacheStatus.current[key] = "done";
     } catch {
       videoCacheStatus.current[key] = "error";
