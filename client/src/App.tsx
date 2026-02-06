@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
+import { NavigationProvider } from "@/contexts/navigation-context";
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
@@ -41,23 +42,25 @@ function AuthenticatedApp() {
   return (
     <ViewModeProvider>
       <SidebarProvider>
-        <div className="flex flex-col h-screen w-full">
-          <GlobalHeader />
-          <div className="flex flex-1 overflow-hidden">
-            <AppSidebar />
-            <main className="flex-1 flex overflow-hidden">
-              <Switch>
-                <Route path="/" component={Academy} />
-                <Route path="/:levelId" component={Academy} />
-                <Route path="/projects/:projectId?" component={Projects} />
-                <Route path="/workflows" component={AgenticWorkflows} />
-                <Route path="/memory" component={MemoryExplorer} />
-                <Route path="/rules" component={RulesExplorer} />
-                <Route component={NotFound} />
-              </Switch>
-            </main>
+        <NavigationProvider>
+          <div className="flex flex-col h-screen w-full">
+            <GlobalHeader />
+            <div className="flex flex-1 overflow-hidden">
+              <AppSidebar />
+              <main className="flex-1 flex overflow-hidden">
+                <Switch>
+                  <Route path="/" component={Academy} />
+                  <Route path="/:levelId" component={Academy} />
+                  <Route path="/projects/:projectId?" component={Projects} />
+                  <Route path="/workflows" component={AgenticWorkflows} />
+                  <Route path="/memory" component={MemoryExplorer} />
+                  <Route path="/rules" component={RulesExplorer} />
+                  <Route component={NotFound} />
+                </Switch>
+              </main>
+            </div>
           </div>
-        </div>
+        </NavigationProvider>
       </SidebarProvider>
     </ViewModeProvider>
   );
