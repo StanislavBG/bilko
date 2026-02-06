@@ -24,6 +24,12 @@ import {
   Building,
   Shield,
   Workflow,
+  Lightbulb,
+  Hammer,
+  HelpCircle,
+  Gamepad2,
+  Trophy,
+  ListChecks,
 } from "lucide-react";
 import {
   Card,
@@ -49,10 +55,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  academyLevels,
+  academyTracks,
   getLevelById,
+  getTrackById,
+  getTrackForLevel,
   type AcademyLevel,
   type SubTopic,
+  type Track,
+  type QuestType,
 } from "@/data/academy-levels";
 import {
   dictionaryCategories,
@@ -273,16 +283,22 @@ function LevelNavItem({
 }
 
 function LevelsL3Nav({
+  selectedTrackId,
   selectedLevelId,
+  onSelectTrack,
   onSelectLevel,
   isCollapsed,
   onToggleCollapse,
 }: {
+  selectedTrackId: string | null;
   selectedLevelId: string | null;
+  onSelectTrack: (id: string) => void;
   onSelectLevel: (id: string | null) => void;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
 }) {
+  const selectedTrack = selectedTrackId ? getTrackById(selectedTrackId) : null;
+
   return (
     <div
       className={`hidden md:flex shrink-0 border-r bg-muted/10 flex-col transition-all duration-200 ${
@@ -296,20 +312,93 @@ function LevelsL3Nav({
           </span>
         ) : (
           <span className="text-xs font-medium text-muted-foreground">
-            Levels
+            {selectedTrack ? selectedTrack.name.split(" ")[0] : "Tracks"}
           </span>
         )}
       </div>
       <div className="flex-1 overflow-auto p-1 space-y-0.5">
-        {academyLevels.map((level) => (
-          <LevelNavItem
-            key={level.id}
-            level={level}
-            isSelected={selectedLevelId === level.id}
-            onSelect={() => onSelectLevel(level.id)}
-            isCollapsed={isCollapsed}
-          />
-        ))}
+        {selectedTrack ? (
+          <>
+            {/* Back to tracks button */}
+            {!isCollapsed && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start h-auto py-1 px-2 text-muted-foreground hover:text-foreground mb-1"
+                onClick={() => onSelectLevel(null)}
+              >
+                <ChevronLeft className="h-3 w-3 mr-1" />
+                <span className="text-xs">All Tracks</span>
+              </Button>
+            )}
+            {/* Levels in selected track */}
+            {selectedTrack.levels.map((level) => (
+              <LevelNavItem
+                key={level.id}
+                level={level}
+                isSelected={selectedLevelId === level.id}
+                onSelect={() => onSelectLevel(level.id)}
+                isCollapsed={isCollapsed}
+              />
+            ))}
+          </>
+        ) : (
+          /* Track selection */
+          academyTracks.map((track) => (
+            <Tooltip key={track.id}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={`w-full h-auto py-2 px-2 ${
+                    isCollapsed ? "justify-center" : "justify-start"
+                  } ${
+                    track.difficulty === "beginner"
+                      ? "hover:bg-emerald-500/10"
+                      : track.difficulty === "intermediate"
+                      ? "hover:bg-blue-500/10"
+                      : "hover:bg-purple-500/10"
+                  }`}
+                  onClick={() => onSelectTrack(track.id)}
+                >
+                  {isCollapsed ? (
+                    <span
+                      className={`text-sm font-medium ${
+                        track.difficulty === "beginner"
+                          ? "text-emerald-500"
+                          : track.difficulty === "intermediate"
+                          ? "text-blue-500"
+                          : "text-purple-500"
+                      }`}
+                    >
+                      {track.name[0]}
+                    </span>
+                  ) : (
+                    <div className="flex flex-col items-start gap-0.5 w-full">
+                      <span
+                        className={`text-sm font-medium ${
+                          track.difficulty === "beginner"
+                            ? "text-emerald-500"
+                            : track.difficulty === "intermediate"
+                            ? "text-blue-500"
+                            : "text-purple-500"
+                        }`}
+                      >
+                        {track.name.split(" ")[0]}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {track.tagline}
+                      </span>
+                    </div>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              {isCollapsed && (
+                <TooltipContent side="right">
+                  {track.name}: {track.tagline}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          ))
+        )}
       </div>
       <div className="border-t h-9 flex items-center justify-center shrink-0">
         <Tooltip>
@@ -408,18 +497,46 @@ function SubTopicDetail({ subTopic }: { subTopic: SubTopic }) {
 }
 
 function LevelsOverview({
-  onSelectLevel,
+  onSelectTrack,
 }: {
-  onSelectLevel: (levelId: string) => void;
+  onSelectTrack: (trackId: string) => void;
 }) {
-  const totalQuests = academyLevels.reduce(
-    (sum, level) => sum + level.quests.length,
+  const totalLevels = academyTracks.reduce(
+    (sum, track) => sum + track.levels.length,
     0
   );
-  const totalSubTopics = academyLevels.reduce(
-    (sum, level) => sum + (level.subTopics?.length || 0),
+  const totalQuests = academyTracks.reduce(
+    (sum, track) =>
+      sum + track.levels.reduce((s, l) => s + l.quests.length, 0),
     0
   );
+
+  const journeyIcons = {
+    seedling: Rocket,
+    zap: Zap,
+    sparkles: Sparkles,
+  };
+
+  const trackColors = {
+    beginner: {
+      border: "border-emerald-500/30",
+      bg: "bg-emerald-500/5",
+      text: "text-emerald-500",
+      hover: "hover:border-emerald-500/50",
+    },
+    intermediate: {
+      border: "border-blue-500/30",
+      bg: "bg-blue-500/5",
+      text: "text-blue-500",
+      hover: "hover:border-blue-500/50",
+    },
+    advanced: {
+      border: "border-purple-500/30",
+      bg: "bg-purple-500/5",
+      text: "text-purple-500",
+      hover: "hover:border-purple-500/50",
+    },
+  };
 
   return (
     <div className="flex-1 overflow-auto bg-background">
@@ -430,83 +547,212 @@ function LevelsOverview({
             <Target className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold mb-1">Progression Levels</h1>
+            <h1 className="text-2xl font-bold mb-1">AI Academy</h1>
             <p className="text-muted-foreground">
-              Structured guidance with practical quests to prove mastery
+              Three paths to AI mastery. Choose your journey based on your experience level.
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4 mt-6">
           <div className="text-center p-3 rounded-lg bg-background/50 border">
-            <div className="text-2xl font-bold text-primary">10</div>
+            <div className="text-2xl font-bold text-primary">{academyTracks.length}</div>
+            <div className="text-xs text-muted-foreground">Tracks</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-background/50 border">
+            <div className="text-2xl font-bold text-primary">{totalLevels}</div>
             <div className="text-xs text-muted-foreground">Levels</div>
           </div>
           <div className="text-center p-3 rounded-lg bg-background/50 border">
             <div className="text-2xl font-bold text-primary">{totalQuests}</div>
             <div className="text-xs text-muted-foreground">Quests</div>
           </div>
-          <div className="text-center p-3 rounded-lg bg-background/50 border">
-            <div className="text-2xl font-bold text-primary">
-              {totalSubTopics}
-            </div>
-            <div className="text-xs text-muted-foreground">Deep Dives</div>
-          </div>
         </div>
       </div>
 
       <div className="p-6 space-y-8">
-        {/* Journey Phases */}
+        {/* Track Cards */}
+        <section>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
+            Choose Your Path
+          </h2>
+          <div className="grid gap-6">
+            {academyTracks.map((track) => {
+              const colors = trackColors[track.difficulty];
+              return (
+                <Card
+                  key={track.id}
+                  className={`cursor-pointer transition-all ${colors.border} ${colors.bg} ${colors.hover}`}
+                  onClick={() => onSelectTrack(track.id)}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <Badge
+                          variant="outline"
+                          className={`${colors.text} border-current mb-2`}
+                        >
+                          {track.difficulty}
+                        </Badge>
+                        <CardTitle className="text-xl">{track.name}</CardTitle>
+                        <CardDescription className="text-base mt-1">
+                          {track.tagline}
+                        </CardDescription>
+                      </div>
+                      <ChevronRight className={`h-6 w-6 ${colors.text}`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {track.description}
+                    </p>
+
+                    {/* Journey phases */}
+                    <div className="grid gap-3 md:grid-cols-3">
+                      {track.journey.map((phase) => {
+                        const PhaseIcon = journeyIcons[phase.icon];
+                        return (
+                          <div
+                            key={phase.id}
+                            className="p-3 rounded-lg bg-background/50 border"
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <PhaseIcon className={`h-4 w-4 ${colors.text}`} />
+                              <span className="text-sm font-medium">
+                                {phase.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                ({phase.levelRange})
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {phase.description}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex gap-4 mt-4 pt-4 border-t">
+                      <div className="text-sm">
+                        <span className={`font-bold ${colors.text}`}>
+                          {track.levels.length}
+                        </span>{" "}
+                        <span className="text-muted-foreground">levels</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className={`font-bold ${colors.text}`}>
+                          {track.levels.reduce(
+                            (sum, l) => sum + l.quests.length,
+                            0
+                          )}
+                        </span>{" "}
+                        <span className="text-muted-foreground">quests</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Recommended Start */}
+        <section className="text-center py-4">
+          <p className="text-sm text-muted-foreground mb-3">
+            New to AI? Start with the Recruit track.
+          </p>
+          <Button onClick={() => onSelectTrack("recruit")}>
+            Start as a Recruit
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function TrackOverview({
+  track,
+  onSelectLevel,
+  onBack,
+}: {
+  track: Track;
+  onSelectLevel: (levelId: string) => void;
+  onBack: () => void;
+}) {
+  const journeyIcons = {
+    seedling: Rocket,
+    zap: Zap,
+    sparkles: Sparkles,
+  };
+
+  const colors = {
+    beginner: { text: "text-emerald-500", border: "border-emerald-500/30", bg: "bg-emerald-500/5" },
+    intermediate: { text: "text-blue-500", border: "border-blue-500/30", bg: "bg-blue-500/5" },
+    advanced: { text: "text-purple-500", border: "border-purple-500/30", bg: "bg-purple-500/5" },
+  }[track.difficulty];
+
+  return (
+    <div className="flex-1 overflow-auto bg-background">
+      {/* Header */}
+      <div className={`p-6 border-b ${colors.bg}`}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="gap-1 mb-4"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          All Tracks
+        </Button>
+
+        <div className="flex items-start gap-4">
+          <div className={`p-3 rounded-xl ${colors.bg} border ${colors.border}`}>
+            <Target className={`h-8 w-8 ${colors.text}`} />
+          </div>
+          <div>
+            <Badge variant="outline" className={`${colors.text} border-current mb-2`}>
+              {track.difficulty}
+            </Badge>
+            <h1 className="text-2xl font-bold">{track.name}</h1>
+            <p className="text-muted-foreground">{track.tagline}</p>
+          </div>
+        </div>
+
+        <p className="mt-4 text-sm text-muted-foreground max-w-2xl">
+          {track.description}
+        </p>
+      </div>
+
+      <div className="p-6 space-y-8">
+        {/* Journey */}
         <section>
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
             The Journey
           </h2>
           <div className="grid gap-4 md:grid-cols-3">
-            <Card className="border-green-500/30 bg-green-500/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Rocket className="h-4 w-4 text-green-500" />
-                  Foundation (0-30)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground">
-                  Learn AI's language. Generate interfaces, automate workflows,
-                  and master prompting across text, image, video, and audio.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-blue-500/30 bg-blue-500/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-blue-500" />
-                  Integration (31-60)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground">
-                  Connect AI to the real world. Extract data, give AI long-term
-                  memory with RAG, and build intelligent routing systems.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-purple-500/30 bg-purple-500/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-purple-500" />
-                  Mastery (61-100)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground">
-                  Build autonomous systems. Give AI hands with function calling,
-                  orchestrate agent teams, and create self-sustaining systems.
-                </p>
-              </CardContent>
-            </Card>
+            {track.journey.map((phase) => {
+              const PhaseIcon = journeyIcons[phase.icon];
+              return (
+                <Card key={phase.id} className={`${colors.border} ${colors.bg}`}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <PhaseIcon className={`h-4 w-4 ${colors.text}`} />
+                      {phase.name} ({phase.levelRange})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-xs text-muted-foreground">
+                      {phase.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </section>
 
@@ -531,7 +777,7 @@ function LevelsOverview({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {academyLevels.map((level) => (
+                  {track.levels.map((level) => (
                     <TableRow
                       key={level.id}
                       className="cursor-pointer hover:bg-muted/50"
@@ -571,8 +817,8 @@ function LevelsOverview({
 
         {/* CTA */}
         <section className="text-center py-4">
-          <Button onClick={() => onSelectLevel("level-0")}>
-            Start with The Drifter
+          <Button onClick={() => onSelectLevel(track.levels[0]?.id)}>
+            Start with {track.levels[0]?.rank}
             <ChevronRight className="h-4 w-4 ml-1" />
           </Button>
         </section>
@@ -710,6 +956,9 @@ function LevelDetailPanel({
                 <div className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-primary" />
                   <CardTitle className="text-base">Quests</CardTitle>
+                  <Badge variant="outline" className="ml-auto">
+                    {level.quests.length} total
+                  </Badge>
                 </div>
                 <CardDescription>
                   Complete these challenges to level up
@@ -717,27 +966,60 @@ function LevelDetailPanel({
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {level.quests.map((quest, idx) => (
-                    <div key={quest.id} className="p-3 rounded-lg border bg-card">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
-                          {idx + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <h4 className="font-medium text-sm">{quest.title}</h4>
-                            <Badge variant="secondary" className="text-xs">
-                              <ExternalLink className="h-3 w-3 mr-1" />
-                              {quest.platform}
-                            </Badge>
+                  {level.quests.map((quest) => {
+                    const questTypeConfig: Record<QuestType, { icon: React.ElementType; color: string; label: string }> = {
+                      prompt: { icon: Lightbulb, color: "text-yellow-500", label: "Prompt Exercise" },
+                      build: { icon: Hammer, color: "text-blue-500", label: "Build Challenge" },
+                      quiz: { icon: HelpCircle, color: "text-purple-500", label: "Quiz" },
+                      game: { icon: Gamepad2, color: "text-green-500", label: "Mini-Game" },
+                      capstone: { icon: Trophy, color: "text-amber-500", label: "Capstone" },
+                    };
+                    const config = questTypeConfig[quest.type];
+                    const QuestIcon = config.icon;
+
+                    return (
+                      <div key={quest.id} className="p-3 rounded-lg border bg-card">
+                        <div className="flex items-start gap-3">
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center ${config.color}`}>
+                            <QuestIcon className="h-4 w-4" />
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {quest.description}
-                          </p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <Badge variant="outline" className={`text-xs ${config.color} border-current`}>
+                                {config.label}
+                              </Badge>
+                              {quest.platform && (
+                                <Badge variant="secondary" className="text-xs">
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  {quest.platform}
+                                </Badge>
+                              )}
+                            </div>
+                            <h4 className="font-medium text-sm mb-1">{quest.title}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {quest.description}
+                            </p>
+                            {quest.tasks && quest.tasks.length > 0 && (
+                              <div className="mt-2 pl-3 border-l-2 border-muted">
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                                  <ListChecks className="h-3 w-3" />
+                                  Tasks
+                                </div>
+                                <ul className="space-y-1">
+                                  {quest.tasks.map((task, taskIdx) => (
+                                    <li key={taskIdx} className="text-xs text-muted-foreground flex items-start gap-1">
+                                      <span className="text-muted-foreground/50">•</span>
+                                      {task}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -1362,6 +1644,9 @@ export default function Academy() {
   const [isL3Collapsed, setIsL3Collapsed] = useState(false);
   const [isL4Collapsed, setIsL4Collapsed] = useState(false);
 
+  // Track state (for Levels section)
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+
   // Levels state
   const [selectedLevelId, setSelectedLevelId] = useState<string | null>(
     params?.levelId || null
@@ -1375,15 +1660,35 @@ export default function Academy() {
 
   // URL sync
   useEffect(() => {
-    if (location.startsWith("/level-")) {
+    if (location.startsWith("/recruit-level-") || location.startsWith("/specialist-level-") || location.startsWith("/architect-level-")) {
       const levelId = location.replace("/", "");
       setSelectedLevelId(levelId);
+      // Auto-select the track based on level
+      const track = getTrackForLevel(levelId);
+      if (track) setSelectedTrackId(track.id);
       setActiveSection("levels");
     } else if (location === "/") {
       setSelectedLevelId(null);
     }
   }, [location]);
 
+  // Auto-collapse L2 when L3 has a selection (track, level, or category selected)
+  useEffect(() => {
+    const hasL3Selection = selectedTrackId || selectedLevelId || selectedCategoryId;
+    if (hasL3Selection) {
+      setIsL2Collapsed(true);
+    }
+  }, [selectedTrackId, selectedLevelId, selectedCategoryId]);
+
+  // Auto-collapse L2 and L3 when L4 has a selection (term selected)
+  useEffect(() => {
+    if (selectedTermId) {
+      setIsL2Collapsed(true);
+      setIsL3Collapsed(true);
+    }
+  }, [selectedTermId]);
+
+  const selectedTrack = selectedTrackId ? getTrackById(selectedTrackId) : null;
   const selectedLevel = selectedLevelId ? getLevelById(selectedLevelId) : null;
   const selectedCategory = selectedCategoryId
     ? getCategoryById(selectedCategoryId)
@@ -1398,20 +1703,42 @@ export default function Academy() {
     );
   }, [selectedTermId]);
 
+  const handleSelectTrack = (trackId: string) => {
+    setSelectedTrackId(trackId);
+    setSelectedLevelId(null);
+  };
+
+  const handleBackToTracks = () => {
+    setSelectedTrackId(null);
+    setSelectedLevelId(null);
+    setIsL2Collapsed(false);
+  };
+
   const handleSelectLevel = (levelId: string | null) => {
     setSelectedLevelId(levelId);
     if (levelId) {
+      // Auto-select the track when selecting a level
+      const track = getTrackForLevel(levelId);
+      if (track && !selectedTrackId) {
+        setSelectedTrackId(track.id);
+      }
       window.history.pushState({}, "", `/${levelId}`);
     } else {
+      // Going back to track view
       window.history.pushState({}, "", "/");
     }
   };
 
   const handleSectionChange = (section: AcademySection) => {
     setActiveSection(section);
+    setSelectedTrackId(null);
     setSelectedLevelId(null);
     setSelectedCategoryId(null);
     setSelectedTermId(null);
+    // Reset collapsed states when switching sections
+    setIsL2Collapsed(false);
+    setIsL3Collapsed(false);
+    setIsL4Collapsed(false);
     window.history.pushState({}, "", "/");
   };
 
@@ -1446,16 +1773,22 @@ export default function Academy() {
 
   const handleBackFromTerm = () => {
     setSelectedTermId(null);
+    // Restore L3 when going back from term view
+    setIsL3Collapsed(false);
   };
 
   const handleBackFromCategory = () => {
     setSelectedCategoryId(null);
     setSelectedTermId(null);
+    // Restore L2 when going back to dictionary root
+    setIsL2Collapsed(false);
   };
 
   // Mobile back handlers
   const handleLevelBack = () => {
     setSelectedLevelId(null);
+    // Restore L2 when going back to levels root
+    setIsL2Collapsed(false);
     window.history.pushState({}, "", "/");
   };
 
@@ -1472,7 +1805,9 @@ export default function Academy() {
       {/* L3 Navigation - Levels */}
       {activeSection === "levels" && (
         <LevelsL3Nav
+          selectedTrackId={selectedTrackId}
           selectedLevelId={selectedLevelId}
+          onSelectTrack={handleSelectTrack}
           onSelectLevel={handleSelectLevel}
           isCollapsed={isL3Collapsed}
           onToggleCollapse={() => setIsL3Collapsed(!isL3Collapsed)}
@@ -1505,8 +1840,14 @@ export default function Academy() {
         <>
           {selectedLevel ? (
             <LevelDetailPanel level={selectedLevel} onBack={handleLevelBack} />
+          ) : selectedTrack ? (
+            <TrackOverview
+              track={selectedTrack}
+              onSelectLevel={handleSelectLevel}
+              onBack={handleBackToTracks}
+            />
           ) : (
-            <LevelsOverview onSelectLevel={handleSelectLevel} />
+            <LevelsOverview onSelectTrack={handleSelectTrack} />
           )}
         </>
       )}
