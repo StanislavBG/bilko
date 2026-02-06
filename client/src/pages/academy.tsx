@@ -74,7 +74,7 @@ import {
   type DictionaryCategory,
   type DictionaryTerm,
 } from "@/data/academy-dictionary";
-import { useSidebar } from "@/components/ui/sidebar";
+import { useNavigation } from "@/contexts/navigation-context";
 import { PromptPlayground } from "@/components/prompt-playground";
 
 // Icon mapping for dictionary categories
@@ -207,7 +207,7 @@ function L2Navigation({
           </Button>
         )}
       </div>
-      <div className="border-t h-11 flex items-center justify-center shrink-0">
+      <div className="border-t h-9 flex items-center justify-center shrink-0">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -1279,7 +1279,7 @@ function DictionaryL4Nav({
           )
         )}
       </div>
-      <div className="border-t h-8 flex items-center justify-center shrink-0">
+      <div className="border-t h-9 flex items-center justify-center shrink-0">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -1722,23 +1722,25 @@ function DictionaryTermView({
 export default function Academy() {
   const [location] = useLocation();
   const [, params] = useRoute("/:levelId");
-  const { setOpen: setL1Open } = useSidebar();
 
-  // State
+  // Use unified navigation framework for collapse management
+  const nav = useNavigation();
+  const isL2Collapsed = nav.isCollapsed(2);
+  const isL3Collapsed = nav.isCollapsed(3);
+  const isL4Collapsed = nav.isCollapsed(4);
+
+  // State - app-specific selections
   const [activeSection, setActiveSection] = useState<AcademySection>("levels");
-  const [isL2Collapsed, setIsL2Collapsed] = useState(false);
-  const [isL3Collapsed, setIsL3Collapsed] = useState(false);
-  const [isL4Collapsed, setIsL4Collapsed] = useState(false);
 
-  // Track state (for Levels section)
+  // Track state (for Levels section) - maps to L3
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
 
-  // Levels state
+  // Levels state - maps to L4
   const [selectedLevelId, setSelectedLevelId] = useState<string | null>(
     params?.levelId || null
   );
 
-  // Dictionary state
+  // Dictionary state - category is L3, term is L4
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
     null
   );
@@ -1753,28 +1755,12 @@ export default function Academy() {
       const track = getTrackForLevel(levelId);
       if (track) setSelectedTrackId(track.id);
       setActiveSection("levels");
+      // Apply L4 collapse rules (expands L3, collapses L1+L2)
+      nav.selectAtLevel(4, levelId);
     } else if (location === "/") {
       setSelectedLevelId(null);
     }
-  }, [location]);
-
-  // Auto-collapse L1 when L3 has a selection (track or category selected)
-  // Rule: clicking level X collapses X-2, NOT adjacent levels
-  useEffect(() => {
-    const hasL3Selection = selectedTrackId || selectedCategoryId;
-    if (hasL3Selection) {
-      setL1Open(false); // Collapse L1 (2 steps away from L3)
-    }
-  }, [selectedTrackId, selectedCategoryId, setL1Open]);
-
-  // Auto-collapse L1 and L2 when L4 has a selection (level within track or term selected)
-  // L4 click: collapse L2 (2 away), L1 (3 away), but NOT L3 (adjacent)
-  useEffect(() => {
-    if (selectedLevelId || selectedTermId) {
-      setL1Open(false); // Collapse L1
-      setIsL2Collapsed(true); // Collapse L2
-    }
-  }, [selectedLevelId, selectedTermId, setL1Open]);
+  }, [location, nav]);
 
   const selectedTrack = selectedTrackId ? getTrackById(selectedTrackId) : null;
   const selectedLevel = selectedLevelId ? getLevelById(selectedLevelId) : null;
@@ -1794,16 +1780,15 @@ export default function Academy() {
   const handleSelectTrack = (trackId: string) => {
     setSelectedTrackId(trackId);
     setSelectedLevelId(null);
-    // Ensure adjacent L2 is visible when clicking L3
-    setIsL2Collapsed(false);
+    // Apply L3 selection collapse rules (expands L2, collapses L1)
+    nav.selectAtLevel(3, trackId);
   };
 
   const handleBackToTracks = () => {
     setSelectedTrackId(null);
     setSelectedLevelId(null);
-    // Restore L1 when going back to tracks overview
-    setL1Open(true);
-    setIsL2Collapsed(false);
+    // Go back from L3 - restores L1 and L2
+    nav.goBack(3);
   };
 
   const handleSelectLevel = (levelId: string | null) => {
@@ -1814,12 +1799,12 @@ export default function Academy() {
       if (track && !selectedTrackId) {
         setSelectedTrackId(track.id);
       }
-      // Ensure adjacent L3 is visible when clicking L4
-      setIsL3Collapsed(false);
+      // Apply L4 selection collapse rules (expands L3, collapses L1+L2)
+      nav.selectAtLevel(4, levelId);
       window.history.pushState({}, "", `/${levelId}`);
     } else {
-      // Going back to track view
-      setIsL3Collapsed(false);
+      // Going back from L4
+      nav.goBack(4);
       window.history.pushState({}, "", "/");
     }
   };
@@ -1830,19 +1815,16 @@ export default function Academy() {
     setSelectedLevelId(null);
     setSelectedCategoryId(null);
     setSelectedTermId(null);
-    // Reset all collapsed states when switching sections
-    setL1Open(true);
-    setIsL2Collapsed(false);
-    setIsL3Collapsed(false);
-    setIsL4Collapsed(false);
+    // Reset all navigation states when switching sections
+    nav.resetAll();
     window.history.pushState({}, "", "/");
   };
 
   const handleSelectCategory = (categoryId: string | null) => {
     setSelectedCategoryId(categoryId);
     setSelectedTermId(null);
-    // Ensure adjacent L2 is visible when clicking L3
-    setIsL2Collapsed(false);
+    // Apply L3 selection collapse rules (expands L2, collapses L1)
+    nav.selectAtLevel(3, categoryId);
   };
 
   const handleSelectTerm = (termId: string | null) => {
@@ -1854,9 +1836,9 @@ export default function Academy() {
       );
       if (cat) setSelectedCategoryId(cat.id);
     }
-    // Ensure adjacent L3 is visible when clicking L4
+    // Apply L4 selection collapse rules (expands L3, collapses L1+L2)
     if (termId) {
-      setIsL3Collapsed(false);
+      nav.selectAtLevel(4, termId);
     }
   };
 
@@ -1875,23 +1857,22 @@ export default function Academy() {
 
   const handleBackFromTerm = () => {
     setSelectedTermId(null);
-    // Restore L2 when going back from term view (L4 → L3)
-    setIsL2Collapsed(false);
+    // Go back from L4 - restores L2 and L3
+    nav.goBack(4);
   };
 
   const handleBackFromCategory = () => {
     setSelectedCategoryId(null);
     setSelectedTermId(null);
-    // Restore L1 when going back to dictionary root
-    setL1Open(true);
-    setIsL2Collapsed(false);
+    // Go back from L3 - restores L1 and L2
+    nav.goBack(3);
   };
 
   // Mobile back handlers
   const handleLevelBack = () => {
     setSelectedLevelId(null);
-    // Restore L1 when going back to levels root
-    setL1Open(true);
+    // Go back from L4 - restores L2 and L3
+    nav.goBack(4);
     window.history.pushState({}, "", "/");
   };
 
@@ -1902,7 +1883,7 @@ export default function Academy() {
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
         isCollapsed={isL2Collapsed}
-        onToggleCollapse={() => setIsL2Collapsed(!isL2Collapsed)}
+        onToggleCollapse={() => nav.toggleCollapse(2)}
       />
 
       {/* L3 Navigation - Tracks */}
@@ -1911,7 +1892,7 @@ export default function Academy() {
           selectedTrackId={selectedTrackId}
           onSelectTrack={handleSelectTrack}
           isCollapsed={isL3Collapsed}
-          onToggleCollapse={() => setIsL3Collapsed(!isL3Collapsed)}
+          onToggleCollapse={() => nav.toggleCollapse(3)}
         />
       )}
 
@@ -1922,7 +1903,7 @@ export default function Academy() {
           selectedLevelId={selectedLevelId}
           onSelectLevel={handleSelectLevel}
           isCollapsed={isL4Collapsed}
-          onToggleCollapse={() => setIsL4Collapsed(!isL4Collapsed)}
+          onToggleCollapse={() => nav.toggleCollapse(4)}
         />
       )}
 
@@ -1932,7 +1913,7 @@ export default function Academy() {
           selectedCategoryId={selectedCategoryId}
           onSelectCategory={handleSelectCategory}
           isCollapsed={isL3Collapsed}
-          onToggleCollapse={() => setIsL3Collapsed(!isL3Collapsed)}
+          onToggleCollapse={() => nav.toggleCollapse(3)}
         />
       )}
 
@@ -1943,7 +1924,7 @@ export default function Academy() {
           selectedTermId={selectedTermId}
           onSelectTerm={handleSelectTerm}
           isCollapsed={isL4Collapsed}
-          onToggleCollapse={() => setIsL4Collapsed(!isL4Collapsed)}
+          onToggleCollapse={() => nav.toggleCollapse(4)}
         />
       )}
 

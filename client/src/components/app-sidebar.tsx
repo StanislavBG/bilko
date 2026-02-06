@@ -116,7 +116,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t h-11 flex items-center justify-center shrink-0 p-0" />
+      <SidebarFooter className="border-t h-9 flex items-center justify-center shrink-0 p-0" />
     </>
   );
 
@@ -214,7 +214,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="border-t h-11 flex items-center justify-center shrink-0 p-0">
+      <SidebarFooter className="border-t h-9 flex items-center justify-center shrink-0 p-0">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
