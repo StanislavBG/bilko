@@ -72,6 +72,7 @@ import {
   type DictionaryCategory,
   type DictionaryTerm,
 } from "@/data/academy-dictionary";
+import { useSidebar } from "@/components/ui/sidebar";
 
 // Icon mapping for dictionary categories
 const categoryIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -1637,6 +1638,7 @@ function DictionaryTermView({
 export default function Academy() {
   const [location] = useLocation();
   const [, params] = useRoute("/:levelId");
+  const { setOpen: setL1Open } = useSidebar();
 
   // State
   const [activeSection, setActiveSection] = useState<AcademySection>("levels");
@@ -1672,21 +1674,23 @@ export default function Academy() {
     }
   }, [location]);
 
-  // Auto-collapse L2 when L3 has a selection (track, level, or category selected)
+  // Auto-collapse L1 when L3 has a selection (track, level, or category selected)
+  // Rule: clicking level X collapses X-2 and X+2, NOT adjacent levels
   useEffect(() => {
     const hasL3Selection = selectedTrackId || selectedLevelId || selectedCategoryId;
     if (hasL3Selection) {
-      setIsL2Collapsed(true);
+      setL1Open(false); // Collapse L1 (2 steps away from L3)
     }
-  }, [selectedTrackId, selectedLevelId, selectedCategoryId]);
+  }, [selectedTrackId, selectedLevelId, selectedCategoryId, setL1Open]);
 
-  // Auto-collapse L2 and L3 when L4 has a selection (term selected)
+  // Auto-collapse L1 and L2 when L4 has a selection (term selected)
+  // L4 click: collapse L2 (2 away), L1 (3 away), but NOT L3 (adjacent)
   useEffect(() => {
     if (selectedTermId) {
-      setIsL2Collapsed(true);
-      setIsL3Collapsed(true);
+      setL1Open(false); // Collapse L1
+      setIsL2Collapsed(true); // Collapse L2
     }
-  }, [selectedTermId]);
+  }, [selectedTermId, setL1Open]);
 
   const selectedTrack = selectedTrackId ? getTrackById(selectedTrackId) : null;
   const selectedLevel = selectedLevelId ? getLevelById(selectedLevelId) : null;
@@ -1711,7 +1715,8 @@ export default function Academy() {
   const handleBackToTracks = () => {
     setSelectedTrackId(null);
     setSelectedLevelId(null);
-    setIsL2Collapsed(false);
+    // Restore L1 when going back to tracks overview
+    setL1Open(true);
   };
 
   const handleSelectLevel = (levelId: string | null) => {
@@ -1735,7 +1740,8 @@ export default function Academy() {
     setSelectedLevelId(null);
     setSelectedCategoryId(null);
     setSelectedTermId(null);
-    // Reset collapsed states when switching sections
+    // Reset all collapsed states when switching sections
+    setL1Open(true);
     setIsL2Collapsed(false);
     setIsL3Collapsed(false);
     setIsL4Collapsed(false);
@@ -1773,22 +1779,23 @@ export default function Academy() {
 
   const handleBackFromTerm = () => {
     setSelectedTermId(null);
-    // Restore L3 when going back from term view
-    setIsL3Collapsed(false);
+    // Restore L2 when going back from term view (L4 → L3)
+    setIsL2Collapsed(false);
   };
 
   const handleBackFromCategory = () => {
     setSelectedCategoryId(null);
     setSelectedTermId(null);
-    // Restore L2 when going back to dictionary root
+    // Restore L1 when going back to dictionary root
+    setL1Open(true);
     setIsL2Collapsed(false);
   };
 
   // Mobile back handlers
   const handleLevelBack = () => {
     setSelectedLevelId(null);
-    // Restore L2 when going back to levels root
-    setIsL2Collapsed(false);
+    // Restore L1 when going back to levels root
+    setL1Open(true);
     window.history.pushState({}, "", "/");
   };
 
