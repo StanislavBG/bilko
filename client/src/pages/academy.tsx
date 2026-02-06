@@ -14,6 +14,7 @@ import {
   Brain,
   TrendingUp,
   ChevronRight,
+  ChevronUp,
   Sparkles,
   Book,
   Search,
@@ -30,6 +31,7 @@ import {
   Gamepad2,
   Trophy,
   ListChecks,
+  Play,
 } from "lucide-react";
 import {
   Card,
@@ -72,6 +74,8 @@ import {
   type DictionaryCategory,
   type DictionaryTerm,
 } from "@/data/academy-dictionary";
+import { useSidebar } from "@/components/ui/sidebar";
+import { PromptPlayground } from "@/components/prompt-playground";
 
 // Icon mapping for dictionary categories
 const categoryIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -837,10 +841,16 @@ function LevelDetailPanel({
   const [selectedSubTopicId, setSelectedSubTopicId] = useState<string | null>(
     null
   );
+  const [expandedQuestId, setExpandedQuestId] = useState<string | null>(null);
 
   useEffect(() => {
     setSelectedSubTopicId(null);
+    setExpandedQuestId(null);
   }, [level.id]);
+
+  const toggleQuestExpand = (questId: string) => {
+    setExpandedQuestId(expandedQuestId === questId ? null : questId);
+  };
 
   const selectedSubTopic = level.subTopics?.find(
     (st) => st.id === selectedSubTopicId
@@ -976,47 +986,82 @@ function LevelDetailPanel({
                     };
                     const config = questTypeConfig[quest.type];
                     const QuestIcon = config.icon;
+                    const isExpanded = expandedQuestId === quest.id;
+                    const isInteractive = quest.type === "prompt";
 
                     return (
-                      <div key={quest.id} className="p-3 rounded-lg border bg-card">
-                        <div className="flex items-start gap-3">
-                          <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center ${config.color}`}>
-                            <QuestIcon className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <Badge variant="outline" className={`text-xs ${config.color} border-current`}>
-                                {config.label}
-                              </Badge>
-                              {quest.platform && (
-                                <Badge variant="secondary" className="text-xs">
-                                  <ExternalLink className="h-3 w-3 mr-1" />
-                                  {quest.platform}
+                      <div key={quest.id} className="rounded-lg border bg-card overflow-hidden">
+                        <div className="p-3">
+                          <div className="flex items-start gap-3">
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center ${config.color}`}>
+                              <QuestIcon className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <Badge variant="outline" className={`text-xs ${config.color} border-current`}>
+                                  {config.label}
                                 </Badge>
+                                {isInteractive && (
+                                  <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-500 border-green-500/30">
+                                    <Play className="h-3 w-3 mr-1" />
+                                    Interactive
+                                  </Badge>
+                                )}
+                              </div>
+                              <h4 className="font-medium text-sm mb-1">{quest.title}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {quest.description}
+                              </p>
+                              {quest.tasks && quest.tasks.length > 0 && (
+                                <div className="mt-2 pl-3 border-l-2 border-muted">
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                                    <ListChecks className="h-3 w-3" />
+                                    Tasks
+                                  </div>
+                                  <ul className="space-y-1">
+                                    {quest.tasks.map((task, taskIdx) => (
+                                      <li key={taskIdx} className="text-xs text-muted-foreground flex items-start gap-1">
+                                        <span className="text-muted-foreground/50">•</span>
+                                        {task}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {isInteractive && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="mt-3"
+                                  onClick={() => toggleQuestExpand(quest.id)}
+                                >
+                                  {isExpanded ? (
+                                    <>
+                                      <ChevronUp className="h-4 w-4 mr-1" />
+                                      Hide Playground
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Play className="h-4 w-4 mr-1" />
+                                      Try it Now
+                                    </>
+                                  )}
+                                </Button>
                               )}
                             </div>
-                            <h4 className="font-medium text-sm mb-1">{quest.title}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {quest.description}
-                            </p>
-                            {quest.tasks && quest.tasks.length > 0 && (
-                              <div className="mt-2 pl-3 border-l-2 border-muted">
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                                  <ListChecks className="h-3 w-3" />
-                                  Tasks
-                                </div>
-                                <ul className="space-y-1">
-                                  {quest.tasks.map((task, taskIdx) => (
-                                    <li key={taskIdx} className="text-xs text-muted-foreground flex items-start gap-1">
-                                      <span className="text-muted-foreground/50">•</span>
-                                      {task}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
                           </div>
                         </div>
+                        {isExpanded && isInteractive && (
+                          <div className="border-t bg-muted/30 p-4">
+                            <PromptPlayground
+                              title={quest.title}
+                              description={quest.description}
+                              placeholder="Try the exercise here..."
+                              defaultModel="gpt-4o-mini"
+                              showModelSelector={true}
+                            />
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -1637,6 +1682,7 @@ function DictionaryTermView({
 export default function Academy() {
   const [location] = useLocation();
   const [, params] = useRoute("/:levelId");
+  const { setOpen: setL1Open } = useSidebar();
 
   // State
   const [activeSection, setActiveSection] = useState<AcademySection>("levels");
@@ -1672,21 +1718,23 @@ export default function Academy() {
     }
   }, [location]);
 
-  // Auto-collapse L2 when L3 has a selection (track, level, or category selected)
+  // Auto-collapse L1 when L3 has a selection (track, level, or category selected)
+  // Rule: clicking level X collapses X-2 and X+2, NOT adjacent levels
   useEffect(() => {
     const hasL3Selection = selectedTrackId || selectedLevelId || selectedCategoryId;
     if (hasL3Selection) {
-      setIsL2Collapsed(true);
+      setL1Open(false); // Collapse L1 (2 steps away from L3)
     }
-  }, [selectedTrackId, selectedLevelId, selectedCategoryId]);
+  }, [selectedTrackId, selectedLevelId, selectedCategoryId, setL1Open]);
 
-  // Auto-collapse L2 and L3 when L4 has a selection (term selected)
+  // Auto-collapse L1 and L2 when L4 has a selection (term selected)
+  // L4 click: collapse L2 (2 away), L1 (3 away), but NOT L3 (adjacent)
   useEffect(() => {
     if (selectedTermId) {
-      setIsL2Collapsed(true);
-      setIsL3Collapsed(true);
+      setL1Open(false); // Collapse L1
+      setIsL2Collapsed(true); // Collapse L2
     }
-  }, [selectedTermId]);
+  }, [selectedTermId, setL1Open]);
 
   const selectedTrack = selectedTrackId ? getTrackById(selectedTrackId) : null;
   const selectedLevel = selectedLevelId ? getLevelById(selectedLevelId) : null;
@@ -1711,7 +1759,8 @@ export default function Academy() {
   const handleBackToTracks = () => {
     setSelectedTrackId(null);
     setSelectedLevelId(null);
-    setIsL2Collapsed(false);
+    // Restore L1 when going back to tracks overview
+    setL1Open(true);
   };
 
   const handleSelectLevel = (levelId: string | null) => {
@@ -1735,7 +1784,8 @@ export default function Academy() {
     setSelectedLevelId(null);
     setSelectedCategoryId(null);
     setSelectedTermId(null);
-    // Reset collapsed states when switching sections
+    // Reset all collapsed states when switching sections
+    setL1Open(true);
     setIsL2Collapsed(false);
     setIsL3Collapsed(false);
     setIsL4Collapsed(false);
@@ -1773,22 +1823,23 @@ export default function Academy() {
 
   const handleBackFromTerm = () => {
     setSelectedTermId(null);
-    // Restore L3 when going back from term view
-    setIsL3Collapsed(false);
+    // Restore L2 when going back from term view (L4 → L3)
+    setIsL2Collapsed(false);
   };
 
   const handleBackFromCategory = () => {
     setSelectedCategoryId(null);
     setSelectedTermId(null);
-    // Restore L2 when going back to dictionary root
+    // Restore L1 when going back to dictionary root
+    setL1Open(true);
     setIsL2Collapsed(false);
   };
 
   // Mobile back handlers
   const handleLevelBack = () => {
     setSelectedLevelId(null);
-    // Restore L2 when going back to levels root
-    setIsL2Collapsed(false);
+    // Restore L1 when going back to levels root
+    setL1Open(true);
     window.history.pushState({}, "", "/");
   };
 
