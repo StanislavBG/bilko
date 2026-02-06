@@ -5,13 +5,14 @@
  * It welcomes unknown users and helps them discover how they want to learn.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { GlobalHeader } from "@/components/global-header";
 import { LearningModeSelector } from "@/components/learning-mode-selector";
 import { PromptPlayground } from "@/components/prompt-playground";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ArrowRight,
   Play,
@@ -19,8 +20,12 @@ import {
   GraduationCap,
   Trophy,
   ChevronRight,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
+import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
+import { useVoiceRecognition } from "@/hooks/use-voice-recognition";
 
 // Flow states for the welcome experience
 type FlowState =
@@ -38,6 +43,25 @@ export default function Landing() {
   const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
   const [showWelcome, setShowWelcome] = useState(true);
 
+  const handleModeSelect = useCallback((modeId: LearningModeId) => {
+    setSelectedMode(modeId);
+    setFlowState(modeId);
+  }, []);
+
+  // Voice recognition for learning mode selection
+  const {
+    isListening,
+    isSupported: isVoiceSupported,
+    permissionDenied: voicePermissionDenied,
+    transcript,
+    toggleListening,
+    stopListening,
+  } = useVoiceRecognition<LearningModeId>({
+    options: LEARNING_MODES,
+    onMatch: handleModeSelect,
+    continuous: true,
+  });
+
   // Auto-advance from welcome to mode selection
   useEffect(() => {
     if (flowState === "welcome") {
@@ -49,10 +73,12 @@ export default function Landing() {
     }
   }, [flowState]);
 
-  const handleModeSelect = (modeId: LearningModeId) => {
-    setSelectedMode(modeId);
-    setFlowState(modeId);
-  };
+  // Stop listening when leaving choose-mode state
+  useEffect(() => {
+    if (flowState !== "choose-mode" && isListening) {
+      stopListening();
+    }
+  }, [flowState, isListening, stopListening]);
 
   const handleBack = () => {
     setFlowState("choose-mode");
@@ -92,6 +118,55 @@ export default function Landing() {
               <p className="text-lg text-muted-foreground">
                 Choose your adventure - no login required to get started
               </p>
+
+              {/* Voice Control */}
+              {isVoiceSupported && (
+                <div className="mt-6 flex flex-col items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={isListening ? "default" : "outline"}
+                        size="lg"
+                        onClick={toggleListening}
+                        className={`gap-2 ${
+                          isListening
+                            ? "bg-red-500 hover:bg-red-600 animate-pulse"
+                            : ""
+                        }`}
+                      >
+                        {isListening ? (
+                          <>
+                            <Mic className="h-5 w-5" />
+                            Listening...
+                          </>
+                        ) : (
+                          <>
+                            <MicOff className="h-5 w-5" />
+                            Use Voice Command
+                          </>
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {voicePermissionDenied
+                        ? "Microphone permission denied - check browser settings"
+                        : isListening
+                        ? 'Say "video", "quiz", "prompt", "explore", "chat", or "quick"'
+                        : "Click to enable voice commands"}
+                    </TooltipContent>
+                  </Tooltip>
+                  {isListening && transcript && (
+                    <p className="text-sm text-muted-foreground italic">
+                      "{transcript}"
+                    </p>
+                  )}
+                  {isListening && !transcript && (
+                    <p className="text-sm text-muted-foreground">
+                      Try saying: "video", "quiz", "chat", "explore"...
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <LearningModeSelector
