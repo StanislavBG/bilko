@@ -5,7 +5,7 @@
  * It welcomes unknown users and helps them discover how they want to learn.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { GlobalHeader } from "@/components/global-header";
 import { LearningModeSelector } from "@/components/learning-mode-selector";
 import { PromptPlayground } from "@/components/prompt-playground";
@@ -13,19 +13,18 @@ import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Play,
   Sparkles,
   GraduationCap,
   Trophy,
   ChevronRight,
-  Mic,
-  MicOff,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
 import { useVoiceRecognition } from "@/hooks/use-voice-recognition";
+
+const VOICE_STORAGE_KEY = "bilko-voice-enabled";
 
 // Flow states for the welcome experience
 type FlowState =
@@ -42,6 +41,7 @@ export default function Landing() {
   const [flowState, setFlowState] = useState<FlowState>("welcome");
   const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
   const [showWelcome, setShowWelcome] = useState(true);
+  const autoStartedVoice = useRef(false);
 
   const handleModeSelect = useCallback((modeId: LearningModeId) => {
     setSelectedMode(modeId);
@@ -54,6 +54,7 @@ export default function Landing() {
     isSupported: isVoiceSupported,
     permissionDenied: voicePermissionDenied,
     transcript,
+    startListening,
     toggleListening,
     stopListening,
   } = useVoiceRecognition<LearningModeId>({
@@ -61,6 +62,29 @@ export default function Landing() {
     onMatch: handleModeSelect,
     continuous: true,
   });
+
+  // Persist voice preference to localStorage
+  const handleVoiceToggle = useCallback(async () => {
+    if (isListening) {
+      localStorage.setItem(VOICE_STORAGE_KEY, "false");
+    } else {
+      localStorage.setItem(VOICE_STORAGE_KEY, "true");
+    }
+    await toggleListening();
+  }, [isListening, toggleListening]);
+
+  // Auto-enable voice on revisit if previously enabled
+  useEffect(() => {
+    if (
+      !autoStartedVoice.current &&
+      isVoiceSupported &&
+      flowState === "choose-mode" &&
+      localStorage.getItem(VOICE_STORAGE_KEY) === "true"
+    ) {
+      autoStartedVoice.current = true;
+      startListening();
+    }
+  }, [flowState, isVoiceSupported, startListening]);
 
   // Auto-advance from welcome to mode selection
   useEffect(() => {
@@ -87,7 +111,16 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <GlobalHeader variant="landing" />
+      <GlobalHeader
+        variant="landing"
+        voice={{
+          isListening,
+          isSupported: isVoiceSupported,
+          permissionDenied: voicePermissionDenied,
+          transcript,
+          onToggle: handleVoiceToggle,
+        }}
+      />
 
       <main className="flex-1 flex flex-col pt-14">
         {/* Welcome State */}
@@ -115,54 +148,12 @@ export default function Landing() {
               <h1 className="text-3xl md:text-4xl font-bold mb-4">
                 How would you like to learn today?
               </h1>
-
-              {/* Voice Control */}
               {isVoiceSupported && (
-                <div className="mt-6 flex flex-col items-center gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={isListening ? "default" : "outline"}
-                        size="lg"
-                        onClick={toggleListening}
-                        className={`gap-2 ${
-                          isListening
-                            ? "bg-red-500 hover:bg-red-600 animate-pulse"
-                            : ""
-                        }`}
-                      >
-                        {isListening ? (
-                          <>
-                            <Mic className="h-5 w-5" />
-                            Listening...
-                          </>
-                        ) : (
-                          <>
-                            <MicOff className="h-5 w-5" />
-                            Use Voice Command
-                          </>
-                        )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {voicePermissionDenied
-                        ? "Microphone permission denied - check browser settings"
-                        : isListening
-                        ? 'Say "video", "quiz", "prompt", "explore", "chat", or "quick"'
-                        : "Click to enable voice commands"}
-                    </TooltipContent>
-                  </Tooltip>
-                  {isListening && transcript && (
-                    <p className="text-sm text-muted-foreground italic">
-                      "{transcript}"
-                    </p>
-                  )}
-                  {isListening && !transcript && (
-                    <p className="text-sm text-muted-foreground">
-                      Try saying: "video", "quiz", "chat", "explore"...
-                    </p>
-                  )}
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  {isListening
+                    ? 'Say "video", "quiz", "chat", "explore", "prompt", or "quick start"'
+                    : "Click the Voice button in the header to use voice commands"}
+                </p>
               )}
             </div>
 
