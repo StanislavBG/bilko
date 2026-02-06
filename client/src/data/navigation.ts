@@ -13,7 +13,7 @@ export const navigationItems: NavItem[] = [
   {
     id: "academy",
     title: "AI Academy",
-    url: "/",
+    url: "/academy",
     icon: GraduationCap,
     adminOnly: false,
   },
