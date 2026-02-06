@@ -130,25 +130,12 @@ export function VideoDiscoveryFlow() {
           messages: [
             {
               role: "system",
-              content: `You are an AI education expert. Generate exactly 10 trending AI topics from the last 6 months that would be interesting for beginners.
+              content: `You are an AI education expert. Generate exactly 10 trending AI topics that would be interesting for beginners.
 
-Return ONLY valid JSON in this exact format, no other text:
-{
-  "topics": [
-    {
-      "rank": 1,
-      "title": "Topic Title",
-      "description": "Brief 1-sentence description",
-      "beginnerQuestion": "An interesting question a beginner might ask about this topic"
-    }
-  ]
-}
+Return ONLY valid JSON. Keep descriptions VERY short (max 10 words each). Example:
+{"topics":[{"rank":1,"title":"AI Agents","description":"AI that acts on your behalf","beginnerQuestion":"How do AI agents work?"}]}
 
-Focus on:
-- Recent developments (late 2025 - early 2026)
-- Practical applications
-- Topics that have beginner-friendly explanations available
-- Mix of technical and non-technical topics`,
+Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 words. No markdown, no explanation, ONLY the JSON object.`,
             },
             {
               role: "user",
@@ -168,14 +155,7 @@ Focus on:
       const data = await response.json();
       const content = data.content || "";
 
-      // Strip markdown code fences then parse JSON
-      const stripped = content.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").trim();
-      const jsonMatch = stripped.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("Invalid response format");
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(content);
       setTopics(parsed.topics);
 
       updateStep("research", "complete", `Found ${parsed.topics.length} trending topics`);
@@ -262,14 +242,7 @@ The learner is wondering: "${topic.beginnerQuestion}"`,
       const data = await response.json();
       const content = data.content || "";
 
-      // Strip markdown code fences then parse JSON
-      const stripped = content.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").trim();
-      const jsonMatch = stripped.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("Invalid response format");
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(content);
       setVideo(parsed.video);
 
       updateStep("video", "complete", `Found: ${parsed.video.creator}`);
