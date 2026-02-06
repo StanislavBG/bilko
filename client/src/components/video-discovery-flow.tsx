@@ -168,8 +168,9 @@ Focus on:
       const data = await response.json();
       const content = data.content || "";
 
-      // Parse JSON from response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      // Strip markdown code fences then parse JSON
+      const stripped = content.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").trim();
+      const jsonMatch = stripped.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error("Invalid response format");
       }
@@ -261,8 +262,9 @@ The learner is wondering: "${topic.beginnerQuestion}"`,
       const data = await response.json();
       const content = data.content || "";
 
-      // Parse JSON from response
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      // Strip markdown code fences then parse JSON
+      const stripped = content.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").trim();
+      const jsonMatch = stripped.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error("Invalid response format");
       }
