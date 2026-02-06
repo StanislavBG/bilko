@@ -14,6 +14,7 @@ import {
   Brain,
   TrendingUp,
   ChevronRight,
+  ChevronUp,
   Sparkles,
   Book,
   Search,
@@ -30,6 +31,7 @@ import {
   Gamepad2,
   Trophy,
   ListChecks,
+  Play,
 } from "lucide-react";
 import {
   Card,
@@ -73,6 +75,7 @@ import {
   type DictionaryTerm,
 } from "@/data/academy-dictionary";
 import { useSidebar } from "@/components/ui/sidebar";
+import { PromptPlayground } from "@/components/prompt-playground";
 
 // Icon mapping for dictionary categories
 const categoryIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -838,10 +841,16 @@ function LevelDetailPanel({
   const [selectedSubTopicId, setSelectedSubTopicId] = useState<string | null>(
     null
   );
+  const [expandedQuestId, setExpandedQuestId] = useState<string | null>(null);
 
   useEffect(() => {
     setSelectedSubTopicId(null);
+    setExpandedQuestId(null);
   }, [level.id]);
+
+  const toggleQuestExpand = (questId: string) => {
+    setExpandedQuestId(expandedQuestId === questId ? null : questId);
+  };
 
   const selectedSubTopic = level.subTopics?.find(
     (st) => st.id === selectedSubTopicId
@@ -977,47 +986,82 @@ function LevelDetailPanel({
                     };
                     const config = questTypeConfig[quest.type];
                     const QuestIcon = config.icon;
+                    const isExpanded = expandedQuestId === quest.id;
+                    const isInteractive = quest.type === "prompt";
 
                     return (
-                      <div key={quest.id} className="p-3 rounded-lg border bg-card">
-                        <div className="flex items-start gap-3">
-                          <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center ${config.color}`}>
-                            <QuestIcon className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <Badge variant="outline" className={`text-xs ${config.color} border-current`}>
-                                {config.label}
-                              </Badge>
-                              {quest.platform && (
-                                <Badge variant="secondary" className="text-xs">
-                                  <ExternalLink className="h-3 w-3 mr-1" />
-                                  {quest.platform}
+                      <div key={quest.id} className="rounded-lg border bg-card overflow-hidden">
+                        <div className="p-3">
+                          <div className="flex items-start gap-3">
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-lg bg-muted flex items-center justify-center ${config.color}`}>
+                              <QuestIcon className="h-4 w-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <Badge variant="outline" className={`text-xs ${config.color} border-current`}>
+                                  {config.label}
                                 </Badge>
+                                {isInteractive && (
+                                  <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-500 border-green-500/30">
+                                    <Play className="h-3 w-3 mr-1" />
+                                    Interactive
+                                  </Badge>
+                                )}
+                              </div>
+                              <h4 className="font-medium text-sm mb-1">{quest.title}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {quest.description}
+                              </p>
+                              {quest.tasks && quest.tasks.length > 0 && (
+                                <div className="mt-2 pl-3 border-l-2 border-muted">
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                                    <ListChecks className="h-3 w-3" />
+                                    Tasks
+                                  </div>
+                                  <ul className="space-y-1">
+                                    {quest.tasks.map((task, taskIdx) => (
+                                      <li key={taskIdx} className="text-xs text-muted-foreground flex items-start gap-1">
+                                        <span className="text-muted-foreground/50">•</span>
+                                        {task}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {isInteractive && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="mt-3"
+                                  onClick={() => toggleQuestExpand(quest.id)}
+                                >
+                                  {isExpanded ? (
+                                    <>
+                                      <ChevronUp className="h-4 w-4 mr-1" />
+                                      Hide Playground
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Play className="h-4 w-4 mr-1" />
+                                      Try it Now
+                                    </>
+                                  )}
+                                </Button>
                               )}
                             </div>
-                            <h4 className="font-medium text-sm mb-1">{quest.title}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {quest.description}
-                            </p>
-                            {quest.tasks && quest.tasks.length > 0 && (
-                              <div className="mt-2 pl-3 border-l-2 border-muted">
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                                  <ListChecks className="h-3 w-3" />
-                                  Tasks
-                                </div>
-                                <ul className="space-y-1">
-                                  {quest.tasks.map((task, taskIdx) => (
-                                    <li key={taskIdx} className="text-xs text-muted-foreground flex items-start gap-1">
-                                      <span className="text-muted-foreground/50">•</span>
-                                      {task}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
                           </div>
                         </div>
+                        {isExpanded && isInteractive && (
+                          <div className="border-t bg-muted/30 p-4">
+                            <PromptPlayground
+                              title={quest.title}
+                              description={quest.description}
+                              placeholder="Try the exercise here..."
+                              defaultModel="gpt-4o-mini"
+                              showModelSelector={true}
+                            />
+                          </div>
+                        )}
                       </div>
                     );
                   })}
