@@ -395,14 +395,14 @@ Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 word
               </p>
             </div>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             {topics.map((topic) => {
               const cacheStatus = videoCacheStatus.current[topic.title];
               return (
                 <Card
                   key={topic.rank}
                   data-testid={`card-topic-${topic.rank}`}
-                  className="cursor-pointer hover:border-primary transition-colors shrink-0 w-48"
+                  className="cursor-pointer hover:border-primary transition-colors"
                   onClick={() => handleTopicSelect(topic)}
                 >
                   <CardContent className="p-4 flex flex-col gap-2 h-full">
