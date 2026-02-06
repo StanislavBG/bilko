@@ -2,9 +2,17 @@
  * Video Discovery Flow - Agentic workflow for finding AI learning videos
  *
  * Auto-starts immediately when rendered.
- * Step 1: Research 5 trending AI topics
- * Step 2: Show topics horizontally + fire parallel video searches in background
- * Step 3: User picks a topic, 3 pre-fetched videos ready to choose from
+ * Step 1: Research 5 trending AI topics       (LLM → chatJSON)
+ * Step 2: Pre-fetch videos for each topic     (LLM → chatJSON, parallel)
+ * Step 3: Validate videos via oEmbed          (API → validateVideos)
+ * Step 4: User picks a topic                  (user-input)
+ * Step 5: User picks a video                  (user-input)
+ * Step 6: Play the video                      (display)
+ *
+ * Uses flow-engine abstractions:
+ * - chatJSON<T>()        for all LLM calls
+ * - validateVideos()     for YouTube validation
+ * - useFlowExecution()   for execution tracing
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -26,6 +34,15 @@ import {
   MessageSquare,
   Eye,
 } from "lucide-react";
+import {
+  chatJSON,
+  jsonPrompt,
+  validateVideos,
+  useFlowExecution,
+} from "@/lib/flow-engine";
+import type { VideoCandidate } from "@/lib/flow-engine";
+
+// ── Types ────────────────────────────────────────────────────────────
 
 type FlowState =
   | "researching-topics"
@@ -40,16 +57,12 @@ interface AITopic {
   beginnerQuestion: string;
 }
 
-interface VideoResult {
-  title: string;
-  creator: string;
-  description: string;
-  url: string;
-  embedId: string;
-  whyRecommended: string;
-  views: string;
-  likes: string;
-  comments: string;
+interface TopicsResponse {
+  topics: AITopic[];
+}
+
+interface VideosResponse {
+  videos: VideoCandidate[];
 }
 
 interface WorkflowStep {
@@ -59,6 +72,39 @@ interface WorkflowStep {
   detail?: string;
 }
 
+// ── Prompts (single source of truth — matches registry) ──────────────
+
+const TOPIC_SYSTEM_PROMPT = `You are an AI education expert. Generate exactly 5 trending AI topics that would be interesting for beginners.
+
+Return ONLY valid JSON. Keep descriptions VERY short (max 10 words each). Example:
+{"topics":[{"rank":1,"title":"AI Agents","description":"AI that acts on your behalf","beginnerQuestion":"How do AI agents work?"}]}
+
+Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 words. No markdown, no explanation, ONLY the JSON object.`;
+
+const TOPIC_USER_MESSAGE =
+  "What are the 5 most interesting AI topics trending in the last 6 months that a beginner should learn about?";
+
+function videoSystemPrompt(topicTitle: string): string {
+  return `You are a YouTube video researcher. Find 3 real YouTube videos about "${topicTitle}" for beginners.
+
+Return ONLY valid JSON. Example:
+{"videos":[{"title":"Video Title","creator":"Channel","description":"Short desc","url":"https://www.youtube.com/watch?v=ID","embedId":"ID","whyRecommended":"Why good for beginners","views":"1.2M","likes":"45K","comments":"2.3K"}]}
+
+Rules:
+- Use REAL YouTube videos from known AI education channels (3Blue1Brown, Fireship, Two Minute Papers, Andrej Karpathy, Computerphile, Yannic Kilcher, etc.)
+- Rank by engagement: views > likes > comments
+- Keep description under 15 words
+- Keep whyRecommended under 15 words
+- Return exactly 3 videos, ordered best first
+- No markdown, ONLY the JSON object`;
+}
+
+function videoUserMessage(topic: AITopic): string {
+  return `Find 3 best YouTube videos for a beginner about: "${topic.title}" - ${topic.description}`;
+}
+
+// ── Status messages ──────────────────────────────────────────────────
+
 const RESEARCH_STATUS_MESSAGES = [
   "Scanning AI news from the last 6 months...",
   "Analyzing trending topics across research papers...",
@@ -67,17 +113,22 @@ const RESEARCH_STATUS_MESSAGES = [
   "Preparing your personalized topic list...",
 ];
 
+// ── Component ────────────────────────────────────────────────────────
+
 export function VideoDiscoveryFlow() {
   const [flowState, setFlowState] = useState<FlowState>("researching-topics");
   const [topics, setTopics] = useState<AITopic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<AITopic | null>(null);
-  const [selectedVideo, setSelectedVideo] = useState<VideoResult | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<VideoCandidate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState(RESEARCH_STATUS_MESSAGES[0]);
   const hasStarted = useRef(false);
-  const videoCache = useRef<Record<string, VideoResult[]>>({});
+  const videoCache = useRef<Record<string, VideoCandidate[]>>({});
   const videoCacheStatus = useRef<Record<string, "loading" | "done" | "error">>({});
   const [, forceUpdate] = useState(0);
+
+  // Flow execution tracker — bridges to Flow Explorer inspector
+  const { trackStep, resolveUserInput } = useFlowExecution("video-discovery");
 
   const [steps, setSteps] = useState<WorkflowStep[]>([
     { id: "research", name: "Researching AI Trends", status: "active", detail: "Our AI agent is scanning the latest developments..." },
@@ -95,6 +146,7 @@ export function VideoDiscoveryFlow() {
     );
   };
 
+  // Rotate status messages during research
   useEffect(() => {
     if (flowState !== "researching-topics") return;
     let index = 0;
@@ -105,6 +157,8 @@ export function VideoDiscoveryFlow() {
     return () => clearInterval(interval);
   }, [flowState]);
 
+  // ── Step: Search videos for a single topic (parallel) ──────────────
+
   const searchVideosForTopic = useCallback(async (topic: AITopic) => {
     const key = topic.title;
     if (videoCacheStatus.current[key]) return;
@@ -112,56 +166,17 @@ export function VideoDiscoveryFlow() {
     forceUpdate((n) => n + 1);
 
     try {
-      const response = await fetch("/api/llm/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content: `You are a YouTube video researcher. Find 3 real YouTube videos about "${topic.title}" for beginners.
+      // LLM call via chatJSON — the core primitive
+      const { data: videoData } = await chatJSON<VideosResponse>(
+        jsonPrompt(videoSystemPrompt(topic.title), videoUserMessage(topic)),
+      );
 
-Return ONLY valid JSON. Example:
-{"videos":[{"title":"Video Title","creator":"Channel","description":"Short desc","url":"https://www.youtube.com/watch?v=ID","embedId":"ID","whyRecommended":"Why good for beginners","views":"1.2M","likes":"45K","comments":"2.3K"}]}
+      const candidates = videoData.videos ?? [];
 
-Rules:
-- Use REAL YouTube videos from known AI education channels (3Blue1Brown, Fireship, Two Minute Papers, Andrej Karpathy, Computerphile, Yannic Kilcher, etc.)
-- Rank by engagement: views > likes > comments
-- Keep description under 15 words
-- Keep whyRecommended under 15 words
-- Return exactly 3 videos, ordered best first
-- No markdown, ONLY the JSON object`,
-            },
-            {
-              role: "user",
-              content: `Find 3 best YouTube videos for a beginner about: "${topic.title}" - ${topic.description}`,
-            },
-          ],
-          model: "gemini-2.5-flash",
-        }),
-      });
+      // Validate via API client
+      const validated = await validateVideos(candidates);
 
-      if (!response.ok) throw new Error("Failed to find videos");
-
-      const data = await response.json();
-      const parsed = JSON.parse(data.content || "{}");
-      const candidates = parsed.videos || [];
-
-      if (candidates.length > 0) {
-        const validateResp = await fetch("/api/llm/validate-videos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ videos: candidates }),
-        });
-        if (validateResp.ok) {
-          const validated = await validateResp.json();
-          videoCache.current[key] = validated.videos || [];
-        } else {
-          videoCache.current[key] = candidates;
-        }
-      } else {
-        videoCache.current[key] = [];
-      }
+      videoCache.current[key] = validated;
       videoCacheStatus.current[key] = "done";
     } catch {
       videoCacheStatus.current[key] = "error";
@@ -170,6 +185,8 @@ Rules:
     forceUpdate((n) => n + 1);
   }, []);
 
+  // ── Step: Research topics ──────────────────────────────────────────
+
   const researchTopics = useCallback(async () => {
     setFlowState("researching-topics");
     setError(null);
@@ -177,45 +194,23 @@ Rules:
     updateStep("research", "active", "Our AI agent is scanning the latest developments...");
 
     try {
-      const response = await fetch("/api/llm/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content: `You are an AI education expert. Generate exactly 5 trending AI topics that would be interesting for beginners.
+      // Tracked LLM call — execution data flows to inspector
+      const { data: result } = await trackStep(
+        "research-topics",
+        { prompt: TOPIC_SYSTEM_PROMPT, userMessage: TOPIC_USER_MESSAGE },
+        () => chatJSON<TopicsResponse>(
+          jsonPrompt(TOPIC_SYSTEM_PROMPT, TOPIC_USER_MESSAGE),
+        ),
+      );
 
-Return ONLY valid JSON. Keep descriptions VERY short (max 10 words each). Example:
-{"topics":[{"rank":1,"title":"AI Agents","description":"AI that acts on your behalf","beginnerQuestion":"How do AI agents work?"}]}
-
-Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 words. No markdown, no explanation, ONLY the JSON object.`,
-            },
-            {
-              role: "user",
-              content:
-                "What are the 5 most interesting AI topics trending in the last 6 months that a beginner should learn about?",
-            },
-          ],
-          model: "gemini-2.5-flash",
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to research topics");
-      }
-
-      const data = await response.json();
-      const content = data.content || "";
-      const parsed = JSON.parse(content);
-      const fetchedTopics = parsed.topics.slice(0, 5) as AITopic[];
+      const fetchedTopics = result.data.topics.slice(0, 5);
       setTopics(fetchedTopics);
 
       updateStep("research", "complete", `Found ${fetchedTopics.length} trending topics`);
       updateStep("select", "active", "Pick a topic — videos are loading in the background");
       setFlowState("select-topic");
 
+      // Fire parallel video searches for all topics
       fetchedTopics.forEach((t) => searchVideosForTopic(t));
     } catch (err) {
       console.error("Topic research error:", err);
@@ -227,14 +222,17 @@ Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 word
       updateStep("research", "error", "Something went wrong");
       setFlowState("error");
     }
-  }, [searchVideosForTopic]);
+  }, [searchVideosForTopic, trackStep]);
 
+  // Auto-start on mount
   useEffect(() => {
     if (!hasStarted.current) {
       hasStarted.current = true;
       researchTopics();
     }
   }, [researchTopics]);
+
+  // ── Step: User picks topic ─────────────────────────────────────────
 
   const pendingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -250,6 +248,8 @@ Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 word
       pendingInterval.current = null;
     }
     setSelectedTopic(topic);
+    resolveUserInput("select-topic", { selectedTopic: topic });
+
     const cached = videoCache.current[topic.title];
     if (cached && cached.length > 0) {
       updateStep("select", "complete", topic.title);
@@ -281,6 +281,8 @@ Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 word
     }
   };
 
+  // ── Reset ──────────────────────────────────────────────────────────
+
   const reset = () => {
     if (pendingInterval.current) {
       clearInterval(pendingInterval.current);
@@ -305,6 +307,8 @@ Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 word
   };
 
   const videosForSelected = selectedTopic ? (videoCache.current[selectedTopic.title] || []) : [];
+
+  // ── Render ─────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
@@ -467,7 +471,10 @@ Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 word
                 key={idx}
                 data-testid={`card-video-${idx}`}
                 className="cursor-pointer hover:border-red-500 transition-colors"
-                onClick={() => setSelectedVideo(video)}
+                onClick={() => {
+                  setSelectedVideo(video);
+                  resolveUserInput("select-video", { selectedVideo: video });
+                }}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
