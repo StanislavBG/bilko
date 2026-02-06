@@ -1,41 +1,80 @@
 import { LogOut, Eye, EyeOff, Settings, Mic, MicOff } from "lucide-react";
-import { useState } from "react";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 
-interface GlobalHeaderProps {
-  variant?: "authenticated" | "landing";
+export interface VoiceHeaderProps {
+  isListening: boolean;
+  isSupported: boolean;
+  permissionDenied: boolean;
+  transcript: string;
+  onToggle: () => void;
 }
 
-export function GlobalHeader({ variant = "authenticated" }: GlobalHeaderProps) {
-  const [isMicEnabled, setIsMicEnabled] = useState(false);
-  const [micPermissionDenied, setMicPermissionDenied] = useState(false);
+interface GlobalHeaderProps {
+  variant?: "authenticated" | "landing";
+  voice?: VoiceHeaderProps;
+}
 
-  const handleMicToggle = async () => {
-    if (isMicEnabled) {
-      setIsMicEnabled(false);
-      return;
-    }
+function VoiceButton({ voice }: { voice: VoiceHeaderProps }) {
+  if (!voice.isSupported) return null;
 
-    try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      setIsMicEnabled(true);
-      setMicPermissionDenied(false);
-    } catch {
-      setMicPermissionDenied(true);
-    }
-  };
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant={voice.isListening ? "default" : "ghost"}
+          size="sm"
+          onClick={voice.onToggle}
+          className={`gap-1.5 ${
+            voice.isListening
+              ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
+              : ""
+          }`}
+        >
+          {voice.isListening ? (
+            <Mic className="h-4 w-4" />
+          ) : (
+            <MicOff className="h-4 w-4" />
+          )}
+          <span className="hidden sm:inline text-xs">
+            {voice.isListening ? "Listening..." : "Voice"}
+          </span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        {voice.permissionDenied
+          ? "Microphone permission denied — check browser settings"
+          : voice.isListening
+          ? "Voice active — say a command or click to stop"
+          : "Enable voice commands"}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
 
+function VoiceTranscript({ voice }: { voice: VoiceHeaderProps }) {
+  if (!voice.isListening) return null;
+
+  return (
+    <span className="text-xs text-muted-foreground italic truncate max-w-[200px]">
+      {voice.transcript ? `"${voice.transcript}"` : "Listening..."}
+    </span>
+  );
+}
+
+export function GlobalHeader({ variant = "authenticated", voice }: GlobalHeaderProps) {
   // Landing page header (for non-authenticated users)
   if (variant === "landing") {
     return (
-      <header className="h-14 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center gap-4 px-4 fixed top-0 left-0 right-0 z-50">
-        <span className="font-bold text-lg">
+      <header className="h-14 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center gap-3 px-4 fixed top-0 left-0 right-0 z-50">
+        <span className="font-bold text-lg shrink-0">
           Bilko Bibitkov AI Academy
         </span>
+        {voice && <VoiceButton voice={voice} />}
+        {voice && <VoiceTranscript voice={voice} />}
         <div className="flex-1" />
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -48,22 +87,10 @@ export function GlobalHeader({ variant = "authenticated" }: GlobalHeaderProps) {
   }
 
   // Authenticated user header - needs ViewMode and Sidebar context
-  return <AuthenticatedHeader
-    isMicEnabled={isMicEnabled}
-    micPermissionDenied={micPermissionDenied}
-    onMicToggle={handleMicToggle}
-  />;
+  return <AuthenticatedHeader voice={voice} />;
 }
 
-function AuthenticatedHeader({
-  isMicEnabled,
-  micPermissionDenied,
-  onMicToggle,
-}: {
-  isMicEnabled: boolean;
-  micPermissionDenied: boolean;
-  onMicToggle: () => void;
-}) {
+function AuthenticatedHeader({ voice }: { voice?: VoiceHeaderProps }) {
   const { isViewingAsUser, toggleViewMode, canToggleViewMode } = useViewMode();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -76,37 +103,10 @@ function AuthenticatedHeader({
           Bilko Bibitkov
         </span>
       )}
+      {voice && <VoiceButton voice={voice} />}
+      {voice && <VoiceTranscript voice={voice} />}
       <div className="flex-1" />
       <div className="flex items-center gap-1">
-        {/* Voice Control - Mic Toggle */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant={isMicEnabled ? "default" : "ghost"}
-              size="icon"
-              onClick={onMicToggle}
-              className={isMicEnabled ? "bg-red-500 hover:bg-red-600" : ""}
-              data-testid="button-mic-toggle"
-            >
-              {isMicEnabled ? (
-                <Mic className="h-4 w-4 text-white" />
-              ) : (
-                <MicOff className="h-4 w-4" />
-              )}
-              <span className="sr-only">
-                {isMicEnabled ? "Disable voice control" : "Enable voice control"}
-              </span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {micPermissionDenied
-              ? "Microphone permission denied"
-              : isMicEnabled
-              ? "Voice control active - click to disable"
-              : "Enable voice control"}
-          </TooltipContent>
-        </Tooltip>
-
         {canToggleViewMode && (
           <Tooltip>
             <TooltipTrigger asChild>
