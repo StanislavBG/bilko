@@ -1,5 +1,5 @@
 import { users, type User, type UpsertUser } from "@shared/models/auth";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
@@ -29,32 +29,24 @@ class AuthStorage implements IAuthStorage {
   }
 
   async upsertUser(userData: UpsertUser, hasAdminRole: boolean = false): Promise<User> {
+    // Admin is determined by ADMIN_USER_ID env var or OIDC role.
+    // The is_admin flag persists in the DB — set it once, it sticks.
     const isAdminByEnv = Boolean(process.env.ADMIN_USER_ID) && userData.id === process.env.ADMIN_USER_ID;
-    let isAdmin = isAdminByEnv || hasAdminRole;
-
-    // Single-user phase: when ADMIN_USER_ID is not configured,
-    // auto-promote if this is the only user in the system.
-    if (!isAdmin && !process.env.ADMIN_USER_ID) {
-      const [{ count }] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(users);
-      if (count <= 1) {
-        isAdmin = true;
-      }
-    }
+    const shouldPromote = isAdminByEnv || hasAdminRole;
 
     const [user] = await db
       .insert(users)
       .values({
         ...userData,
-        isAdmin: isAdmin,
+        isAdmin: shouldPromote,
       })
       .onConflictDoUpdate({
         target: users.id,
         set: {
           ...userData,
-          // Always write the computed value — never skip the update
-          isAdmin: isAdmin,
+          // Only promote to admin, never demote — the DB flag is the source of truth.
+          // To demote, update the DB directly.
+          ...(shouldPromote ? { isAdmin: true } : {}),
           updatedAt: new Date(),
         },
       })
