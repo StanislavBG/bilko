@@ -1,4 +1,4 @@
-import { Activity, BookOpen, Workflow, FolderOpen, GraduationCap, type LucideIcon } from "lucide-react";
+import { Activity, BookOpen, Workflow, FolderOpen, GraduationCap, Sparkles, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
   id: string;
@@ -36,6 +36,13 @@ export const navigationItems: NavItem[] = [
     title: "Memory Explorer",
     url: "/memory",
     icon: Activity,
+    adminOnly: true,
+  },
+  {
+    id: "flows",
+    title: "Flow Explorer",
+    url: "/flows",
+    icon: Sparkles,
     adminOnly: true,
   },
   {
