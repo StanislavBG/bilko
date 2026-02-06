@@ -1794,6 +1794,8 @@ export default function Academy() {
   const handleSelectTrack = (trackId: string) => {
     setSelectedTrackId(trackId);
     setSelectedLevelId(null);
+    // Ensure adjacent L2 is visible when clicking L3
+    setIsL2Collapsed(false);
   };
 
   const handleBackToTracks = () => {
@@ -1801,6 +1803,7 @@ export default function Academy() {
     setSelectedLevelId(null);
     // Restore L1 when going back to tracks overview
     setL1Open(true);
+    setIsL2Collapsed(false);
   };
 
   const handleSelectLevel = (levelId: string | null) => {
@@ -1811,9 +1814,12 @@ export default function Academy() {
       if (track && !selectedTrackId) {
         setSelectedTrackId(track.id);
       }
+      // Ensure adjacent L3 is visible when clicking L4
+      setIsL3Collapsed(false);
       window.history.pushState({}, "", `/${levelId}`);
     } else {
       // Going back to track view
+      setIsL3Collapsed(false);
       window.history.pushState({}, "", "/");
     }
   };
@@ -1835,6 +1841,8 @@ export default function Academy() {
   const handleSelectCategory = (categoryId: string | null) => {
     setSelectedCategoryId(categoryId);
     setSelectedTermId(null);
+    // Ensure adjacent L2 is visible when clicking L3
+    setIsL2Collapsed(false);
   };
 
   const handleSelectTerm = (termId: string | null) => {
@@ -1845,6 +1853,10 @@ export default function Academy() {
         c.terms.some((t) => t.id === termId)
       );
       if (cat) setSelectedCategoryId(cat.id);
+    }
+    // Ensure adjacent L3 is visible when clicking L4
+    if (termId) {
+      setIsL3Collapsed(false);
     }
   };
 
