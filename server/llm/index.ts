@@ -1,6 +1,10 @@
 /**
  * LLM Service - Unified interface for multiple LLM providers
  *
+ * Environment variables:
+ * - AI_INTEGRATIONS_OPENAI_API_KEY: API key for OpenAI-compatible endpoint
+ * - AI_INTEGRATIONS_OPENAI_BASE_URL: Base URL (defaults to https://api.openai.com)
+ *
  * Currently supported:
  * - OpenAI: gpt-4o-mini (fast, affordable, 128K context)
  */
@@ -78,12 +82,16 @@ export async function chat(request: ChatRequest): Promise<ChatResponse> {
 }
 
 async function chatOpenAI(request: ChatRequest, model: LLMModel): Promise<ChatResponse> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || "https://api.openai.com";
+
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is not configured");
+    throw new Error("AI_INTEGRATIONS_OPENAI_API_KEY is not configured");
   }
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const url = `${baseUrl}/v1/chat/completions`;
+
+  const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
