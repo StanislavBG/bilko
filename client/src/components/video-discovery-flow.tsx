@@ -156,7 +156,7 @@ Focus on:
                 "What are the 10 most interesting AI topics trending in the last 6 months that a beginner should learn about?",
             },
           ],
-          model: "gemini-2.5-flash-preview-05-20",
+          model: "gemini-2.5-flash",
         }),
       });
 
@@ -249,7 +249,7 @@ Context: ${topic.description}
 The learner is wondering: "${topic.beginnerQuestion}"`,
             },
           ],
-          model: "gemini-2.5-flash-preview-05-20",
+          model: "gemini-2.5-flash",
         }),
       });
 

@@ -95,7 +95,7 @@ Note: This is an AI-generated summary based on the video metadata. Watch the ful
               content: `Please summarize this video: "${video.title}"`,
             },
           ],
-          model: "gemini-2.5-flash-preview-05-20",
+          model: "gemini-2.5-flash",
         }),
       });
 
@@ -141,7 +141,7 @@ Keep it educational and relevant to the topic. This is a simulation for demonstr
               content: `Generate a transcript for this video about: "${video.title}"`,
             },
           ],
-          model: "gemini-2.5-flash-preview-05-20",
+          model: "gemini-2.5-flash",
         }),
       });
 
@@ -193,7 +193,7 @@ Answer questions based on the transcript content. If the user asks to "extract" 
               content: question,
             },
           ],
-          model: "gemini-2.5-flash-preview-05-20",
+          model: "gemini-2.5-flash",
         }),
       });
 

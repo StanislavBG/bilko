@@ -1145,7 +1145,7 @@ function LevelDetailPanel({
                               title={quest.title}
                               description={quest.description}
                               placeholder="Try the exercise here..."
-                              defaultModel="gemini-2.5-flash-preview-05-20"
+                              defaultModel="gemini-2.5-flash"
                               showModelSelector={true}
                             />
                           </div>
