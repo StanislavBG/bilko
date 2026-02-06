@@ -29,28 +29,28 @@ export const navigationItems: NavItem[] = [
     title: "Agentic Workflows",
     url: "/workflows",
     icon: Workflow,
-    adminOnly: true,
+    adminOnly: false,
   },
   {
     id: "memory",
     title: "Memory Explorer",
     url: "/memory",
     icon: Activity,
-    adminOnly: true,
+    adminOnly: false,
   },
   {
     id: "flows",
     title: "Flow Explorer",
     url: "/flows",
     icon: Sparkles,
-    adminOnly: true,
+    adminOnly: false,
   },
   {
     id: "rules",
     title: "Rules Explorer",
     url: "/rules",
     icon: BookOpen,
-    adminOnly: true,
+    adminOnly: false,
   },
 ];
 
