@@ -6,7 +6,7 @@
  * Zoom in/out with buttons or scroll-wheel.
  */
 
-import { useMemo, useRef, useState, useCallback, type WheelEvent } from "react";
+import { useMemo, useRef, useState, useCallback, memo, type WheelEvent } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,8 +60,13 @@ export function FlowCanvas({ flow, selectedStepId, onSelectStep, executions }: F
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
+  const isPanningRef = useRef(false);
+  const [isPanningState, setIsPanningState] = useState(false);
+  const panRef = useRef({ x: 0, y: 0 });
   const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+
+  // Keep panRef in sync with state
+  panRef.current = pan;
 
   const layout = useMemo(() => computeLayout(flow.steps), [flow.steps]);
 
@@ -88,27 +93,38 @@ export function FlowCanvas({ flow, selectedStepId, onSelectStep, executions }: F
     }
   }, []);
 
-  // ── Pan (drag) ──────────────────────────────────────────
+  // ── Pan (drag) — uses refs to avoid stale closures ─────
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     if (e.button !== 0) return;
-    // Only start pan when clicking on the canvas background (not on a node)
     if ((e.target as HTMLElement).closest("[data-step-node]")) return;
-    setIsPanning(true);
-    panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+    isPanningRef.current = true;
+    setIsPanningState(true);
+    panStart.current = { x: e.clientX, y: e.clientY, panX: panRef.current.x, panY: panRef.current.y };
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
-  }, [pan]);
+  }, []);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isPanning) return;
+    if (!isPanningRef.current) return;
     setPan({
       x: panStart.current.panX + (e.clientX - panStart.current.x),
       y: panStart.current.panY + (e.clientY - panStart.current.y),
     });
-  }, [isPanning]);
+  }, []);
 
-  const onPointerUp = useCallback(() => setIsPanning(false), []);
+  const onPointerUp = useCallback(() => {
+    isPanningRef.current = false;
+    setIsPanningState(false);
+  }, []);
 
-  const getStatus = (stepId: string): StepStatus => executions?.[stepId]?.status ?? "idle";
+  const getStatus = useCallback(
+    (stepId: string): StepStatus => executions?.[stepId]?.status ?? "idle",
+    [executions],
+  );
+
+  // Stable callback ref for node selection
+  const onSelectStepRef = useRef(onSelectStep);
+  onSelectStepRef.current = onSelectStep;
+  const handleNodeClick = useCallback((stepId: string) => onSelectStepRef.current(stepId), []);
 
   const zoomPercent = Math.round(zoom * 100);
 
@@ -157,7 +173,7 @@ export function FlowCanvas({ flow, selectedStepId, onSelectStep, executions }: F
       {/* Canvas area */}
       <div
         ref={containerRef}
-        className={cn("flex-1 overflow-hidden", isPanning ? "cursor-grabbing" : "cursor-grab")}
+        className={cn("flex-1 overflow-hidden", isPanningState ? "cursor-grabbing" : "cursor-grab")}
         onWheel={handleWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -207,7 +223,7 @@ export function FlowCanvas({ flow, selectedStepId, onSelectStep, executions }: F
                 y={pos.y}
                 status={getStatus(step.id)}
                 isSelected={selectedStepId === step.id}
-                onClick={() => onSelectStep(step.id)}
+                onClick={handleNodeClick}
               />
             );
           })}
@@ -225,10 +241,10 @@ interface CanvasNodeProps {
   y: number;
   status: StepStatus;
   isSelected: boolean;
-  onClick: () => void;
+  onClick: (stepId: string) => void;
 }
 
-function CanvasNode({ step, x, y, status, isSelected, onClick }: CanvasNodeProps) {
+const CanvasNode = memo(function CanvasNode({ step, x, y, status, isSelected, onClick }: CanvasNodeProps) {
   const config = TYPE_CONFIG[step.type];
   const TypeIcon = config.icon;
   const StatusIcon = STATUS_ICON[status];
@@ -236,7 +252,7 @@ function CanvasNode({ step, x, y, status, isSelected, onClick }: CanvasNodeProps
   return (
     <button
       data-step-node
-      onClick={onClick}
+      onClick={() => onClick(step.id)}
       className={cn(
         "absolute rounded-lg border bg-background shadow-sm transition-all",
         "hover:shadow-md hover:border-primary/50 text-left",
@@ -272,4 +288,4 @@ function CanvasNode({ step, x, y, status, isSelected, onClick }: CanvasNodeProps
       </div>
     </button>
   );
-}
+});

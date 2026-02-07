@@ -129,7 +129,7 @@ export default function FlowDetail() {
               </Button>
             </div>
             <div className="p-3">
-              <StepDetail step={selectedStep} execution={selectedExecution} />
+              <StepDetail step={selectedStep} flow={flow} execution={selectedExecution} />
             </div>
           </div>
         )}
