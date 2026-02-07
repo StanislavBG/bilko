@@ -94,6 +94,30 @@ Rules:
 const GREETING_FALLBACK =
   "Welcome to the Mental Gym. I'm Bilko — your AI training partner. What would you like to work on today?";
 
+// ── Bilko's patience ────────────────────────────────────
+// Bilko doesn't jump in after every utterance. He gives the user
+// space to find the right words — like a good coach.
+//
+// - First few unmatched utterances: just log them, keep listening
+// - After PATIENCE_THRESHOLD misses: Bilko offers gentle guidance
+// - If a mode matches at any point: act immediately, reset patience
+const PATIENCE_THRESHOLD = 3;
+
+const GUIDANCE_MESSAGES = [
+  {
+    text: "Take your time. When you're ready, just say something like \"video\", \"interview\", or \"chat\" — or tap one on the right.",
+    speech: "Take your time. When you're ready, just say something like video, interview, or chat, or tap one on the right.",
+  },
+  {
+    text: "Still here. You can pick a training mode by name, or just tap one of the options on the right side.",
+    speech: "Still here. You can pick a training mode by name, or just tap one of the options on the right side.",
+  },
+  {
+    text: "No rush. The modes are: Video Discovery, AI Consultation, Recursive Interview, LinkedIn Strategist, and Socratic Architect. Say any of those or tap one.",
+    speech: "No rush. The modes are Video Discovery, AI Consultation, Recursive Interview, LinkedIn Strategist, and Socratic Architect. Say any of those, or tap one.",
+  },
+];
+
 // ── Experience back button ───────────────────────────────
 
 function ExperienceBack({ onBack }: { onBack: () => void }) {
@@ -260,40 +284,58 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   const { floor, onUserUtterance, autoListenEnabled, setAutoListen } = useConversationDesign();
   const { isListening, toggleListening, transcript, transcriptLog, clearTranscriptLog } = useVoice();
 
-  // When the user finishes speaking, try to match an option on the right panel.
-  // The chat is a LOG — voice input drives navigation, not free-form chat.
+  // ── Bilko's patience: voice → option matching with breathing room ──
+  // The user gets a few tries before Bilko jumps in. If a mode is matched
+  // at any point, act immediately. Otherwise accumulate misses and only
+  // offer guidance after PATIENCE_THRESHOLD.
+  const unmatchedCountRef = useRef(0);
+  const guidanceRoundRef = useRef(0);
+
   useEffect(() => {
     const unsub = onUserUtterance((text: string) => {
       // Always log what the user said
       addMessage({ role: "user", text, meta: { type: "voice" } });
 
-      // If no mode is selected, try to match a mode by name/keywords
-      if (!selectedMode) {
-        const lower = text.toLowerCase();
-        const matched = LEARNING_MODES.find((m) => {
-          const label = m.label.toLowerCase();
-          const id = m.id.toLowerCase();
-          const desc = m.description.toLowerCase();
-          // Check label, id, or key words from the description
-          return (
-            lower.includes(label) ||
-            lower.includes(id) ||
-            label.split(/\s+/).some((w) => w.length > 3 && lower.includes(w)) ||
-            desc.split(/\s+/).some((w) => w.length > 5 && lower.includes(w))
-          );
-        });
-        if (matched) {
-          handleChoice(matched.id);
-          return;
-        }
-        // No match — Bilko guides the user
+      // If a mode is already selected, just log — the subflow owns the conversation
+      if (selectedMode) return;
+
+      // Try to match a mode by name/keywords
+      const lower = text.toLowerCase();
+      const matched = LEARNING_MODES.find((m) => {
+        const label = m.label.toLowerCase();
+        const id = m.id.toLowerCase();
+        const desc = m.description.toLowerCase();
+        return (
+          lower.includes(label) ||
+          lower.includes(id) ||
+          label.split(/\s+/).some((w) => w.length > 3 && lower.includes(w)) ||
+          desc.split(/\s+/).some((w) => w.length > 5 && lower.includes(w))
+        );
+      });
+
+      if (matched) {
+        // Match found — act immediately, reset patience
+        unmatchedCountRef.current = 0;
+        handleChoice(matched.id);
+        return;
+      }
+
+      // No match — increment patience counter
+      unmatchedCountRef.current += 1;
+
+      if (unmatchedCountRef.current >= PATIENCE_THRESHOLD) {
+        // Patience expired — Bilko offers guidance (rotating messages)
+        const msg = GUIDANCE_MESSAGES[guidanceRoundRef.current % GUIDANCE_MESSAGES.length];
         addMessage({
           role: "bilko",
-          text: "I didn't catch a training mode from that. Try saying something like \"video\", \"interview\", or \"chat\" — or tap one on the right.",
-          speech: "I didn't catch a training mode from that. Try saying something like video, interview, or chat, or tap one on the right.",
+          text: msg.text,
+          speech: msg.speech,
           meta: { type: "guidance" },
         });
+        unmatchedCountRef.current = 0;
+        guidanceRoundRef.current += 1;
       }
+      // Otherwise: just keep listening, user is still finding their words
     });
     return unsub;
   }, [onUserUtterance, selectedMode, handleChoice, addMessage]);
