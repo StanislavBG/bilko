@@ -10,7 +10,7 @@
  *               all deliveries to the user happen in the main area.
  */
 
-import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { GlobalHeader } from "@/components/global-header";
 import {
   ConversationCanvas,
@@ -27,6 +27,9 @@ import {
   SOCRATIC_ARCHITECT_CONFIG,
 } from "@/components/ai-consultation-flow";
 import { bilkoSays } from "@/lib/bilko-persona";
+import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
+import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
+import { chat } from "@/lib/flow-engine";
 import { Button } from "@/components/ui/button";
 import {
   Play,
@@ -74,6 +77,26 @@ const MODE_OPTIONS: ModeOption[] = LEARNING_MODES.map((mode) => ({
   description: mode.description,
   icon: iconMap[mode.icon] ?? <Sparkles className="h-5 w-5" />,
 }));
+
+// ── LLM greeting prompt ──────────────────────────────────
+
+const GREETING_SYSTEM_PROMPT = bilkoSystemPrompt(
+  `You are greeting a new visitor to the Mental Gym. This is their first interaction with you.
+
+Generate a warm, natural opening. Welcome them, introduce yourself briefly as Bilko their AI training partner, and ask how they'd like to learn today. Make it feel like meeting a friendly coach — not a scripted bot.
+
+Available training modes they can pick from:
+${LEARNING_MODES.map((m) => `- ${m.label}: ${m.description}`).join("\n")}
+
+Rules:
+- 2-3 sentences max. Keep it tight.
+- End with a natural question about how they want to train.
+- Don't list all the modes — just ask warmly.
+- Plain text only. No formatting, no markdown, no JSON.`,
+);
+
+const GREETING_FALLBACK =
+  "Welcome to the Mental Gym. I'm Bilko — your AI training partner. What would you like to work on today?";
 
 // ── Content block definitions for each mode ──────────────
 
@@ -190,16 +213,6 @@ const QUICK_START_BLOCKS: ContentBlock[] = [
   },
 ];
 
-// ── Bilko's contextual responses per mode ────────────────
-
-function getBilkoResponse(mode: LearningModeId): { text: string; speech: string } {
-  const speech = bilkoSays({
-    event: "choice-made",
-    topic: LEARNING_MODES.find((m) => m.id === mode)?.label,
-  });
-  return { text: speech.text, speech: speech.speech };
-}
-
 // ── Experience back button ───────────────────────────────
 
 function ExperienceBack({ onBack }: { onBack: () => void }) {
@@ -227,28 +240,53 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     clearMode,
   } = useConversation();
 
-  // Record initial messages on first visit (not on restore)
+  const [greetingLoading, setGreetingLoading] = useState(false);
+
+  // Generate Bilko's opening via LLM on first visit
   const didInit = useRef(false);
   useEffect(() => {
     if (didInit.current || messages.length > 0) return;
     didInit.current = true;
 
-    if (!skipWelcome) {
-      const greeting = bilkoSays({ event: "greeting" });
+    if (skipWelcome) {
+      // Authenticated users — shorter opening
       addMessage({
         role: "bilko",
-        text: greeting.text,
-        speech: greeting.speech,
+        text: "What do you want to train today?",
+        speech: "What do you want to train today?",
         meta: { type: "greeting" },
       });
+      return;
     }
 
-    addMessage({
-      role: "bilko",
-      text: "How do you want to train today?",
-      speech: "How do you want to train today?",
-      meta: { type: "question" },
-    });
+    // LLM-generated greeting — Bilko opens the conversation dynamically
+    setGreetingLoading(true);
+    chat(
+      [
+        { role: "system", content: GREETING_SYSTEM_PROMPT },
+        { role: "user", content: "A new visitor just arrived at the Mental Gym." },
+      ],
+      { temperature: 0.9 },
+    )
+      .then((result) => {
+        const text = result.data.trim();
+        addMessage({
+          role: "bilko",
+          text,
+          speech: text,
+          meta: { type: "greeting" },
+        });
+      })
+      .catch(() => {
+        // Fallback if LLM is unavailable
+        addMessage({
+          role: "bilko",
+          text: GREETING_FALLBACK,
+          speech: GREETING_FALLBACK,
+          meta: { type: "greeting" },
+        });
+      })
+      .finally(() => setGreetingLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -264,12 +302,15 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         meta: { type: "choice", modeId: mode, modeLabel },
       });
 
-      // Record Bilko's acknowledgment
-      const response = getBilkoResponse(mode);
+      // Bilko acknowledges the choice
+      const speech = bilkoSays({
+        event: "choice-made",
+        topic: modeLabel,
+      });
       addMessage({
         role: "bilko",
-        text: response.text,
-        speech: response.speech,
+        text: speech.text,
+        speech: speech.speech,
         meta: { type: "acknowledgment", modeId: mode },
       });
 
@@ -281,60 +322,76 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   const handleBack = useCallback(() => {
     addMessage({
       role: "user",
-      text: "Ask me something else",
+      text: "Show me what else you've got",
       meta: { type: "back" },
     });
+
+    addMessage({
+      role: "bilko",
+      text: "What else are you interested in?",
+      speech: "What else are you interested in?",
+      meta: { type: "question" },
+    });
+
     clearMode();
   }, [addMessage, clearMode]);
 
-  // ── Left panel: conversation LOG only (no interactive cards) ──
+  // ── Derive conversation turns from actual messages (single source of truth) ──
   const conversationTurns = useMemo<ConversationTurn[]>(() => {
-    const t: ConversationTurn[] = [];
-
-    // Bilko's greeting
-    if (!skipWelcome) {
-      const greeting = bilkoSays({ event: "greeting" });
-      t.push({
-        type: "bilko",
-        text: greeting.text,
-        speech: greeting.speech,
-        delay: 200,
-      });
+    // While LLM is generating the greeting, show typing indicator
+    if (greetingLoading || messages.length === 0) {
+      return [
+        {
+          type: "content" as const,
+          render: () => (
+            <div className="flex items-center gap-1.5 py-4">
+              <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse [animation-delay:200ms]" />
+              <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse [animation-delay:400ms]" />
+            </div>
+          ),
+        },
+      ];
     }
 
-    // Bilko asks the question
-    t.push({
-      type: "bilko",
-      text: "How do you want to train today?",
-      speech: "How do you want to train today?",
-      delay: skipWelcome ? 100 : 400,
-    });
+    return messages.map((msg, i) => {
+      // Bilko messages → typewriter turns
+      if (msg.role === "bilko") {
+        return {
+          type: "bilko" as const,
+          text: msg.text,
+          speech: msg.speech,
+          delay: i === 0 ? ENTRANCE_DELAY_MS : 200,
+        };
+      }
 
-    // If user picked a mode, log it as compact text entries
-    if (selectedMode) {
-      const modeLabel = LEARNING_MODES.find((m) => m.id === selectedMode)?.label ?? selectedMode;
-      const modeIcon = LEARNING_MODES.find((m) => m.id === selectedMode)?.icon;
-
-      // User's choice (compact log entry)
-      t.push({
-        type: "content",
-        render: () => (
-          <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-            <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center shrink-0">
-              {iconMap[modeIcon ?? ""] ?? <Sparkles className="h-3.5 w-3.5" />}
+      // User choice → compact icon + label
+      if (msg.meta?.type === "choice") {
+        const modeIcon = LEARNING_MODES.find((m) => m.id === msg.meta?.modeId)?.icon;
+        return {
+          type: "content" as const,
+          render: () => (
+            <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+              <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                {iconMap[modeIcon ?? ""] ?? <Sparkles className="h-3.5 w-3.5" />}
+              </div>
+              <span>{msg.text}</span>
             </div>
-            <span>{modeLabel}</span>
+          ),
+        };
+      }
+
+      // Other user messages (back, etc.)
+      return {
+        type: "content" as const,
+        render: () => (
+          <div className="text-sm text-muted-foreground italic">
+            {msg.text}
           </div>
         ),
-      });
-
-      // Bilko's acknowledgment
-      const response = getBilkoResponse(selectedMode);
-      t.push({ type: "bilko", ...response, delay: 200 });
-    }
-
-    return t;
-  }, [skipWelcome, selectedMode]);
+      };
+    });
+  }, [messages, greetingLoading]);
 
   // On restored session, skip animations for all existing turns
   const initialSettledCount = isRestored ? conversationTurns.length : 0;
