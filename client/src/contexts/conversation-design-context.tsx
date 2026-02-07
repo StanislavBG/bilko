@@ -37,6 +37,36 @@ import { POST_TTS_BUFFER_MS } from "@/lib/bilko-persona/pacing";
 
 export type ConversationFloor = "bilko" | "user" | "idle";
 
+// ── Screen Options Registry ─────────────────────────────
+// The whole site is the conversation. Whatever's on screen — topic cards,
+// video choices, buttons — should be voice-navigable. Components register
+// their interactive options here so the conversation can match against them.
+
+export interface ScreenOption {
+  id: string;
+  label: string;
+  keywords?: string[];
+  action: () => void;
+}
+
+/**
+ * Try to match user speech against registered screen options.
+ * Returns the matched option or null.
+ */
+export function matchScreenOption(text: string, options: ScreenOption[]): ScreenOption | null {
+  const lower = text.toLowerCase();
+  for (const opt of options) {
+    const label = opt.label.toLowerCase();
+    // Exact label match
+    if (lower.includes(label)) return opt;
+    // Individual words from the label (>3 chars)
+    if (label.split(/\s+/).some((w) => w.length > 3 && lower.includes(w))) return opt;
+    // Explicit keywords
+    if (opt.keywords?.some((kw) => lower.includes(kw.toLowerCase()))) return opt;
+  }
+  return null;
+}
+
 // ── Turn-end keywords ───────────────────────────────────
 // When the user says one of these, we immediately submit
 // whatever they've said so far (minus the keyword) and hand
@@ -113,6 +143,13 @@ interface ConversationDesignValue {
   /** Register a callback for when the user finishes an utterance.
    *  The callback receives the transcribed text. Returns unsubscribe fn. */
   onUserUtterance: (cb: (text: string) => void) => () => void;
+
+  /** Currently registered screen options (from whatever's visible on the right panel) */
+  screenOptions: ScreenOption[];
+
+  /** Register interactive options for voice matching. Returns unregister fn.
+   *  Call this from any component that shows clickable options (topic cards, etc.) */
+  registerScreenOptions: (options: ScreenOption[]) => () => void;
 }
 
 // ── Context ──────────────────────────────────────────────
@@ -135,6 +172,22 @@ export function ConversationDesignProvider({ children }: { children: ReactNode }
   const userUtteranceCbsRef = useRef<Set<(text: string) => void>>(new Set());
   const autoListenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const keywordFiredRef = useRef(false);
+
+  // ── Screen Options Registry ──
+  const [screenOptions, setScreenOptions] = useState<ScreenOption[]>([]);
+  const screenOptionSetsRef = useRef<Map<number, ScreenOption[]>>(new Map());
+  const nextScreenOptionIdRef = useRef(0);
+
+  const registerScreenOptions = useCallback((options: ScreenOption[]) => {
+    const regId = nextScreenOptionIdRef.current++;
+    screenOptionSetsRef.current.set(regId, options);
+    // Flatten all registered sets into a single list
+    setScreenOptions(Array.from(screenOptionSetsRef.current.values()).flat());
+    return () => {
+      screenOptionSetsRef.current.delete(regId);
+      setScreenOptions(Array.from(screenOptionSetsRef.current.values()).flat());
+    };
+  }, []);
 
   // Keep refs in sync
   useEffect(() => { autoListenRef.current = autoListenEnabled; }, [autoListenEnabled]);
@@ -247,6 +300,8 @@ export function ConversationDesignProvider({ children }: { children: ReactNode }
         giveFloorToUser,
         userTurnDone,
         onUserUtterance,
+        screenOptions,
+        registerScreenOptions,
       }}
     >
       {children}
@@ -262,4 +317,22 @@ export function useConversationDesign(): ConversationDesignValue {
     throw new Error("useConversationDesign must be used within a ConversationDesignProvider");
   }
   return ctx;
+}
+
+/**
+ * Register screen options for voice matching. Auto-cleans up on unmount.
+ * Call from any component that shows interactive choices the user could
+ * refer to by voice (topic cards, video cards, menu buttons, etc.).
+ *
+ * Options are re-registered whenever the array reference changes.
+ */
+export function useScreenOptions(options: ScreenOption[]) {
+  const { registerScreenOptions } = useConversationDesign();
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
+  useEffect(() => {
+    if (options.length === 0) return;
+    return registerScreenOptions(options);
+  }, [options, registerScreenOptions]);
 }
