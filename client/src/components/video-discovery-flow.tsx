@@ -117,7 +117,7 @@ const RESEARCH_STATUS_MESSAGES = [
 
 // ── Component ────────────────────────────────────────────────────────
 
-export function VideoDiscoveryFlow() {
+export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary: string) => void } = {}) {
   const [flowState, setFlowState] = useState<FlowState>("researching-topics");
   const [topics, setTopics] = useState<AITopic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<AITopic | null>(null);
@@ -476,6 +476,7 @@ export function VideoDiscoveryFlow() {
                 onClick={() => {
                   setSelectedVideo(video);
                   resolveUserInput("select-video", { selectedVideo: video });
+                  onComplete?.(`Discovered "${video.title}" by ${video.creator} on the topic of ${selectedTopic?.title ?? "AI"}.`);
                 }}
               >
                 <CardContent className="p-4">

@@ -268,6 +268,19 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     });
   }, [messages, greetingLoading]);
 
+  // When a subflow completes, log a summary into the main conversation
+  const handleSubflowComplete = useCallback(
+    (summary: string) => {
+      addMessage({
+        role: "bilko",
+        text: summary,
+        speech: summary,
+        meta: { type: "subflow-summary" },
+      });
+    },
+    [addMessage],
+  );
+
   // On restored session, skip animations for all existing turns
   const initialSettledCount = isRestored ? conversationTurns.length : 0;
 
@@ -288,7 +301,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         {selectedMode ? (
           <div className="flex-1 max-w-4xl mx-auto px-6 py-6 w-full">
             <ExperienceBack onBack={handleBack} />
-            <RightPanelContent mode={selectedMode} />
+            <RightPanelContent mode={selectedMode} onComplete={handleSubflowComplete} />
           </div>
         ) : (
           <ModeSelectionGrid onSelect={handleChoice} />
@@ -338,14 +351,14 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
 // Each mode is a subflow of the main conversation. The left panel
 // continues logging independently while the subflow runs here.
 
-function RightPanelContent({ mode }: { mode: LearningModeId }) {
+function RightPanelContent({ mode, onComplete }: { mode: LearningModeId; onComplete?: (summary: string) => void }) {
   return (
     <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {mode === "video" && <VideoDiscoveryFlow />}
-      {mode === "chat" && <AiConsultationFlow />}
-      {mode === "interviewer" && <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} />}
-      {mode === "linkedin" && <AiConsultationFlow config={LINKEDIN_STRATEGIST_CONFIG} />}
-      {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} />}
+      {mode === "video" && <VideoDiscoveryFlow onComplete={onComplete} />}
+      {mode === "chat" && <AiConsultationFlow onComplete={onComplete} />}
+      {mode === "interviewer" && <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} onComplete={onComplete} />}
+      {mode === "linkedin" && <AiConsultationFlow config={LINKEDIN_STRATEGIST_CONFIG} onComplete={onComplete} />}
+      {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} onComplete={onComplete} />}
     </div>
   );
 }

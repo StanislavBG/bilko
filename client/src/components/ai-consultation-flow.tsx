@@ -425,7 +425,7 @@ type Phase = "intro" | "setup" | "questioning" | "analyzing" | "complete";
 
 // ── Component ────────────────────────────────────────────
 
-export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) {
+export function AiConsultationFlow({ config, onComplete }: { config?: ConsultationConfig; onComplete?: (summary: string) => void }) {
   const c = config ?? DEFAULT_CONFIG;
   const hasSetup = !!c.setupPhase;
 
@@ -623,6 +623,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
           nonObvious: analysis.nonObvious,
         });
         setPhase("complete");
+        onComplete?.(analysis.summary);
         await speak(
           `I've analyzed your responses. ${analysis.summary}`,
         );
@@ -631,7 +632,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
         setPhase("questioning");
       }
     },
-    [trackStep, speak],
+    [trackStep, speak, onComplete],
   );
 
   // ── Reset ───────────────────────────────────────────────
