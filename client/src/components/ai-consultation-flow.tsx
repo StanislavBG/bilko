@@ -29,6 +29,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { chatJSON, jsonPrompt, useFlowExecution } from "@/lib/flow-engine";
 import { useVoice } from "@/contexts/voice-context";
+import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 
 // ── Config type ──────────────────────────────────────────
 
@@ -506,7 +507,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
     const { system, firstQuestion } = resolvedPromptsRef.current;
 
     try {
-      conversationRef.current = [{ role: "system", content: system }];
+      conversationRef.current = [{ role: "system", content: bilkoSystemPrompt(system) }];
 
       const { data: llmResult } = await trackStep(
         "first-question",
@@ -607,7 +608,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
           () =>
             chatJSON<AnalysisResponse>(
               jsonPrompt(
-                resolvedPromptsRef.current.analysis,
+                bilkoSystemPrompt(resolvedPromptsRef.current.analysis),
                 `Interview transcript:\n\n${transcript}\n\nProvide your analysis and recommendations.`,
               ),
             ),

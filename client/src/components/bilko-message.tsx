@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useVoice } from "@/contexts/voice-context";
+import { ENTRANCE_DELAY_MS, TYPEWRITER_SPEED_MS } from "@/lib/bilko-persona/pacing";
 
 interface BilkoMessageProps {
   /** The text Bilko says */
@@ -31,9 +32,9 @@ export function BilkoMessage({
   speech,
   speakAloud = true,
   onComplete,
-  delay = 300,
+  delay = ENTRANCE_DELAY_MS,
   className = "",
-  speed = 80,
+  speed = TYPEWRITER_SPEED_MS,
 }: BilkoMessageProps) {
   const [displayedWords, setDisplayedWords] = useState(0);
   const [started, setStarted] = useState(false);
