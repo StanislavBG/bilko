@@ -128,6 +128,8 @@ export function VideoDiscoveryFlow() {
   const [statusMessage, setStatusMessage] = useState(RESEARCH_STATUS_MESSAGES[0]);
   const hasStarted = useRef(false);
   const videoCache = useRef<Record<string, VideoCandidate[]>>({});
+  /** Raw LLM candidates before oEmbed validation — fallback if all fail */
+  const videoFallbackCache = useRef<Record<string, VideoCandidate[]>>({});
   const videoCacheStatus = useRef<Record<string, "loading" | "done" | "error">>({});
   const [, forceUpdate] = useState(0);
 
@@ -189,10 +191,14 @@ export function VideoDiscoveryFlow() {
 
       const candidates = videoData.videos ?? [];
 
+      // Keep raw candidates as fallback (oEmbed may reject all)
+      videoFallbackCache.current[key] = candidates;
+
       // Validate via API client
       const validated = await validateVideos(candidates);
 
-      videoCache.current[key] = validated;
+      // Use validated videos, or fall back to raw candidates if all rejected
+      videoCache.current[key] = validated.length > 0 ? validated : candidates;
       videoCacheStatus.current[key] = "done";
     } catch {
       videoCacheStatus.current[key] = "error";
@@ -267,11 +273,13 @@ export function VideoDiscoveryFlow() {
     resolveUserInput("select-topic", { selectedTopic: topic });
 
     const cached = videoCache.current[topic.title];
+    const cacheStatus = videoCacheStatus.current[topic.title];
+
     if (cached && cached.length > 0) {
       updateStep("select", "complete", topic.title);
       updateStep("ready", "complete", `${cached.length} videos found`);
       setFlowState("ready");
-    } else if (videoCacheStatus.current[topic.title] === "loading") {
+    } else if (cacheStatus === "loading") {
       updateStep("select", "complete", topic.title);
       updateStep("ready", "active", "Still searching for videos...");
       pendingInterval.current = setInterval(() => {
@@ -280,20 +288,62 @@ export function VideoDiscoveryFlow() {
           if (pendingInterval.current) clearInterval(pendingInterval.current);
           pendingInterval.current = null;
           const videos = videoCache.current[topic.title] || [];
-          updateStep("ready", "complete", `${videos.length} videos found`);
-          setFlowState("ready");
+          if (videos.length > 0) {
+            updateStep("ready", "complete", `${videos.length} videos found`);
+            setFlowState("ready");
+          } else {
+            // LLM returned no candidates at all — let user pick another topic
+            setSelectedTopic(null);
+            updateStep("select", "active", "No videos found — pick another topic");
+            updateStep("ready", "pending");
+            setFlowState("select-topic");
+          }
         } else if (status === "error") {
           if (pendingInterval.current) clearInterval(pendingInterval.current);
           pendingInterval.current = null;
-          setError("Failed to find videos for this topic. Try another one.");
-          updateStep("ready", "error", "Something went wrong");
-          setFlowState("error");
+          // Don't hard-error — let user pick another topic
+          setSelectedTopic(null);
+          updateStep("select", "active", "Couldn't load videos — try another topic");
+          updateStep("ready", "pending");
+          setFlowState("select-topic");
         }
       }, 500);
+    } else if (cacheStatus === "done" && (!cached || cached.length === 0)) {
+      // Completed but empty — let user pick another topic instead of hard error
+      setSelectedTopic(null);
+      updateStep("select", "active", "No videos found — pick another topic");
+      updateStep("ready", "pending");
+      setFlowState("select-topic");
     } else {
-      setError("Failed to find videos for this topic. Try another one.");
-      updateStep("ready", "error", "Something went wrong");
-      setFlowState("error");
+      // Status is "error" or unknown — retry the video search
+      updateStep("select", "complete", topic.title);
+      updateStep("ready", "active", "Retrying video search...");
+      videoCacheStatus.current[topic.title] = undefined as any;
+      searchVideosForTopic(topic);
+      pendingInterval.current = setInterval(() => {
+        const status = videoCacheStatus.current[topic.title];
+        if (status === "done") {
+          if (pendingInterval.current) clearInterval(pendingInterval.current);
+          pendingInterval.current = null;
+          const videos = videoCache.current[topic.title] || [];
+          if (videos.length > 0) {
+            updateStep("ready", "complete", `${videos.length} videos found`);
+            setFlowState("ready");
+          } else {
+            setSelectedTopic(null);
+            updateStep("select", "active", "No videos found — pick another topic");
+            updateStep("ready", "pending");
+            setFlowState("select-topic");
+          }
+        } else if (status === "error") {
+          if (pendingInterval.current) clearInterval(pendingInterval.current);
+          pendingInterval.current = null;
+          setSelectedTopic(null);
+          updateStep("select", "active", "Couldn't load videos — try another topic");
+          updateStep("ready", "pending");
+          setFlowState("select-topic");
+        }
+      }, 500);
     }
   };
 
@@ -310,6 +360,7 @@ export function VideoDiscoveryFlow() {
     setSelectedVideo(null);
     setError(null);
     videoCache.current = {};
+    videoFallbackCache.current = {};
     videoCacheStatus.current = {};
     setSteps([
       { id: "research", name: "Researching AI Trends", status: "active", detail: "Our AI agent is scanning the latest developments..." },

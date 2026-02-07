@@ -8,9 +8,14 @@
  * Turn lifecycle:
  * 1. Bilko speaks (TTS + typewriter)
  * 2. Brief pause (POST_TTS_BUFFER_MS)
- * 3. Mic activates automatically (if user has opted in)
+ * 3. Mic auto-resumes (if user has it on — one button controls everything)
  * 4. User speaks → turn-end detected → utterance captured
  * 5. Bilko processes → go to 1
+ *
+ * Auto-listen: derived from mic state. When the user turns mic ON,
+ * the full conversational flow activates — auto-resume after Bilko,
+ * mute during TTS, floor-aware listening. Mic OFF = voice off.
+ * One button. No separate toggle.
  *
  * Turn-end detection (two mechanisms):
  * A. Silence — after SILENCE_TIMEOUT_MS of no speech, fire utterance
@@ -277,16 +282,10 @@ interface ConversationDesignValue {
   /** Who currently has the conversational floor */
   floor: ConversationFloor;
 
-  /** Whether auto-listen is enabled (user opted in to voice) */
-  autoListenEnabled: boolean;
-
-  /** Enable/disable auto-listen globally */
-  setAutoListen: (enabled: boolean) => void;
-
   /** Signal that Bilko has started speaking (TTS active) */
   bilkoStartedSpeaking: () => void;
 
-  /** Signal that Bilko finished speaking — triggers auto-listen after delay */
+  /** Signal that Bilko finished speaking — triggers auto-resume if mic is on */
   bilkoFinishedSpeaking: () => void;
 
   /** Signal that the user has been given the floor (e.g. choice turn) */
@@ -311,18 +310,14 @@ interface ConversationDesignValue {
 
 const ConversationDesignCtx = createContext<ConversationDesignValue | undefined>(undefined);
 
-const AUTO_LISTEN_KEY = "bilko-auto-listen";
-
 export function ConversationDesignProvider({ children }: { children: ReactNode }) {
-  const { startListening, stopListening, isListening, onUtteranceEnd, isSpeaking, transcript } = useVoice();
+  const { startListening, isListening, onUtteranceEnd, isSpeaking, transcript } = useVoice();
 
   const [floor, setFloor] = useState<ConversationFloor>("idle");
-  const [autoListenEnabled, setAutoListenState] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem(AUTO_LISTEN_KEY) !== "false";
-  });
 
-  const autoListenRef = useRef(autoListenEnabled);
+  // Auto-listen is derived from mic state — when the mic is on,
+  // the full conversational flow activates. One button, no separate toggle.
+  const micActiveRef = useRef(isListening);
   const floorRef = useRef(floor);
   const userUtteranceCbsRef = useRef<Set<(text: string) => void>>(new Set());
   const autoListenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -345,7 +340,7 @@ export function ConversationDesignProvider({ children }: { children: ReactNode }
   }, []);
 
   // Keep refs in sync
-  useEffect(() => { autoListenRef.current = autoListenEnabled; }, [autoListenEnabled]);
+  useEffect(() => { micActiveRef.current = isListening; }, [isListening]);
   useEffect(() => { floorRef.current = floor; }, [floor]);
 
   // ── Dispatch helper ───────────────────────────────────
@@ -356,14 +351,6 @@ export function ConversationDesignProvider({ children }: { children: ReactNode }
       cb(cleaned);
     }
   }, []);
-
-  const setAutoListen = useCallback((enabled: boolean) => {
-    setAutoListenState(enabled);
-    localStorage.setItem(AUTO_LISTEN_KEY, String(enabled));
-    if (!enabled) {
-      stopListening();
-    }
-  }, [stopListening]);
 
   const bilkoStartedSpeaking = useCallback(() => {
     setFloor("bilko");
@@ -376,11 +363,13 @@ export function ConversationDesignProvider({ children }: { children: ReactNode }
 
   const bilkoFinishedSpeaking = useCallback(() => {
     // After Bilko stops speaking, give the floor to the user
-    // with a brief pause so TTS audio clears before mic opens
+    // with a brief pause so TTS audio clears before mic opens.
+    // If the mic is on (user toggled it), auto-resume listening.
     autoListenTimerRef.current = setTimeout(() => {
       setFloor("user");
       keywordFiredRef.current = false;
-      if (autoListenRef.current && !isListening) {
+      // Mic is on = user wants voice conversation. Ensure it's active.
+      if (micActiveRef.current && !isListening) {
         startListening();
       }
       autoListenTimerRef.current = null;
@@ -390,7 +379,8 @@ export function ConversationDesignProvider({ children }: { children: ReactNode }
   const giveFloorToUser = useCallback(() => {
     setFloor("user");
     keywordFiredRef.current = false;
-    if (autoListenRef.current && !isListening) {
+    // Mic is on = user wants voice. Ensure it's listening.
+    if (micActiveRef.current && !isListening) {
       startListening();
     }
   }, [startListening, isListening]);
@@ -448,8 +438,6 @@ export function ConversationDesignProvider({ children }: { children: ReactNode }
     <ConversationDesignCtx.Provider
       value={{
         floor,
-        autoListenEnabled,
-        setAutoListen,
         bilkoStartedSpeaking,
         bilkoFinishedSpeaking,
         giveFloorToUser,
