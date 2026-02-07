@@ -146,8 +146,12 @@ if [[ -n "$MERGED" ]]; then
   echo "  Merged successfully!"
   echo "  Commit: ${SHA}"
   echo ""
-  echo "  To update your local main:"
-  echo "    git checkout ${BASE} && git pull origin ${BASE}"
+
+  # ── Step 4: Sync local to merged main ──────────────────
+  echo "→ Syncing local repo to github/${BASE}..."
+  git fetch github
+  git reset --hard "github/${BASE}"
+  echo "  Local repo reset to github/${BASE} — ready to build."
 else
   echo "  ERROR: Merge failed (HTTP ${HTTP_CODE})"
   echo "$BODY" | head -10
