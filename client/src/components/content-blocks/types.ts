@@ -95,6 +95,21 @@ export interface VideoBlock extends BaseBlock {
   recommendation?: string;
 }
 
+/** Full video learning experience — player + AI summary + transcript Q&A */
+export interface VideoExperienceBlock extends BaseBlock {
+  type: "video-experience";
+  embedId: string;
+  title: string;
+  creator?: string;
+  description?: string;
+  tags?: string[];
+  youtubeUrl?: string;
+  /** Whether to auto-start AI summary on mount */
+  autoSummary?: boolean;
+  /** Whether to auto-start transcript on mount */
+  autoTranscript?: boolean;
+}
+
 /** Curated list of resources/links */
 export interface ResourceListBlock extends BaseBlock {
   type: "resource-list";
@@ -182,6 +197,7 @@ export type ContentBlock =
   | CodeBlock
   | ComparisonBlock
   | VideoBlock
+  | VideoExperienceBlock
   | ResourceListBlock
   | ProgressBlock
   | ImageBlock

@@ -13,6 +13,7 @@ export { StepsRenderer } from "./steps-block";
 export { CodeRenderer } from "./code-block";
 export { ComparisonRenderer } from "./comparison-block";
 export { VideoRenderer } from "./video-block";
+export { VideoExperienceRenderer } from "./video-experience-block";
 export { ResourceListRenderer } from "./resource-list-block";
 export { ProgressRenderer } from "./progress-block";
 export { QuizRenderer } from "./quiz-block";

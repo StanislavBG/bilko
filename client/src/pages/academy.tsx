@@ -85,7 +85,7 @@ import {
 } from "@/data/academy-videos";
 import { useNavigation } from "@/contexts/navigation-context";
 import { PromptPlayground } from "@/components/prompt-playground";
-import { VideoPlayerPage } from "@/components/video-player-page";
+import { VideoExperienceRenderer } from "@/components/content-blocks";
 
 // Icon mapping for dictionary categories
 const categoryIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -2436,7 +2436,16 @@ export default function Academy() {
       {activeSection === "video" && (
         <>
           {selectedVideo ? (
-            <VideoPlayerPage video={selectedVideo} />
+            <VideoExperienceRenderer block={{
+              id: selectedVideo.id,
+              type: "video-experience",
+              embedId: selectedVideo.youtubeId,
+              title: selectedVideo.title,
+              description: selectedVideo.description,
+              creator: selectedVideo.creator,
+              tags: selectedVideo.tags,
+              youtubeUrl: selectedVideo.youtubeUrl,
+            }} />
           ) : selectedVideoCategory ? (
             <VideoCategoryOverview
               category={selectedVideoCategory}
