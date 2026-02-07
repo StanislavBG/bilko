@@ -182,6 +182,158 @@ Rules:
       },
     ],
   },
+
+  // ── AI Leverage Consultation ──────────────────────────────
+  {
+    id: "ai-consultation",
+    name: "AI Leverage Consultation",
+    description:
+      "Multi-turn interview flow where an AI expert asks questions about the user's work, then delivers 2 obvious and 2 non-obvious AI leverage recommendations.",
+    version: "1.0.0",
+    location: "landing",
+    componentPath: "client/src/components/ai-consultation-flow.tsx",
+    tags: ["landing", "ai", "consultation", "recommendations", "gemini"],
+    output: {
+      name: "recommendations",
+      type: "object",
+      description:
+        "Summary + 2 obvious and 2 non-obvious AI leverage recommendations with tools and impact",
+    },
+    steps: [
+      {
+        id: "first-question",
+        name: "Ask First Question",
+        type: "llm",
+        description:
+          "Generates the opening question to understand who the user is and what they do.",
+        prompt:
+          "You are an elite AI strategy consultant. Ask your first warm, conversational question to understand the user's role and industry.",
+        userMessage:
+          "Start the consultation. Ask your first question to understand who this person is and what they do.",
+        model: "gemini-2.5-flash",
+        inputSchema: [],
+        outputSchema: [
+          {
+            name: "nextQuestion",
+            type: "string",
+            description: "The question to ask the user",
+          },
+          {
+            name: "done",
+            type: "boolean",
+            description: "Whether enough context has been gathered",
+            example: "false",
+          },
+        ],
+        dependsOn: [],
+      },
+      {
+        id: "follow-up-questions",
+        name: "Follow-up Questions (iterative)",
+        type: "llm",
+        description:
+          "For each user answer, evaluates context completeness and generates the next question. Covers: role/industry, daily workflows, pain points, KPIs, tools, team, data. Sets done=true after 5-7 questions.",
+        prompt:
+          "Given the interview so far, ask the next question OR set done=true if you have enough context for recommendations.",
+        userMessage: "User's latest answer + full conversation history",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "conversationHistory",
+            type: "array",
+            description: "All prior Q&A pairs",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "nextQuestion",
+            type: "string",
+            description: "Next interview question (if not done)",
+          },
+          {
+            name: "done",
+            type: "boolean",
+            description: "True when enough context gathered",
+          },
+        ],
+        dependsOn: ["first-question"],
+      },
+      {
+        id: "user-answers",
+        name: "User Answers (voice/text)",
+        type: "user-input",
+        description:
+          "User provides free-text answers via keyboard or voice input. Each answer feeds back into the follow-up question step.",
+        inputSchema: [
+          {
+            name: "question",
+            type: "string",
+            description: "The current question being answered",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "answer",
+            type: "string",
+            description: "The user's free-text response",
+          },
+        ],
+        dependsOn: ["first-question"],
+      },
+      {
+        id: "analysis",
+        name: "Generate Recommendations",
+        type: "llm",
+        description:
+          "Analyzes the complete interview transcript and generates 2 obvious + 2 non-obvious AI leverage recommendations, each with title, description, impact, and suggested tools.",
+        prompt:
+          "Based on the interview transcript, provide exactly 2 obvious and 2 non-obvious AI recommendations specific to the user's workflows.",
+        userMessage: "Full interview transcript with all Q&A pairs",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "transcript",
+            type: "string",
+            description: "Complete Q&A transcript from the interview",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "summary",
+            type: "string",
+            description: "2-3 sentence summary of the user's situation",
+          },
+          {
+            name: "obvious",
+            type: "array",
+            description: "2 obvious AI leverage recommendations",
+          },
+          {
+            name: "nonObvious",
+            type: "array",
+            description: "2 non-obvious AI leverage recommendations",
+          },
+        ],
+        dependsOn: ["follow-up-questions", "user-answers"],
+      },
+      {
+        id: "display-results",
+        name: "Display Recommendations",
+        type: "display",
+        description:
+          "Renders the final consultation results: summary, 2 obvious wins, and 2 hidden opportunities with tool suggestions and impact estimates.",
+        inputSchema: [
+          {
+            name: "recommendations",
+            type: "object",
+            description: "The analysis result with summary, obvious, and nonObvious arrays",
+          },
+        ],
+        outputSchema: [],
+        dependsOn: ["analysis"],
+      },
+    ],
+  },
 ];
 
 /** Validated registry — only flows passing ARCH-005 invariants */
