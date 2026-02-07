@@ -16,6 +16,10 @@ import {
   type ReactNode,
 } from "react";
 import type { VoiceTriggerOption } from "@/hooks/use-voice-recognition";
+import {
+  POST_TTS_BUFFER_MS,
+  SILENCE_TIMEOUT_MS as PACING_SILENCE_TIMEOUT_MS,
+} from "@/lib/bilko-persona/pacing";
 
 const VOICE_STORAGE_KEY = "bilko-voice-enabled";
 
@@ -32,6 +36,8 @@ interface TranscriptEntry {
 interface VoiceContextType {
   isListening: boolean;
   isSpeaking: boolean;
+  /** True when mic is suppressed during TTS playback */
+  isMuted: boolean;
   isSupported: boolean;
   ttsSupported: boolean;
   permissionDenied: boolean;
@@ -46,6 +52,12 @@ interface VoiceContextType {
   stopSpeaking: () => void;
   registerHandler: (id: string, handler: VoiceHandler) => () => void;
   clearTranscriptLog: () => void;
+  /**
+   * Register a callback for when the user finishes speaking.
+   * Fires after a silence gap following final speech results.
+   * Returns unsubscribe function.
+   */
+  onUtteranceEnd: (callback: (text: string) => void) => () => void;
 }
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);
@@ -62,6 +74,7 @@ const getSpeechRecognition = () => {
 export function VoiceProvider({ children }: { children: ReactNode }) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [transcriptLog, setTranscriptLog] = useState<TranscriptEntry[]>([]);
@@ -70,8 +83,15 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const handlersRef = useRef<Map<string, VoiceHandler>>(new Map());
   const isListeningRef = useRef(false);
   const permissionDeniedRef = useRef(false);
+  const isMutedRef = useRef(false);
   const autoStartedRef = useRef(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // End-of-speech detection
+  const utteranceEndCallbacksRef = useRef<Set<(text: string) => void>>(new Set());
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingFinalTextRef = useRef("");
+  const SILENCE_TIMEOUT_MS = PACING_SILENCE_TIMEOUT_MS;
 
   const isSupported = getSpeechRecognition() !== null;
   const ttsSupported = typeof window !== "undefined" && "speechSynthesis" in window;
@@ -83,6 +103,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     permissionDeniedRef.current = permissionDenied;
   }, [permissionDenied]);
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
 
   // Initialize speech recognition once on mount
   useEffect(() => {
@@ -95,6 +118,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     recognition.lang = "en-US";
 
     recognition.onresult = (event: any) => {
+      // Suppress recognition results while Bilko is speaking (echo cancellation)
+      if (isMutedRef.current) return;
+
       let finalTranscript = "";
       let interimTranscript = "";
 
@@ -133,6 +159,34 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
             }
           }
         }
+      }
+
+      // ── End-of-speech detection ──
+      // Reset the silence timer on any speech activity.
+      // After SILENCE_TIMEOUT_MS of no new results, fire utteranceEnd.
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+
+      if (finalTranscript) {
+        // Accumulate final text for the full utterance
+        pendingFinalTextRef.current =
+          (pendingFinalTextRef.current + " " + finalTranscript).trim();
+      }
+
+      if (pendingFinalTextRef.current) {
+        silenceTimerRef.current = setTimeout(() => {
+          const fullText = pendingFinalTextRef.current.trim();
+          if (fullText) {
+            for (const cb of utteranceEndCallbacksRef.current) {
+              cb(fullText);
+            }
+            pendingFinalTextRef.current = "";
+            setTranscript("");
+          }
+          silenceTimerRef.current = null;
+        }, SILENCE_TIMEOUT_MS);
       }
     };
 
@@ -212,11 +266,14 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [isListening, startListening, stopListening]);
 
-  // ── TTS: Bilko speaks ──────────────────────────────────
+  // ── TTS: Bilko speaks (mutes mic to prevent echo) ──────
   const speak = useCallback(async (text: string) => {
     if (!ttsSupported) return;
     // Cancel any in-progress speech
     window.speechSynthesis.cancel();
+
+    // Mute mic during TTS to prevent echo feedback
+    setIsMuted(true);
 
     return new Promise<void>((resolve) => {
       const utterance = new SpeechSynthesisUtterance(text);
@@ -226,8 +283,17 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       utterance.lang = "en-US";
 
       utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => { setIsSpeaking(false); resolve(); };
-      utterance.onerror = () => { setIsSpeaking(false); resolve(); };
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        // Brief delay before unmuting to avoid catching the tail end of TTS audio
+        setTimeout(() => setIsMuted(false), POST_TTS_BUFFER_MS);
+        resolve();
+      };
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+        setIsMuted(false);
+        resolve();
+      };
 
       utteranceRef.current = utterance;
       window.speechSynthesis.speak(utterance);
@@ -239,6 +305,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       window.speechSynthesis.cancel();
     }
     setIsSpeaking(false);
+    setIsMuted(false);
   }, [ttsSupported]);
 
   const registerHandler = useCallback(
@@ -255,6 +322,22 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     setTranscriptLog([]);
   }, []);
 
+  const onUtteranceEnd = useCallback((callback: (text: string) => void) => {
+    utteranceEndCallbacksRef.current.add(callback);
+    return () => {
+      utteranceEndCallbacksRef.current.delete(callback);
+    };
+  }, []);
+
+  // Clean up silence timer on unmount
+  useEffect(() => {
+    return () => {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
+    };
+  }, []);
+
   // Auto-start on mount if user previously enabled voice
   useEffect(() => {
     if (!autoStartedRef.current && isSupported && localStorage.getItem(VOICE_STORAGE_KEY) === "true") {
@@ -268,6 +351,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       value={{
         isListening,
         isSpeaking,
+        isMuted,
         isSupported,
         ttsSupported,
         permissionDenied,
@@ -280,6 +364,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         stopSpeaking,
         registerHandler,
         clearTranscriptLog,
+        onUtteranceEnd,
       }}
     >
       {children}

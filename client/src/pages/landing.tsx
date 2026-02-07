@@ -1,19 +1,20 @@
 /**
- * Landing Page — Next-generation conversational experience.
+ * Landing Page — Split-panel agentic experience.
  *
- * The website IS a conversation with Bilko, our AI host.
- * No chat frame. The entire page canvas is the dialogue.
+ * Left panel:  Conversation LOG — text record of the dialogue
+ *              between Bilko and the user. No interactive cards here.
  *
- * Bilko speaks (typewriter + TTS), the user responds by clicking
- * option cards or by voice. Agent results render as content blocks.
+ * Right panel:  Agent DELIVERY SURFACE — where Bilko delivers
+ *               interactive content (mode selection, experiences,
+ *               quizzes, flows). The agent controls both panels but
+ *               all deliveries to the user happen in the main area.
  */
 
-import { useState, useCallback, useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { GlobalHeader } from "@/components/global-header";
 import {
   ConversationCanvas,
   type ConversationTurn,
-  type OptionChoice,
 } from "@/components/conversation-canvas";
 import type { ContentBlock } from "@/components/content-blocks/types";
 import { BlockSequence } from "@/components/content-blocks";
@@ -41,8 +42,19 @@ import {
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
+import {
+  ConversationProvider,
+  useConversation,
+} from "@/contexts/conversation-context";
 
-// ── Map mode definitions to OptionChoice ─────────────────
+// ── Mode definitions for the delivery surface ────────────
+
+interface ModeOption {
+  id: string;
+  label: string;
+  description: string;
+  icon: ReactNode;
+}
 
 const iconMap: Record<string, ReactNode> = {
   Play: <Play className="h-5 w-5" />,
@@ -56,12 +68,11 @@ const iconMap: Record<string, ReactNode> = {
   GraduationCap: <GraduationCap className="h-5 w-5" />,
 };
 
-const MODE_OPTIONS: OptionChoice[] = LEARNING_MODES.map((mode) => ({
+const MODE_OPTIONS: ModeOption[] = LEARNING_MODES.map((mode) => ({
   id: mode.id,
   label: mode.label,
   description: mode.description,
   icon: iconMap[mode.icon] ?? <Sparkles className="h-5 w-5" />,
-  voiceTriggers: mode.voiceTriggers,
 }));
 
 // ── Content block definitions for each mode ──────────────
@@ -207,21 +218,80 @@ function ExperienceBack({ onBack }: { onBack: () => void }) {
 // ── Main component ───────────────────────────────────────
 
 export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean }) {
-  const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
+  const {
+    messages,
+    selectedMode,
+    isRestored,
+    addMessage,
+    selectMode,
+    clearMode,
+  } = useConversation();
 
-  const handleChoice = useCallback((choiceId: string) => {
-    setSelectedMode(choiceId as LearningModeId);
+  // Record initial messages on first visit (not on restore)
+  const didInit = useRef(false);
+  useEffect(() => {
+    if (didInit.current || messages.length > 0) return;
+    didInit.current = true;
+
+    if (!skipWelcome) {
+      const greeting = bilkoSays({ event: "greeting" });
+      addMessage({
+        role: "bilko",
+        text: greeting.text,
+        speech: greeting.speech,
+        meta: { type: "greeting" },
+      });
+    }
+
+    addMessage({
+      role: "bilko",
+      text: "How do you want to train today?",
+      speech: "How do you want to train today?",
+      meta: { type: "question" },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleChoice = useCallback(
+    (choiceId: string) => {
+      const mode = choiceId as LearningModeId;
+      const modeLabel = LEARNING_MODES.find((m) => m.id === mode)?.label;
+
+      // Record user's choice
+      addMessage({
+        role: "user",
+        text: modeLabel ?? choiceId,
+        meta: { type: "choice", modeId: mode, modeLabel },
+      });
+
+      // Record Bilko's acknowledgment
+      const response = getBilkoResponse(mode);
+      addMessage({
+        role: "bilko",
+        text: response.text,
+        speech: response.speech,
+        meta: { type: "acknowledgment", modeId: mode },
+      });
+
+      selectMode(mode);
+    },
+    [addMessage, selectMode],
+  );
 
   const handleBack = useCallback(() => {
-    setSelectedMode(null);
-  }, []);
+    addMessage({
+      role: "user",
+      text: "Ask me something else",
+      meta: { type: "back" },
+    });
+    clearMode();
+  }, [addMessage, clearMode]);
 
-  // Conversation turns (left panel) — only dialogue, no content rendering
+  // ── Left panel: conversation LOG only (no interactive cards) ──
   const conversationTurns = useMemo<ConversationTurn[]>(() => {
     const t: ConversationTurn[] = [];
 
-    // Turn 1: Bilko's greeting
+    // Bilko's greeting
     if (!skipWelcome) {
       const greeting = bilkoSays({ event: "greeting" });
       t.push({
@@ -232,7 +302,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       });
     }
 
-    // Turn 2: Bilko asks the question
+    // Bilko asks the question
     t.push({
       type: "bilko",
       text: "How do you want to train today?",
@@ -240,11 +310,25 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       delay: skipWelcome ? 100 : 400,
     });
 
-    // Turn 3: User's response options
-    t.push({ type: "user-choice", options: MODE_OPTIONS });
-
-    // Turn 4: If user picked, show Bilko's acknowledgment
+    // If user picked a mode, log it as compact text entries
     if (selectedMode) {
+      const modeLabel = LEARNING_MODES.find((m) => m.id === selectedMode)?.label ?? selectedMode;
+      const modeIcon = LEARNING_MODES.find((m) => m.id === selectedMode)?.icon;
+
+      // User's choice (compact log entry)
+      t.push({
+        type: "content",
+        render: () => (
+          <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+            <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center shrink-0">
+              {iconMap[modeIcon ?? ""] ?? <Sparkles className="h-3.5 w-3.5" />}
+            </div>
+            <span>{modeLabel}</span>
+          </div>
+        ),
+      });
+
+      // Bilko's acknowledgment
       const response = getBilkoResponse(selectedMode);
       t.push({ type: "bilko", ...response, delay: 200 });
     }
@@ -252,18 +336,22 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     return t;
   }, [skipWelcome, selectedMode]);
 
+  // On restored session, skip animations for all existing turns
+  const initialSettledCount = isRestored ? conversationTurns.length : 0;
+
   return (
     <div className="flex flex-1 overflow-hidden">
-      {/* Left panel: Conversation thread — always visible */}
+      {/* Left panel: Conversation log — text-only record of the dialogue */}
       <div className="w-full lg:w-[420px] xl:w-[480px] shrink-0 lg:border-r border-border overflow-auto bg-background">
         <ConversationCanvas
           turns={conversationTurns}
-          onChoice={handleChoice}
+          onChoice={() => {}}
           compact
+          initialSettledCount={initialSettledCount}
         />
       </div>
 
-      {/* Right panel: Dynamic content area — adjusts based on conversation */}
+      {/* Right panel: Agent delivery surface — interactive content goes here */}
       <div className="hidden lg:flex flex-1 overflow-auto">
         {selectedMode ? (
           <div className="flex-1 max-w-4xl mx-auto px-6 py-6 w-full">
@@ -271,15 +359,44 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
             <RightPanelContent mode={selectedMode} onBack={handleBack} />
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center space-y-3 px-8 max-w-md">
-              <div className="text-6xl font-bold text-primary/10">B</div>
-              <p className="text-sm text-muted-foreground">
-                Pick a training mode to get started.
-              </p>
-            </div>
-          </div>
+          <ModeSelectionGrid onSelect={handleChoice} />
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Mode selection grid (main area delivery) ─────────────
+
+function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
+  return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <div className="max-w-3xl w-full space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {MODE_OPTIONS.map((option, i) => (
+            <button
+              key={option.id}
+              onClick={() => onSelect(option.id)}
+              className="group text-left rounded-xl border-2 border-border p-5 transition-all duration-300
+                hover:border-primary/50 hover:bg-muted/50 hover:shadow-md hover:scale-[1.02]
+                animate-in fade-in slide-in-from-bottom-4 duration-500"
+              style={{ animationDelay: `${i * 60}ms` }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors
+                  bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
+                  {option.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm">{option.label}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                    {option.description}
+                  </p>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -357,11 +474,13 @@ function ExperiencePanel({
 /** Landing page shell for unauthenticated users */
 export default function Landing() {
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
-      <GlobalHeader variant="landing" />
-      <main className="flex-1 flex overflow-hidden pt-14">
-        <LandingContent />
-      </main>
-    </div>
+    <ConversationProvider>
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
+        <GlobalHeader variant="landing" />
+        <main className="flex-1 flex overflow-hidden pt-14">
+          <LandingContent />
+        </main>
+      </div>
+    </ConversationProvider>
   );
 }

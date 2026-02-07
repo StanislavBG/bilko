@@ -29,6 +29,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { chatJSON, jsonPrompt, useFlowExecution } from "@/lib/flow-engine";
 import { useVoice } from "@/contexts/voice-context";
+import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 
 // ── Config type ──────────────────────────────────────────
 
@@ -451,7 +452,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { trackStep, resolveUserInput } = useFlowExecution(c.flowId);
-  const { isListening, isSupported, transcript, toggleListening, speak } = useVoice();
+  const { isListening, isSupported, transcript, toggleListening, speak, onUtteranceEnd } = useVoice();
 
   const accent = c.accentColor ?? "yellow";
 
@@ -462,12 +463,24 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
     }
   }, [qaPairs, currentQuestion, phase]);
 
-  // Fill input from voice
+  // Fill input from voice (live interim results)
   useEffect(() => {
     if (isListening && transcript && phase === "questioning") {
       setUserInput(transcript);
     }
   }, [transcript, isListening, phase]);
+
+  // Auto-send when user finishes speaking (silence detection)
+  const submitAnswerRef = useRef(submitAnswer);
+  submitAnswerRef.current = submitAnswer;
+  useEffect(() => {
+    if (!isListening || phase !== "questioning") return;
+    return onUtteranceEnd((text) => {
+      setUserInput(text);
+      // Pass text directly to avoid stale closure over userInput
+      submitAnswerRef.current(text);
+    });
+  }, [isListening, phase, onUtteranceEnd]);
 
   // ── Setup phase submit ──────────────────────────────────
 
@@ -494,7 +507,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
     const { system, firstQuestion } = resolvedPromptsRef.current;
 
     try {
-      conversationRef.current = [{ role: "system", content: system }];
+      conversationRef.current = [{ role: "system", content: bilkoSystemPrompt(system) }];
 
       const { data: llmResult } = await trackStep(
         "first-question",
@@ -534,8 +547,8 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
 
   // ── Submit answer ───────────────────────────────────────
 
-  const submitAnswer = useCallback(async () => {
-    const answer = userInput.trim();
+  const submitAnswer = useCallback(async (overrideText?: string) => {
+    const answer = (overrideText ?? userInput).trim();
     if (!answer || isThinking) return;
 
     const question = currentQuestion;
@@ -595,7 +608,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
           () =>
             chatJSON<AnalysisResponse>(
               jsonPrompt(
-                resolvedPromptsRef.current.analysis,
+                bilkoSystemPrompt(resolvedPromptsRef.current.analysis),
                 `Interview transcript:\n\n${transcript}\n\nProvide your analysis and recommendations.`,
               ),
             ),

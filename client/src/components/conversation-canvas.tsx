@@ -17,6 +17,7 @@ import { BlockSequence } from "@/components/content-blocks";
 import type { ContentBlock, AgentContentResult } from "@/components/content-blocks/types";
 import { useVoiceCommands } from "@/contexts/voice-context";
 import type { VoiceTriggerOption } from "@/hooks/use-voice-recognition";
+import { breathingPause } from "@/lib/bilko-persona/pacing";
 
 // ── Turn types ───────────────────────────────────────────
 
@@ -39,6 +40,8 @@ export interface OptionChoice {
 export interface UserChoiceTurn {
   type: "user-choice";
   options: OptionChoice[];
+  /** Pre-selected option ID (for session restore) */
+  selectedId?: string;
 }
 
 export interface ContentTurn {
@@ -76,6 +79,8 @@ interface ConversationCanvasProps {
   className?: string;
   /** Compact mode for side-panel usage (smaller text, tighter spacing) */
   compact?: boolean;
+  /** Number of turns already settled on mount (restored from session) */
+  initialSettledCount?: number;
 }
 
 // ── Helper: build turns from AgentContentResult ──────────
@@ -131,21 +136,41 @@ export function ConversationCanvas({
   onChoice,
   className = "",
   compact = false,
+  initialSettledCount = 0,
 }: ConversationCanvasProps) {
-  const [settledCount, setSettledCount] = useState(0);
+  const [settledCount, setSettledCount] = useState(initialSettledCount);
+  const [isBreathing, setIsBreathing] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const breathTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-scroll to bottom when new content appears
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [settledCount, turns.length]);
 
+  // Clean up breathing timer on unmount
+  useEffect(() => {
+    return () => {
+      if (breathTimerRef.current) clearTimeout(breathTimerRef.current);
+    };
+  }, []);
+
   const handleSettled = useCallback(() => {
-    setSettledCount((c) => c + 1);
+    // After a turn settles, add a breathing pause before showing the next.
+    // People breathe. Bilko does too.
+    setIsBreathing(true);
+    breathTimerRef.current = setTimeout(() => {
+      setSettledCount((c) => c + 1);
+      setIsBreathing(false);
+      breathTimerRef.current = null;
+    }, breathingPause());
   }, []);
 
   // Determine how many turns to render: all settled + the next unsettled one
-  const visibleCount = Math.min(settledCount + 1, turns.length);
+  // During breathing, don't show the next turn yet
+  const visibleCount = isBreathing
+    ? settledCount
+    : Math.min(settledCount + 1, turns.length);
 
   return (
     <div className={`flex-1 flex flex-col overflow-auto ${className}`}>
@@ -171,6 +196,16 @@ export function ConversationCanvas({
               />
             );
           })}
+
+          {/* Breathing indicator — Bilko pauses between thoughts */}
+          {isBreathing && settledCount < turns.length && (
+            <div className="flex items-center gap-1.5 py-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-pulse [animation-delay:200ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-pulse [animation-delay:400ms]" />
+            </div>
+          )}
+
           <div ref={bottomRef} />
         </div>
       </div>
@@ -290,8 +325,17 @@ function UserChoiceView({
   onSettled: () => void;
   compact?: boolean;
 }) {
-  const [pickedId, setPickedId] = useState<string | null>(null);
-  const settledCalled = useRef(false);
+  const [pickedId, setPickedId] = useState<string | null>(turn.selectedId ?? null);
+  const settledCalled = useRef(!!turn.selectedId);
+
+  // If pre-selected (restored from session), fire settled immediately
+  useEffect(() => {
+    if (turn.selectedId && !isSettled) {
+      onSettled();
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const voiceOptions: VoiceTriggerOption[] = turn.options.map((o) => ({
     id: o.id,
