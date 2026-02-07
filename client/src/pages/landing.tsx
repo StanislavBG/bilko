@@ -48,7 +48,7 @@ import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
 import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import { useConversationDesign } from "@/contexts/conversation-design-context";
 import { useVoice } from "@/contexts/voice-context";
-import { Mic, MicOff } from "lucide-react";
+import { Mic, MicOff, MessageSquareText, Trash2 } from "lucide-react";
 
 // ── Mode definitions for the delivery surface ────────────
 
@@ -248,58 +248,52 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         };
       }
 
-      // User choice → compact icon + label
-      if (msg.meta?.type === "choice") {
-        const modeIcon = LEARNING_MODES.find((m) => m.id === msg.meta?.modeId)?.icon;
-        return {
-          type: "content" as const,
-          render: () => (
-            <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-              <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center shrink-0">
-                {iconMap[modeIcon ?? ""] ?? <Sparkles className="h-3.5 w-3.5" />}
-              </div>
-              <span>{msg.text}</span>
-            </div>
-          ),
-        };
-      }
-
-      // Other user messages (back, etc.)
+      // All user messages → right-aligned bubble
       return {
-        type: "content" as const,
-        render: () => (
-          <div className="text-sm text-muted-foreground italic">
-            {msg.text}
-          </div>
-        ),
+        type: "user" as const,
+        text: msg.text,
       };
     });
   }, [messages, greetingLoading]);
 
   // ── Conversation design: voice turn-taking ──
   const { floor, onUserUtterance, autoListenEnabled, setAutoListen } = useConversationDesign();
-  const { isListening, toggleListening, transcript } = useVoice();
+  const { isListening, toggleListening, transcript, transcriptLog, clearTranscriptLog } = useVoice();
 
-  // When the user finishes speaking (silence detected), handle the utterance
+  // When the user finishes speaking, try to match an option on the right panel.
+  // The chat is a LOG — voice input drives navigation, not free-form chat.
   useEffect(() => {
     const unsub = onUserUtterance((text: string) => {
-      // If no mode is selected, try to match a mode by name
+      // Always log what the user said
+      addMessage({ role: "user", text, meta: { type: "voice" } });
+
+      // If no mode is selected, try to match a mode by name/keywords
       if (!selectedMode) {
         const lower = text.toLowerCase();
-        const matched = LEARNING_MODES.find(
-          (m) => lower.includes(m.label.toLowerCase()) || lower.includes(m.id),
-        );
+        const matched = LEARNING_MODES.find((m) => {
+          const label = m.label.toLowerCase();
+          const id = m.id.toLowerCase();
+          const desc = m.description.toLowerCase();
+          // Check label, id, or key words from the description
+          return (
+            lower.includes(label) ||
+            lower.includes(id) ||
+            label.split(/\s+/).some((w) => w.length > 3 && lower.includes(w)) ||
+            desc.split(/\s+/).some((w) => w.length > 5 && lower.includes(w))
+          );
+        });
         if (matched) {
           handleChoice(matched.id);
           return;
         }
+        // No match — Bilko guides the user
+        addMessage({
+          role: "bilko",
+          text: "I didn't catch a training mode from that. Try saying something like \"video\", \"interview\", or \"chat\" — or tap one on the right.",
+          speech: "I didn't catch a training mode from that. Try saying something like video, interview, or chat, or tap one on the right.",
+          meta: { type: "guidance" },
+        });
       }
-      // Otherwise log it as a user message
-      addMessage({
-        role: "user",
-        text,
-        meta: { type: "voice" },
-      });
     });
     return unsub;
   }, [onUserUtterance, selectedMode, handleChoice, addMessage]);
@@ -352,6 +346,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
           autoListenEnabled={autoListenEnabled}
           onToggleListen={toggleListening}
           onToggleAutoListen={() => setAutoListen(!autoListenEnabled)}
+          transcriptLog={transcriptLog}
+          onClearLog={clearTranscriptLog}
         />
         {/* Flow status pinned to bottom of chat panel */}
         <FlowStatusIndicator onReset={handleReset} />
@@ -376,6 +372,16 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 // Shows the mic state at the bottom of the chat panel so the user
 // knows when Bilko is listening and can see their live transcript.
 
+interface TranscriptEntry {
+  text: string;
+  timestamp: number;
+}
+
+function formatTime(ts: number) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
 function VoiceStatusBar({
   floor,
   isListening,
@@ -383,6 +389,8 @@ function VoiceStatusBar({
   autoListenEnabled,
   onToggleListen,
   onToggleAutoListen,
+  transcriptLog,
+  onClearLog,
 }: {
   floor: "bilko" | "user" | "idle";
   isListening: boolean;
@@ -390,49 +398,94 @@ function VoiceStatusBar({
   autoListenEnabled: boolean;
   onToggleListen: () => void;
   onToggleAutoListen: () => void;
+  transcriptLog: TranscriptEntry[];
+  onClearLog: () => void;
 }) {
-  return (
-    <div className="border-t border-border px-4 py-2 flex items-center gap-2 bg-background/95 backdrop-blur-sm">
-      {/* Mic toggle */}
-      <button
-        onClick={onToggleListen}
-        className={`p-1.5 rounded-md transition-colors ${
-          isListening
-            ? "bg-green-500/15 text-green-500"
-            : "text-muted-foreground/50 hover:text-foreground hover:bg-muted"
-        }`}
-        title={isListening ? "Mic on — click to mute" : "Mic off — click to speak"}
-      >
-        {isListening ? <Mic className="h-3.5 w-3.5" /> : <MicOff className="h-3.5 w-3.5" />}
-      </button>
+  const [showSummary, setShowSummary] = useState(false);
 
-      {/* Status / transcript */}
-      <div className="flex-1 min-w-0">
-        {isListening && transcript ? (
-          <p className="text-xs text-foreground truncate animate-in fade-in duration-200">
-            {transcript}
-          </p>
-        ) : isListening ? (
-          <p className="text-xs text-muted-foreground/60">Listening...</p>
-        ) : floor === "bilko" ? (
-          <p className="text-xs text-muted-foreground/60">Bilko is speaking...</p>
-        ) : (
-          <p className="text-xs text-muted-foreground/40">Tap mic or speak</p>
+  return (
+    <div className="border-t border-border bg-background/95 backdrop-blur-sm">
+      <div className="px-4 py-2 flex items-center gap-2">
+        {/* Mic toggle */}
+        <button
+          onClick={onToggleListen}
+          className={`p-1.5 rounded-md transition-colors ${
+            isListening
+              ? "bg-green-500/15 text-green-500"
+              : "text-muted-foreground/50 hover:text-foreground hover:bg-muted"
+          }`}
+          title={isListening ? "Mic on — click to mute" : "Mic off — click to speak"}
+        >
+          {isListening ? <Mic className="h-3.5 w-3.5" /> : <MicOff className="h-3.5 w-3.5" />}
+        </button>
+
+        {/* Status / transcript */}
+        <div className="flex-1 min-w-0">
+          {isListening && transcript ? (
+            <p className="text-xs text-foreground truncate animate-in fade-in duration-200">
+              {transcript}
+            </p>
+          ) : isListening ? (
+            <p className="text-xs text-muted-foreground/60">Listening...</p>
+          ) : floor === "bilko" ? (
+            <p className="text-xs text-muted-foreground/60">Bilko is speaking...</p>
+          ) : (
+            <p className="text-xs text-muted-foreground/40">Tap mic or speak</p>
+          )}
+        </div>
+
+        {/* Summary toggle */}
+        {transcriptLog.length > 0 && (
+          <button
+            onClick={() => setShowSummary(!showSummary)}
+            className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+            title="Voice summary"
+          >
+            <MessageSquareText className="h-3 w-3" />
+            <span className="font-mono">{transcriptLog.length}</span>
+          </button>
         )}
+
+        {/* Auto-listen toggle */}
+        <button
+          onClick={onToggleAutoListen}
+          className={`text-[10px] font-mono px-1.5 py-0.5 rounded transition-colors ${
+            autoListenEnabled
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground/40 hover:text-muted-foreground"
+          }`}
+          title={autoListenEnabled ? "Auto-listen on" : "Auto-listen off"}
+        >
+          AUTO
+        </button>
       </div>
 
-      {/* Auto-listen toggle */}
-      <button
-        onClick={onToggleAutoListen}
-        className={`text-[10px] font-mono px-1.5 py-0.5 rounded transition-colors ${
-          autoListenEnabled
-            ? "bg-primary/10 text-primary"
-            : "text-muted-foreground/40 hover:text-muted-foreground"
-        }`}
-        title={autoListenEnabled ? "Auto-listen on" : "Auto-listen off"}
-      >
-        AUTO
-      </button>
+      {/* Expandable summary panel */}
+      {showSummary && transcriptLog.length > 0 && (
+        <div className="border-t border-border px-4 py-2 max-h-48 overflow-y-auto
+          animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Voice Log</span>
+            <button
+              onClick={onClearLog}
+              className="p-0.5 rounded text-muted-foreground/40 hover:text-destructive transition-colors"
+              title="Clear log"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+          <div className="space-y-1">
+            {transcriptLog.map((entry, i) => (
+              <div key={i} className="text-xs text-muted-foreground">
+                <span className="text-[9px] font-mono text-muted-foreground/50 mr-1.5">
+                  {formatTime(entry.timestamp)}
+                </span>
+                {entry.text}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
