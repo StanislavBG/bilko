@@ -74,6 +74,8 @@ interface ConversationCanvasProps {
   onChoice: (choiceId: string) => void;
   /** Optional class on the outer wrapper */
   className?: string;
+  /** Compact mode for side-panel usage (smaller text, tighter spacing) */
+  compact?: boolean;
 }
 
 // ── Helper: build turns from AgentContentResult ──────────
@@ -128,6 +130,7 @@ export function ConversationCanvas({
   turns,
   onChoice,
   className = "",
+  compact = false,
 }: ConversationCanvasProps) {
   const [settledCount, setSettledCount] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -147,7 +150,10 @@ export function ConversationCanvas({
   return (
     <div className={`flex-1 flex flex-col overflow-auto ${className}`}>
       <div className="flex-1 flex flex-col justify-end min-h-0">
-        <div className="max-w-3xl mx-auto w-full px-4 py-8 space-y-8">
+        <div className={compact
+          ? "w-full px-4 py-6 space-y-5"
+          : "max-w-3xl mx-auto w-full px-4 py-8 space-y-8"
+        }>
           {turns.slice(0, visibleCount).map((turn, i) => {
             const isLatest = i === visibleCount - 1;
             const isSettled = i < settledCount;
@@ -161,6 +167,7 @@ export function ConversationCanvas({
                 isLatest={isLatest}
                 onSettled={handleSettled}
                 onChoice={onChoice}
+                compact={compact}
               />
             );
           })}
@@ -180,6 +187,7 @@ interface TurnRendererProps {
   isLatest: boolean;
   onSettled: () => void;
   onChoice: (id: string) => void;
+  compact?: boolean;
 }
 
 function TurnRenderer({
@@ -188,6 +196,7 @@ function TurnRenderer({
   isLatest,
   onSettled,
   onChoice,
+  compact,
 }: TurnRendererProps) {
   if (turn.type === "bilko") {
     return (
@@ -195,6 +204,7 @@ function TurnRenderer({
         turn={turn}
         isSettled={isSettled}
         onSettled={onSettled}
+        compact={compact}
       />
     );
   }
@@ -207,6 +217,7 @@ function TurnRenderer({
         isLatest={isLatest}
         onChoice={onChoice}
         onSettled={onSettled}
+        compact={compact}
       />
     );
   }
@@ -228,15 +239,21 @@ function BilkoTurnView({
   turn,
   isSettled,
   onSettled,
+  compact,
 }: {
   turn: BilkoTurn;
   isSettled: boolean;
   onSettled: () => void;
+  compact?: boolean;
 }) {
+  const textClass = compact
+    ? "text-lg md:text-xl font-bold tracking-tight leading-tight text-foreground"
+    : "text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight leading-tight text-foreground";
+
   if (isSettled) {
     return (
       <div className="animate-in fade-in duration-300">
-        <p className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight leading-tight text-foreground">
+        <p className={textClass}>
           {turn.text}
         </p>
       </div>
@@ -251,7 +268,7 @@ function BilkoTurnView({
       delay={turn.delay ?? 300}
       speed={70}
       onComplete={onSettled}
-      className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight leading-tight text-foreground"
+      className={textClass}
     />
   );
 }
@@ -264,12 +281,14 @@ function UserChoiceView({
   isLatest,
   onChoice,
   onSettled,
+  compact,
 }: {
   turn: UserChoiceTurn;
   isSettled: boolean;
   isLatest: boolean;
   onChoice: (id: string) => void;
   onSettled: () => void;
+  compact?: boolean;
 }) {
   const [pickedId, setPickedId] = useState<string | null>(null);
   const settledCalled = useRef(false);
@@ -316,7 +335,11 @@ function UserChoiceView({
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${
+      compact
+        ? "grid grid-cols-1 gap-2"
+        : "grid grid-cols-2 md:grid-cols-3 gap-3"
+    }`}>
       {turn.options.map((option, i) => {
         const isPicked = pickedId === option.id;
         const isDimmed = pickedId !== null && !isPicked;
@@ -327,7 +350,8 @@ function UserChoiceView({
             onClick={() => handlePick(option.id)}
             disabled={!!pickedId}
             className={`
-              group relative text-left rounded-xl border-2 p-5 transition-all duration-300
+              group relative text-left rounded-xl border transition-all duration-300
+              ${compact ? "p-3" : "border-2 p-5"}
               ${isPicked
                 ? "border-primary bg-primary/5 scale-[1.02] shadow-lg"
                 : isDimmed
@@ -337,18 +361,20 @@ function UserChoiceView({
             `}
             style={{ animationDelay: `${i * 80}ms` }}
           >
-            <div className="flex items-start gap-3">
+            <div className="flex items-center gap-2.5">
               <div className={`
-                w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors
+                ${compact ? "w-8 h-8 rounded-md" : "w-10 h-10 rounded-lg"} flex items-center justify-center shrink-0 transition-colors
                 ${isPicked ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"}
               `}>
                 {option.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-sm">{option.label}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                  {option.description}
-                </p>
+                <h3 className={`font-semibold ${compact ? "text-xs" : "text-sm"}`}>{option.label}</h3>
+                {!compact && (
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                    {option.description}
+                  </p>
+                )}
               </div>
             </div>
           </button>
