@@ -46,7 +46,7 @@ import {
 } from "@/contexts/conversation-context";
 import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
 import { FlowStatusIndicator } from "@/components/flow-status-indicator";
-import { useConversationDesign } from "@/contexts/conversation-design-context";
+import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
 import { useVoice } from "@/contexts/voice-context";
 import { Mic, MicOff, MessageSquareText, Trash2 } from "lucide-react";
 
@@ -281,7 +281,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   }, [messages, greetingLoading]);
 
   // ── Conversation design: voice turn-taking ──
-  const { floor, onUserUtterance, autoListenEnabled, setAutoListen } = useConversationDesign();
+  const { floor, onUserUtterance, autoListenEnabled, setAutoListen, screenOptions } = useConversationDesign();
   const { isListening, toggleListening, transcript, transcriptLog, clearTranscriptLog } = useVoice();
 
   // ── Bilko's patience: voice → option matching with breathing room ──
@@ -296,10 +296,19 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       // Always log what the user said
       addMessage({ role: "user", text, meta: { type: "voice" } });
 
-      // If a mode is already selected, just log — the subflow owns the conversation
+      // 1. Try to match against dynamic screen options (whatever's visible on screen)
+      //    This catches topic cards, video cards, mode cards — anything registered
+      const screenMatch = matchScreenOption(text, screenOptions);
+      if (screenMatch) {
+        unmatchedCountRef.current = 0;
+        screenMatch.action();
+        return;
+      }
+
+      // If a mode is already selected, the subflow owns the screen — just log
       if (selectedMode) return;
 
-      // Try to match a mode by name/keywords
+      // 2. Fall back to static learning mode matching (for when nothing is registered)
       const lower = text.toLowerCase();
       const matched = LEARNING_MODES.find((m) => {
         const label = m.label.toLowerCase();
@@ -338,7 +347,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       // Otherwise: just keep listening, user is still finding their words
     });
     return unsub;
-  }, [onUserUtterance, selectedMode, handleChoice, addMessage]);
+  }, [onUserUtterance, selectedMode, handleChoice, addMessage, screenOptions]);
 
   // Subscribe to FlowBus messages addressed to "main" conversation
   const { subscribe } = useFlowBus();
@@ -535,6 +544,18 @@ function VoiceStatusBar({
 // ── Mode selection grid (main area delivery) ─────────────
 
 function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
+  // Register mode cards as screen options for voice matching
+  const modeScreenOptions = useMemo<ScreenOption[]>(() =>
+    MODE_OPTIONS.map((opt) => ({
+      id: opt.id,
+      label: opt.label,
+      keywords: opt.description.split(/\s+/).filter((w) => w.length > 4),
+      action: () => onSelect(opt.id),
+    })),
+    [onSelect],
+  );
+  useScreenOptions(modeScreenOptions);
+
   return (
     <div className="flex-1 flex items-center justify-center p-8">
       <div className="max-w-3xl w-full space-y-6">

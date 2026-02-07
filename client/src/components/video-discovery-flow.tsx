@@ -15,7 +15,7 @@
  * - useFlowExecution()   for execution tracing
  */
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +43,7 @@ import {
 import type { VideoCandidate } from "@/lib/flow-engine";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
+import { useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
 import { VideoExperienceRenderer } from "@/components/content-blocks";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -322,6 +323,41 @@ export function VideoDiscoveryFlow() {
   };
 
   const videosForSelected = selectedTopic ? (videoCache.current[selectedTopic.title] || []) : [];
+
+  // ── Register screen options for voice matching ─────────────────────
+  // When topic cards are visible, register them so the user can say
+  // "prompt engineering" or "AI agents" and the conversation matches it.
+  // When video cards are visible, register those instead.
+
+  const screenOptions = useMemo<ScreenOption[]>(() => {
+    if (flowState === "select-topic" && topics.length > 0) {
+      return topics.map((topic) => ({
+        id: `topic-${topic.rank}`,
+        label: topic.title,
+        keywords: [topic.description],
+        action: () => handleTopicSelect(topic),
+      }));
+    }
+
+    if (flowState === "ready" && selectedTopic && !selectedVideo && videosForSelected.length > 0) {
+      return videosForSelected.map((video) => ({
+        id: `video-${video.embedId}`,
+        label: video.title,
+        keywords: [video.creator],
+        action: () => {
+          setSelectedVideo(video);
+          resolveUserInput("select-video", { selectedVideo: video });
+          busSend("main", "summary", {
+            summary: `Discovered "${video.title}" by ${video.creator} on the topic of ${selectedTopic?.title ?? "AI"}.`,
+          });
+        },
+      }));
+    }
+
+    return [];
+  }, [flowState, topics, selectedTopic, selectedVideo, videosForSelected, busSend, resolveUserInput]);
+
+  useScreenOptions(screenOptions);
 
   // ── Render ─────────────────────────────────────────────────────────
 
