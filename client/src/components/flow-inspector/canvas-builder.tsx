@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useVoice } from "@/contexts/voice-context";
 import { chatJSON, jsonPrompt } from "@/lib/flow-engine";
+import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import {
   applyMutation,
   createBlankStep,
@@ -63,7 +64,7 @@ interface ParsedIntent {
   description: string;
 }
 
-const INTENT_SYSTEM_PROMPT = `You are Bilko's flow builder assistant. The user is looking at a DAG flow and has selected some nodes.
+const INTENT_SYSTEM_PROMPT = bilkoSystemPrompt(`The user is looking at a DAG flow and has selected some nodes.
 They will tell you what change they want. Parse their intent into a structured action.
 
 Available step types: llm, user-input, transform, validate, display
@@ -80,7 +81,7 @@ Rules:
 - For "connect" or "disconnect": targetStepIds should have exactly 2 IDs [from, to]
 - description is a human-readable summary of what will happen
 - If you can't understand the request, use action: "unknown"
-- No markdown, ONLY the JSON object`;
+- No markdown, ONLY the JSON object`);
 
 function buildIntentUserMessage(
   userText: string,
