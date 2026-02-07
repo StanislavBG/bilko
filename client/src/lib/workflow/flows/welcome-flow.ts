@@ -7,7 +7,9 @@
 
 import type { Workflow } from "../types";
 
-// Learning mode options - scalable menu
+// Learning mode options — each is a subflow of the main conversation.
+// When a user selects a mode, the right panel activates that subflow
+// while the main conversation in the left panel continues independently.
 export const LEARNING_MODES = [
   {
     id: "video",
@@ -17,39 +19,11 @@ export const LEARNING_MODES = [
     voiceTriggers: ["video", "watch", "tutorial", "show me"],
   },
   {
-    id: "quiz",
-    label: "Challenge Mode",
-    description: "Test your knowledge with interactive quizzes",
-    icon: "Trophy",
-    voiceTriggers: ["quiz", "challenge", "test", "game"],
-  },
-  {
-    id: "prompt",
-    label: "Try a Prompt",
-    description: "Jump straight into hands-on AI prompting",
-    icon: "Sparkles",
-    voiceTriggers: ["prompt", "try", "practice", "hands on"],
-  },
-  {
-    id: "explore",
-    label: "Explore the Academy",
-    description: "Browse courses, tracks, and curriculum",
-    icon: "Compass",
-    voiceTriggers: ["explore", "browse", "look around", "courses"],
-  },
-  {
     id: "chat",
     label: "AI Leverage Consultation",
     description: "Discover where AI fits in your work",
     icon: "MessageCircle",
     voiceTriggers: ["chat", "talk", "consult", "leverage", "consultation", "advice"],
-  },
-  {
-    id: "quick",
-    label: "Quick Start Guide",
-    description: "3-minute intro to get you started",
-    icon: "Zap",
-    voiceTriggers: ["quick", "fast", "start", "intro", "beginner"],
   },
   {
     id: "interviewer",
@@ -150,13 +124,12 @@ export const welcomeFlow: Workflow = {
       condition: "selectedMode",
       branches: {
         video: "video-experience",
-        quiz: "quiz-experience",
-        prompt: "prompt-experience",
-        explore: "explore-experience",
         chat: "chat-experience",
-        quick: "quick-experience",
+        interviewer: "chat-experience",
+        linkedin: "chat-experience",
+        socratic: "chat-experience",
       },
-      defaultBranch: "explore-experience",
+      defaultBranch: "chat-experience",
     },
 
     // Video experience
@@ -172,45 +145,6 @@ export const welcomeFlow: Workflow = {
       next: "end-with-cta",
     },
 
-    // Quiz experience
-    "quiz-experience": {
-      id: "quiz-experience",
-      type: "display",
-      name: "Quiz Experience",
-      mode: "visual",
-      content: {
-        component: "QuizExperience",
-        text: "Let's test your AI knowledge!",
-      },
-      next: "end-with-cta",
-    },
-
-    // Prompt experience
-    "prompt-experience": {
-      id: "prompt-experience",
-      type: "display",
-      name: "Prompt Experience",
-      mode: "visual",
-      content: {
-        component: "PromptExperience",
-        text: "Try your first AI prompt right here",
-      },
-      next: "end-with-cta",
-    },
-
-    // Explore experience
-    "explore-experience": {
-      id: "explore-experience",
-      type: "display",
-      name: "Explore Experience",
-      mode: "visual",
-      content: {
-        component: "ExploreExperience",
-        text: "Explore our learning tracks and courses",
-      },
-      next: "end-with-cta",
-    },
-
     // Chat experience (agentic)
     "chat-experience": {
       id: "chat-experience",
@@ -220,20 +154,6 @@ export const welcomeFlow: Workflow = {
       prompt: `You are Bilko, a friendly AI tutor at Bilko's Mental Gym.
 The user is new and exploring. Help them understand what they can learn here.
 Be encouraging, concise, and guide them toward signing up to save their progress.`,
-      next: "end-with-cta",
-    },
-
-    // Quick start experience
-    "quick-experience": {
-      id: "quick-experience",
-      type: "display",
-      name: "Quick Start",
-      mode: "both",
-      content: {
-        component: "QuickStartGuide",
-        speech: "Great choice! Let me give you a quick 3-minute tour of what you can learn here.",
-        text: "Quick Start Guide",
-      },
       next: "end-with-cta",
     },
 

@@ -13,6 +13,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
 import Landing, { LandingContent } from "@/pages/landing";
 import { ConversationProvider } from "@/contexts/conversation-context";
+import { FlowBusProvider } from "@/contexts/flow-bus-context";
+import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import Projects from "@/pages/projects";
 import AgenticWorkflows from "@/pages/agentic-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
@@ -39,41 +41,54 @@ function AuthenticatedApp() {
     );
   }
 
-  if (!isAuthenticated || !user) {
-    return <Landing />;
-  }
-
+  // All routes require authentication
   return (
-    <ViewModeProvider>
-      <SidebarProvider>
-        <NavigationProvider>
-          <div className="flex flex-col h-screen w-full">
-            <GlobalHeader />
-            <div className="flex flex-1 overflow-hidden">
-              <AppSidebar />
-              <main className="flex-1 flex overflow-hidden">
-                <Switch>
-                  <Route path="/">
-                    <ConversationProvider>
-                      <LandingContent skipWelcome />
-                    </ConversationProvider>
-                  </Route>
-                  <Route path="/academy" component={Academy} />
-                  <Route path="/academy/:levelId" component={Academy} />
-                  <Route path="/projects/:projectId?" component={Projects} />
-                  <Route path="/workflows" component={AgenticWorkflows} />
-                  <Route path="/memory" component={MemoryExplorer} />
-                  <Route path="/rules" component={RulesExplorer} />
-                  <Route path="/flows" component={FlowExplorer} />
-                  <Route path="/flows/:flowId" component={FlowDetail} />
-                  <Route component={NotFound} />
-                </Switch>
-              </main>
-            </div>
-          </div>
-        </NavigationProvider>
-      </SidebarProvider>
-    </ViewModeProvider>
+    <Switch>
+      {/* Everything goes through the auth gate */}
+      <Route>
+        {() => {
+          if (!isAuthenticated || !user) {
+            return <Landing />;
+          }
+
+          return (
+            <ViewModeProvider>
+              <SidebarProvider>
+                <NavigationProvider>
+                  <div className="flex flex-col h-screen w-full">
+                    <GlobalHeader />
+                    <div className="flex flex-1 overflow-hidden">
+                      <AppSidebar />
+                      <main className="flex-1 flex overflow-hidden">
+                        <Switch>
+                          <Route path="/">
+                            <FlowBusProvider>
+                              <ConversationProvider>
+                                <LandingContent skipWelcome />
+                                <FlowStatusIndicator />
+                              </ConversationProvider>
+                            </FlowBusProvider>
+                          </Route>
+                          <Route path="/academy" component={Academy} />
+                          <Route path="/academy/:levelId" component={Academy} />
+                          <Route path="/projects/:projectId?" component={Projects} />
+                          <Route path="/workflows" component={AgenticWorkflows} />
+                          <Route path="/memory" component={MemoryExplorer} />
+                          <Route path="/rules" component={RulesExplorer} />
+                          <Route path="/flows" component={FlowExplorer} />
+                          <Route path="/flows/:flowId" component={FlowDetail} />
+                          <Route component={NotFound} />
+                        </Switch>
+                      </main>
+                    </div>
+                  </div>
+                </NavigationProvider>
+              </SidebarProvider>
+            </ViewModeProvider>
+          );
+        }}
+      </Route>
+    </Switch>
   );
 }
 

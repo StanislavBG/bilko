@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { chatJSON, jsonPrompt, useFlowExecution } from "@/lib/flow-engine";
 import { useVoice } from "@/contexts/voice-context";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
+import { useFlowRegistration } from "@/contexts/flow-bus-context";
 
 // ── Config type ──────────────────────────────────────────
 
@@ -453,8 +454,21 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
 
   const { trackStep, resolveUserInput } = useFlowExecution(c.flowId);
   const { isListening, isSupported, transcript, toggleListening, speak, onUtteranceEnd } = useVoice();
+  const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(c.flowId, c.title);
 
   const accent = c.accentColor ?? "yellow";
+
+  // Sync phase changes to the flow bus
+  useEffect(() => {
+    const statusMap: Record<Phase, "running" | "complete" | "error"> = {
+      intro: "running",
+      setup: "running",
+      questioning: "running",
+      analyzing: "running",
+      complete: "complete",
+    };
+    setBusStatus(statusMap[phase], phase);
+  }, [phase, setBusStatus]);
 
   // Auto-scroll
   useEffect(() => {
@@ -623,6 +637,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
           nonObvious: analysis.nonObvious,
         });
         setPhase("complete");
+        busSend("main", "summary", { summary: analysis.summary });
         await speak(
           `I've analyzed your responses. ${analysis.summary}`,
         );
@@ -631,7 +646,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
         setPhase("questioning");
       }
     },
-    [trackStep, speak],
+    [trackStep, speak, busSend],
   );
 
   // ── Reset ───────────────────────────────────────────────

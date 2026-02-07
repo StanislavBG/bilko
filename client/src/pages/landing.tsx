@@ -10,15 +10,12 @@
  *               all deliveries to the user happen in the main area.
  */
 
-import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { GlobalHeader } from "@/components/global-header";
 import {
   ConversationCanvas,
   type ConversationTurn,
 } from "@/components/conversation-canvas";
-import type { ContentBlock } from "@/components/content-blocks/types";
-import { BlockSequence } from "@/components/content-blocks";
-import { PromptPlayground } from "@/components/prompt-playground";
 import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
 import {
   AiConsultationFlow,
@@ -27,14 +24,14 @@ import {
   SOCRATIC_ARCHITECT_CONFIG,
 } from "@/components/ai-consultation-flow";
 import { bilkoSays } from "@/lib/bilko-persona";
+import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
+import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
+import { chat } from "@/lib/flow-engine";
 import { Button } from "@/components/ui/button";
 import {
   Play,
   Sparkles,
-  Trophy,
   MessageCircle,
-  Compass,
-  Zap,
   ArrowLeft,
   Lightbulb,
   Briefcase,
@@ -46,6 +43,8 @@ import {
   ConversationProvider,
   useConversation,
 } from "@/contexts/conversation-context";
+import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
+import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 
 // ── Mode definitions for the delivery surface ────────────
 
@@ -58,11 +57,7 @@ interface ModeOption {
 
 const iconMap: Record<string, ReactNode> = {
   Play: <Play className="h-5 w-5" />,
-  Trophy: <Trophy className="h-5 w-5" />,
-  Sparkles: <Sparkles className="h-5 w-5" />,
-  Compass: <Compass className="h-5 w-5" />,
   MessageCircle: <MessageCircle className="h-5 w-5" />,
-  Zap: <Zap className="h-5 w-5" />,
   Lightbulb: <Lightbulb className="h-5 w-5" />,
   Briefcase: <Briefcase className="h-5 w-5" />,
   GraduationCap: <GraduationCap className="h-5 w-5" />,
@@ -75,130 +70,25 @@ const MODE_OPTIONS: ModeOption[] = LEARNING_MODES.map((mode) => ({
   icon: iconMap[mode.icon] ?? <Sparkles className="h-5 w-5" />,
 }));
 
-// ── Content block definitions for each mode ──────────────
+// ── LLM greeting prompt ──────────────────────────────────
 
-const QUIZ_BLOCKS: ContentBlock[] = [
-  {
-    id: "quiz-intro",
-    type: "callout",
-    variant: "insight",
-    title: "AI Knowledge Quiz",
-    body: "Three questions to test your AI fundamentals. No pressure — this is how we learn.",
-  },
-  {
-    id: "q1",
-    type: "quiz",
-    question: "What does AI stand for?",
-    options: [
-      { id: "a", text: "Artificial Intelligence" },
-      { id: "b", text: "Automated Internet" },
-      { id: "c", text: "Advanced Information" },
-      { id: "d", text: "Analog Interface" },
-    ],
-    correctIndex: 0,
-    explanation: "Artificial Intelligence — the field of computer science focused on creating systems that can perform tasks typically requiring human intelligence.",
-  },
-  {
-    id: "q2",
-    type: "quiz",
-    question: "Which of these is an AI language model?",
-    options: [
-      { id: "a", text: "GPT-4" },
-      { id: "b", text: "HTML" },
-      { id: "c", text: "SQL" },
-      { id: "d", text: "CSS" },
-    ],
-    correctIndex: 0,
-    explanation: "GPT-4 is a large language model by OpenAI. HTML, SQL, and CSS are web/database technologies, not AI models.",
-  },
-  {
-    id: "q3",
-    type: "quiz",
-    question: "What is a 'prompt' in AI?",
-    options: [
-      { id: "a", text: "A type of computer virus" },
-      { id: "b", text: "The input you give to an AI" },
-      { id: "c", text: "A programming language" },
-      { id: "d", text: "A hardware component" },
-    ],
-    correctIndex: 1,
-    explanation: "A prompt is the text you provide to an AI model to get a response. Good prompts lead to better results — that's a key skill we'll practice here.",
-  },
-];
+const GREETING_SYSTEM_PROMPT = bilkoSystemPrompt(
+  `You are greeting a new visitor to the Mental Gym. This is their first interaction with you.
 
-const EXPLORE_BLOCKS: ContentBlock[] = [
-  {
-    id: "explore-heading",
-    type: "heading",
-    text: "Training Tracks",
-    level: 2,
-  },
-  {
-    id: "explore-intro",
-    type: "text",
-    content: "The Mental Gym is organized into three tracks. Each builds on the last, taking you from beginner to architect.",
-    variant: "lead",
-  },
-  {
-    id: "explore-tracks",
-    type: "comparison",
-    columns: ["Track", "Focus", "Levels"],
-    rows: [
-      { label: "Recruit", values: ["From Zero to Builder", "Fundamentals, prompts, first projects", "10"] },
-      { label: "Specialist", values: ["Deep Technical Mastery", "Advanced techniques, fine-tuning, evaluation", "10"] },
-      { label: "Architect", values: ["Enterprise Scale", "System design, orchestration, production", "10"] },
-    ],
-  },
-  {
-    id: "explore-tip",
-    type: "callout",
-    variant: "tip",
-    body: "Start with Recruit even if you have experience. The levels are designed to fill gaps you might not know you have.",
-  },
-];
+Generate a warm, natural opening. Welcome them, introduce yourself briefly as Bilko their AI training partner, and ask how they'd like to learn today. Make it feel like meeting a friendly coach — not a scripted bot.
 
-const QUICK_START_BLOCKS: ContentBlock[] = [
-  {
-    id: "qs-heading",
-    type: "heading",
-    text: "Three Steps. Three Minutes.",
-    level: 2,
-  },
-  {
-    id: "qs-steps",
-    type: "steps",
-    steps: [
-      {
-        title: "Learn to Prompt",
-        body: "Good prompts lead to better results. We'll teach you the patterns that work — specificity, context, constraints, and iteration.",
-      },
-      {
-        title: "Practice Hands-On",
-        body: "Try real exercises with immediate feedback. The Gym gives you structured challenges that build real skill, not just knowledge.",
-      },
-      {
-        title: "Track Progress",
-        body: "Level up through three tracks. Earn badges. Build a portfolio of completed challenges that proves you know your stuff.",
-      },
-    ],
-  },
-  {
-    id: "qs-callout",
-    type: "callout",
-    variant: "insight",
-    body: "Most people learn AI by reading about it. At the Mental Gym, you learn by doing it. Every concept comes with practice.",
-  },
-];
+Available training modes they can pick from:
+${LEARNING_MODES.map((m) => `- ${m.label}: ${m.description}`).join("\n")}
 
-// ── Bilko's contextual responses per mode ────────────────
+Rules:
+- 2-3 sentences max. Keep it tight.
+- End with a natural question about how they want to train.
+- Don't list all the modes — just ask warmly.
+- Plain text only. No formatting, no markdown, no JSON.`,
+);
 
-function getBilkoResponse(mode: LearningModeId): { text: string; speech: string } {
-  const speech = bilkoSays({
-    event: "choice-made",
-    topic: LEARNING_MODES.find((m) => m.id === mode)?.label,
-  });
-  return { text: speech.text, speech: speech.speech };
-}
+const GREETING_FALLBACK =
+  "Welcome to the Mental Gym. I'm Bilko — your AI training partner. What would you like to work on today?";
 
 // ── Experience back button ───────────────────────────────
 
@@ -227,28 +117,53 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     clearMode,
   } = useConversation();
 
-  // Record initial messages on first visit (not on restore)
+  const [greetingLoading, setGreetingLoading] = useState(false);
+
+  // Generate Bilko's opening via LLM on first visit
   const didInit = useRef(false);
   useEffect(() => {
     if (didInit.current || messages.length > 0) return;
     didInit.current = true;
 
-    if (!skipWelcome) {
-      const greeting = bilkoSays({ event: "greeting" });
+    if (skipWelcome) {
+      // Authenticated users — shorter opening
       addMessage({
         role: "bilko",
-        text: greeting.text,
-        speech: greeting.speech,
+        text: "What do you want to train today?",
+        speech: "What do you want to train today?",
         meta: { type: "greeting" },
       });
+      return;
     }
 
-    addMessage({
-      role: "bilko",
-      text: "How do you want to train today?",
-      speech: "How do you want to train today?",
-      meta: { type: "question" },
-    });
+    // LLM-generated greeting — Bilko opens the conversation dynamically
+    setGreetingLoading(true);
+    chat(
+      [
+        { role: "system", content: GREETING_SYSTEM_PROMPT },
+        { role: "user", content: "A new visitor just arrived at the Mental Gym." },
+      ],
+      { temperature: 0.9 },
+    )
+      .then((result) => {
+        const text = result.data.trim();
+        addMessage({
+          role: "bilko",
+          text,
+          speech: text,
+          meta: { type: "greeting" },
+        });
+      })
+      .catch(() => {
+        // Fallback if LLM is unavailable
+        addMessage({
+          role: "bilko",
+          text: GREETING_FALLBACK,
+          speech: GREETING_FALLBACK,
+          meta: { type: "greeting" },
+        });
+      })
+      .finally(() => setGreetingLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -264,12 +179,15 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         meta: { type: "choice", modeId: mode, modeLabel },
       });
 
-      // Record Bilko's acknowledgment
-      const response = getBilkoResponse(mode);
+      // Bilko acknowledges the choice
+      const speech = bilkoSays({
+        event: "choice-made",
+        topic: modeLabel,
+      });
       addMessage({
         role: "bilko",
-        text: response.text,
-        speech: response.speech,
+        text: speech.text,
+        speech: speech.speech,
         meta: { type: "acknowledgment", modeId: mode },
       });
 
@@ -281,60 +199,92 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   const handleBack = useCallback(() => {
     addMessage({
       role: "user",
-      text: "Ask me something else",
+      text: "Show me what else you've got",
       meta: { type: "back" },
     });
+
+    addMessage({
+      role: "bilko",
+      text: "What else are you interested in?",
+      speech: "What else are you interested in?",
+      meta: { type: "question" },
+    });
+
     clearMode();
   }, [addMessage, clearMode]);
 
-  // ── Left panel: conversation LOG only (no interactive cards) ──
+  // ── Derive conversation turns from actual messages (single source of truth) ──
   const conversationTurns = useMemo<ConversationTurn[]>(() => {
-    const t: ConversationTurn[] = [];
-
-    // Bilko's greeting
-    if (!skipWelcome) {
-      const greeting = bilkoSays({ event: "greeting" });
-      t.push({
-        type: "bilko",
-        text: greeting.text,
-        speech: greeting.speech,
-        delay: 200,
-      });
+    // While LLM is generating the greeting, show typing indicator
+    if (greetingLoading || messages.length === 0) {
+      return [
+        {
+          type: "content" as const,
+          render: () => (
+            <div className="flex items-center gap-1.5 py-4">
+              <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse [animation-delay:200ms]" />
+              <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse [animation-delay:400ms]" />
+            </div>
+          ),
+        },
+      ];
     }
 
-    // Bilko asks the question
-    t.push({
-      type: "bilko",
-      text: "How do you want to train today?",
-      speech: "How do you want to train today?",
-      delay: skipWelcome ? 100 : 400,
-    });
+    return messages.map((msg, i) => {
+      // Bilko messages → typewriter turns
+      if (msg.role === "bilko") {
+        return {
+          type: "bilko" as const,
+          text: msg.text,
+          speech: msg.speech,
+          delay: i === 0 ? ENTRANCE_DELAY_MS : 200,
+        };
+      }
 
-    // If user picked a mode, log it as compact text entries
-    if (selectedMode) {
-      const modeLabel = LEARNING_MODES.find((m) => m.id === selectedMode)?.label ?? selectedMode;
-      const modeIcon = LEARNING_MODES.find((m) => m.id === selectedMode)?.icon;
-
-      // User's choice (compact log entry)
-      t.push({
-        type: "content",
-        render: () => (
-          <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-            <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center shrink-0">
-              {iconMap[modeIcon ?? ""] ?? <Sparkles className="h-3.5 w-3.5" />}
+      // User choice → compact icon + label
+      if (msg.meta?.type === "choice") {
+        const modeIcon = LEARNING_MODES.find((m) => m.id === msg.meta?.modeId)?.icon;
+        return {
+          type: "content" as const,
+          render: () => (
+            <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+              <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center shrink-0">
+                {iconMap[modeIcon ?? ""] ?? <Sparkles className="h-3.5 w-3.5" />}
+              </div>
+              <span>{msg.text}</span>
             </div>
-            <span>{modeLabel}</span>
+          ),
+        };
+      }
+
+      // Other user messages (back, etc.)
+      return {
+        type: "content" as const,
+        render: () => (
+          <div className="text-sm text-muted-foreground italic">
+            {msg.text}
           </div>
         ),
-      });
+      };
+    });
+  }, [messages, greetingLoading]);
 
-      // Bilko's acknowledgment
-      const response = getBilkoResponse(selectedMode);
-      t.push({ type: "bilko", ...response, delay: 200 });
-    }
-
-    return t;
-  }, [skipWelcome, selectedMode]);
+  // Subscribe to FlowBus messages addressed to "main" conversation
+  const { subscribe } = useFlowBus();
+  useEffect(() => {
+    const unsub = subscribe("main", (msg) => {
+      if (msg.type === "summary" && typeof msg.payload.summary === "string") {
+        addMessage({
+          role: "bilko",
+          text: msg.payload.summary,
+          speech: msg.payload.summary,
+          meta: { type: "subflow-summary", fromFlow: msg.from },
+        });
+      }
+    });
+    return unsub;
+  }, [subscribe, addMessage]);
 
   // On restored session, skip animations for all existing turns
   const initialSettledCount = isRestored ? conversationTurns.length : 0;
@@ -356,7 +306,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         {selectedMode ? (
           <div className="flex-1 max-w-4xl mx-auto px-6 py-6 w-full">
             <ExperienceBack onBack={handleBack} />
-            <RightPanelContent mode={selectedMode} onBack={handleBack} />
+            <RightPanelContent mode={selectedMode} />
           </div>
         ) : (
           <ModeSelectionGrid onSelect={handleChoice} />
@@ -372,7 +322,7 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
   return (
     <div className="flex-1 flex items-center justify-center p-8">
       <div className="max-w-3xl w-full space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {MODE_OPTIONS.map((option, i) => (
             <button
               key={option.id}
@@ -402,71 +352,18 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
   );
 }
 
-// ── Right panel content (experience rendering) ──────────
+// ── Right panel: subflow experience rendering ────────────
+// Each mode is a subflow of the main conversation. The left panel
+// continues logging independently while the subflow runs here.
 
-function RightPanelContent({
-  mode,
-  onBack,
-}: {
-  mode: LearningModeId;
-  onBack: () => void;
-}) {
-  if (mode === "quiz") {
-    return <BlockSequenceWrapper blocks={QUIZ_BLOCKS} />;
-  }
-  if (mode === "explore") {
-    return <BlockSequenceWrapper blocks={EXPLORE_BLOCKS} />;
-  }
-  if (mode === "quick") {
-    return <BlockSequenceWrapper blocks={QUICK_START_BLOCKS} />;
-  }
-
-  // Interactive modes (video, prompt, chat, interviewer, etc.)
-  return <ExperiencePanel mode={mode} onBack={onBack} />;
-}
-
-function BlockSequenceWrapper({ blocks }: { blocks: ContentBlock[] }) {
+function RightPanelContent({ mode }: { mode: LearningModeId }) {
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <BlockSequence blocks={blocks} />
-    </div>
-  );
-}
-
-// ── Experience panel (for non-block modes) ───────────────
-
-function ExperiencePanel({
-  mode,
-}: {
-  mode: LearningModeId;
-  onBack?: () => void;
-}) {
-  return (
-    <div className="w-full">
+    <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
       {mode === "video" && <VideoDiscoveryFlow />}
-
-      {mode === "prompt" && (
-        <PromptPlayground
-          title="Your First AI Prompt"
-          description="Try asking AI anything! Start with something simple like 'Explain AI to a 5 year old'."
-          placeholder="Type your prompt here and press Enter..."
-          showModelSelector={true}
-        />
-      )}
-
       {mode === "chat" && <AiConsultationFlow />}
-
-      {mode === "interviewer" && (
-        <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} />
-      )}
-
-      {mode === "linkedin" && (
-        <AiConsultationFlow config={LINKEDIN_STRATEGIST_CONFIG} />
-      )}
-
-      {mode === "socratic" && (
-        <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} />
-      )}
+      {mode === "interviewer" && <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} />}
+      {mode === "linkedin" && <AiConsultationFlow config={LINKEDIN_STRATEGIST_CONFIG} />}
+      {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} />}
     </div>
   );
 }
@@ -474,13 +371,16 @@ function ExperiencePanel({
 /** Landing page shell for unauthenticated users */
 export default function Landing() {
   return (
-    <ConversationProvider>
-      <div className="h-screen flex flex-col bg-background overflow-hidden">
-        <GlobalHeader variant="landing" />
-        <main className="flex-1 flex overflow-hidden pt-14">
-          <LandingContent />
-        </main>
-      </div>
-    </ConversationProvider>
+    <FlowBusProvider>
+      <ConversationProvider>
+        <div className="h-screen flex flex-col bg-background overflow-hidden">
+          <GlobalHeader variant="landing" />
+          <main className="flex-1 flex overflow-hidden pt-14">
+            <LandingContent />
+          </main>
+          <FlowStatusIndicator />
+        </div>
+      </ConversationProvider>
+    </FlowBusProvider>
   );
 }
