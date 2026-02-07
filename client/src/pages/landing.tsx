@@ -282,7 +282,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 
   // ── Conversation design: voice turn-taking ──
   const { floor, onUserUtterance, autoListenEnabled, setAutoListen, screenOptions } = useConversationDesign();
-  const { isListening, toggleListening, transcript, transcriptLog, clearTranscriptLog } = useVoice();
+  const { isListening, toggleListening, transcript, transcriptLog, clearTranscriptLog, ttsUnlocked, ttsSupported } = useVoice();
 
   // ── Bilko's patience: voice → option matching with breathing room ──
   // The user gets a few tries before Bilko jumps in. If a mode is matched
@@ -399,6 +399,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
           onToggleAutoListen={() => setAutoListen(!autoListenEnabled)}
           transcriptLog={transcriptLog}
           onClearLog={clearTranscriptLog}
+          ttsSupported={ttsSupported}
+          ttsUnlocked={ttsUnlocked}
         />
         {/* Flow status pinned to bottom of chat panel */}
         <FlowStatusIndicator onReset={handleReset} />
@@ -442,6 +444,8 @@ function VoiceStatusBar({
   onToggleAutoListen,
   transcriptLog,
   onClearLog,
+  ttsSupported,
+  ttsUnlocked,
 }: {
   floor: "bilko" | "user" | "idle";
   isListening: boolean;
@@ -451,6 +455,8 @@ function VoiceStatusBar({
   onToggleAutoListen: () => void;
   transcriptLog: TranscriptEntry[];
   onClearLog: () => void;
+  ttsSupported: boolean;
+  ttsUnlocked: boolean;
 }) {
   const [showSummary, setShowSummary] = useState(false);
 
@@ -472,7 +478,9 @@ function VoiceStatusBar({
 
         {/* Status / transcript */}
         <div className="flex-1 min-w-0">
-          {isListening && transcript ? (
+          {ttsSupported && !ttsUnlocked ? (
+            <p className="text-xs text-amber-500 animate-pulse">Tap anywhere to enable Bilko's voice</p>
+          ) : isListening && transcript ? (
             <p className="text-xs text-foreground truncate animate-in fade-in duration-200">
               {transcript}
             </p>

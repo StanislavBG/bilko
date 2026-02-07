@@ -40,6 +40,8 @@ interface VoiceContextType {
   isMuted: boolean;
   isSupported: boolean;
   ttsSupported: boolean;
+  /** True after first user interaction unlocked speechSynthesis */
+  ttsUnlocked: boolean;
   permissionDenied: boolean;
   transcript: string;
   /** Accumulated session transcript log (all final results) */
@@ -78,6 +80,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [transcriptLog, setTranscriptLog] = useState<TranscriptEntry[]>([]);
+  const [ttsUnlocked, setTtsUnlocked] = useState(false);
 
   const recognitionRef = useRef<any>(null);
   const handlersRef = useRef<Map<string, VoiceHandler>>(new Map());
@@ -87,6 +90,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const autoStartedRef = useRef(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const selectedVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
+  const ttsUnlockedRef = useRef(false);
+  const pendingSpeakRef = useRef<string | null>(null);
+  const pendingSpeakResolveRef = useRef<(() => void) | null>(null);
 
   // End-of-speech detection
   const utteranceEndCallbacksRef = useRef<Set<(text: string) => void>>(new Set());
@@ -96,6 +102,62 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   const isSupported = getSpeechRecognition() !== null;
   const ttsSupported = typeof window !== "undefined" && "speechSynthesis" in window;
+
+  // ── TTS warm-up on first user interaction ──
+  // Many browsers (Safari, some Chrome configs, embedded webviews) require
+  // a user gesture before speechSynthesis.speak() will produce audio.
+  // We "unlock" TTS by speaking a silent utterance on the first click/tap/keypress.
+  useEffect(() => {
+    if (!ttsSupported || ttsUnlockedRef.current) return;
+
+    const unlock = () => {
+      if (ttsUnlockedRef.current) return;
+      ttsUnlockedRef.current = true;
+      setTtsUnlocked(true);
+
+      // Warm up speechSynthesis with a silent utterance
+      try {
+        const warmUp = new SpeechSynthesisUtterance("");
+        warmUp.volume = 0;
+        warmUp.lang = "en-US";
+        window.speechSynthesis.speak(warmUp);
+        // Small delay then cancel — just enough to unlock the audio context
+        setTimeout(() => {
+          window.speechSynthesis.cancel();
+        }, 50);
+      } catch (e) {
+        // If warm-up fails, TTS may still work — just mark as unlocked
+        console.warn("[TTS] warm-up failed:", e);
+      }
+
+      // If there's a pending speak call waiting for unlock, execute it now
+      if (pendingSpeakRef.current !== null) {
+        const text = pendingSpeakRef.current;
+        const resolve = pendingSpeakResolveRef.current;
+        pendingSpeakRef.current = null;
+        pendingSpeakResolveRef.current = null;
+        // Small delay to let warm-up clear
+        setTimeout(() => {
+          doSpeak(text).then(() => resolve?.());
+        }, 100);
+      }
+
+      // Remove listeners after first interaction
+      document.removeEventListener("click", unlock, true);
+      document.removeEventListener("touchstart", unlock, true);
+      document.removeEventListener("keydown", unlock, true);
+    };
+
+    document.addEventListener("click", unlock, true);
+    document.addEventListener("touchstart", unlock, true);
+    document.addEventListener("keydown", unlock, true);
+
+    return () => {
+      document.removeEventListener("click", unlock, true);
+      document.removeEventListener("touchstart", unlock, true);
+      document.removeEventListener("keydown", unlock, true);
+    };
+  }, [ttsSupported]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Voice loading (Chrome loads voices asynchronously) ──
   useEffect(() => {
@@ -289,14 +351,14 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [isListening, startListening, stopListening]);
 
-  // ── TTS: Bilko speaks (mutes mic to prevent echo) ──────
+  // ── TTS core: actually speak (internal, assumes unlocked) ──
   //
   // Chrome quirks addressed:
   // 1. Voices load async — wait for them if needed
   // 2. cancel() before speak() needs a tick gap
   // 3. speechSynthesis silently pauses after ~15s — poke with resume()
   // 4. onend sometimes never fires — fallback timeout
-  const speak = useCallback(async (text: string) => {
+  const doSpeak = useCallback(async (text: string) => {
     if (!ttsSupported) return;
 
     // Cancel any in-progress speech
@@ -342,10 +404,12 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         utterance.voice = selectedVoiceRef.current;
       }
 
-      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+      };
       utterance.onend = done;
       utterance.onerror = (e) => {
-        console.warn("[TTS] speech error:", e);
+        console.warn("[TTS] speech error:", e.error || e);
         setIsSpeaking(false);
         setIsMuted(false);
         if (!resolved) {
@@ -378,6 +442,24 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       window.speechSynthesis.speak(utterance);
     });
   }, [ttsSupported]);
+
+  // ── Public speak: gates on TTS unlock, queues if needed ──
+  // If TTS hasn't been unlocked by a user gesture yet, we queue the
+  // request and play it as soon as the user clicks/taps anything.
+  const speak = useCallback(async (text: string) => {
+    if (!ttsSupported) return;
+
+    if (ttsUnlockedRef.current) {
+      return doSpeak(text);
+    }
+
+    // TTS not yet unlocked — queue this speak and wait
+    // It will be played when the user interacts with the page
+    return new Promise<void>((resolve) => {
+      pendingSpeakRef.current = text;
+      pendingSpeakResolveRef.current = resolve;
+    });
+  }, [ttsSupported, doSpeak]);
 
   const stopSpeaking = useCallback(() => {
     if (ttsSupported) {
@@ -433,6 +515,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         isMuted,
         isSupported,
         ttsSupported,
+        ttsUnlocked,
         permissionDenied,
         transcript,
         transcriptLog,
