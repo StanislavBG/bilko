@@ -18,7 +18,12 @@ import {
 import type { ContentBlock } from "@/components/content-blocks/types";
 import { PromptPlayground } from "@/components/prompt-playground";
 import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
-import { AiConsultationFlow } from "@/components/ai-consultation-flow";
+import {
+  AiConsultationFlow,
+  RECURSIVE_INTERVIEWER_CONFIG,
+  LINKEDIN_STRATEGIST_CONFIG,
+  SOCRATIC_ARCHITECT_CONFIG,
+} from "@/components/ai-consultation-flow";
 import { bilkoSays } from "@/lib/bilko-persona";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +34,9 @@ import {
   Compass,
   Zap,
   ArrowLeft,
+  Lightbulb,
+  Briefcase,
+  GraduationCap,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
@@ -42,6 +50,9 @@ const iconMap: Record<string, ReactNode> = {
   Compass: <Compass className="h-5 w-5" />,
   MessageCircle: <MessageCircle className="h-5 w-5" />,
   Zap: <Zap className="h-5 w-5" />,
+  Lightbulb: <Lightbulb className="h-5 w-5" />,
+  Briefcase: <Briefcase className="h-5 w-5" />,
+  GraduationCap: <GraduationCap className="h-5 w-5" />,
 };
 
 const MODE_OPTIONS: OptionChoice[] = LEARNING_MODES.map((mode) => ({
@@ -294,6 +305,18 @@ function ExperiencePanel({
       )}
 
       {mode === "chat" && <AiConsultationFlow />}
+
+      {mode === "interviewer" && (
+        <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} />
+      )}
+
+      {mode === "linkedin" && (
+        <AiConsultationFlow config={LINKEDIN_STRATEGIST_CONFIG} />
+      )}
+
+      {mode === "socratic" && (
+        <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} />
+      )}
     </div>
   );
 }
