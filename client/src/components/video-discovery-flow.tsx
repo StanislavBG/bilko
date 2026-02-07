@@ -42,6 +42,7 @@ import {
 } from "@/lib/flow-engine";
 import type { VideoCandidate } from "@/lib/flow-engine";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
+import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { VideoExperienceRenderer } from "@/components/content-blocks";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -131,6 +132,7 @@ export function VideoDiscoveryFlow() {
 
   // Flow execution tracker — bridges to Flow Explorer inspector
   const { trackStep, resolveUserInput } = useFlowExecution("video-discovery");
+  const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("video-discovery", "Video Discovery");
 
   const [steps, setSteps] = useState<WorkflowStep[]>([
     { id: "research", name: "Researching AI Trends", status: "active", detail: "Our AI agent is scanning the latest developments..." },
@@ -147,6 +149,17 @@ export function VideoDiscoveryFlow() {
       prev.map((s) => (s.id === stepId ? { ...s, status, detail } : s))
     );
   };
+
+  // Sync flowState changes to the flow bus
+  useEffect(() => {
+    const statusMap: Record<FlowState, "running" | "complete" | "error"> = {
+      "researching-topics": "running",
+      "select-topic": "running",
+      "ready": "complete",
+      "error": "error",
+    };
+    setBusStatus(statusMap[flowState], flowState);
+  }, [flowState, setBusStatus]);
 
   // Rotate status messages during research
   useEffect(() => {
@@ -476,6 +489,9 @@ export function VideoDiscoveryFlow() {
                 onClick={() => {
                   setSelectedVideo(video);
                   resolveUserInput("select-video", { selectedVideo: video });
+                  busSend("main", "summary", {
+                    summary: `Discovered "${video.title}" by ${video.creator} on the topic of ${selectedTopic?.title ?? "AI"}.`,
+                  });
                 }}
               >
                 <CardContent className="p-4">
