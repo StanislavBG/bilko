@@ -13,6 +13,9 @@ import { useEffect } from "react";
 import {
   ConversationDesignProvider,
   useConversationDesign,
+  matchTurnEndKeyword,
+  stripTurnEndKeyword,
+  TURN_END_KEYWORDS,
 } from "@/contexts/conversation-design-context";
 import { VoiceProvider } from "@/contexts/voice-context";
 import type { ReactNode } from "react";
@@ -167,5 +170,76 @@ describe("Conversation Design: provider requirement", () => {
     ).toThrow("useConversationDesign must be used within a ConversationDesignProvider");
 
     spy.mockRestore();
+  });
+});
+
+// ── Turn-end keyword tests (pure functions) ─────────────
+
+describe("Turn-end keywords: matchTurnEndKeyword", () => {
+  it("matches 'go ahead' at the end of a sentence", () => {
+    expect(matchTurnEndKeyword("I want to learn about AI go ahead")).toBe("go ahead");
+  });
+
+  it("matches 'bilko go' at the end", () => {
+    expect(matchTurnEndKeyword("tell me about machine learning bilko go")).toBe("bilko go");
+  });
+
+  it("matches 'done' at the end", () => {
+    expect(matchTurnEndKeyword("I think that covers it done")).toBe("done");
+  });
+
+  it("matches 'ok bilko' case-insensitively", () => {
+    expect(matchTurnEndKeyword("Let's try video OK Bilko")).toBe("ok bilko");
+  });
+
+  it("matches 'i'm done'", () => {
+    expect(matchTurnEndKeyword("that's my answer I'm done")).toBe("i'm done");
+  });
+
+  it("matches 'over to you bilko'", () => {
+    expect(matchTurnEndKeyword("over to you bilko")).toBe("over to you bilko");
+  });
+
+  it("matches 'that's it'", () => {
+    expect(matchTurnEndKeyword("yeah that's it")).toBe("that's it");
+  });
+
+  it("returns null when no keyword found", () => {
+    expect(matchTurnEndKeyword("I want to learn about AI")).toBeNull();
+  });
+
+  it("returns null for empty string", () => {
+    expect(matchTurnEndKeyword("")).toBeNull();
+  });
+
+  it("does not match keyword in the middle of text", () => {
+    // "done" appears but not at the end
+    expect(matchTurnEndKeyword("done with that, tell me more about React")).toBeNull();
+  });
+
+  it("TURN_END_KEYWORDS list is non-empty", () => {
+    expect(TURN_END_KEYWORDS.length).toBeGreaterThan(0);
+  });
+});
+
+describe("Turn-end keywords: stripTurnEndKeyword", () => {
+  it("strips keyword from the end, returning the user's message", () => {
+    expect(stripTurnEndKeyword("I want video go ahead", "go ahead")).toBe("I want video");
+  });
+
+  it("strips keyword and trims whitespace", () => {
+    expect(stripTurnEndKeyword("  video please   done  ", "done")).toBe("video please");
+  });
+
+  it("returns empty string when the text IS the keyword", () => {
+    expect(stripTurnEndKeyword("go ahead", "go ahead")).toBe("");
+  });
+
+  it("handles case-insensitive stripping", () => {
+    expect(stripTurnEndKeyword("Tell me more OK Bilko", "ok bilko")).toBe("Tell me more");
+  });
+
+  it("returns original text when keyword not found", () => {
+    expect(stripTurnEndKeyword("hello world", "not here")).toBe("hello world");
   });
 });
