@@ -471,14 +471,13 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
   }, [transcript, isListening, phase]);
 
   // Auto-send when user finishes speaking (silence detection)
-  const submitAnswerRef = useRef(submitAnswer);
-  submitAnswerRef.current = submitAnswer;
+  const submitAnswerRef = useRef<((overrideText?: string) => Promise<void>) | null>(null);
   useEffect(() => {
     if (!isListening || phase !== "questioning") return;
     return onUtteranceEnd((text) => {
       setUserInput(text);
       // Pass text directly to avoid stale closure over userInput
-      submitAnswerRef.current(text);
+      submitAnswerRef.current?.(text);
     });
   }, [isListening, phase, onUtteranceEnd]);
 
@@ -590,6 +589,9 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
       setIsThinking(false);
     }
   }, [userInput, isThinking, currentQuestion, currentContext, qaPairs, trackStep, resolveUserInput, speak]);
+
+  // Keep ref in sync for the utteranceEnd callback (avoids stale closure)
+  submitAnswerRef.current = submitAnswer;
 
   // ── Analysis ────────────────────────────────────────────
 
