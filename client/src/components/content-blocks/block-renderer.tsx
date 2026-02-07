@@ -15,6 +15,7 @@ import { StepsRenderer } from "./steps-block";
 import { CodeRenderer } from "./code-block";
 import { ComparisonRenderer } from "./comparison-block";
 import { VideoRenderer } from "./video-block";
+import { VideoExperienceRenderer } from "./video-experience-block";
 import { ResourceListRenderer } from "./resource-list-block";
 import { ProgressRenderer } from "./progress-block";
 import { QuizRenderer } from "./quiz-block";
@@ -48,6 +49,8 @@ export function BlockRenderer({ block, onQuizAnswer, widgets }: BlockRendererPro
       return <ComparisonRenderer block={block} />;
     case "video":
       return <VideoRenderer block={block} />;
+    case "video-experience":
+      return <VideoExperienceRenderer block={block} />;
     case "resource-list":
       return <ResourceListRenderer block={block} />;
     case "progress":

@@ -41,6 +41,7 @@ import {
   useFlowExecution,
 } from "@/lib/flow-engine";
 import type { VideoCandidate } from "@/lib/flow-engine";
+import { VideoExperienceRenderer } from "@/components/content-blocks";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -530,66 +531,15 @@ export function VideoDiscoveryFlow() {
 
       {flowState === "ready" && selectedVideo && (
         <div className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Youtube className="h-5 w-5 text-red-500" />
-                <CardTitle className="text-lg">{selectedVideo.title}</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                <iframe
-                  src={`https://www.youtube.com/embed/${selectedVideo.embedId}?autoplay=1`}
-                  title={selectedVideo.title}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full"
-                  data-testid="iframe-video"
-                />
-              </div>
-              <div className="space-y-3 pt-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge>{selectedVideo.creator}</Badge>
-                  <a
-                    href={selectedVideo.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline flex items-center gap-1"
-                    data-testid="link-youtube"
-                  >
-                    Open on YouTube <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {selectedVideo.description}
-                </p>
-                <div className="flex items-center gap-4 flex-wrap">
-                  {selectedVideo.views && (
-                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Eye className="h-4 w-4" /> {selectedVideo.views} views
-                    </span>
-                  )}
-                  {selectedVideo.likes && (
-                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <ThumbsUp className="h-4 w-4" /> {selectedVideo.likes} likes
-                    </span>
-                  )}
-                  {selectedVideo.comments && (
-                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MessageSquare className="h-4 w-4" /> {selectedVideo.comments} comments
-                    </span>
-                  )}
-                </div>
-                <div className="bg-muted p-3 rounded-md">
-                  <p className="text-sm">
-                    <span className="font-medium">Why this video: </span>
-                    {selectedVideo.whyRecommended}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <VideoExperienceRenderer block={{
+            id: `discovered-${selectedVideo.embedId}`,
+            type: "video-experience",
+            embedId: selectedVideo.embedId,
+            title: selectedVideo.title,
+            creator: selectedVideo.creator,
+            description: selectedVideo.description,
+            youtubeUrl: selectedVideo.url,
+          }} />
 
           <div className="flex justify-center gap-3 flex-wrap">
             <Button
