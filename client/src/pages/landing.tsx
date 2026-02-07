@@ -18,6 +18,7 @@ import {
 import type { ContentBlock } from "@/components/content-blocks/types";
 import { PromptPlayground } from "@/components/prompt-playground";
 import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
+import { AiConsultationFlow } from "@/components/ai-consultation-flow";
 import { bilkoSays } from "@/lib/bilko-persona";
 import { Button } from "@/components/ui/button";
 import {
@@ -292,15 +293,7 @@ function ExperiencePanel({
         />
       )}
 
-      {mode === "chat" && (
-        <PromptPlayground
-          title="AI Tutor"
-          description="I'm your AI tutor! Ask me anything about AI, machine learning, or what you can learn at the Mental Gym."
-          systemPrompt="You are Bilko, a friendly AI tutor at Bilko's Mental Gym. Help the user understand AI concepts. Be encouraging and concise."
-          placeholder="Ask me anything about AI..."
-          showModelSelector={false}
-        />
-      )}
+      {mode === "chat" && <AiConsultationFlow />}
     </div>
   );
 }

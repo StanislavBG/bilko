@@ -39,10 +39,10 @@ export const LEARNING_MODES = [
   },
   {
     id: "chat",
-    label: "Chat with AI Tutor",
-    description: "Get personalized guidance from our AI",
+    label: "AI Leverage Consultation",
+    description: "Discover where AI fits in your work",
     icon: "MessageCircle",
-    voiceTriggers: ["chat", "talk", "help", "tutor", "guide"],
+    voiceTriggers: ["chat", "talk", "consult", "leverage", "consultation", "advice"],
   },
   {
     id: "quick",
