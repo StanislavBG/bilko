@@ -1,57 +1,12 @@
 import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
-import { ExternalLink, Check, PanelLeft, ChevronLeft } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExternalLink, Check, ChevronLeft } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PageContent } from "@/components/page-content";
+import { NavPanel } from "@/components/nav";
 import { projects, getProjectById, type Project } from "@/data/projects";
-
-function ProjectNavItem({
-  project,
-  isSelected,
-  onSelect,
-  isCollapsed = false
-}: {
-  project: Project;
-  isSelected: boolean;
-  onSelect: () => void;
-  isCollapsed?: boolean;
-}) {
-  if (isCollapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            className={`w-full justify-center h-8 ${
-              isSelected ? "bg-accent text-accent-foreground" : ""
-            }`}
-            onClick={onSelect}
-            data-testid={`nav-project-${project.id}`}
-          >
-            <span className="text-sm font-medium">{project.title.charAt(0)}</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right">{project.title}</TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return (
-    <Button
-      variant="ghost"
-      className={`w-full justify-start h-8 ${
-        isSelected ? "bg-accent text-accent-foreground" : ""
-      }`}
-      onClick={onSelect}
-      data-testid={`nav-project-${project.id}`}
-    >
-      <span className="text-sm truncate">{project.title}</span>
-    </Button>
-  );
-}
 
 function StatusBadge({ status }: { status: Project["status"] }) {
   const statusConfig = {
@@ -205,54 +160,22 @@ export default function Projects() {
 
   return (
     <>
-      {/* Desktop: Secondary nav panel */}
-      <div
-        className={`hidden md:flex shrink-0 border-r bg-muted/20 flex-col transition-all duration-200 ${
-          isNavCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
-        }`}
-        data-testid="projects-nav"
-      >
-        <div className="border-b px-2 h-8 flex items-center shrink-0">
-          {isNavCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-xs font-medium text-muted-foreground block w-full text-center cursor-default">B</span>
-              </TooltipTrigger>
-              <TooltipContent side="right">Bilko's Projects</TooltipContent>
-            </Tooltip>
-          ) : (
-            <span className="text-xs font-medium text-muted-foreground">Bilko's Projects</span>
-          )}
-        </div>
-        <div className="flex-1 overflow-auto p-1 space-y-0.5">
-          {projects.map((project) => (
-            <ProjectNavItem
-              key={project.id}
-              project={project}
-              isSelected={selectedProjectId === project.id}
-              onSelect={() => handleSelectProject(project.id)}
-              isCollapsed={isNavCollapsed}
-            />
-          ))}
-        </div>
-        <div className="border-t h-11 flex items-center justify-center shrink-0">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => setIsNavCollapsed(!isNavCollapsed)}
-                data-testid="button-toggle-projects-nav"
-              >
-                <PanelLeft className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              {isNavCollapsed ? "Expand" : "Collapse"}
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
+      <NavPanel
+        header="Bilko's Projects"
+        items={projects.map((p) => ({
+          id: p.id,
+          label: p.title,
+          shortLabel: p.title.charAt(0),
+        }))}
+        selectedId={selectedProjectId}
+        onSelect={handleSelectProject}
+        isCollapsed={isNavCollapsed}
+        onToggleCollapse={() => setIsNavCollapsed(!isNavCollapsed)}
+        expandedWidth="min-w-[10rem] max-w-[12rem]"
+        collapsedWidth="min-w-12 max-w-12"
+        bg="bg-muted/20"
+        testId="projects-nav"
+      />
 
       <PageContent>
         {selectedProject ? (
