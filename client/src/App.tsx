@@ -8,13 +8,13 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
 import { NavigationProvider } from "@/contexts/navigation-context";
 import { VoiceProvider } from "@/contexts/voice-context";
+import { ConversationDesignProvider } from "@/contexts/conversation-design-context";
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
 import Landing, { LandingContent } from "@/pages/landing";
 import { ConversationProvider } from "@/contexts/conversation-context";
 import { FlowBusProvider } from "@/contexts/flow-bus-context";
-import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import Projects from "@/pages/projects";
 import AgenticWorkflows from "@/pages/agentic-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
@@ -65,7 +65,6 @@ function AuthenticatedApp() {
                             <FlowBusProvider>
                               <ConversationProvider>
                                 <LandingContent skipWelcome />
-                                <FlowStatusIndicator />
                               </ConversationProvider>
                             </FlowBusProvider>
                           </Route>
@@ -98,8 +97,10 @@ function App() {
       <ThemeProvider defaultTheme="system" storageKey="bilko-ui-theme">
         <TooltipProvider>
           <VoiceProvider>
-            <Toaster />
-            <AuthenticatedApp />
+            <ConversationDesignProvider>
+              <Toaster />
+              <AuthenticatedApp />
+            </ConversationDesignProvider>
           </VoiceProvider>
         </TooltipProvider>
       </ThemeProvider>
