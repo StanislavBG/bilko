@@ -45,6 +45,11 @@ export interface UserChoiceTurn {
   selectedId?: string;
 }
 
+export interface UserTurn {
+  type: "user";
+  text: string;
+}
+
 export interface ContentTurn {
   type: "content";
   render: () => ReactNode;
@@ -65,6 +70,7 @@ export interface ContentBlocksTurn {
 
 export type ConversationTurn =
   | BilkoTurn
+  | UserTurn
   | UserChoiceTurn
   | ContentTurn
   | ContentBlocksTurn;
@@ -255,6 +261,10 @@ function TurnRenderer({
     );
   }
 
+  if (turn.type === "user") {
+    return <UserTurnView turn={turn} onSettled={onSettled} compact={compact} />;
+  }
+
   if (turn.type === "user-choice") {
     return (
       <UserChoiceView
@@ -316,6 +326,38 @@ function BilkoTurnView({
       onComplete={onSettled}
       className={textClass}
     />
+  );
+}
+
+// ── User's turn (iMessage-style bubble, right-aligned) ──
+
+function UserTurnView({
+  turn,
+  onSettled,
+  compact,
+}: {
+  turn: UserTurn;
+  onSettled: () => void;
+  compact?: boolean;
+}) {
+  const settledRef = useRef(false);
+  useEffect(() => {
+    if (!settledRef.current) {
+      settledRef.current = true;
+      onSettled();
+    }
+  }, [onSettled]);
+
+  return (
+    <div className="flex justify-end animate-in fade-in slide-in-from-right-2 duration-300">
+      <div
+        className={`max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2 bg-primary text-primary-foreground ${
+          compact ? "text-sm" : "text-base"
+        }`}
+      >
+        {turn.text}
+      </div>
+    </div>
   );
 }
 
