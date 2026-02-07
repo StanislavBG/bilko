@@ -48,7 +48,7 @@ import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
 import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
 import { useVoice } from "@/contexts/voice-context";
-import { Mic, MicOff, MessageSquareText, Trash2 } from "lucide-react";
+import { Mic, MicOff } from "lucide-react";
 
 // ── Mode definitions for the delivery surface ────────────
 
@@ -281,8 +281,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   }, [messages, greetingLoading]);
 
   // ── Conversation design: voice turn-taking ──
-  const { floor, onUserUtterance, autoListenEnabled, setAutoListen, screenOptions } = useConversationDesign();
-  const { isListening, toggleListening, transcript, transcriptLog, clearTranscriptLog, ttsUnlocked, ttsSupported } = useVoice();
+  const { floor, onUserUtterance, screenOptions } = useConversationDesign();
+  const { isListening, isMuted, isSpeaking, toggleListening, transcript, ttsUnlocked, ttsSupported } = useVoice();
 
   // ── Bilko's patience: voice → option matching with breathing room ──
   // The user gets a few tries before Bilko jumps in. If a mode is matched
@@ -393,12 +393,10 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         <VoiceStatusBar
           floor={floor}
           isListening={isListening}
+          isMuted={isMuted}
+          isSpeaking={isSpeaking}
           transcript={transcript}
-          autoListenEnabled={autoListenEnabled}
           onToggleListen={toggleListening}
-          onToggleAutoListen={() => setAutoListen(!autoListenEnabled)}
-          transcriptLog={transcriptLog}
-          onClearLog={clearTranscriptLog}
           ttsSupported={ttsSupported}
           ttsUnlocked={ttsUnlocked}
         />
@@ -422,129 +420,87 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 }
 
 // ── Voice status bar ──────────────────────────────────────
-// Shows the mic state at the bottom of the chat panel so the user
-// knows when Bilko is listening and can see their live transcript.
-
-interface TranscriptEntry {
-  text: string;
-  timestamp: number;
-}
-
-function formatTime(ts: number) {
-  const d = new Date(ts);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-}
+// Single mic toggle + conversational status. The mic button is the
+// ONE control for voice. When it's on, Bilko's full conversational
+// awareness kicks in — auto-resume, mute during TTS, floor tracking.
 
 function VoiceStatusBar({
   floor,
   isListening,
+  isMuted,
+  isSpeaking,
   transcript,
-  autoListenEnabled,
   onToggleListen,
-  onToggleAutoListen,
-  transcriptLog,
-  onClearLog,
   ttsSupported,
   ttsUnlocked,
 }: {
   floor: "bilko" | "user" | "idle";
   isListening: boolean;
+  isMuted: boolean;
+  isSpeaking: boolean;
   transcript: string;
-  autoListenEnabled: boolean;
   onToggleListen: () => void;
-  onToggleAutoListen: () => void;
-  transcriptLog: TranscriptEntry[];
-  onClearLog: () => void;
   ttsSupported: boolean;
   ttsUnlocked: boolean;
 }) {
-  const [showSummary, setShowSummary] = useState(false);
+  // Derive the mic button style from conversational state
+  const micActive = isListening && !isMuted;
+  const micMuted = isListening && isMuted;
 
   return (
     <div className="border-t border-border bg-background/95 backdrop-blur-sm">
       <div className="px-4 py-2 flex items-center gap-2">
-        {/* Mic toggle */}
+        {/* Single mic toggle — the ONE control for voice */}
         <button
           onClick={onToggleListen}
           className={`p-1.5 rounded-md transition-colors ${
-            isListening
+            micActive
               ? "bg-green-500/15 text-green-500"
+              : micMuted
+              ? "bg-amber-500/10 text-amber-500"
               : "text-muted-foreground/50 hover:text-foreground hover:bg-muted"
           }`}
-          title={isListening ? "Mic on — click to mute" : "Mic off — click to speak"}
+          title={
+            isListening
+              ? isMuted
+                ? "Mic paused — Bilko is speaking"
+                : "Mic on — click to turn off"
+              : "Mic off — click to start voice conversation"
+          }
         >
           {isListening ? <Mic className="h-3.5 w-3.5" /> : <MicOff className="h-3.5 w-3.5" />}
         </button>
 
-        {/* Status / transcript */}
+        {/* Conversational status — shows what's happening in the conversation */}
         <div className="flex-1 min-w-0">
           {ttsSupported && !ttsUnlocked ? (
             <p className="text-xs text-amber-500 animate-pulse">Tap anywhere to enable Bilko's voice</p>
+          ) : isListening && isMuted && isSpeaking ? (
+            // Mic is on but paused while Bilko speaks via TTS
+            <p className="text-xs text-amber-500/80">Bilko is speaking... mic will resume</p>
           ) : isListening && transcript ? (
+            // Live transcript as user speaks
             <p className="text-xs text-foreground truncate animate-in fade-in duration-200">
               {transcript}
             </p>
+          ) : isListening && floor === "user" ? (
+            // Mic active, user's turn, waiting for speech
+            <p className="text-xs text-green-500/70">Your turn — listening...</p>
           ) : isListening ? (
+            // Mic active, idle
             <p className="text-xs text-muted-foreground/60">Listening...</p>
           ) : floor === "bilko" ? (
             <p className="text-xs text-muted-foreground/60">Bilko is speaking...</p>
           ) : (
-            <p className="text-xs text-muted-foreground/40">Tap mic or speak</p>
+            <p className="text-xs text-muted-foreground/40">Tap mic to talk to Bilko</p>
           )}
         </div>
 
-        {/* Summary toggle */}
-        {transcriptLog.length > 0 && (
-          <button
-            onClick={() => setShowSummary(!showSummary)}
-            className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-            title="Voice summary"
-          >
-            <MessageSquareText className="h-3 w-3" />
-            <span className="font-mono">{transcriptLog.length}</span>
-          </button>
+        {/* Conversation mode indicator when mic is on */}
+        {isListening && (
+          <span className="text-[10px] font-mono text-green-500/60 shrink-0">VOICE</span>
         )}
-
-        {/* Auto-listen toggle */}
-        <button
-          onClick={onToggleAutoListen}
-          className={`text-[10px] font-mono px-1.5 py-0.5 rounded transition-colors ${
-            autoListenEnabled
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground/40 hover:text-muted-foreground"
-          }`}
-          title={autoListenEnabled ? "Auto-listen on" : "Auto-listen off"}
-        >
-          AUTO
-        </button>
       </div>
-
-      {/* Expandable summary panel */}
-      {showSummary && transcriptLog.length > 0 && (
-        <div className="border-t border-border px-4 py-2 max-h-48 overflow-y-auto
-          animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Voice Log</span>
-            <button
-              onClick={onClearLog}
-              className="p-0.5 rounded text-muted-foreground/40 hover:text-destructive transition-colors"
-              title="Clear log"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          </div>
-          <div className="space-y-1">
-            {transcriptLog.map((entry, i) => (
-              <div key={i} className="text-xs text-muted-foreground">
-                <span className="text-[9px] font-mono text-muted-foreground/50 mr-1.5">
-                  {formatTime(entry.timestamp)}
-                </span>
-                {entry.text}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

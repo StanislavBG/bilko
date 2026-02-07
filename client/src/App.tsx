@@ -24,6 +24,7 @@ import FlowExplorer from "@/pages/flow-explorer";
 import FlowDetail from "@/pages/flow-detail";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DebugProvider } from "@/contexts/debug-context";
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -101,18 +102,20 @@ function AuthenticatedApp() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="bilko-ui-theme">
-        <TooltipProvider>
-          <VoiceProvider>
-            <ConversationDesignProvider>
-              <Toaster />
-              <AuthenticatedApp />
-            </ConversationDesignProvider>
-          </VoiceProvider>
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <DebugProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider defaultTheme="system" storageKey="bilko-ui-theme">
+          <TooltipProvider>
+            <VoiceProvider>
+              <ConversationDesignProvider>
+                <Toaster />
+                <AuthenticatedApp />
+              </ConversationDesignProvider>
+            </VoiceProvider>
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </DebugProvider>
   );
 }
 
