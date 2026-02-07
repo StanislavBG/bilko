@@ -13,6 +13,8 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
 import Landing, { LandingContent } from "@/pages/landing";
 import { ConversationProvider } from "@/contexts/conversation-context";
+import { FlowBusProvider } from "@/contexts/flow-bus-context";
+import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import Projects from "@/pages/projects";
 import AgenticWorkflows from "@/pages/agentic-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
@@ -60,9 +62,12 @@ function AuthenticatedApp() {
                       <main className="flex-1 flex overflow-hidden">
                         <Switch>
                           <Route path="/">
-                            <ConversationProvider>
-                              <LandingContent skipWelcome />
-                            </ConversationProvider>
+                            <FlowBusProvider>
+                              <ConversationProvider>
+                                <LandingContent skipWelcome />
+                                <FlowStatusIndicator />
+                              </ConversationProvider>
+                            </FlowBusProvider>
                           </Route>
                           <Route path="/academy" component={Academy} />
                           <Route path="/academy/:levelId" component={Academy} />

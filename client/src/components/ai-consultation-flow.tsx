@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { chatJSON, jsonPrompt, useFlowExecution } from "@/lib/flow-engine";
 import { useVoice } from "@/contexts/voice-context";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
+import { useFlowRegistration } from "@/contexts/flow-bus-context";
 
 // ── Config type ──────────────────────────────────────────
 
@@ -425,7 +426,7 @@ type Phase = "intro" | "setup" | "questioning" | "analyzing" | "complete";
 
 // ── Component ────────────────────────────────────────────
 
-export function AiConsultationFlow({ config, onComplete }: { config?: ConsultationConfig; onComplete?: (summary: string) => void }) {
+export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) {
   const c = config ?? DEFAULT_CONFIG;
   const hasSetup = !!c.setupPhase;
 
@@ -453,8 +454,21 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
 
   const { trackStep, resolveUserInput } = useFlowExecution(c.flowId);
   const { isListening, isSupported, transcript, toggleListening, speak, onUtteranceEnd } = useVoice();
+  const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(c.flowId, c.title);
 
   const accent = c.accentColor ?? "yellow";
+
+  // Sync phase changes to the flow bus
+  useEffect(() => {
+    const statusMap: Record<Phase, "running" | "complete" | "error"> = {
+      intro: "running",
+      setup: "running",
+      questioning: "running",
+      analyzing: "running",
+      complete: "complete",
+    };
+    setBusStatus(statusMap[phase], phase);
+  }, [phase, setBusStatus]);
 
   // Auto-scroll
   useEffect(() => {
@@ -623,7 +637,7 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
           nonObvious: analysis.nonObvious,
         });
         setPhase("complete");
-        onComplete?.(analysis.summary);
+        busSend("main", "summary", { summary: analysis.summary });
         await speak(
           `I've analyzed your responses. ${analysis.summary}`,
         );
@@ -632,7 +646,7 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
         setPhase("questioning");
       }
     },
-    [trackStep, speak, onComplete],
+    [trackStep, speak, busSend],
   );
 
   // ── Reset ───────────────────────────────────────────────

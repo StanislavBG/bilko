@@ -43,6 +43,8 @@ import {
   ConversationProvider,
   useConversation,
 } from "@/contexts/conversation-context";
+import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
+import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 
 // ── Mode definitions for the delivery surface ────────────
 
@@ -268,18 +270,21 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     });
   }, [messages, greetingLoading]);
 
-  // When a subflow completes, log a summary into the main conversation
-  const handleSubflowComplete = useCallback(
-    (summary: string) => {
-      addMessage({
-        role: "bilko",
-        text: summary,
-        speech: summary,
-        meta: { type: "subflow-summary" },
-      });
-    },
-    [addMessage],
-  );
+  // Subscribe to FlowBus messages addressed to "main" conversation
+  const { subscribe } = useFlowBus();
+  useEffect(() => {
+    const unsub = subscribe("main", (msg) => {
+      if (msg.type === "summary" && typeof msg.payload.summary === "string") {
+        addMessage({
+          role: "bilko",
+          text: msg.payload.summary,
+          speech: msg.payload.summary,
+          meta: { type: "subflow-summary", fromFlow: msg.from },
+        });
+      }
+    });
+    return unsub;
+  }, [subscribe, addMessage]);
 
   // On restored session, skip animations for all existing turns
   const initialSettledCount = isRestored ? conversationTurns.length : 0;
@@ -301,7 +306,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         {selectedMode ? (
           <div className="flex-1 max-w-4xl mx-auto px-6 py-6 w-full">
             <ExperienceBack onBack={handleBack} />
-            <RightPanelContent mode={selectedMode} onComplete={handleSubflowComplete} />
+            <RightPanelContent mode={selectedMode} />
           </div>
         ) : (
           <ModeSelectionGrid onSelect={handleChoice} />
@@ -351,14 +356,14 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
 // Each mode is a subflow of the main conversation. The left panel
 // continues logging independently while the subflow runs here.
 
-function RightPanelContent({ mode, onComplete }: { mode: LearningModeId; onComplete?: (summary: string) => void }) {
+function RightPanelContent({ mode }: { mode: LearningModeId }) {
   return (
     <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {mode === "video" && <VideoDiscoveryFlow onComplete={onComplete} />}
-      {mode === "chat" && <AiConsultationFlow onComplete={onComplete} />}
-      {mode === "interviewer" && <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} onComplete={onComplete} />}
-      {mode === "linkedin" && <AiConsultationFlow config={LINKEDIN_STRATEGIST_CONFIG} onComplete={onComplete} />}
-      {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} onComplete={onComplete} />}
+      {mode === "video" && <VideoDiscoveryFlow />}
+      {mode === "chat" && <AiConsultationFlow />}
+      {mode === "interviewer" && <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} />}
+      {mode === "linkedin" && <AiConsultationFlow config={LINKEDIN_STRATEGIST_CONFIG} />}
+      {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} />}
     </div>
   );
 }
@@ -366,13 +371,16 @@ function RightPanelContent({ mode, onComplete }: { mode: LearningModeId; onCompl
 /** Landing page shell for unauthenticated users */
 export default function Landing() {
   return (
-    <ConversationProvider>
-      <div className="h-screen flex flex-col bg-background overflow-hidden">
-        <GlobalHeader variant="landing" />
-        <main className="flex-1 flex overflow-hidden pt-14">
-          <LandingContent />
-        </main>
-      </div>
-    </ConversationProvider>
+    <FlowBusProvider>
+      <ConversationProvider>
+        <div className="h-screen flex flex-col bg-background overflow-hidden">
+          <GlobalHeader variant="landing" />
+          <main className="flex-1 flex overflow-hidden pt-14">
+            <LandingContent />
+          </main>
+          <FlowStatusIndicator />
+        </div>
+      </ConversationProvider>
+    </FlowBusProvider>
   );
 }
