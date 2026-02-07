@@ -8,7 +8,7 @@
  * option cards or by voice. Agent results render as content blocks.
  */
 
-import { useState, useCallback, useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { GlobalHeader } from "@/components/global-header";
 import {
   ConversationCanvas,
@@ -41,6 +41,10 @@ import {
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
+import {
+  ConversationProvider,
+  useConversation,
+} from "@/contexts/conversation-context";
 
 // ── Map mode definitions to OptionChoice ─────────────────
 
@@ -207,17 +211,76 @@ function ExperienceBack({ onBack }: { onBack: () => void }) {
 // ── Main component ───────────────────────────────────────
 
 export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean }) {
-  const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
+  const {
+    messages,
+    selectedMode,
+    isRestored,
+    addMessage,
+    selectMode,
+    clearMode,
+  } = useConversation();
 
-  const handleChoice = useCallback((choiceId: string) => {
-    setSelectedMode(choiceId as LearningModeId);
+  // Record initial messages on first visit (not on restore)
+  const didInit = useRef(false);
+  useEffect(() => {
+    if (didInit.current || messages.length > 0) return;
+    didInit.current = true;
+
+    if (!skipWelcome) {
+      const greeting = bilkoSays({ event: "greeting" });
+      addMessage({
+        role: "bilko",
+        text: greeting.text,
+        speech: greeting.speech,
+        meta: { type: "greeting" },
+      });
+    }
+
+    addMessage({
+      role: "bilko",
+      text: "How do you want to train today?",
+      speech: "How do you want to train today?",
+      meta: { type: "question" },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleChoice = useCallback(
+    (choiceId: string) => {
+      const mode = choiceId as LearningModeId;
+      const modeLabel = LEARNING_MODES.find((m) => m.id === mode)?.label;
+
+      // Record user's choice
+      addMessage({
+        role: "user",
+        text: modeLabel ?? choiceId,
+        meta: { type: "choice", modeId: mode, modeLabel },
+      });
+
+      // Record Bilko's acknowledgment
+      const response = getBilkoResponse(mode);
+      addMessage({
+        role: "bilko",
+        text: response.text,
+        speech: response.speech,
+        meta: { type: "acknowledgment", modeId: mode },
+      });
+
+      selectMode(mode);
+    },
+    [addMessage, selectMode],
+  );
 
   const handleBack = useCallback(() => {
-    setSelectedMode(null);
-  }, []);
+    addMessage({
+      role: "user",
+      text: "Ask me something else",
+      meta: { type: "back" },
+    });
+    clearMode();
+  }, [addMessage, clearMode]);
 
-  // Conversation turns (left panel) — only dialogue, no content rendering
+  // Derive conversation turns from current state
   const conversationTurns = useMemo<ConversationTurn[]>(() => {
     const t: ConversationTurn[] = [];
 
@@ -240,8 +303,12 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       delay: skipWelcome ? 100 : 400,
     });
 
-    // Turn 3: User's response options
-    t.push({ type: "user-choice", options: MODE_OPTIONS });
+    // Turn 3: User's response options (with pre-selection for restore)
+    t.push({
+      type: "user-choice",
+      options: MODE_OPTIONS,
+      selectedId: selectedMode ?? undefined,
+    });
 
     // Turn 4: If user picked, show Bilko's acknowledgment
     if (selectedMode) {
@@ -252,6 +319,9 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     return t;
   }, [skipWelcome, selectedMode]);
 
+  // On restored session, skip animations for all existing turns
+  const initialSettledCount = isRestored ? conversationTurns.length : 0;
+
   return (
     <div className="flex flex-1 overflow-hidden">
       {/* Left panel: Conversation thread — always visible */}
@@ -260,6 +330,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
           turns={conversationTurns}
           onChoice={handleChoice}
           compact
+          initialSettledCount={initialSettledCount}
         />
       </div>
 
@@ -357,11 +428,13 @@ function ExperiencePanel({
 /** Landing page shell for unauthenticated users */
 export default function Landing() {
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
-      <GlobalHeader variant="landing" />
-      <main className="flex-1 flex overflow-hidden pt-14">
-        <LandingContent />
-      </main>
-    </div>
+    <ConversationProvider>
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
+        <GlobalHeader variant="landing" />
+        <main className="flex-1 flex overflow-hidden pt-14">
+          <LandingContent />
+        </main>
+      </div>
+    </ConversationProvider>
   );
 }
