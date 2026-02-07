@@ -24,6 +24,11 @@ interface VoiceHandler {
   onMatch: (matchedId: string) => void;
 }
 
+interface TranscriptEntry {
+  text: string;
+  timestamp: number;
+}
+
 interface VoiceContextType {
   isListening: boolean;
   isSpeaking: boolean;
@@ -31,6 +36,8 @@ interface VoiceContextType {
   ttsSupported: boolean;
   permissionDenied: boolean;
   transcript: string;
+  /** Accumulated session transcript log (all final results) */
+  transcriptLog: TranscriptEntry[];
   toggleListening: () => Promise<void>;
   startListening: () => Promise<void>;
   stopListening: () => void;
@@ -38,6 +45,7 @@ interface VoiceContextType {
   speak: (text: string) => Promise<void>;
   stopSpeaking: () => void;
   registerHandler: (id: string, handler: VoiceHandler) => () => void;
+  clearTranscriptLog: () => void;
 }
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);
@@ -56,6 +64,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [transcript, setTranscript] = useState("");
+  const [transcriptLog, setTranscriptLog] = useState<TranscriptEntry[]>([]);
 
   const recognitionRef = useRef<any>(null);
   const handlersRef = useRef<Map<string, VoiceHandler>>(new Map());
@@ -99,6 +108,17 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       }
 
       setTranscript(finalTranscript || interimTranscript);
+
+      // Accumulate final transcripts into the session log
+      if (finalTranscript) {
+        const trimmed = finalTranscript.trim();
+        if (trimmed) {
+          setTranscriptLog((prev) => [
+            ...prev,
+            { text: trimmed, timestamp: Date.now() },
+          ]);
+        }
+      }
 
       // On final transcript, check all registered handlers for matches
       if (finalTranscript) {
@@ -231,6 +251,10 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const clearTranscriptLog = useCallback(() => {
+    setTranscriptLog([]);
+  }, []);
+
   // Auto-start on mount if user previously enabled voice
   useEffect(() => {
     if (!autoStartedRef.current && isSupported && localStorage.getItem(VOICE_STORAGE_KEY) === "true") {
@@ -248,12 +272,14 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         ttsSupported,
         permissionDenied,
         transcript,
+        transcriptLog,
         toggleListening,
         startListening,
         stopListening,
         speak,
         stopSpeaking,
         registerHandler,
+        clearTranscriptLog,
       }}
     >
       {children}
