@@ -303,7 +303,8 @@ describe("FlowStatusIndicator", () => {
         <FlowStatusIndicator />
       </BusWrapper>,
     );
-    expect(container.querySelector("[class*='fixed']")).toBeNull();
+    // No border-t panel should appear
+    expect(container.querySelector("[class*='border-t']")).toBeNull();
   });
 
   it("renders a pill for a running flow with ID and status", async () => {
@@ -440,10 +441,180 @@ describe("FlowStatusIndicator", () => {
       </BusWrapper>,
     );
 
-    // Give effects time to run, then verify idle flows don't appear
     await waitFor(() => {
       expect(screen.queryByText("idle-flow")).not.toBeInTheDocument();
     });
-    expect(container.querySelector("[class*='fixed']")).toBeNull();
+    expect(container.querySelector("[class*='border-t']")).toBeNull();
+  });
+});
+
+// ── Mini flow progress tests ────────────────────────────
+
+describe("FlowStatusIndicator mini progress", () => {
+  beforeEach(cleanup);
+
+  it("renders phase progress dots for a known flow (ai-consultation)", async () => {
+    function Setup() {
+      const { registerFlow, updateFlowStatus } = useFlowBus();
+      useEffect(() => {
+        registerFlow("ai-consultation", "AI Consultation");
+        updateFlowStatus("ai-consultation", "running", "questioning");
+      }, [registerFlow, updateFlowStatus]);
+      return null;
+    }
+
+    const { container } = render(
+      <BusWrapper>
+        <Setup />
+        <FlowStatusIndicator />
+      </BusWrapper>,
+    );
+
+    // ai-consultation has 5 phases: intro, setup, questioning, analyzing, complete
+    // So there should be 5 phase dots (w-2 h-2 rounded-full)
+    await waitFor(() => {
+      expect(screen.getByText("ai-consultation")).toBeInTheDocument();
+    });
+
+    // Hover tooltips contain the short labels
+    expect(screen.getByText("Start")).toBeInTheDocument();        // intro
+    expect(screen.getByText("Setup")).toBeInTheDocument();        // setup
+    expect(screen.getByText("Interview")).toBeInTheDocument();    // questioning (active)
+    expect(screen.getByText("Analyzing")).toBeInTheDocument();    // analyzing
+    // "Done" is used both as a status label and a phase label — check at least 1
+    expect(screen.getAllByText("Done").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders phase progress dots for video-discovery", async () => {
+    function Setup() {
+      const { registerFlow, updateFlowStatus } = useFlowBus();
+      useEffect(() => {
+        registerFlow("video-discovery", "Video Discovery");
+        updateFlowStatus("video-discovery", "running", "select-topic");
+      }, [registerFlow, updateFlowStatus]);
+      return null;
+    }
+
+    render(
+      <BusWrapper>
+        <Setup />
+        <FlowStatusIndicator />
+      </BusWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("video-discovery")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Research")).toBeInTheDocument();     // researching-topics
+    expect(screen.getByText("Pick Topic")).toBeInTheDocument();   // select-topic (active)
+    expect(screen.getByText("Watch")).toBeInTheDocument();        // ready
+  });
+
+  it("does not render progress dots for unknown flow IDs", async () => {
+    function Setup() {
+      const { registerFlow, updateFlowStatus } = useFlowBus();
+      useEffect(() => {
+        registerFlow("unknown-flow", "Unknown");
+        updateFlowStatus("unknown-flow", "running", "step-1");
+      }, [registerFlow, updateFlowStatus]);
+      return null;
+    }
+
+    render(
+      <BusWrapper>
+        <Setup />
+        <FlowStatusIndicator />
+      </BusWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("unknown-flow")).toBeInTheDocument();
+    });
+    // Phase is shown in the status pill, but no progress dots
+    expect(screen.getByText("step-1")).toBeInTheDocument();
+    // No tooltip labels from known flows
+    expect(screen.queryByText("Start")).not.toBeInTheDocument();
+    expect(screen.queryByText("Interview")).not.toBeInTheDocument();
+  });
+});
+
+// ── Reset button tests ──────────────────────────────────
+
+describe("FlowStatusIndicator reset button", () => {
+  beforeEach(cleanup);
+
+  it("renders reset button when onReset is provided", async () => {
+    const onReset = vi.fn();
+
+    function Setup() {
+      const { registerFlow } = useFlowBus();
+      useEffect(() => {
+        registerFlow("test-flow", "Test");
+      }, [registerFlow]);
+      return null;
+    }
+
+    render(
+      <BusWrapper>
+        <Setup />
+        <FlowStatusIndicator onReset={onReset} />
+      </BusWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTitle("Reset flow")).toBeInTheDocument();
+    });
+  });
+
+  it("does not render reset button when onReset is not provided", async () => {
+    function Setup() {
+      const { registerFlow } = useFlowBus();
+      useEffect(() => {
+        registerFlow("test-flow", "Test");
+      }, [registerFlow]);
+      return null;
+    }
+
+    render(
+      <BusWrapper>
+        <Setup />
+        <FlowStatusIndicator />
+      </BusWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("test-flow")).toBeInTheDocument();
+    });
+    expect(screen.queryByTitle("Reset flow")).not.toBeInTheDocument();
+  });
+
+  it("calls onReset when the reset button is clicked", async () => {
+    const onReset = vi.fn();
+
+    function Setup() {
+      const { registerFlow } = useFlowBus();
+      useEffect(() => {
+        registerFlow("test-flow", "Test");
+      }, [registerFlow]);
+      return null;
+    }
+
+    render(
+      <BusWrapper>
+        <Setup />
+        <FlowStatusIndicator onReset={onReset} />
+      </BusWrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTitle("Reset flow")).toBeInTheDocument();
+    });
+
+    act(() => {
+      screen.getByTitle("Reset flow").click();
+    });
+
+    expect(onReset).toHaveBeenCalledTimes(1);
   });
 });

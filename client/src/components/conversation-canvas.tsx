@@ -16,6 +16,7 @@ import { BilkoMessage } from "@/components/bilko-message";
 import { BlockSequence } from "@/components/content-blocks";
 import type { ContentBlock, AgentContentResult } from "@/components/content-blocks/types";
 import { useVoiceCommands } from "@/contexts/voice-context";
+import { useConversationDesign } from "@/contexts/conversation-design-context";
 import type { VoiceTriggerOption } from "@/hooks/use-voice-recognition";
 import { breathingPause } from "@/lib/bilko-persona/pacing";
 
@@ -142,6 +143,7 @@ export function ConversationCanvas({
   const [isBreathing, setIsBreathing] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const breathTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { giveFloorToUser } = useConversationDesign();
 
   // Auto-scroll to bottom when new content appears
   useEffect(() => {
@@ -160,11 +162,20 @@ export function ConversationCanvas({
     // People breathe. Bilko does too.
     setIsBreathing(true);
     breathTimerRef.current = setTimeout(() => {
-      setSettledCount((c) => c + 1);
+      setSettledCount((c) => {
+        const nextCount = c + 1;
+        // If Bilko just finished and there's no next turn, or the next turn
+        // is a user-choice, give the floor to the user (auto-listen kicks in)
+        const nextTurn = turns[nextCount];
+        if (!nextTurn || nextTurn.type === "user-choice") {
+          giveFloorToUser();
+        }
+        return nextCount;
+      });
       setIsBreathing(false);
       breathTimerRef.current = null;
     }, breathingPause());
-  }, []);
+  }, [turns, giveFloorToUser]);
 
   // Determine how many turns to render: all settled + the next unsettled one
   // During breathing, don't show the next turn yet

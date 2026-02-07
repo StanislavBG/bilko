@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useLocation } from "wouter";
 import { GlobalHeader } from "@/components/global-header";
 import {
   ConversationCanvas,
@@ -45,6 +46,9 @@ import {
 } from "@/contexts/conversation-context";
 import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
 import { FlowStatusIndicator } from "@/components/flow-status-indicator";
+import { useConversationDesign } from "@/contexts/conversation-design-context";
+import { useVoice } from "@/contexts/voice-context";
+import { Mic, MicOff } from "lucide-react";
 
 // ── Mode definitions for the delivery surface ────────────
 
@@ -115,7 +119,9 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     addMessage,
     selectMode,
     clearMode,
+    reset: resetConversation,
   } = useConversation();
+  const [, navigate] = useLocation();
 
   const [greetingLoading, setGreetingLoading] = useState(false);
 
@@ -270,6 +276,34 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     });
   }, [messages, greetingLoading]);
 
+  // ── Conversation design: voice turn-taking ──
+  const { floor, onUserUtterance, autoListenEnabled, setAutoListen } = useConversationDesign();
+  const { isListening, toggleListening, transcript } = useVoice();
+
+  // When the user finishes speaking (silence detected), handle the utterance
+  useEffect(() => {
+    const unsub = onUserUtterance((text: string) => {
+      // If no mode is selected, try to match a mode by name
+      if (!selectedMode) {
+        const lower = text.toLowerCase();
+        const matched = LEARNING_MODES.find(
+          (m) => lower.includes(m.label.toLowerCase()) || lower.includes(m.id),
+        );
+        if (matched) {
+          handleChoice(matched.id);
+          return;
+        }
+      }
+      // Otherwise log it as a user message
+      addMessage({
+        role: "user",
+        text,
+        meta: { type: "voice" },
+      });
+    });
+    return unsub;
+  }, [onUserUtterance, selectedMode, handleChoice, addMessage]);
+
   // Subscribe to FlowBus messages addressed to "main" conversation
   const { subscribe } = useFlowBus();
   useEffect(() => {
@@ -286,19 +320,41 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     return unsub;
   }, [subscribe, addMessage]);
 
+  // Reset: clear conversation state and navigate to the root
+  // (which renders landing for unauth, home for auth)
+  const handleReset = useCallback(() => {
+    resetConversation();
+    navigate("/", { replace: true });
+    // Force a full remount by reloading — ensures greeting re-fires
+    window.location.reload();
+  }, [resetConversation, navigate]);
+
   // On restored session, skip animations for all existing turns
   const initialSettledCount = isRestored ? conversationTurns.length : 0;
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      {/* Left panel: Conversation log — text-only record of the dialogue */}
-      <div className="w-full lg:w-[420px] xl:w-[480px] shrink-0 lg:border-r border-border overflow-auto bg-background">
-        <ConversationCanvas
-          turns={conversationTurns}
-          onChoice={() => {}}
-          compact
-          initialSettledCount={initialSettledCount}
+      {/* Left panel: Conversation log + flow indicator pinned to bottom */}
+      <div className="w-full lg:w-[420px] xl:w-[480px] shrink-0 lg:border-r border-border flex flex-col bg-background">
+        <div className="flex-1 overflow-auto">
+          <ConversationCanvas
+            turns={conversationTurns}
+            onChoice={() => {}}
+            compact
+            initialSettledCount={initialSettledCount}
+          />
+        </div>
+        {/* Voice status bar — shows mic state and live transcript */}
+        <VoiceStatusBar
+          floor={floor}
+          isListening={isListening}
+          transcript={transcript}
+          autoListenEnabled={autoListenEnabled}
+          onToggleListen={toggleListening}
+          onToggleAutoListen={() => setAutoListen(!autoListenEnabled)}
         />
+        {/* Flow status pinned to bottom of chat panel */}
+        <FlowStatusIndicator onReset={handleReset} />
       </div>
 
       {/* Right panel: Agent delivery surface — interactive content goes here */}
@@ -312,6 +368,71 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
           <ModeSelectionGrid onSelect={handleChoice} />
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Voice status bar ──────────────────────────────────────
+// Shows the mic state at the bottom of the chat panel so the user
+// knows when Bilko is listening and can see their live transcript.
+
+function VoiceStatusBar({
+  floor,
+  isListening,
+  transcript,
+  autoListenEnabled,
+  onToggleListen,
+  onToggleAutoListen,
+}: {
+  floor: "bilko" | "user" | "idle";
+  isListening: boolean;
+  transcript: string;
+  autoListenEnabled: boolean;
+  onToggleListen: () => void;
+  onToggleAutoListen: () => void;
+}) {
+  return (
+    <div className="border-t border-border px-4 py-2 flex items-center gap-2 bg-background/95 backdrop-blur-sm">
+      {/* Mic toggle */}
+      <button
+        onClick={onToggleListen}
+        className={`p-1.5 rounded-md transition-colors ${
+          isListening
+            ? "bg-green-500/15 text-green-500"
+            : "text-muted-foreground/50 hover:text-foreground hover:bg-muted"
+        }`}
+        title={isListening ? "Mic on — click to mute" : "Mic off — click to speak"}
+      >
+        {isListening ? <Mic className="h-3.5 w-3.5" /> : <MicOff className="h-3.5 w-3.5" />}
+      </button>
+
+      {/* Status / transcript */}
+      <div className="flex-1 min-w-0">
+        {isListening && transcript ? (
+          <p className="text-xs text-foreground truncate animate-in fade-in duration-200">
+            {transcript}
+          </p>
+        ) : isListening ? (
+          <p className="text-xs text-muted-foreground/60">Listening...</p>
+        ) : floor === "bilko" ? (
+          <p className="text-xs text-muted-foreground/60">Bilko is speaking...</p>
+        ) : (
+          <p className="text-xs text-muted-foreground/40">Tap mic or speak</p>
+        )}
+      </div>
+
+      {/* Auto-listen toggle */}
+      <button
+        onClick={onToggleAutoListen}
+        className={`text-[10px] font-mono px-1.5 py-0.5 rounded transition-colors ${
+          autoListenEnabled
+            ? "bg-primary/10 text-primary"
+            : "text-muted-foreground/40 hover:text-muted-foreground"
+        }`}
+        title={autoListenEnabled ? "Auto-listen on" : "Auto-listen off"}
+      >
+        AUTO
+      </button>
     </div>
   );
 }
@@ -378,7 +499,6 @@ export default function Landing() {
           <main className="flex-1 flex overflow-hidden pt-14">
             <LandingContent />
           </main>
-          <FlowStatusIndicator />
         </div>
       </ConversationProvider>
     </FlowBusProvider>
