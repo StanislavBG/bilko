@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useLocation } from "wouter";
 import { GlobalHeader } from "@/components/global-header";
 import {
   ConversationCanvas,
@@ -115,7 +116,9 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     addMessage,
     selectMode,
     clearMode,
+    reset: resetConversation,
   } = useConversation();
+  const [, navigate] = useLocation();
 
   const [greetingLoading, setGreetingLoading] = useState(false);
 
@@ -286,19 +289,32 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     return unsub;
   }, [subscribe, addMessage]);
 
+  // Reset: clear conversation state and navigate to the root
+  // (which renders landing for unauth, home for auth)
+  const handleReset = useCallback(() => {
+    resetConversation();
+    navigate("/", { replace: true });
+    // Force a full remount by reloading — ensures greeting re-fires
+    window.location.reload();
+  }, [resetConversation, navigate]);
+
   // On restored session, skip animations for all existing turns
   const initialSettledCount = isRestored ? conversationTurns.length : 0;
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      {/* Left panel: Conversation log — text-only record of the dialogue */}
-      <div className="w-full lg:w-[420px] xl:w-[480px] shrink-0 lg:border-r border-border overflow-auto bg-background">
-        <ConversationCanvas
-          turns={conversationTurns}
-          onChoice={() => {}}
-          compact
-          initialSettledCount={initialSettledCount}
-        />
+      {/* Left panel: Conversation log + flow indicator pinned to bottom */}
+      <div className="w-full lg:w-[420px] xl:w-[480px] shrink-0 lg:border-r border-border flex flex-col bg-background">
+        <div className="flex-1 overflow-auto">
+          <ConversationCanvas
+            turns={conversationTurns}
+            onChoice={() => {}}
+            compact
+            initialSettledCount={initialSettledCount}
+          />
+        </div>
+        {/* Flow status pinned to bottom of chat panel */}
+        <FlowStatusIndicator onReset={handleReset} />
       </div>
 
       {/* Right panel: Agent delivery surface — interactive content goes here */}
@@ -378,7 +394,6 @@ export default function Landing() {
           <main className="flex-1 flex overflow-hidden pt-14">
             <LandingContent />
           </main>
-          <FlowStatusIndicator />
         </div>
       </ConversationProvider>
     </FlowBusProvider>
