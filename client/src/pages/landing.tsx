@@ -16,6 +16,7 @@ import {
   type OptionChoice,
 } from "@/components/conversation-canvas";
 import type { ContentBlock } from "@/components/content-blocks/types";
+import { BlockSequence } from "@/components/content-blocks";
 import { PromptPlayground } from "@/components/prompt-playground";
 import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
 import {
@@ -216,7 +217,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     setSelectedMode(null);
   }, []);
 
-  const turns = useMemo<ConversationTurn[]>(() => {
+  // Conversation turns (left panel) — only dialogue, no content rendering
+  const conversationTurns = useMemo<ConversationTurn[]>(() => {
     const t: ConversationTurn[] = [];
 
     // Turn 1: Bilko's greeting
@@ -241,42 +243,76 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     // Turn 3: User's response options
     t.push({ type: "user-choice", options: MODE_OPTIONS });
 
-    // Turn 4+: If user picked, show Bilko's response + experience
+    // Turn 4: If user picked, show Bilko's acknowledgment
     if (selectedMode) {
       const response = getBilkoResponse(selectedMode);
       t.push({ type: "bilko", ...response, delay: 200 });
-
-      // Modes that use content blocks
-      if (selectedMode === "quiz") {
-        t.push({ type: "content-blocks", blocks: QUIZ_BLOCKS });
-      } else if (selectedMode === "explore") {
-        t.push({ type: "content-blocks", blocks: EXPLORE_BLOCKS });
-      } else if (selectedMode === "quick") {
-        t.push({ type: "content-blocks", blocks: QUICK_START_BLOCKS });
-      } else {
-        // Modes that still use raw content (video discovery, prompt playground)
-        t.push({
-          type: "content",
-          render: () => <ExperiencePanel mode={selectedMode} onBack={handleBack} />,
-        });
-        return t;
-      }
-
-      // Back button for block-based modes
-      t.push({
-        type: "content",
-        render: () => <ExperienceBack onBack={handleBack} />,
-      });
     }
 
     return t;
-  }, [skipWelcome, selectedMode, handleBack]);
+  }, [skipWelcome, selectedMode]);
 
   return (
-    <ConversationCanvas
-      turns={turns}
-      onChoice={handleChoice}
-    />
+    <div className="flex flex-1 overflow-hidden">
+      {/* Left panel: Conversation thread — always visible */}
+      <div className="w-full lg:w-[420px] xl:w-[480px] shrink-0 lg:border-r border-border overflow-auto bg-background">
+        <ConversationCanvas
+          turns={conversationTurns}
+          onChoice={handleChoice}
+          compact
+        />
+      </div>
+
+      {/* Right panel: Dynamic content area — adjusts based on conversation */}
+      <div className="hidden lg:flex flex-1 overflow-auto">
+        {selectedMode ? (
+          <div className="flex-1 max-w-4xl mx-auto px-6 py-6 w-full">
+            <ExperienceBack onBack={handleBack} />
+            <RightPanelContent mode={selectedMode} onBack={handleBack} />
+          </div>
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center space-y-3 px-8 max-w-md">
+              <div className="text-6xl font-bold text-primary/10">B</div>
+              <p className="text-sm text-muted-foreground">
+                Pick a training mode to get started.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Right panel content (experience rendering) ──────────
+
+function RightPanelContent({
+  mode,
+  onBack,
+}: {
+  mode: LearningModeId;
+  onBack: () => void;
+}) {
+  if (mode === "quiz") {
+    return <BlockSequenceWrapper blocks={QUIZ_BLOCKS} />;
+  }
+  if (mode === "explore") {
+    return <BlockSequenceWrapper blocks={EXPLORE_BLOCKS} />;
+  }
+  if (mode === "quick") {
+    return <BlockSequenceWrapper blocks={QUICK_START_BLOCKS} />;
+  }
+
+  // Interactive modes (video, prompt, chat, interviewer, etc.)
+  return <ExperiencePanel mode={mode} onBack={onBack} />;
+}
+
+function BlockSequenceWrapper({ blocks }: { blocks: ContentBlock[] }) {
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <BlockSequence blocks={blocks} />
+    </div>
   );
 }
 
@@ -284,15 +320,12 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 
 function ExperiencePanel({
   mode,
-  onBack,
 }: {
   mode: LearningModeId;
-  onBack: () => void;
+  onBack?: () => void;
 }) {
   return (
     <div className="w-full">
-      <ExperienceBack onBack={onBack} />
-
       {mode === "video" && <VideoDiscoveryFlow />}
 
       {mode === "prompt" && (
@@ -324,9 +357,9 @@ function ExperiencePanel({
 /** Landing page shell for unauthenticated users */
 export default function Landing() {
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
       <GlobalHeader variant="landing" />
-      <main className="flex-1 flex flex-col pt-14">
+      <main className="flex-1 flex overflow-hidden pt-14">
         <LandingContent />
       </main>
     </div>
