@@ -86,6 +86,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const isMutedRef = useRef(false);
   const autoStartedRef = useRef(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const selectedVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
 
   // End-of-speech detection
   const utteranceEndCallbacksRef = useRef<Set<(text: string) => void>>(new Set());
@@ -95,6 +96,28 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   const isSupported = getSpeechRecognition() !== null;
   const ttsSupported = typeof window !== "undefined" && "speechSynthesis" in window;
+
+  // ── Voice loading (Chrome loads voices asynchronously) ──
+  useEffect(() => {
+    if (!ttsSupported) return;
+    const synth = window.speechSynthesis;
+    const pickVoice = () => {
+      const voices = synth.getVoices();
+      if (voices.length > 0) {
+        const preferred =
+          voices.find((v) => v.lang === "en-US" && v.localService) ||
+          voices.find((v) => v.lang === "en-US") ||
+          voices.find((v) => v.lang.startsWith("en")) ||
+          voices[0];
+        selectedVoiceRef.current = preferred;
+      }
+    };
+    pickVoice();
+    if (typeof synth.addEventListener === "function") {
+      synth.addEventListener("voiceschanged", pickVoice);
+      return () => synth.removeEventListener("voiceschanged", pickVoice);
+    }
+  }, [ttsSupported]);
 
   // Keep refs in sync with state so event handlers see current values
   useEffect(() => {
@@ -268,14 +291,32 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   // ── TTS: Bilko speaks (mutes mic to prevent echo) ──────
   //
-  // Chrome has a well-known bug where speechSynthesis silently pauses
-  // after ~15s, or the onend event never fires. Workarounds:
-  // 1. Periodically call speechSynthesis.resume() while speech is active
-  // 2. Set a timeout fallback based on estimated speech duration
+  // Chrome quirks addressed:
+  // 1. Voices load async — wait for them if needed
+  // 2. cancel() before speak() needs a tick gap
+  // 3. speechSynthesis silently pauses after ~15s — poke with resume()
+  // 4. onend sometimes never fires — fallback timeout
   const speak = useCallback(async (text: string) => {
     if (!ttsSupported) return;
+
     // Cancel any in-progress speech
     window.speechSynthesis.cancel();
+
+    // Chrome needs a tick after cancel() before speak() works
+    await new Promise((r) => setTimeout(r, 50));
+
+    // If voices haven't loaded yet, wait up to 2s
+    const synth = window.speechSynthesis;
+    if (synth.getVoices().length === 0 && typeof synth.addEventListener === "function") {
+      await new Promise<void>((resolve) => {
+        const onLoad = () => {
+          synth.removeEventListener("voiceschanged", onLoad);
+          resolve();
+        };
+        synth.addEventListener("voiceschanged", onLoad);
+        setTimeout(() => resolve(), 2000);
+      });
+    }
 
     // Mute mic during TTS to prevent echo feedback
     setIsMuted(true);
@@ -288,7 +329,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         clearInterval(resumeInterval);
         clearTimeout(fallbackTimeout);
         setIsSpeaking(false);
-        // Brief delay before unmuting to avoid catching the tail end of TTS audio
         setTimeout(() => setIsMuted(false), POST_TTS_BUFFER_MS);
         resolve();
       };
@@ -298,10 +338,14 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       utterance.pitch = 1.0;
       utterance.volume = 1.0;
       utterance.lang = "en-US";
+      if (selectedVoiceRef.current) {
+        utterance.voice = selectedVoiceRef.current;
+      }
 
       utterance.onstart = () => setIsSpeaking(true);
       utterance.onend = done;
-      utterance.onerror = () => {
+      utterance.onerror = (e) => {
+        console.warn("[TTS] speech error:", e);
         setIsSpeaking(false);
         setIsMuted(false);
         if (!resolved) {
