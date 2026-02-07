@@ -17,6 +17,7 @@ import { BlockSequence } from "@/components/content-blocks";
 import type { ContentBlock, AgentContentResult } from "@/components/content-blocks/types";
 import { useVoiceCommands } from "@/contexts/voice-context";
 import type { VoiceTriggerOption } from "@/hooks/use-voice-recognition";
+import { breathingPause } from "@/lib/bilko-persona/pacing";
 
 // ── Turn types ───────────────────────────────────────────
 
@@ -138,19 +139,38 @@ export function ConversationCanvas({
   initialSettledCount = 0,
 }: ConversationCanvasProps) {
   const [settledCount, setSettledCount] = useState(initialSettledCount);
+  const [isBreathing, setIsBreathing] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const breathTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-scroll to bottom when new content appears
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [settledCount, turns.length]);
 
+  // Clean up breathing timer on unmount
+  useEffect(() => {
+    return () => {
+      if (breathTimerRef.current) clearTimeout(breathTimerRef.current);
+    };
+  }, []);
+
   const handleSettled = useCallback(() => {
-    setSettledCount((c) => c + 1);
+    // After a turn settles, add a breathing pause before showing the next.
+    // People breathe. Bilko does too.
+    setIsBreathing(true);
+    breathTimerRef.current = setTimeout(() => {
+      setSettledCount((c) => c + 1);
+      setIsBreathing(false);
+      breathTimerRef.current = null;
+    }, breathingPause());
   }, []);
 
   // Determine how many turns to render: all settled + the next unsettled one
-  const visibleCount = Math.min(settledCount + 1, turns.length);
+  // During breathing, don't show the next turn yet
+  const visibleCount = isBreathing
+    ? settledCount
+    : Math.min(settledCount + 1, turns.length);
 
   return (
     <div className={`flex-1 flex flex-col overflow-auto ${className}`}>
@@ -176,6 +196,16 @@ export function ConversationCanvas({
               />
             );
           })}
+
+          {/* Breathing indicator — Bilko pauses between thoughts */}
+          {isBreathing && settledCount < turns.length && (
+            <div className="flex items-center gap-1.5 py-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-pulse [animation-delay:200ms]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 animate-pulse [animation-delay:400ms]" />
+            </div>
+          )}
+
           <div ref={bottomRef} />
         </div>
       </div>

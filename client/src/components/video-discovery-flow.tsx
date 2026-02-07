@@ -41,6 +41,7 @@ import {
   useFlowExecution,
 } from "@/lib/flow-engine";
 import type { VideoCandidate } from "@/lib/flow-engine";
+import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { VideoExperienceRenderer } from "@/components/content-blocks";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -75,18 +76,18 @@ interface WorkflowStep {
 
 // ── Prompts (single source of truth — matches registry) ──────────────
 
-const TOPIC_SYSTEM_PROMPT = `You are an AI education expert. Generate exactly 5 trending AI topics that would be interesting for beginners.
+const TOPIC_SYSTEM_PROMPT = bilkoSystemPrompt(`Generate exactly 5 trending AI topics that would be interesting for beginners.
 
 Return ONLY valid JSON. Keep descriptions VERY short (max 10 words each). Example:
 {"topics":[{"rank":1,"title":"AI Agents","description":"AI that acts on your behalf","beginnerQuestion":"How do AI agents work?"}]}
 
-Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 words. No markdown, no explanation, ONLY the JSON object.`;
+Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 words. No markdown, no explanation, ONLY the JSON object.`);
 
 const TOPIC_USER_MESSAGE =
   "What are the 5 most interesting AI topics trending in the last 6 months that a beginner should learn about?";
 
 function videoSystemPrompt(topicTitle: string): string {
-  return `You are a YouTube video researcher. Find 3 real YouTube videos about "${topicTitle}" for beginners.
+  return bilkoSystemPrompt(`Find 3 real YouTube videos about "${topicTitle}" for beginners.
 
 Return ONLY valid JSON. Example:
 {"videos":[{"title":"Video Title","creator":"Channel","description":"Short desc","url":"https://www.youtube.com/watch?v=ID","embedId":"ID","whyRecommended":"Why good for beginners","views":"1.2M","likes":"45K","comments":"2.3K"}]}
@@ -97,7 +98,7 @@ Rules:
 - Keep description under 15 words
 - Keep whyRecommended under 15 words
 - Return exactly 3 videos, ordered best first
-- No markdown, ONLY the JSON object`;
+- No markdown, ONLY the JSON object`);
 }
 
 function videoUserMessage(topic: AITopic): string {

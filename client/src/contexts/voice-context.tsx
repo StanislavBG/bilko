@@ -16,6 +16,10 @@ import {
   type ReactNode,
 } from "react";
 import type { VoiceTriggerOption } from "@/hooks/use-voice-recognition";
+import {
+  POST_TTS_BUFFER_MS,
+  SILENCE_TIMEOUT_MS as PACING_SILENCE_TIMEOUT_MS,
+} from "@/lib/bilko-persona/pacing";
 
 const VOICE_STORAGE_KEY = "bilko-voice-enabled";
 
@@ -87,7 +91,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const utteranceEndCallbacksRef = useRef<Set<(text: string) => void>>(new Set());
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingFinalTextRef = useRef("");
-  const SILENCE_TIMEOUT_MS = 1500; // 1.5s of silence = user is done
+  const SILENCE_TIMEOUT_MS = PACING_SILENCE_TIMEOUT_MS;
 
   const isSupported = getSpeechRecognition() !== null;
   const ttsSupported = typeof window !== "undefined" && "speechSynthesis" in window;
@@ -282,7 +286,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       utterance.onend = () => {
         setIsSpeaking(false);
         // Brief delay before unmuting to avoid catching the tail end of TTS audio
-        setTimeout(() => setIsMuted(false), 300);
+        setTimeout(() => setIsMuted(false), POST_TTS_BUFFER_MS);
         resolve();
       };
       utterance.onerror = () => {

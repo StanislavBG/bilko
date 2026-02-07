@@ -26,6 +26,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { chat } from "@/lib/flow-engine";
+import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import type { VideoExperienceBlock } from "./types";
 
 // ── Internal types ────────────────────────────────────────
@@ -64,7 +65,7 @@ export function VideoExperienceRenderer({ block }: { block: VideoExperienceBlock
       const result = await chat([
         {
           role: "system",
-          content: `You are an educational content summarizer. Create a comprehensive summary of a YouTube video.
+          content: bilkoSystemPrompt(`Create a comprehensive summary of a YouTube video.
 
 The video details:
 - Title: ${block.title}
@@ -88,7 +89,7 @@ Format your response with clear sections:
 ## Main Takeaways
 [What learners should remember]
 
-Note: This is an AI-generated summary based on the video metadata. Watch the full video for complete understanding.`,
+Note: This is an AI-generated summary based on the video metadata. Watch the full video for complete understanding.`),
         },
         {
           role: "user",
@@ -111,7 +112,7 @@ Note: This is an AI-generated summary based on the video metadata. Watch the ful
       const result = await chat([
         {
           role: "system",
-          content: `You are simulating a video transcript loader. Since we cannot access the actual YouTube transcript, generate a plausible educational transcript based on the video metadata.
+          content: bilkoSystemPrompt(`Generate a plausible educational transcript based on video metadata. Since we cannot access the actual YouTube transcript, simulate one from the metadata.
 
 Video: "${block.title}"
 Description: ${block.description ?? ""}
@@ -122,7 +123,7 @@ Generate a realistic transcript of key points that would be covered in this vide
 [0:30] First topic...
 etc.
 
-Keep it educational and relevant to the topic. This is a simulation for demonstration purposes.`,
+Keep it educational and relevant to the topic. This is a simulation for demonstration purposes.`),
         },
         {
           role: "user",
@@ -151,13 +152,11 @@ Keep it educational and relevant to the topic. This is a simulation for demonstr
       const result = await chat([
         {
           role: "system",
-          content: `You are an AI assistant helping users understand a video transcript.
+          content: bilkoSystemPrompt(`Help the user understand a video transcript. Answer questions based on the content below. If the user asks to "extract" specific ideas, provide focused excerpts from the transcript.
 
 Video: "${block.title}"
 Transcript:
-${transcript}
-
-Answer questions based on the transcript content. If the user asks to "extract" specific ideas, provide focused excerpts from the transcript. Be helpful and educational.`,
+${transcript}`),
         },
         ...messages.map((m) => ({
           role: m.role as "user" | "assistant",
