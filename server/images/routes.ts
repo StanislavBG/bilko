@@ -7,7 +7,7 @@ const log = createLogger("images");
 export function registerImageRoutes(app: Express): void {
   app.post("/api/images/brand", async (req, res) => {
     try {
-      const { imageBase64, text = "Bilko Bibitkov AI Academy", position = "bottom-right" } = req.body;
+      const { imageBase64, text = "Bilko's Mental Gym", position = "bottom-right" } = req.body;
 
       if (!imageBase64) {
         return res.status(400).json({ error: "imageBase64 is required", success: false });

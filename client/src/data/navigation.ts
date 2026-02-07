@@ -12,7 +12,7 @@ export interface NavItem {
 export const navigationItems: NavItem[] = [
   {
     id: "academy",
-    title: "AI Academy",
+    title: "Mental Gym",
     url: "/academy",
     icon: GraduationCap,
     adminOnly: false,

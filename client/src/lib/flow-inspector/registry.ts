@@ -3,11 +3,15 @@
  *
  * All inspectable PER-002 flows are registered here.
  * Each entry describes the flow's steps, prompts, and I/O schemas.
+ *
+ * Validated at import time by ARCH-005 steel frame validator.
+ * Invalid flows are logged and excluded.
  */
 
 import type { FlowDefinition } from "./types";
+import { validateRegistry } from "./validate";
 
-export const flowRegistry: FlowDefinition[] = [
+const allFlows: FlowDefinition[] = [
   {
     id: "video-discovery",
     name: "AI Video Discovery",
@@ -17,6 +21,11 @@ export const flowRegistry: FlowDefinition[] = [
     location: "landing",
     componentPath: "client/src/components/video-discovery-flow.tsx",
     tags: ["landing", "ai", "video", "youtube", "gemini"],
+    output: {
+      name: "selectedVideo",
+      type: "object",
+      description: "The YouTube video the user chose to watch, with embed ID, metadata, and engagement stats",
+    },
     steps: [
       {
         id: "research-topics",
@@ -173,7 +182,394 @@ Rules:
       },
     ],
   },
+
+  // ── AI Leverage Consultation ──────────────────────────────
+  {
+    id: "ai-consultation",
+    name: "AI Leverage Consultation",
+    description:
+      "Multi-turn interview flow where an AI expert asks questions about the user's work, then delivers 2 obvious and 2 non-obvious AI leverage recommendations.",
+    version: "1.0.0",
+    location: "landing",
+    componentPath: "client/src/components/ai-consultation-flow.tsx",
+    tags: ["landing", "ai", "consultation", "recommendations", "gemini"],
+    output: {
+      name: "recommendations",
+      type: "object",
+      description:
+        "Summary + 2 obvious and 2 non-obvious AI leverage recommendations with tools and impact",
+    },
+    steps: [
+      {
+        id: "first-question",
+        name: "Ask First Question",
+        type: "llm",
+        description:
+          "Generates the opening question to understand who the user is and what they do.",
+        prompt:
+          "You are an elite AI strategy consultant. Ask your first warm, conversational question to understand the user's role and industry.",
+        userMessage:
+          "Start the consultation. Ask your first question to understand who this person is and what they do.",
+        model: "gemini-2.5-flash",
+        inputSchema: [],
+        outputSchema: [
+          {
+            name: "nextQuestion",
+            type: "string",
+            description: "The question to ask the user",
+          },
+          {
+            name: "done",
+            type: "boolean",
+            description: "Whether enough context has been gathered",
+            example: "false",
+          },
+        ],
+        dependsOn: [],
+      },
+      {
+        id: "follow-up-questions",
+        name: "Follow-up Questions (iterative)",
+        type: "llm",
+        description:
+          "For each user answer, evaluates context completeness and generates the next question. Covers: role/industry, daily workflows, pain points, KPIs, tools, team, data. Sets done=true after 5-7 questions.",
+        prompt:
+          "Given the interview so far, ask the next question OR set done=true if you have enough context for recommendations.",
+        userMessage: "User's latest answer + full conversation history",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "conversationHistory",
+            type: "array",
+            description: "All prior Q&A pairs",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "nextQuestion",
+            type: "string",
+            description: "Next interview question (if not done)",
+          },
+          {
+            name: "done",
+            type: "boolean",
+            description: "True when enough context gathered",
+          },
+        ],
+        dependsOn: ["first-question"],
+      },
+      {
+        id: "user-answers",
+        name: "User Answers (voice/text)",
+        type: "user-input",
+        description:
+          "User provides free-text answers via keyboard or voice input. Each answer feeds back into the follow-up question step.",
+        inputSchema: [
+          {
+            name: "question",
+            type: "string",
+            description: "The current question being answered",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "answer",
+            type: "string",
+            description: "The user's free-text response",
+          },
+        ],
+        dependsOn: ["first-question"],
+      },
+      {
+        id: "analysis",
+        name: "Generate Recommendations",
+        type: "llm",
+        description:
+          "Analyzes the complete interview transcript and generates 2 obvious + 2 non-obvious AI leverage recommendations, each with title, description, impact, and suggested tools.",
+        prompt:
+          "Based on the interview transcript, provide exactly 2 obvious and 2 non-obvious AI recommendations specific to the user's workflows.",
+        userMessage: "Full interview transcript with all Q&A pairs",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "transcript",
+            type: "string",
+            description: "Complete Q&A transcript from the interview",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "summary",
+            type: "string",
+            description: "2-3 sentence summary of the user's situation",
+          },
+          {
+            name: "obvious",
+            type: "array",
+            description: "2 obvious AI leverage recommendations",
+          },
+          {
+            name: "nonObvious",
+            type: "array",
+            description: "2 non-obvious AI leverage recommendations",
+          },
+        ],
+        dependsOn: ["follow-up-questions", "user-answers"],
+      },
+      {
+        id: "display-results",
+        name: "Display Recommendations",
+        type: "display",
+        description:
+          "Renders the final consultation results: summary, 2 obvious wins, and 2 hidden opportunities with tool suggestions and impact estimates.",
+        inputSchema: [
+          {
+            name: "recommendations",
+            type: "object",
+            description: "The analysis result with summary, obvious, and nonObvious arrays",
+          },
+        ],
+        outputSchema: [],
+        dependsOn: ["analysis"],
+      },
+    ],
+  },
+
+  // ── Recursive Interviewer ─────────────────────────────────
+  {
+    id: "recursive-interviewer",
+    name: "The Recursive Interviewer",
+    description:
+      "Deep-dive strategy session using the Recursive Interviewer framework: role anchoring, constraint-based iteration, and AI-judged completion. Delivers confirmed insights and hidden patterns.",
+    version: "1.0.0",
+    location: "landing",
+    componentPath: "client/src/components/ai-consultation-flow.tsx",
+    tags: ["landing", "ai", "strategy", "recursive", "framework", "gemini"],
+    output: {
+      name: "insights",
+      type: "object",
+      description: "Confirmed insights + hidden patterns from the recursive interview",
+    },
+    steps: [
+      {
+        id: "first-question",
+        name: "Establish Context",
+        type: "llm",
+        description: "Opens with a question to understand who the user is and what challenge brought them here.",
+        prompt: "Begin the Recursive Interviewer. Establish context.",
+        userMessage: "Ask first question: role, domain, challenge/goal.",
+        model: "gemini-2.5-flash",
+        inputSchema: [],
+        outputSchema: [{ name: "nextQuestion", type: "string", description: "Opening question" }],
+        dependsOn: [],
+      },
+      {
+        id: "recursive-questions",
+        name: "Recursive Follow-ups",
+        type: "llm",
+        description: "Each question references prior answers. Breadth first, then depth. 5-7 total.",
+        prompt: "Build recursively on prior answers.",
+        userMessage: "Full conversation history",
+        model: "gemini-2.5-flash",
+        inputSchema: [{ name: "history", type: "array", description: "Prior Q&A pairs" }],
+        outputSchema: [{ name: "nextQuestion", type: "string", description: "Next interview question" }, { name: "done", type: "boolean", description: "Whether interview is complete" }],
+        dependsOn: ["first-question"],
+      },
+      {
+        id: "user-answers",
+        name: "User Answers",
+        type: "user-input",
+        description: "Free-text or voice responses to each interview question.",
+        inputSchema: [{ name: "question", type: "string", description: "The current question being answered" }],
+        outputSchema: [{ name: "answer", type: "string", description: "The user's free-text response" }],
+        dependsOn: ["first-question"],
+      },
+      {
+        id: "analysis",
+        name: "Generate Insights",
+        type: "llm",
+        description: "Delivers 2 confirmed insights and 2 hidden patterns with tools and impact.",
+        prompt: "Analyze transcript for confirmed + hidden insights.",
+        userMessage: "Full interview transcript",
+        model: "gemini-2.5-flash",
+        inputSchema: [{ name: "transcript", type: "string", description: "Complete interview Q&A transcript" }],
+        outputSchema: [{ name: "obvious", type: "array", description: "Primary recommendations" }, { name: "nonObvious", type: "array", description: "Secondary/hidden recommendations" }],
+        dependsOn: ["recursive-questions", "user-answers"],
+      },
+      {
+        id: "display-results",
+        name: "Display Insights",
+        type: "display",
+        description: "Renders confirmed insights and hidden patterns with tool recommendations.",
+        inputSchema: [{ name: "insights", type: "object", description: "The analysis result" }],
+        outputSchema: [],
+        dependsOn: ["analysis"],
+      },
+    ],
+  },
+
+  // ── LinkedIn Strategist & Career Archivist ────────────────
+  {
+    id: "linkedin-strategist",
+    name: "LinkedIn Strategist & Career Archivist",
+    description:
+      "Career-focused interview that extracts invisible responsibilities, KPIs, and achievements, then delivers high-impact LinkedIn edits and hidden career asset identification.",
+    version: "1.0.0",
+    location: "landing",
+    componentPath: "client/src/components/ai-consultation-flow.tsx",
+    tags: ["landing", "career", "linkedin", "brand", "interview", "gemini"],
+    output: {
+      name: "careerDossier",
+      type: "object",
+      description: "LinkedIn edits + hidden career assets",
+    },
+    steps: [
+      {
+        id: "first-question",
+        name: "Career Opening",
+        type: "llm",
+        description: "Asks about current role — how they'd describe it at a dinner party.",
+        prompt: "Start career interview. Warm, professional.",
+        userMessage: "Ask first question about current role.",
+        model: "gemini-2.5-flash",
+        inputSchema: [],
+        outputSchema: [{ name: "nextQuestion", type: "string", description: "Opening interview question" }],
+        dependsOn: [],
+      },
+      {
+        id: "career-deep-dive",
+        name: "Career Deep-Dive Questions",
+        type: "llm",
+        description: "Extracts stories behind bullet points: achievements, metrics, invisible responsibilities. 5-8 questions.",
+        prompt: "Dig into the story behind each bullet point.",
+        userMessage: "Conversation history + latest answer",
+        model: "gemini-2.5-flash",
+        inputSchema: [{ name: "history", type: "array", description: "Prior Q&A pairs" }],
+        outputSchema: [{ name: "nextQuestion", type: "string", description: "Next interview question" }, { name: "done", type: "boolean", description: "Whether interview is complete" }],
+        dependsOn: ["first-question"],
+      },
+      {
+        id: "user-answers",
+        name: "User Career Responses",
+        type: "user-input",
+        description: "Free-text career history and role detail responses.",
+        inputSchema: [{ name: "question", type: "string", description: "The current question being answered" }],
+        outputSchema: [{ name: "answer", type: "string", description: "The user's free-text response" }],
+        dependsOn: ["first-question"],
+      },
+      {
+        id: "analysis",
+        name: "Generate Career Dossier",
+        type: "llm",
+        description: "Delivers 3 high-impact LinkedIn edits and 3 hidden career assets with positioning advice.",
+        prompt: "Analyze for LinkedIn edits and hidden career differentiators.",
+        userMessage: "Full career interview transcript",
+        model: "gemini-2.5-flash",
+        inputSchema: [{ name: "transcript", type: "string", description: "Complete interview Q&A transcript" }],
+        outputSchema: [{ name: "obvious", type: "array", description: "Primary recommendations" }, { name: "nonObvious", type: "array", description: "Secondary/hidden recommendations" }],
+        dependsOn: ["career-deep-dive", "user-answers"],
+      },
+      {
+        id: "display-results",
+        name: "Display Career Dossier",
+        type: "display",
+        description: "Renders LinkedIn edits and hidden career assets.",
+        inputSchema: [{ name: "dossier", type: "object", description: "Career dossier result" }],
+        outputSchema: [],
+        dependsOn: ["analysis"],
+      },
+    ],
+  },
+
+  // ── Socratic Architect ────────────────────────────────────
+  {
+    id: "socratic-architect",
+    name: "The Socratic Architect",
+    description:
+      "User-configurable consultation template. User defines the expert role, goal, and desired output, then undergoes a Socratic deep-dive interview tailored to those parameters.",
+    version: "1.0.0",
+    location: "landing",
+    componentPath: "client/src/components/ai-consultation-flow.tsx",
+    tags: ["landing", "socratic", "configurable", "template", "interview", "gemini"],
+    output: {
+      name: "findings",
+      type: "object",
+      description: "Customized findings based on user-defined output requirements",
+    },
+    steps: [
+      {
+        id: "setup",
+        name: "Configure Expert",
+        type: "user-input",
+        description: "User fills in: Expert Role, Goal, Desired Output. These values are interpolated into the system prompt.",
+        inputSchema: [],
+        outputSchema: [
+          { name: "expertise", type: "string", description: "The expert role" },
+          { name: "goal", type: "string", description: "What the user wants to achieve" },
+          { name: "output", type: "string", description: "Desired output format" },
+        ],
+        dependsOn: [],
+      },
+      {
+        id: "first-question",
+        name: "Socratic Opening",
+        type: "llm",
+        description: "First question from the configured expert persona.",
+        prompt: "Dynamic — built from setup values.",
+        userMessage: "Begin the Socratic interview.",
+        model: "gemini-2.5-flash",
+        inputSchema: [{ name: "setupValues", type: "object", description: "User-configured expertise, goal, output" }],
+        outputSchema: [{ name: "nextQuestion", type: "string", description: "Opening interview question" }],
+        dependsOn: ["setup"],
+      },
+      {
+        id: "socratic-questions",
+        name: "Recursive Socratic Questions",
+        type: "llm",
+        description: "Each question builds on prior answers. Expert judges when context is complete.",
+        prompt: "Dynamic — built from setup values.",
+        userMessage: "Conversation history",
+        model: "gemini-2.5-flash",
+        inputSchema: [{ name: "history", type: "array", description: "Prior Q&A pairs" }],
+        outputSchema: [{ name: "nextQuestion", type: "string", description: "Next interview question" }, { name: "done", type: "boolean", description: "Whether interview is complete" }],
+        dependsOn: ["first-question"],
+      },
+      {
+        id: "user-answers",
+        name: "User Responses",
+        type: "user-input",
+        description: "Free-text or voice answers to Socratic questions.",
+        inputSchema: [{ name: "question", type: "string", description: "The current question being answered" }],
+        outputSchema: [{ name: "answer", type: "string", description: "The user's free-text response" }],
+        dependsOn: ["first-question"],
+      },
+      {
+        id: "analysis",
+        name: "Generate Custom Findings",
+        type: "llm",
+        description: "Delivers findings structured as 2 obvious + 2 non-obvious based on the user-defined output requirement.",
+        prompt: "Dynamic — built from setup values.",
+        userMessage: "Full interview transcript",
+        model: "gemini-2.5-flash",
+        inputSchema: [{ name: "transcript", type: "string", description: "Complete interview Q&A transcript" }],
+        outputSchema: [{ name: "obvious", type: "array", description: "Primary recommendations" }, { name: "nonObvious", type: "array", description: "Secondary/hidden recommendations" }],
+        dependsOn: ["socratic-questions", "user-answers"],
+      },
+      {
+        id: "display-results",
+        name: "Display Findings",
+        type: "display",
+        description: "Renders the customized findings.",
+        inputSchema: [{ name: "findings", type: "object", description: "Customized findings result" }],
+        outputSchema: [],
+        dependsOn: ["analysis"],
+      },
+    ],
+  },
 ];
+
+/** Validated registry — only flows passing ARCH-005 invariants */
+export const flowRegistry: FlowDefinition[] = validateRegistry(allFlows);
 
 export function getFlowById(id: string): FlowDefinition | undefined {
   return flowRegistry.find((f) => f.id === id);

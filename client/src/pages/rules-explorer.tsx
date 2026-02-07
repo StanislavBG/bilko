@@ -4,13 +4,13 @@ import { useViewMode } from "@/contexts/view-mode-context";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Clock, GitBranch, Link2, PanelLeft } from "lucide-react";
+import { Clock, GitBranch, Link2 } from "lucide-react";
 import { PageContent } from "@/components/page-content";
 import { ActionBar } from "@/components/action-bar";
 import { ActionPanel } from "@/components/action-panel";
+import { NavPanel } from "@/components/nav";
 
 interface RuleMetadata {
   id: string;
@@ -59,197 +59,6 @@ const PRIORITY_DESCRIPTIONS: Record<string, string> = {
 
 function getPriorityDescription(priority: string): string {
   return PRIORITY_DESCRIPTIONS[priority] ?? priority;
-}
-
-function SecondaryNavItem({ 
-  label, 
-  isActive, 
-  onClick,
-  testId,
-  isCollapsed = false
-}: { 
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-  testId: string;
-  isCollapsed?: boolean;
-}) {
-  const button = (
-    <Button
-      variant="ghost"
-      className={`w-full h-9 ${
-        isCollapsed ? "justify-center px-0" : "justify-start"
-      } ${isActive ? "bg-accent text-accent-foreground" : ""}`}
-      onClick={onClick}
-      data-testid={testId}
-    >
-      {isCollapsed ? (
-        <span className="text-sm font-medium">{label.charAt(0)}</span>
-      ) : (
-        <span className="text-sm">{label}</span>
-      )}
-    </Button>
-  );
-
-  if (isCollapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent side="right">
-          <span>{label}</span>
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return button;
-}
-
-function PartitionNavItem({
-  partition,
-  isSelected,
-  onSelect,
-  isCollapsed = false
-}: {
-  partition: PartitionInfo;
-  isSelected: boolean;
-  onSelect: () => void;
-  isCollapsed?: boolean;
-}) {
-  if (isCollapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            className={`w-full justify-center h-8 ${
-              isSelected ? "bg-accent text-accent-foreground" : ""
-            }`}
-            onClick={onSelect}
-            data-testid={`nav-partition-${partition.id}`}
-          >
-            <span className="text-sm uppercase">{partition.id.charAt(0)}</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right">{partition.id}</TooltipContent>
-      </Tooltip>
-    );
-  }
-  
-  return (
-    <Button
-      variant="ghost"
-      className={`w-full justify-start h-8 ${
-        isSelected ? "bg-accent text-accent-foreground" : ""
-      }`}
-      onClick={onSelect}
-      data-testid={`nav-partition-${partition.id}`}
-    >
-      <span className="text-sm capitalize truncate">{partition.id}</span>
-    </Button>
-  );
-}
-
-function TertiaryNavPanel({
-  children,
-  className = "",
-  testId,
-  isCollapsed,
-  onToggleCollapse,
-  header
-}: {
-  children: React.ReactNode;
-  className?: string;
-  testId?: string;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
-  header?: string;
-}) {
-  return (
-    <div className={`shrink-0 border-r bg-background flex flex-col ${className}`} data-testid={testId}>
-      {header && (
-        <div className="border-b px-2 h-8 flex items-center shrink-0">
-          {isCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-xs font-medium text-muted-foreground block w-full text-center cursor-default">
-                  {header.charAt(0)}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="right">{header}</TooltipContent>
-            </Tooltip>
-          ) : (
-            <span className="text-xs font-medium text-muted-foreground">{header}</span>
-          )}
-        </div>
-      )}
-      <div className="flex-1 overflow-auto p-1 space-y-0.5">
-        {children}
-      </div>
-      <div className="border-t h-11 flex items-center justify-center shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleCollapse}
-              data-testid={`${testId}-toggle`}
-            >
-              <PanelLeft className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            {isCollapsed ? "Expand" : "Collapse"}
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </div>
-  );
-}
-
-function RuleNavItem({
-  rule,
-  isSelected,
-  onSelect,
-  isCollapsed = false
-}: {
-  rule: RuleMetadata;
-  isSelected: boolean;
-  onSelect: () => void;
-  isCollapsed?: boolean;
-}) {
-  if (isCollapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            className={`w-full justify-center h-8 ${
-              isSelected ? "bg-accent text-accent-foreground" : ""
-            }`}
-            onClick={onSelect}
-            data-testid={`nav-rule-${rule.id.toLowerCase()}`}
-          >
-            <code className="text-xs font-medium">{rule.id.split("-")[0]}</code>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right">{rule.id}</TooltipContent>
-      </Tooltip>
-    );
-  }
-  
-  return (
-    <Button
-      variant="ghost"
-      className={`w-full justify-start h-8 ${
-        isSelected ? "bg-accent text-accent-foreground" : ""
-      }`}
-      onClick={onSelect}
-      data-testid={`nav-rule-${rule.id.toLowerCase()}`}
-    >
-      <code className="text-xs font-medium">{rule.id}</code>
-    </Button>
-  );
 }
 
 function RuleDetailPanel({ 
@@ -426,74 +235,39 @@ function CatalogView({
 
   return (
     <>
-      <div className={`hidden md:flex shrink-0 border-r bg-muted/20 flex-col transition-all duration-200 ${
-        isPartitionCollapsed ? "min-w-12 max-w-12" : "min-w-[8rem] max-w-[10rem] flex-1"
-      }`} data-testid="partition-nav">
-        <div className="border-b px-2 h-8 flex items-center shrink-0">
-          {isPartitionCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="text-xs font-medium text-muted-foreground block w-full text-center cursor-default">P</span>
-              </TooltipTrigger>
-              <TooltipContent side="right">Partitions</TooltipContent>
-            </Tooltip>
-          ) : (
-            <span className="text-xs font-medium text-muted-foreground">Partitions</span>
-          )}
-        </div>
-        <div className="flex-1 overflow-auto p-1 space-y-0.5">
-          {catalog.partitions.map((partition) => (
-            <PartitionNavItem
-              key={partition.id}
-              partition={partition}
-              isSelected={selectedPartitionId === partition.id}
-              onSelect={() => {
-                setSelectedPartitionId(partition.id);
-                setSelectedRuleId(null);
-              }}
-              isCollapsed={isPartitionCollapsed}
-            />
-          ))}
-        </div>
-        <div className="border-t h-11 flex items-center justify-center shrink-0">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => setIsPartitionCollapsed(!isPartitionCollapsed)}
-                data-testid="button-toggle-partition-nav"
-              >
-                <PanelLeft className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              {isPartitionCollapsed ? "Expand" : "Collapse"}
-            </TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
+      <NavPanel
+        header="Partitions"
+        items={catalog.partitions.map((p) => ({
+          id: p.id,
+          label: p.id,
+          shortLabel: p.id.charAt(0).toUpperCase(),
+        }))}
+        selectedId={selectedPartitionId}
+        onSelect={(id) => { setSelectedPartitionId(id); setSelectedRuleId(null); }}
+        isCollapsed={isPartitionCollapsed}
+        onToggleCollapse={() => setIsPartitionCollapsed(!isPartitionCollapsed)}
+        expandedWidth="min-w-[8rem] max-w-[10rem]"
+        collapsedWidth="min-w-12 max-w-12"
+        bg="bg-muted/20"
+        testId="partition-nav"
+      />
 
       {selectedPartition && (
-        <TertiaryNavPanel
+        <NavPanel
+          header="Rules"
+          items={selectedPartition.rules.map((rule) => ({
+            id: rule.id,
+            label: rule.id,
+            shortLabel: rule.id.split("-")[0],
+          }))}
+          selectedId={selectedRuleId}
+          onSelect={(id) => setSelectedRuleId(id)}
           isCollapsed={isTertiaryCollapsed}
           onToggleCollapse={() => setIsTertiaryCollapsed(!isTertiaryCollapsed)}
-          className={`hidden md:flex transition-all duration-200 ${
-            isTertiaryCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
-          }`}
+          expandedWidth="min-w-[10rem] max-w-[12rem]"
+          collapsedWidth="min-w-12 max-w-12"
           testId="tertiary-nav-rules"
-          header="Rules"
-        >
-          {selectedPartition.rules.map((rule) => (
-            <RuleNavItem
-              key={rule.id}
-              rule={rule}
-              isSelected={selectedRuleId === rule.id}
-              onSelect={() => setSelectedRuleId(rule.id)}
-              isCollapsed={isTertiaryCollapsed}
-            />
-          ))}
-        </TertiaryNavPanel>
+        />
       )}
 
       <PageContent>

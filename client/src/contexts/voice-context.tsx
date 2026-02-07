@@ -26,12 +26,17 @@ interface VoiceHandler {
 
 interface VoiceContextType {
   isListening: boolean;
+  isSpeaking: boolean;
   isSupported: boolean;
+  ttsSupported: boolean;
   permissionDenied: boolean;
   transcript: string;
   toggleListening: () => Promise<void>;
   startListening: () => Promise<void>;
   stopListening: () => void;
+  /** Bilko speaks — uses Web Speech API speechSynthesis */
+  speak: (text: string) => Promise<void>;
+  stopSpeaking: () => void;
   registerHandler: (id: string, handler: VoiceHandler) => () => void;
 }
 
@@ -48,6 +53,7 @@ const getSpeechRecognition = () => {
 
 export function VoiceProvider({ children }: { children: ReactNode }) {
   const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [transcript, setTranscript] = useState("");
 
@@ -56,8 +62,10 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const isListeningRef = useRef(false);
   const permissionDeniedRef = useRef(false);
   const autoStartedRef = useRef(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const isSupported = getSpeechRecognition() !== null;
+  const ttsSupported = typeof window !== "undefined" && "speechSynthesis" in window;
 
   // Keep refs in sync with state so event handlers see current values
   useEffect(() => {
@@ -184,6 +192,35 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [isListening, startListening, stopListening]);
 
+  // ── TTS: Bilko speaks ──────────────────────────────────
+  const speak = useCallback(async (text: string) => {
+    if (!ttsSupported) return;
+    // Cancel any in-progress speech
+    window.speechSynthesis.cancel();
+
+    return new Promise<void>((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      utterance.lang = "en-US";
+
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => { setIsSpeaking(false); resolve(); };
+      utterance.onerror = () => { setIsSpeaking(false); resolve(); };
+
+      utteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    });
+  }, [ttsSupported]);
+
+  const stopSpeaking = useCallback(() => {
+    if (ttsSupported) {
+      window.speechSynthesis.cancel();
+    }
+    setIsSpeaking(false);
+  }, [ttsSupported]);
+
   const registerHandler = useCallback(
     (id: string, handler: VoiceHandler) => {
       handlersRef.current.set(id, handler);
@@ -206,12 +243,16 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     <VoiceContext.Provider
       value={{
         isListening,
+        isSpeaking,
         isSupported,
+        ttsSupported,
         permissionDenied,
         transcript,
         toggleListening,
         startListening,
         stopListening,
+        speak,
+        stopSpeaking,
         registerHandler,
       }}
     >

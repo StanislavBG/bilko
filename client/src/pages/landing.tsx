@@ -1,181 +1,321 @@
 /**
- * Landing Page - Dynamic, agentic welcome experience
+ * Landing Page — Next-generation conversational experience.
  *
- * This is the face of Bilko Bibitkov's AI Academy.
- * It welcomes unknown users and helps them discover how they want to learn.
+ * The website IS a conversation with Bilko, our AI host.
+ * No chat frame. The entire page canvas is the dialogue.
  *
- * LandingContent is exported separately so the authenticated home page
- * can reuse the same experience without the landing shell (header, etc.).
+ * Bilko speaks (typewriter + TTS), the user responds by clicking
+ * option cards or by voice. Agent results render as content blocks.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useMemo, type ReactNode } from "react";
 import { GlobalHeader } from "@/components/global-header";
-import { LearningModeSelector } from "@/components/learning-mode-selector";
+import {
+  ConversationCanvas,
+  type ConversationTurn,
+  type OptionChoice,
+} from "@/components/conversation-canvas";
+import type { ContentBlock } from "@/components/content-blocks/types";
 import { PromptPlayground } from "@/components/prompt-playground";
 import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
+import {
+  AiConsultationFlow,
+  RECURSIVE_INTERVIEWER_CONFIG,
+  LINKEDIN_STRATEGIST_CONFIG,
+  SOCRATIC_ARCHITECT_CONFIG,
+} from "@/components/ai-consultation-flow";
+import { bilkoSays } from "@/lib/bilko-persona";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Play,
   Sparkles,
-  GraduationCap,
   Trophy,
-  ChevronRight,
+  MessageCircle,
+  Compass,
+  Zap,
+  ArrowLeft,
+  Lightbulb,
+  Briefcase,
+  GraduationCap,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
-import { useVoice, useVoiceCommands } from "@/contexts/voice-context";
 
-// Flow states for the welcome experience
-type FlowState =
-  | "welcome"
-  | "choose-mode"
-  | "video"
-  | "quiz"
-  | "prompt"
-  | "explore"
-  | "chat"
-  | "quick";
+// ── Map mode definitions to OptionChoice ─────────────────
 
-/**
- * Reusable landing experience content.
- * skipWelcome=true skips the welcome animation and goes straight to mode selection
- * (used for authenticated users who already know the app).
- */
+const iconMap: Record<string, ReactNode> = {
+  Play: <Play className="h-5 w-5" />,
+  Trophy: <Trophy className="h-5 w-5" />,
+  Sparkles: <Sparkles className="h-5 w-5" />,
+  Compass: <Compass className="h-5 w-5" />,
+  MessageCircle: <MessageCircle className="h-5 w-5" />,
+  Zap: <Zap className="h-5 w-5" />,
+  Lightbulb: <Lightbulb className="h-5 w-5" />,
+  Briefcase: <Briefcase className="h-5 w-5" />,
+  GraduationCap: <GraduationCap className="h-5 w-5" />,
+};
+
+const MODE_OPTIONS: OptionChoice[] = LEARNING_MODES.map((mode) => ({
+  id: mode.id,
+  label: mode.label,
+  description: mode.description,
+  icon: iconMap[mode.icon] ?? <Sparkles className="h-5 w-5" />,
+  voiceTriggers: mode.voiceTriggers,
+}));
+
+// ── Content block definitions for each mode ──────────────
+
+const QUIZ_BLOCKS: ContentBlock[] = [
+  {
+    id: "quiz-intro",
+    type: "callout",
+    variant: "insight",
+    title: "AI Knowledge Quiz",
+    body: "Three questions to test your AI fundamentals. No pressure — this is how we learn.",
+  },
+  {
+    id: "q1",
+    type: "quiz",
+    question: "What does AI stand for?",
+    options: [
+      { id: "a", text: "Artificial Intelligence" },
+      { id: "b", text: "Automated Internet" },
+      { id: "c", text: "Advanced Information" },
+      { id: "d", text: "Analog Interface" },
+    ],
+    correctIndex: 0,
+    explanation: "Artificial Intelligence — the field of computer science focused on creating systems that can perform tasks typically requiring human intelligence.",
+  },
+  {
+    id: "q2",
+    type: "quiz",
+    question: "Which of these is an AI language model?",
+    options: [
+      { id: "a", text: "GPT-4" },
+      { id: "b", text: "HTML" },
+      { id: "c", text: "SQL" },
+      { id: "d", text: "CSS" },
+    ],
+    correctIndex: 0,
+    explanation: "GPT-4 is a large language model by OpenAI. HTML, SQL, and CSS are web/database technologies, not AI models.",
+  },
+  {
+    id: "q3",
+    type: "quiz",
+    question: "What is a 'prompt' in AI?",
+    options: [
+      { id: "a", text: "A type of computer virus" },
+      { id: "b", text: "The input you give to an AI" },
+      { id: "c", text: "A programming language" },
+      { id: "d", text: "A hardware component" },
+    ],
+    correctIndex: 1,
+    explanation: "A prompt is the text you provide to an AI model to get a response. Good prompts lead to better results — that's a key skill we'll practice here.",
+  },
+];
+
+const EXPLORE_BLOCKS: ContentBlock[] = [
+  {
+    id: "explore-heading",
+    type: "heading",
+    text: "Training Tracks",
+    level: 2,
+  },
+  {
+    id: "explore-intro",
+    type: "text",
+    content: "The Mental Gym is organized into three tracks. Each builds on the last, taking you from beginner to architect.",
+    variant: "lead",
+  },
+  {
+    id: "explore-tracks",
+    type: "comparison",
+    columns: ["Track", "Focus", "Levels"],
+    rows: [
+      { label: "Recruit", values: ["From Zero to Builder", "Fundamentals, prompts, first projects", "10"] },
+      { label: "Specialist", values: ["Deep Technical Mastery", "Advanced techniques, fine-tuning, evaluation", "10"] },
+      { label: "Architect", values: ["Enterprise Scale", "System design, orchestration, production", "10"] },
+    ],
+  },
+  {
+    id: "explore-tip",
+    type: "callout",
+    variant: "tip",
+    body: "Start with Recruit even if you have experience. The levels are designed to fill gaps you might not know you have.",
+  },
+];
+
+const QUICK_START_BLOCKS: ContentBlock[] = [
+  {
+    id: "qs-heading",
+    type: "heading",
+    text: "Three Steps. Three Minutes.",
+    level: 2,
+  },
+  {
+    id: "qs-steps",
+    type: "steps",
+    steps: [
+      {
+        title: "Learn to Prompt",
+        body: "Good prompts lead to better results. We'll teach you the patterns that work — specificity, context, constraints, and iteration.",
+      },
+      {
+        title: "Practice Hands-On",
+        body: "Try real exercises with immediate feedback. The Gym gives you structured challenges that build real skill, not just knowledge.",
+      },
+      {
+        title: "Track Progress",
+        body: "Level up through three tracks. Earn badges. Build a portfolio of completed challenges that proves you know your stuff.",
+      },
+    ],
+  },
+  {
+    id: "qs-callout",
+    type: "callout",
+    variant: "insight",
+    body: "Most people learn AI by reading about it. At the Mental Gym, you learn by doing it. Every concept comes with practice.",
+  },
+];
+
+// ── Bilko's contextual responses per mode ────────────────
+
+function getBilkoResponse(mode: LearningModeId): { text: string; speech: string } {
+  const speech = bilkoSays({
+    event: "choice-made",
+    topic: LEARNING_MODES.find((m) => m.id === mode)?.label,
+  });
+  return { text: speech.text, speech: speech.speech };
+}
+
+// ── Experience back button ───────────────────────────────
+
+function ExperienceBack({ onBack }: { onBack: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={onBack}
+      className="mb-4 gap-1.5 text-muted-foreground hover:text-foreground"
+    >
+      <ArrowLeft className="h-3.5 w-3.5" /> Ask me something else
+    </Button>
+  );
+}
+
+// ── Main component ───────────────────────────────────────
+
 export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean }) {
-  const [flowState, setFlowState] = useState<FlowState>(skipWelcome ? "choose-mode" : "welcome");
   const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
-  const [showWelcome, setShowWelcome] = useState(true);
-  const { isListening, isSupported: isVoiceSupported } = useVoice();
 
-  const handleModeSelect = useCallback((modeId: LearningModeId) => {
-    setSelectedMode(modeId);
-    setFlowState(modeId);
+  const handleChoice = useCallback((choiceId: string) => {
+    setSelectedMode(choiceId as LearningModeId);
   }, []);
 
-  // Register voice commands only when on the choose-mode screen
-  useVoiceCommands(
-    "landing-modes",
-    LEARNING_MODES,
-    handleModeSelect as (id: string) => void,
-    flowState === "choose-mode"
-  );
-
-  // Auto-advance from welcome to mode selection
-  useEffect(() => {
-    if (flowState === "welcome") {
-      const timer = setTimeout(() => {
-        setShowWelcome(false);
-        setTimeout(() => setFlowState("choose-mode"), 500);
-      }, 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [flowState]);
-
-  const handleBack = () => {
-    setFlowState("choose-mode");
+  const handleBack = useCallback(() => {
     setSelectedMode(null);
-  };
+  }, []);
+
+  const turns = useMemo<ConversationTurn[]>(() => {
+    const t: ConversationTurn[] = [];
+
+    // Turn 1: Bilko's greeting
+    if (!skipWelcome) {
+      const greeting = bilkoSays({ event: "greeting" });
+      t.push({
+        type: "bilko",
+        text: greeting.text,
+        speech: greeting.speech,
+        delay: 200,
+      });
+    }
+
+    // Turn 2: Bilko asks the question
+    t.push({
+      type: "bilko",
+      text: "How do you want to train today?",
+      speech: "How do you want to train today?",
+      delay: skipWelcome ? 100 : 400,
+    });
+
+    // Turn 3: User's response options
+    t.push({ type: "user-choice", options: MODE_OPTIONS });
+
+    // Turn 4+: If user picked, show Bilko's response + experience
+    if (selectedMode) {
+      const response = getBilkoResponse(selectedMode);
+      t.push({ type: "bilko", ...response, delay: 200 });
+
+      // Modes that use content blocks
+      if (selectedMode === "quiz") {
+        t.push({ type: "content-blocks", blocks: QUIZ_BLOCKS });
+      } else if (selectedMode === "explore") {
+        t.push({ type: "content-blocks", blocks: EXPLORE_BLOCKS });
+      } else if (selectedMode === "quick") {
+        t.push({ type: "content-blocks", blocks: QUICK_START_BLOCKS });
+      } else {
+        // Modes that still use raw content (video discovery, prompt playground)
+        t.push({
+          type: "content",
+          render: () => <ExperiencePanel mode={selectedMode} onBack={handleBack} />,
+        });
+        return t;
+      }
+
+      // Back button for block-based modes
+      t.push({
+        type: "content",
+        render: () => <ExperienceBack onBack={handleBack} />,
+      });
+    }
+
+    return t;
+  }, [skipWelcome, selectedMode, handleBack]);
 
   return (
-    <div className="flex-1 flex flex-col overflow-auto">
-      {/* Welcome State */}
-      {flowState === "welcome" && (
-        <div
-          className={`flex-1 flex flex-col items-center justify-center transition-opacity duration-500 ${
-            showWelcome ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <div className="text-center space-y-4">
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
-              Welcome
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              to Bilko Bibitkov's AI Academy
-            </p>
-          </div>
-        </div>
+    <ConversationCanvas
+      turns={turns}
+      onChoice={handleChoice}
+    />
+  );
+}
+
+// ── Experience panel (for non-block modes) ───────────────
+
+function ExperiencePanel({
+  mode,
+  onBack,
+}: {
+  mode: LearningModeId;
+  onBack: () => void;
+}) {
+  return (
+    <div className="w-full">
+      <ExperienceBack onBack={onBack} />
+
+      {mode === "video" && <VideoDiscoveryFlow />}
+
+      {mode === "prompt" && (
+        <PromptPlayground
+          title="Your First AI Prompt"
+          description="Try asking AI anything! Start with something simple like 'Explain AI to a 5 year old'."
+          placeholder="Type your prompt here and press Enter..."
+          showModelSelector={true}
+        />
       )}
 
-      {/* Choose Mode State */}
-      {flowState === "choose-mode" && (
-        <div className="flex-1 flex flex-col items-center px-4 py-12">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">
-              How would you like to learn today?
-            </h1>
-            {isVoiceSupported && (
-              <p className="text-sm text-muted-foreground">
-                {isListening
-                  ? 'Say "video", "quiz", "chat", "explore", "prompt", or "quick start"'
-                  : "Click the Voice button in the header to use voice commands"}
-              </p>
-            )}
-          </div>
+      {mode === "chat" && <AiConsultationFlow />}
 
-          <LearningModeSelector
-            onSelect={handleModeSelect}
-            selectedMode={selectedMode}
-          />
-        </div>
+      {mode === "interviewer" && (
+        <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} />
       )}
 
-      {/* Video Experience */}
-      {flowState === "video" && (
-        <ExperienceWrapper title="Watch & Learn" onBack={handleBack}>
-          <VideoDiscoveryFlow />
-        </ExperienceWrapper>
+      {mode === "linkedin" && (
+        <AiConsultationFlow config={LINKEDIN_STRATEGIST_CONFIG} />
       )}
 
-      {/* Quiz Experience */}
-      {flowState === "quiz" && (
-        <ExperienceWrapper title="Challenge Mode" onBack={handleBack}>
-          <QuizExperience />
-        </ExperienceWrapper>
-      )}
-
-      {/* Prompt Experience */}
-      {flowState === "prompt" && (
-        <ExperienceWrapper title="Try a Prompt" onBack={handleBack}>
-          <div className="max-w-3xl mx-auto">
-            <PromptPlayground
-              title="Your First AI Prompt"
-              description="Try asking AI anything! Start with something simple like 'Explain AI to a 5 year old' or 'Write a haiku about coding'."
-              placeholder="Type your prompt here and press Enter..."
-              showModelSelector={true}
-            />
-          </div>
-        </ExperienceWrapper>
-      )}
-
-      {/* Explore Experience */}
-      {flowState === "explore" && (
-        <ExperienceWrapper title="Explore the Academy" onBack={handleBack}>
-          <ExploreExperience />
-        </ExperienceWrapper>
-      )}
-
-      {/* Chat Experience */}
-      {flowState === "chat" && (
-        <ExperienceWrapper title="Chat with AI Tutor" onBack={handleBack}>
-          <div className="max-w-3xl mx-auto">
-            <PromptPlayground
-              title="AI Tutor"
-              description="I'm your AI tutor! Ask me anything about AI, machine learning, or what you can learn at the Academy."
-              systemPrompt="You are Bilko, a friendly AI tutor at Bilko Bibitkov's AI Academy. Help the user understand AI concepts and answer their questions. Be encouraging and helpful."
-              placeholder="Ask me anything about AI..."
-              showModelSelector={false}
-            />
-          </div>
-        </ExperienceWrapper>
-      )}
-
-      {/* Quick Start Experience */}
-      {flowState === "quick" && (
-        <ExperienceWrapper title="Quick Start Guide" onBack={handleBack}>
-          <QuickStartGuide />
-        </ExperienceWrapper>
+      {mode === "socratic" && (
+        <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} />
       )}
     </div>
   );
@@ -189,252 +329,6 @@ export default function Landing() {
       <main className="flex-1 flex flex-col pt-14">
         <LandingContent />
       </main>
-    </div>
-  );
-}
-
-// Wrapper component for all experiences
-function ExperienceWrapper({
-  title,
-  onBack,
-  children,
-}: {
-  title: string;
-  onBack: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex-1 flex flex-col px-4 py-8">
-      <div className="max-w-4xl mx-auto w-full">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" onClick={onBack}>
-            ← Back
-          </Button>
-          <h1 className="text-2xl font-bold">{title}</h1>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-// Quiz mini-experience
-function QuizExperience() {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [score, setScore] = useState(0);
-  const [answered, setAnswered] = useState(false);
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-
-  const questions = [
-    {
-      question: "What does AI stand for?",
-      options: [
-        "Artificial Intelligence",
-        "Automated Internet",
-        "Advanced Information",
-        "Analog Interface",
-      ],
-      correct: 0,
-    },
-    {
-      question: "Which of these is an AI language model?",
-      options: ["GPT-4", "HTML", "SQL", "CSS"],
-      correct: 0,
-    },
-    {
-      question: "What is a 'prompt' in AI?",
-      options: [
-        "A type of computer virus",
-        "The input you give to an AI",
-        "A programming language",
-        "A hardware component",
-      ],
-      correct: 1,
-    },
-  ];
-
-  const handleAnswer = (index: number) => {
-    if (answered) return;
-    setSelectedAnswer(index);
-    setAnswered(true);
-    if (index === questions[currentQuestion].correct) {
-      setScore(score + 1);
-    }
-  };
-
-  const nextQuestion = () => {
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setAnswered(false);
-      setSelectedAnswer(null);
-    }
-  };
-
-  const isComplete = currentQuestion === questions.length - 1 && answered;
-  const q = questions[currentQuestion];
-
-  return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-500" />
-            <CardTitle>AI Knowledge Quiz</CardTitle>
-          </div>
-          <Badge variant="outline">
-            Question {currentQuestion + 1}/{questions.length}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {!isComplete ? (
-          <>
-            <h3 className="text-xl font-semibold mb-6">{q.question}</h3>
-            <div className="space-y-3">
-              {q.options.map((option, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleAnswer(index)}
-                  disabled={answered}
-                  className={`w-full p-4 rounded-lg border text-left transition-all ${
-                    answered
-                      ? index === q.correct
-                        ? "bg-green-500/20 border-green-500"
-                        : index === selectedAnswer
-                        ? "bg-red-500/20 border-red-500"
-                        : "opacity-50"
-                      : "hover:bg-muted cursor-pointer"
-                  }`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-            {answered && (
-              <Button onClick={nextQuestion} className="mt-6 w-full">
-                Next Question <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            )}
-          </>
-        ) : (
-          <div className="text-center py-8">
-            <Trophy className="h-16 w-16 mx-auto mb-4 text-yellow-500" />
-            <h3 className="text-2xl font-bold mb-2">Quiz Complete!</h3>
-            <p className="text-lg text-muted-foreground">
-              You scored {score} out of {questions.length}
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// Explore mini-experience
-function ExploreExperience() {
-  const tracks = [
-    {
-      name: "Recruit",
-      tagline: "From Zero to Builder",
-      levels: 10,
-      color: "text-emerald-500",
-    },
-    {
-      name: "Specialist",
-      tagline: "Deep Technical Mastery",
-      levels: 10,
-      color: "text-blue-500",
-    },
-    {
-      name: "Architect",
-      tagline: "Enterprise Scale",
-      levels: 10,
-      color: "text-purple-500",
-    },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold mb-2">Three Learning Tracks</h2>
-        <p className="text-muted-foreground">
-          Progress from beginner to expert at your own pace
-        </p>
-      </div>
-      <div className="grid md:grid-cols-3 gap-6">
-        {tracks.map((track) => (
-          <Card key={track.name} className="hover:shadow-lg transition-shadow">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <GraduationCap className={`h-12 w-12 mx-auto mb-4 ${track.color}`} />
-                <h3 className={`text-xl font-bold ${track.color}`}>
-                  {track.name}
-                </h3>
-                <p className="text-muted-foreground mt-1">{track.tagline}</p>
-                <Badge variant="outline" className="mt-4">
-                  {track.levels} Levels
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// Quick Start mini-experience
-function QuickStartGuide() {
-  const steps = [
-    {
-      title: "Learn to Prompt",
-      description:
-        "Start by learning how to talk to AI. Good prompts = better results.",
-      icon: Sparkles,
-    },
-    {
-      title: "Practice Hands-On",
-      description:
-        "Try real exercises with immediate feedback. Learn by doing.",
-      icon: Play,
-    },
-    {
-      title: "Track Progress",
-      description:
-        "Level up through our curriculum. Earn badges and certificates.",
-      icon: Trophy,
-    },
-  ];
-
-  return (
-    <div className="space-y-8">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold mb-2">Get Started in 3 Steps</h2>
-        <p className="text-muted-foreground">
-          Your AI learning journey begins here
-        </p>
-      </div>
-      <div className="space-y-6">
-        {steps.map((step, index) => {
-          const Icon = step.icon;
-          return (
-            <Card key={index}>
-              <CardContent className="flex items-center gap-6 p-6">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <span className="text-xl font-bold text-primary">
-                    {index + 1}
-                  </span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{step.title}</h3>
-                  <p className="text-muted-foreground">{step.description}</p>
-                </div>
-                <Icon className="h-8 w-8 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
     </div>
   );
 }

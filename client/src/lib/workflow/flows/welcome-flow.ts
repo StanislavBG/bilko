@@ -1,7 +1,7 @@
 /**
  * Welcome Flow - First interaction with unknown users
  *
- * This flow welcomes users to Bilko Bibitkov's AI Academy
+ * This flow welcomes users to Bilko's Mental Gym
  * and helps them choose how they want to learn.
  */
 
@@ -39,10 +39,10 @@ export const LEARNING_MODES = [
   },
   {
     id: "chat",
-    label: "Chat with AI Tutor",
-    description: "Get personalized guidance from our AI",
+    label: "AI Leverage Consultation",
+    description: "Discover where AI fits in your work",
     icon: "MessageCircle",
-    voiceTriggers: ["chat", "talk", "help", "tutor", "guide"],
+    voiceTriggers: ["chat", "talk", "consult", "leverage", "consultation", "advice"],
   },
   {
     id: "quick",
@@ -50,6 +50,27 @@ export const LEARNING_MODES = [
     description: "3-minute intro to get you started",
     icon: "Zap",
     voiceTriggers: ["quick", "fast", "start", "intro", "beginner"],
+  },
+  {
+    id: "interviewer",
+    label: "The Recursive Interviewer",
+    description: "Deep-dive AI strategy session with recursive questioning",
+    icon: "Lightbulb",
+    voiceTriggers: ["interviewer", "recursive", "deep dive", "strategy"],
+  },
+  {
+    id: "linkedin",
+    label: "LinkedIn Strategist",
+    description: "Build your Master Career Dossier",
+    icon: "Briefcase",
+    voiceTriggers: ["linkedin", "career", "resume", "profile", "dossier"],
+  },
+  {
+    id: "socratic",
+    label: "The Socratic Architect",
+    description: "Configure any expert for a custom interview",
+    icon: "GraduationCap",
+    voiceTriggers: ["socratic", "architect", "custom", "configure", "expert"],
   },
 ] as const;
 
@@ -81,8 +102,8 @@ export const welcomeFlow: Workflow = {
       name: "Welcome Message",
       mode: "both",
       content: {
-        text: "Welcome to Bilko Bibitkov's AI Academy",
-        speech: "Welcome to Bilko Bibitkov's AI Academy! I'm excited to help you on your AI learning journey.",
+        text: "Welcome to Bilko's Mental Gym",
+        speech: "Welcome to Bilko's Mental Gym! I'm excited to help you on your AI learning journey.",
         component: "WelcomeHero",
       },
       duration: 3000,
@@ -196,7 +217,7 @@ export const welcomeFlow: Workflow = {
       type: "agent",
       name: "AI Tutor Chat",
       task: "converse",
-      prompt: `You are Bilko, a friendly AI tutor at the AI Academy.
+      prompt: `You are Bilko, a friendly AI tutor at Bilko's Mental Gym.
 The user is new and exploring. Help them understand what they can learn here.
 Be encouraging, concise, and guide them toward signing up to save their progress.`,
       next: "end-with-cta",
