@@ -267,6 +267,11 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, [isListening, startListening, stopListening]);
 
   // ── TTS: Bilko speaks (mutes mic to prevent echo) ──────
+  //
+  // Chrome has a well-known bug where speechSynthesis silently pauses
+  // after ~15s, or the onend event never fires. Workarounds:
+  // 1. Periodically call speechSynthesis.resume() while speech is active
+  // 2. Set a timeout fallback based on estimated speech duration
   const speak = useCallback(async (text: string) => {
     if (!ttsSupported) return;
     // Cancel any in-progress speech
@@ -276,6 +281,18 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     setIsMuted(true);
 
     return new Promise<void>((resolve) => {
+      let resolved = false;
+      const done = () => {
+        if (resolved) return;
+        resolved = true;
+        clearInterval(resumeInterval);
+        clearTimeout(fallbackTimeout);
+        setIsSpeaking(false);
+        // Brief delay before unmuting to avoid catching the tail end of TTS audio
+        setTimeout(() => setIsMuted(false), POST_TTS_BUFFER_MS);
+        resolve();
+      };
+
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
@@ -283,19 +300,37 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       utterance.lang = "en-US";
 
       utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => {
-        setIsSpeaking(false);
-        // Brief delay before unmuting to avoid catching the tail end of TTS audio
-        setTimeout(() => setIsMuted(false), POST_TTS_BUFFER_MS);
-        resolve();
-      };
+      utterance.onend = done;
       utterance.onerror = () => {
         setIsSpeaking(false);
         setIsMuted(false);
+        if (!resolved) {
+          resolved = true;
+          clearInterval(resumeInterval);
+          clearTimeout(fallbackTimeout);
+        }
         resolve();
       };
 
       utteranceRef.current = utterance;
+
+      // Chrome workaround: periodically poke speechSynthesis to prevent silent pause
+      const resumeInterval = setInterval(() => {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.resume();
+        }
+      }, 5000);
+
+      // Fallback timeout: ~150 WPM average, plus generous buffer
+      const wordCount = text.split(/\s+/).length;
+      const estimatedMs = Math.max((wordCount / 150) * 60 * 1000, 3000) + 2000;
+      const fallbackTimeout = setTimeout(() => {
+        if (!resolved) {
+          console.warn("[TTS] onend never fired — resolving via timeout fallback");
+          done();
+        }
+      }, estimatedMs);
+
       window.speechSynthesis.speak(utterance);
     });
   }, [ttsSupported]);
