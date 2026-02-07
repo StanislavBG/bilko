@@ -103,29 +103,18 @@ describe("Conversation Design: floor management", () => {
   });
 });
 
-// ── Auto-listen preference tests ────────────────────────
+// ── Auto-listen derived from mic state ───────────────────
+// Auto-listen is now derived from VoiceContext.isListening.
+// There is no separate toggle — the mic button IS the toggle.
 
-describe("Conversation Design: auto-listen preference", () => {
-  it("auto-listen is enabled by default", () => {
-    localStorage.removeItem("bilko-auto-listen");
+describe("Conversation Design: mic-driven conversation", () => {
+  it("floor management works without separate auto-listen toggle", () => {
     const { result } = renderHook(() => useConversationDesign(), {
       wrapper: DesignWrapper,
     });
-    expect(result.current.autoListenEnabled).toBe(true);
-  });
-
-  it("persists auto-listen preference to localStorage", () => {
-    const { result } = renderHook(() => useConversationDesign(), {
-      wrapper: DesignWrapper,
-    });
-
-    act(() => result.current.setAutoListen(false));
-    expect(result.current.autoListenEnabled).toBe(false);
-    expect(localStorage.getItem("bilko-auto-listen")).toBe("false");
-
-    act(() => result.current.setAutoListen(true));
-    expect(result.current.autoListenEnabled).toBe(true);
-    expect(localStorage.getItem("bilko-auto-listen")).toBe("true");
+    // Context should not expose autoListenEnabled or setAutoListen
+    expect(result.current).not.toHaveProperty("autoListenEnabled");
+    expect(result.current).not.toHaveProperty("setAutoListen");
   });
 });
 

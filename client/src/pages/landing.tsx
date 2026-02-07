@@ -282,7 +282,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 
   // ── Conversation design: voice turn-taking ──
   const { floor, onUserUtterance, screenOptions } = useConversationDesign();
-  const { isListening, toggleListening, transcript, ttsUnlocked, ttsSupported } = useVoice();
+  const { isListening, isMuted, isSpeaking, toggleListening, transcript, ttsUnlocked, ttsSupported } = useVoice();
 
   // ── Bilko's patience: voice → option matching with breathing room ──
   // The user gets a few tries before Bilko jumps in. If a mode is matched
@@ -393,6 +393,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         <VoiceStatusBar
           floor={floor}
           isListening={isListening}
+          isMuted={isMuted}
+          isSpeaking={isSpeaking}
           transcript={transcript}
           onToggleListen={toggleListening}
           ttsSupported={ttsSupported}
@@ -418,11 +420,15 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 }
 
 // ── Voice status bar ──────────────────────────────────────
-// Single mic toggle + status text. One control, clear feedback.
+// Single mic toggle + conversational status. The mic button is the
+// ONE control for voice. When it's on, Bilko's full conversational
+// awareness kicks in — auto-resume, mute during TTS, floor tracking.
 
 function VoiceStatusBar({
   floor,
   isListening,
+  isMuted,
+  isSpeaking,
   transcript,
   onToggleListen,
   ttsSupported,
@@ -430,11 +436,17 @@ function VoiceStatusBar({
 }: {
   floor: "bilko" | "user" | "idle";
   isListening: boolean;
+  isMuted: boolean;
+  isSpeaking: boolean;
   transcript: string;
   onToggleListen: () => void;
   ttsSupported: boolean;
   ttsUnlocked: boolean;
 }) {
+  // Derive the mic button style from conversational state
+  const micActive = isListening && !isMuted;
+  const micMuted = isListening && isMuted;
+
   return (
     <div className="border-t border-border bg-background/95 backdrop-blur-sm">
       <div className="px-4 py-2 flex items-center gap-2">
@@ -442,24 +454,40 @@ function VoiceStatusBar({
         <button
           onClick={onToggleListen}
           className={`p-1.5 rounded-md transition-colors ${
-            isListening
+            micActive
               ? "bg-green-500/15 text-green-500"
+              : micMuted
+              ? "bg-amber-500/10 text-amber-500"
               : "text-muted-foreground/50 hover:text-foreground hover:bg-muted"
           }`}
-          title={isListening ? "Mic on — click to mute" : "Mic off — click to speak"}
+          title={
+            isListening
+              ? isMuted
+                ? "Mic paused — Bilko is speaking"
+                : "Mic on — click to turn off"
+              : "Mic off — click to start voice conversation"
+          }
         >
           {isListening ? <Mic className="h-3.5 w-3.5" /> : <MicOff className="h-3.5 w-3.5" />}
         </button>
 
-        {/* Status / live transcript */}
+        {/* Conversational status — shows what's happening in the conversation */}
         <div className="flex-1 min-w-0">
           {ttsSupported && !ttsUnlocked ? (
             <p className="text-xs text-amber-500 animate-pulse">Tap anywhere to enable Bilko's voice</p>
+          ) : isListening && isMuted && isSpeaking ? (
+            // Mic is on but paused while Bilko speaks via TTS
+            <p className="text-xs text-amber-500/80">Bilko is speaking... mic will resume</p>
           ) : isListening && transcript ? (
+            // Live transcript as user speaks
             <p className="text-xs text-foreground truncate animate-in fade-in duration-200">
               {transcript}
             </p>
+          ) : isListening && floor === "user" ? (
+            // Mic active, user's turn, waiting for speech
+            <p className="text-xs text-green-500/70">Your turn — listening...</p>
           ) : isListening ? (
+            // Mic active, idle
             <p className="text-xs text-muted-foreground/60">Listening...</p>
           ) : floor === "bilko" ? (
             <p className="text-xs text-muted-foreground/60">Bilko is speaking...</p>
@@ -467,6 +495,11 @@ function VoiceStatusBar({
             <p className="text-xs text-muted-foreground/40">Tap mic to talk to Bilko</p>
           )}
         </div>
+
+        {/* Conversation mode indicator when mic is on */}
+        {isListening && (
+          <span className="text-[10px] font-mono text-green-500/60 shrink-0">VOICE</span>
+        )}
       </div>
     </div>
   );
