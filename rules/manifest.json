@@ -207,6 +207,38 @@
       ],
       "description": "Non-negotiable structural invariants for all in-platform flows. Defines DAG rules, step type contracts, execution contracts, and conversational canvas contracts."
     },
+    "ARCH-006": {
+      "id": "ARCH-006",
+      "title": "Content Block System",
+      "path": "rules/architecture/006-content-blocks.md",
+      "partition": "architecture",
+      "priority": "CRITICAL",
+      "version": "1.0.0",
+      "triggers": [
+        "content block",
+        "block type",
+        "block renderer",
+        "agent result",
+        "quiz block",
+        "video block",
+        "bilko persona",
+        "bilko voice",
+        "bilko tone",
+        "AgentContentResult",
+        "BlockSequence",
+        "content-blocks"
+      ],
+      "dependencies": [
+        "ARCH-000",
+        "ARCH-001",
+        "ARCH-005"
+      ],
+      "crossReferences": [
+        "PER-002",
+        "APP-LANDING-001"
+      ],
+      "description": "Content block vocabulary and Bilko persona system. Defines 15 typed block types agents produce and the canvas renders, plus context-aware educator voice."
+    },
     "INT-003": {
       "id": "INT-003",
       "title": "Orchestrator Communication Contract",
@@ -951,6 +983,12 @@
       },
       {
         "pattern": "flow|steel frame|DAG|step type|flow inspector|flow registry|flow definition|execution trace|step contract",
+        "partitions": [
+          "architecture"
+        ]
+      },
+      {
+        "pattern": "content block|block type|block renderer|agent result|bilko persona|bilko voice|bilko tone|quiz block|video block",
         "partitions": [
           "architecture"
         ]
