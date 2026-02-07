@@ -48,7 +48,15 @@ function AuthenticatedApp() {
       <Route>
         {() => {
           if (!isAuthenticated || !user) {
-            return <Landing />;
+            return (
+              <Switch>
+                <Route path="/flows/:flowId" component={FlowDetail} />
+                <Route path="/flows" component={FlowExplorer} />
+                <Route>
+                  <Landing />
+                </Route>
+              </Switch>
+            );
           }
 
           return (
