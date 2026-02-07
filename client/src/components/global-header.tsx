@@ -19,7 +19,7 @@ function formatTime(ts: number) {
 
 function VoiceWidget() {
   const {
-    isListening, isSupported, permissionDenied, transcript,
+    isListening, isMuted, isSupported, permissionDenied, transcript,
     transcriptLog, toggleListening, clearTranscriptLog,
   } = useVoice();
 
@@ -34,9 +34,11 @@ function VoiceWidget() {
             size="sm"
             onClick={toggleListening}
             className={`gap-1.5 shrink-0 ${
-              isListening
-                ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
-                : ""
+              isListening && isMuted
+                ? "bg-amber-500 hover:bg-amber-600 text-white"
+                : isListening
+                  ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
+                  : ""
             }`}
           >
             {isListening ? (
@@ -45,13 +47,15 @@ function VoiceWidget() {
               <MicOff className="h-4 w-4" />
             )}
             <span className="hidden sm:inline text-xs">
-              {isListening ? "Listening..." : "Voice"}
+              {isListening && isMuted ? "Bilko speaking..." : isListening ? "Listening..." : "Voice"}
             </span>
           </Button>
         </TooltipTrigger>
         <TooltipContent>
           {permissionDenied
             ? "Microphone permission denied — check browser settings"
+            : isListening && isMuted
+            ? "Mic muted while Bilko speaks"
             : isListening
             ? "Voice active — say a command or click to stop"
             : "Enable voice commands"}
