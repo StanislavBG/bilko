@@ -51,6 +51,27 @@ export const LEARNING_MODES = [
     icon: "Zap",
     voiceTriggers: ["quick", "fast", "start", "intro", "beginner"],
   },
+  {
+    id: "interviewer",
+    label: "The Recursive Interviewer",
+    description: "Deep-dive AI strategy session with recursive questioning",
+    icon: "Lightbulb",
+    voiceTriggers: ["interviewer", "recursive", "deep dive", "strategy"],
+  },
+  {
+    id: "linkedin",
+    label: "LinkedIn Strategist",
+    description: "Build your Master Career Dossier",
+    icon: "Briefcase",
+    voiceTriggers: ["linkedin", "career", "resume", "profile", "dossier"],
+  },
+  {
+    id: "socratic",
+    label: "The Socratic Architect",
+    description: "Configure any expert for a custom interview",
+    icon: "GraduationCap",
+    voiceTriggers: ["socratic", "architect", "custom", "configure", "expert"],
+  },
 ] as const;
 
 export type LearningModeId = typeof LEARNING_MODES[number]["id"];
