@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { DebugButton } from "@/components/debug-panel";
 
 interface GlobalHeaderProps {
   variant?: "authenticated" | "landing";
@@ -20,6 +21,7 @@ export function GlobalHeader({ variant = "authenticated" }: GlobalHeaderProps) {
         </span>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
+          <DebugButton />
           <ThemeToggle />
           <Button variant="ghost" size="sm" asChild>
             <a href="/api/login">Sign In</a>
@@ -87,6 +89,7 @@ function AuthenticatedHeader() {
           </TooltipTrigger>
           <TooltipContent>Settings (coming soon)</TooltipContent>
         </Tooltip>
+        <DebugButton />
         <ThemeToggle />
         <Button variant="ghost" size="icon" asChild data-testid="button-logout">
           <a href="/api/logout">
