@@ -36,7 +36,7 @@ export function AppSidebar() {
   
   const visibleNavItems = filterNavItems(navigationItems, effectiveIsAdmin);
   
-  const rootLevel: NavLevel = { title: "Bilko Bibitkov AI Academy", items: visibleNavItems };
+  const rootLevel: NavLevel = { title: "Bilko's Mental Gym", items: visibleNavItems };
   const [navStack, setNavStack] = useState<NavLevel[]>([rootLevel]);
   
   const currentLevel = navStack[navStack.length - 1];
@@ -200,7 +200,7 @@ export function AppSidebar() {
           <span className="font-bold text-base" data-testid="sidebar-logo-collapsed">B</span>
         ) : (
           <span className="font-semibold text-xs whitespace-nowrap" data-testid="sidebar-logo-expanded">
-            Bilko Bibitkov AI Academy
+            Bilko's Mental Gym
           </span>
         )}
       </SidebarHeader>

@@ -3,7 +3,6 @@ import { useRoute, useLocation } from "wouter";
 import {
   Target,
   Zap,
-  PanelLeft,
   ChevronLeft,
   BookOpen,
   CheckCircle2,
@@ -45,11 +44,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   Table,
   TableBody,
   TableCell,
@@ -85,7 +79,8 @@ import {
 } from "@/data/academy-videos";
 import { useNavigation } from "@/contexts/navigation-context";
 import { PromptPlayground } from "@/components/prompt-playground";
-import { VideoPlayerPage } from "@/components/video-player-page";
+import { VideoExperienceRenderer } from "@/components/content-blocks";
+import { NavPanel, type NavPanelItem } from "@/components/nav";
 
 // Icon mapping for dictionary categories
 const categoryIcons: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -102,420 +97,47 @@ const categoryIcons: Record<string, React.ComponentType<{ className?: string }>>
 
 type AcademySection = "levels" | "dictionary" | "video";
 
+// Icon mapping for video categories
+const videoCategoryIcons: Record<string, React.ComponentType<{ className?: string }>> = {
+  Brain,
+  Video: VideoIcon,
+  Sparkles,
+  Play,
+};
+
+// ── NavPanel item data ──────────────────────────────────
+
+const l2Items: NavPanelItem[] = [
+  { id: "levels", label: "Levels", description: "Progression & Quests", icon: Target },
+  { id: "dictionary", label: "Dictionary", description: "AI Terminology", icon: Book },
+  { id: "video", label: "Video", description: "Curated Content", icon: VideoIcon },
+];
+
+const trackItems: NavPanelItem[] = academyTracks.map((track) => {
+  const color = track.difficulty === "beginner" ? "text-emerald-500"
+    : track.difficulty === "intermediate" ? "text-blue-500"
+    : "text-purple-500";
+  const activeBg = track.difficulty === "beginner" ? "bg-emerald-500/20"
+    : track.difficulty === "intermediate" ? "bg-blue-500/20"
+    : "bg-purple-500/20";
+  const hoverBg = track.difficulty === "beginner" ? "hover:bg-emerald-500/10"
+    : track.difficulty === "intermediate" ? "hover:bg-blue-500/10"
+    : "hover:bg-purple-500/10";
+  return {
+    id: track.id,
+    label: track.name.split(" ")[0],
+    description: track.tagline,
+    shortLabel: track.name[0],
+    color,
+    activeBg,
+    hoverBg,
+  };
+});
+
 // ============================================
-// L2 NAVIGATION COMPONENT
-// ============================================
-
-function L2Navigation({
-  activeSection,
-  onSectionChange,
-  isCollapsed,
-  onToggleCollapse,
-}: {
-  activeSection: AcademySection;
-  onSectionChange: (section: AcademySection) => void;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
-}) {
-  return (
-    <div
-      className={`hidden md:flex shrink-0 border-r bg-muted/20 flex-col transition-all duration-200 ${
-        isCollapsed ? "min-w-12 max-w-12" : "min-w-[10rem] max-w-[12rem] flex-1"
-      }`}
-      data-testid="academy-l2-nav"
-    >
-      <div className="border-b px-2 h-8 flex items-center shrink-0">
-        {isCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="text-xs font-medium text-muted-foreground block w-full text-center cursor-default">
-                A
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="right">AI Academy</TooltipContent>
-          </Tooltip>
-        ) : (
-          <span className="text-xs font-medium text-muted-foreground">
-            Academy
-          </span>
-        )}
-      </div>
-      <div className="flex-1 overflow-auto p-1 space-y-0.5">
-        {/* Levels Section */}
-        {isCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                className={`w-full justify-center h-8 ${
-                  activeSection === "levels"
-                    ? "bg-accent text-accent-foreground"
-                    : ""
-                }`}
-                onClick={() => onSectionChange("levels")}
-              >
-                <Target className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Levels</TooltipContent>
-          </Tooltip>
-        ) : (
-          <Button
-            variant="ghost"
-            className={`w-full justify-start h-auto py-2 px-2 ${
-              activeSection === "levels"
-                ? "bg-accent text-accent-foreground"
-                : ""
-            }`}
-            onClick={() => onSectionChange("levels")}
-          >
-            <Target className="h-4 w-4 mr-2" />
-            <div className="flex flex-col items-start gap-0.5">
-              <span className="text-sm">Levels</span>
-              <span className="text-xs text-muted-foreground">
-                Progression & Quests
-              </span>
-            </div>
-          </Button>
-        )}
-
-        {/* Dictionary Section */}
-        {isCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                className={`w-full justify-center h-8 ${
-                  activeSection === "dictionary"
-                    ? "bg-accent text-accent-foreground"
-                    : ""
-                }`}
-                onClick={() => onSectionChange("dictionary")}
-              >
-                <Book className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Dictionary</TooltipContent>
-          </Tooltip>
-        ) : (
-          <Button
-            variant="ghost"
-            className={`w-full justify-start h-auto py-2 px-2 ${
-              activeSection === "dictionary"
-                ? "bg-accent text-accent-foreground"
-                : ""
-            }`}
-            onClick={() => onSectionChange("dictionary")}
-          >
-            <Book className="h-4 w-4 mr-2" />
-            <div className="flex flex-col items-start gap-0.5">
-              <span className="text-sm">Dictionary</span>
-              <span className="text-xs text-muted-foreground">
-                AI Terminology
-              </span>
-            </div>
-          </Button>
-        )}
-
-        {/* Video Section */}
-        {isCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                className={`w-full justify-center h-8 ${
-                  activeSection === "video"
-                    ? "bg-accent text-accent-foreground"
-                    : ""
-                }`}
-                onClick={() => onSectionChange("video")}
-              >
-                <VideoIcon className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Video</TooltipContent>
-          </Tooltip>
-        ) : (
-          <Button
-            variant="ghost"
-            className={`w-full justify-start h-auto py-2 px-2 ${
-              activeSection === "video"
-                ? "bg-accent text-accent-foreground"
-                : ""
-            }`}
-            onClick={() => onSectionChange("video")}
-          >
-            <VideoIcon className="h-4 w-4 mr-2" />
-            <div className="flex flex-col items-start gap-0.5">
-              <span className="text-sm">Video</span>
-              <span className="text-xs text-muted-foreground">
-                Curated Content
-              </span>
-            </div>
-          </Button>
-        )}
-      </div>
-      <div className="border-t h-9 flex items-center justify-center shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={onToggleCollapse}
-            >
-              <PanelLeft
-                className={`h-4 w-4 transition-transform ${
-                  isCollapsed ? "rotate-180" : ""
-                }`}
-              />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            {isCollapsed ? "Expand" : "Collapse"} nav
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </div>
-  );
-}
-
 // ============================================
 // LEVELS SECTION COMPONENTS
 // ============================================
-
-function LevelNavItem({
-  level,
-  isSelected,
-  onSelect,
-  isCollapsed = false,
-}: {
-  level: AcademyLevel;
-  isSelected: boolean;
-  onSelect: () => void;
-  isCollapsed?: boolean;
-}) {
-  if (isCollapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            className={`w-full justify-center h-8 ${
-              isSelected ? "bg-accent text-accent-foreground" : ""
-            }`}
-            onClick={onSelect}
-          >
-            <span className="text-sm font-medium">{level.order}</span>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="right">
-          {level.levelRange}: {level.rank}
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return (
-    <Button
-      variant="ghost"
-      className={`w-full justify-start h-auto py-1.5 px-2 ${
-        isSelected ? "bg-accent text-accent-foreground" : ""
-      }`}
-      onClick={onSelect}
-    >
-      <div className="flex flex-col items-start gap-0.5 w-full">
-        <span className="text-xs text-muted-foreground">
-          Lvl {level.levelRange}
-        </span>
-        <span className="text-sm truncate w-full text-left">{level.rank}</span>
-      </div>
-    </Button>
-  );
-}
-
-function LevelsL3Nav({
-  selectedTrackId,
-  onSelectTrack,
-  isCollapsed,
-  onToggleCollapse,
-}: {
-  selectedTrackId: string | null;
-  onSelectTrack: (id: string) => void;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
-}) {
-  return (
-    <div
-      className={`hidden md:flex shrink-0 border-r bg-muted/10 flex-col transition-all duration-200 ${
-        isCollapsed ? "min-w-10 max-w-10" : "min-w-[9rem] max-w-[10rem]"
-      }`}
-    >
-      <div className="border-b px-2 h-8 flex items-center shrink-0">
-        {isCollapsed ? (
-          <span className="text-xs font-medium text-muted-foreground block w-full text-center">
-            T
-          </span>
-        ) : (
-          <span className="text-xs font-medium text-muted-foreground">
-            Tracks
-          </span>
-        )}
-      </div>
-      <div className="flex-1 overflow-auto p-1 space-y-0.5">
-        {academyTracks.map((track) => (
-          <Tooltip key={track.id}>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                className={`w-full h-auto py-2 px-2 ${
-                  isCollapsed ? "justify-center" : "justify-start"
-                } ${
-                  selectedTrackId === track.id
-                    ? track.difficulty === "beginner"
-                      ? "bg-emerald-500/20"
-                      : track.difficulty === "intermediate"
-                      ? "bg-blue-500/20"
-                      : "bg-purple-500/20"
-                    : track.difficulty === "beginner"
-                    ? "hover:bg-emerald-500/10"
-                    : track.difficulty === "intermediate"
-                    ? "hover:bg-blue-500/10"
-                    : "hover:bg-purple-500/10"
-                }`}
-                onClick={() => onSelectTrack(track.id)}
-              >
-                {isCollapsed ? (
-                  <span
-                    className={`text-sm font-medium ${
-                      track.difficulty === "beginner"
-                        ? "text-emerald-500"
-                        : track.difficulty === "intermediate"
-                        ? "text-blue-500"
-                        : "text-purple-500"
-                    }`}
-                  >
-                    {track.name[0]}
-                  </span>
-                ) : (
-                  <div className="flex flex-col items-start gap-0.5 w-full">
-                    <span
-                      className={`text-sm font-medium ${
-                        track.difficulty === "beginner"
-                          ? "text-emerald-500"
-                          : track.difficulty === "intermediate"
-                          ? "text-blue-500"
-                          : "text-purple-500"
-                      }`}
-                    >
-                      {track.name.split(" ")[0]}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {track.tagline}
-                    </span>
-                  </div>
-                )}
-              </Button>
-            </TooltipTrigger>
-            {isCollapsed && (
-              <TooltipContent side="right">
-                {track.name}: {track.tagline}
-              </TooltipContent>
-            )}
-          </Tooltip>
-        ))}
-      </div>
-      <div className="border-t h-9 flex items-center justify-center shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={onToggleCollapse}
-            >
-              <PanelLeft
-                className={`h-3 w-3 transition-transform ${
-                  isCollapsed ? "rotate-180" : ""
-                }`}
-              />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            {isCollapsed ? "Expand" : "Collapse"}
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </div>
-  );
-}
-
-// L4 Navigation for levels within a track
-function LevelsL4Nav({
-  track,
-  selectedLevelId,
-  onSelectLevel,
-  isCollapsed,
-  onToggleCollapse,
-}: {
-  track: Track;
-  selectedLevelId: string | null;
-  onSelectLevel: (id: string | null) => void;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
-}) {
-  return (
-    <div
-      className={`hidden md:flex shrink-0 border-r bg-muted/10 flex-col transition-all duration-200 ${
-        isCollapsed ? "min-w-10 max-w-10" : "min-w-[9rem] max-w-[10rem]"
-      }`}
-    >
-      <div className="border-b px-2 h-8 flex items-center shrink-0">
-        {isCollapsed ? (
-          <span className="text-xs font-medium text-muted-foreground block w-full text-center">
-            L
-          </span>
-        ) : (
-          <span className="text-xs font-medium text-muted-foreground">
-            Levels
-          </span>
-        )}
-      </div>
-      <div className="flex-1 overflow-auto p-1 space-y-0.5">
-        {track.levels.map((level) => (
-          <LevelNavItem
-            key={level.id}
-            level={level}
-            isSelected={selectedLevelId === level.id}
-            onSelect={() => onSelectLevel(level.id)}
-            isCollapsed={isCollapsed}
-          />
-        ))}
-      </div>
-      <div className="border-t h-9 flex items-center justify-center shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={onToggleCollapse}
-            >
-              <PanelLeft
-                className={`h-3 w-3 transition-transform ${
-                  isCollapsed ? "rotate-180" : ""
-                }`}
-              />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            {isCollapsed ? "Expand" : "Collapse"}
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </div>
-  );
-}
 
 function SubTopicNav({
   subTopics,
@@ -639,7 +261,7 @@ function LevelsOverview({
             <Target className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold mb-1">AI Academy</h1>
+            <h1 className="text-2xl font-bold mb-1">Mental Gym</h1>
             <p className="text-muted-foreground">
               Three paths to AI mastery. Choose your journey based on your experience level.
             </p>
@@ -1169,380 +791,9 @@ function LevelDetailPanel({
 
 import { getAllTerms } from "@/data/academy-dictionary";
 
-function DictionaryL3Nav({
-  selectedCategoryId,
-  onSelectCategory,
-  isCollapsed,
-  onToggleCollapse,
-}: {
-  selectedCategoryId: string | null;
-  onSelectCategory: (id: string | null) => void;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
-}) {
-  return (
-    <div
-      className={`hidden md:flex shrink-0 border-r bg-muted/10 flex-col transition-all duration-200 ${
-        isCollapsed ? "min-w-10 max-w-10" : "min-w-[9rem] max-w-[10rem]"
-      }`}
-    >
-      <div className="border-b px-2 h-8 flex items-center shrink-0">
-        {isCollapsed ? (
-          <span className="text-xs font-medium text-muted-foreground block w-full text-center">
-            C
-          </span>
-        ) : (
-          <span className="text-xs font-medium text-muted-foreground">
-            Categories
-          </span>
-        )}
-      </div>
-      <div className="flex-1 overflow-auto p-1 space-y-0.5">
-        {dictionaryCategories.map((cat) => {
-          const IconComponent = categoryIcons[cat.icon] || Brain;
-          return isCollapsed ? (
-            <Tooltip key={cat.id}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={`w-full justify-center h-8 ${
-                    selectedCategoryId === cat.id
-                      ? "bg-accent text-accent-foreground"
-                      : ""
-                  }`}
-                  onClick={() => onSelectCategory(cat.id)}
-                >
-                  <IconComponent className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{cat.title}</TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button
-              key={cat.id}
-              variant="ghost"
-              className={`w-full justify-start h-auto py-1.5 px-2 ${
-                selectedCategoryId === cat.id
-                  ? "bg-accent text-accent-foreground"
-                  : ""
-              }`}
-              onClick={() => onSelectCategory(cat.id)}
-            >
-              <IconComponent className="h-4 w-4 mr-2 shrink-0" />
-              <span className="text-sm truncate">{cat.title}</span>
-            </Button>
-          );
-        })}
-      </div>
-      <div className="border-t h-9 flex items-center justify-center shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={onToggleCollapse}
-            >
-              <PanelLeft
-                className={`h-3 w-3 transition-transform ${
-                  isCollapsed ? "rotate-180" : ""
-                }`}
-              />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            {isCollapsed ? "Expand" : "Collapse"}
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </div>
-  );
-}
-
-// L4 Navigation - Terms within a category
-function DictionaryL4Nav({
-  category,
-  selectedTermId,
-  onSelectTerm,
-  isCollapsed,
-  onToggleCollapse,
-}: {
-  category: DictionaryCategory;
-  selectedTermId: string | null;
-  onSelectTerm: (id: string | null) => void;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
-}) {
-  return (
-    <div
-      className={`hidden md:flex shrink-0 border-r bg-muted/5 flex-col transition-all duration-200 ${
-        isCollapsed ? "min-w-8 max-w-8" : "min-w-[8rem] max-w-[9rem]"
-      }`}
-    >
-      <div className="border-b px-2 h-8 flex items-center shrink-0">
-        {isCollapsed ? (
-          <span className="text-xs font-medium text-muted-foreground block w-full text-center">
-            T
-          </span>
-        ) : (
-          <span className="text-xs font-medium text-muted-foreground truncate">
-            Terms
-          </span>
-        )}
-      </div>
-      <div className="flex-1 overflow-auto p-1 space-y-0.5">
-        {category.terms.map((term) =>
-          isCollapsed ? (
-            <Tooltip key={term.id}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={`w-full justify-center h-6 text-xs ${
-                    selectedTermId === term.id
-                      ? "bg-accent text-accent-foreground"
-                      : ""
-                  }`}
-                  onClick={() => onSelectTerm(term.id)}
-                >
-                  {term.abbreviation || term.term.charAt(0)}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{term.term}</TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button
-              key={term.id}
-              variant="ghost"
-              className={`w-full justify-start h-auto py-1 px-2 ${
-                selectedTermId === term.id
-                  ? "bg-accent text-accent-foreground"
-                  : ""
-              }`}
-              onClick={() => onSelectTerm(term.id)}
-            >
-              <span className="text-xs truncate">
-                {term.abbreviation ? `${term.abbreviation}` : term.term}
-              </span>
-            </Button>
-          )
-        )}
-      </div>
-      <div className="border-t h-9 flex items-center justify-center shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={onToggleCollapse}
-            >
-              <PanelLeft
-                className={`h-3 w-3 transition-transform ${
-                  isCollapsed ? "rotate-180" : ""
-                }`}
-              />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            {isCollapsed ? "Expand" : "Collapse"}
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </div>
-  );
-}
-
 // ============================================
 // VIDEO SECTION COMPONENTS
 // ============================================
-
-// Icon mapping for video categories
-const videoCategoryIcons: Record<string, React.ComponentType<{ className?: string }>> = {
-  Brain,
-  Video: VideoIcon,
-  Sparkles,
-  Play,
-};
-
-function VideoL3Nav({
-  selectedCategoryId,
-  onSelectCategory,
-  isCollapsed,
-  onToggleCollapse,
-}: {
-  selectedCategoryId: string | null;
-  onSelectCategory: (id: string) => void;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
-}) {
-  return (
-    <div
-      className={`hidden md:flex shrink-0 border-r bg-muted/10 flex-col transition-all duration-200 ${
-        isCollapsed ? "min-w-10 max-w-10" : "min-w-[9rem] max-w-[10rem]"
-      }`}
-    >
-      <div className="border-b px-2 h-8 flex items-center shrink-0">
-        {isCollapsed ? (
-          <span className="text-xs font-medium text-muted-foreground block w-full text-center">
-            C
-          </span>
-        ) : (
-          <span className="text-xs font-medium text-muted-foreground">
-            Categories
-          </span>
-        )}
-      </div>
-      <div className="flex-1 overflow-auto p-1 space-y-0.5">
-        {videoCategories.map((cat) => {
-          const IconComponent = videoCategoryIcons[cat.icon] || VideoIcon;
-          return isCollapsed ? (
-            <Tooltip key={cat.id}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={`w-full justify-center h-8 ${
-                    selectedCategoryId === cat.id
-                      ? "bg-accent text-accent-foreground"
-                      : ""
-                  }`}
-                  onClick={() => onSelectCategory(cat.id)}
-                >
-                  <IconComponent className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{cat.title}</TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button
-              key={cat.id}
-              variant="ghost"
-              className={`w-full justify-start h-auto py-1.5 px-2 ${
-                selectedCategoryId === cat.id
-                  ? "bg-accent text-accent-foreground"
-                  : ""
-              }`}
-              onClick={() => onSelectCategory(cat.id)}
-            >
-              <IconComponent className="h-4 w-4 mr-2 shrink-0" />
-              <span className="text-sm truncate">{cat.title}</span>
-            </Button>
-          );
-        })}
-      </div>
-      <div className="border-t h-9 flex items-center justify-center shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={onToggleCollapse}
-            >
-              <PanelLeft
-                className={`h-3 w-3 transition-transform ${
-                  isCollapsed ? "rotate-180" : ""
-                }`}
-              />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            {isCollapsed ? "Expand" : "Collapse"}
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </div>
-  );
-}
-
-function VideoL4Nav({
-  category,
-  selectedVideoId,
-  onSelectVideo,
-  isCollapsed,
-  onToggleCollapse,
-}: {
-  category: VideoCategory;
-  selectedVideoId: string | null;
-  onSelectVideo: (id: string) => void;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
-}) {
-  return (
-    <div
-      className={`hidden md:flex shrink-0 border-r bg-muted/5 flex-col transition-all duration-200 ${
-        isCollapsed ? "min-w-8 max-w-8" : "min-w-[8rem] max-w-[9rem]"
-      }`}
-    >
-      <div className="border-b px-2 h-8 flex items-center shrink-0">
-        {isCollapsed ? (
-          <span className="text-xs font-medium text-muted-foreground block w-full text-center">
-            V
-          </span>
-        ) : (
-          <span className="text-xs font-medium text-muted-foreground truncate">
-            Videos
-          </span>
-        )}
-      </div>
-      <div className="flex-1 overflow-auto p-1 space-y-0.5">
-        {category.videos.map((video, idx) =>
-          isCollapsed ? (
-            <Tooltip key={video.id}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className={`w-full justify-center h-6 text-xs ${
-                    selectedVideoId === video.id
-                      ? "bg-accent text-accent-foreground"
-                      : ""
-                  }`}
-                  onClick={() => onSelectVideo(video.id)}
-                >
-                  {idx + 1}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right">{video.title}</TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button
-              key={video.id}
-              variant="ghost"
-              className={`w-full justify-start h-auto py-1 px-2 ${
-                selectedVideoId === video.id
-                  ? "bg-accent text-accent-foreground"
-                  : ""
-              }`}
-              onClick={() => onSelectVideo(video.id)}
-            >
-              <span className="text-xs truncate">{video.title}</span>
-            </Button>
-          )
-        )}
-      </div>
-      <div className="border-t h-9 flex items-center justify-center shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={onToggleCollapse}
-            >
-              <PanelLeft
-                className={`h-3 w-3 transition-transform ${
-                  isCollapsed ? "rotate-180" : ""
-                }`}
-              />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            {isCollapsed ? "Expand" : "Collapse"}
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </div>
-  );
-}
 
 function VideoOverview({
   onSelectCategory,
@@ -2321,19 +1572,27 @@ export default function Academy() {
 
   return (
     <>
-      {/* L2 Navigation */}
-      <L2Navigation
-        activeSection={activeSection}
-        onSectionChange={handleSectionChange}
+      {/* L2 Navigation — Section Switcher */}
+      <NavPanel
+        header="Academy"
+        items={l2Items}
+        selectedId={activeSection}
+        onSelect={(id) => handleSectionChange(id as AcademySection)}
         isCollapsed={isL2Collapsed}
         onToggleCollapse={() => nav.toggleCollapse(2)}
+        expandedWidth="min-w-[10rem] max-w-[12rem]"
+        collapsedWidth="min-w-12 max-w-12"
+        bg="bg-muted/20"
+        testId="academy-l2-nav"
       />
 
       {/* L3 Navigation - Tracks */}
       {activeSection === "levels" && (
-        <LevelsL3Nav
-          selectedTrackId={selectedTrackId}
-          onSelectTrack={handleSelectTrack}
+        <NavPanel
+          header="Tracks"
+          items={trackItems}
+          selectedId={selectedTrackId}
+          onSelect={handleSelectTrack}
           isCollapsed={isL3Collapsed}
           onToggleCollapse={() => nav.toggleCollapse(3)}
         />
@@ -2341,10 +1600,16 @@ export default function Academy() {
 
       {/* L4 Navigation - Levels within track */}
       {activeSection === "levels" && selectedTrack && (
-        <LevelsL4Nav
-          track={selectedTrack}
-          selectedLevelId={selectedLevelId}
-          onSelectLevel={handleSelectLevel}
+        <NavPanel
+          header="Levels"
+          items={selectedTrack.levels.map((level) => ({
+            id: level.id,
+            label: level.rank,
+            shortLabel: String(level.order),
+            description: `Lvl ${level.levelRange}`,
+          }))}
+          selectedId={selectedLevelId}
+          onSelect={handleSelectLevel}
           isCollapsed={isL4Collapsed}
           onToggleCollapse={() => nav.toggleCollapse(4)}
         />
@@ -2352,43 +1617,71 @@ export default function Academy() {
 
       {/* L3 Navigation - Dictionary Categories */}
       {activeSection === "dictionary" && (
-        <DictionaryL3Nav
-          selectedCategoryId={selectedCategoryId}
-          onSelectCategory={handleSelectCategory}
+        <NavPanel
+          header="Categories"
+          items={dictionaryCategories.map((cat) => ({
+            id: cat.id,
+            label: cat.title,
+            icon: categoryIcons[cat.icon] || Brain,
+          }))}
+          selectedId={selectedCategoryId}
+          onSelect={handleSelectCategory}
           isCollapsed={isL3Collapsed}
           onToggleCollapse={() => nav.toggleCollapse(3)}
         />
       )}
 
-      {/* L4 Navigation - Dictionary Terms (when category selected) */}
+      {/* L4 Navigation - Dictionary Terms */}
       {activeSection === "dictionary" && selectedCategory && (
-        <DictionaryL4Nav
-          category={selectedCategory}
-          selectedTermId={selectedTermId}
-          onSelectTerm={handleSelectTerm}
+        <NavPanel
+          header="Terms"
+          items={selectedCategory.terms.map((term) => ({
+            id: term.id,
+            label: term.abbreviation || term.term,
+            shortLabel: term.abbreviation || term.term.charAt(0),
+          }))}
+          selectedId={selectedTermId}
+          onSelect={handleSelectTerm}
           isCollapsed={isL4Collapsed}
           onToggleCollapse={() => nav.toggleCollapse(4)}
+          expandedWidth="min-w-[8rem] max-w-[9rem]"
+          collapsedWidth="min-w-8 max-w-8"
+          bg="bg-muted/5"
         />
       )}
 
       {/* L3 Navigation - Video Categories */}
       {activeSection === "video" && (
-        <VideoL3Nav
-          selectedCategoryId={selectedVideoCategoryId}
-          onSelectCategory={handleSelectVideoCategory}
+        <NavPanel
+          header="Categories"
+          items={videoCategories.map((cat) => ({
+            id: cat.id,
+            label: cat.title,
+            icon: videoCategoryIcons[cat.icon] || VideoIcon,
+          }))}
+          selectedId={selectedVideoCategoryId}
+          onSelect={handleSelectVideoCategory}
           isCollapsed={isL3Collapsed}
           onToggleCollapse={() => nav.toggleCollapse(3)}
         />
       )}
 
-      {/* L4 Navigation - Videos (when category selected) */}
+      {/* L4 Navigation - Videos */}
       {activeSection === "video" && selectedVideoCategory && (
-        <VideoL4Nav
-          category={selectedVideoCategory}
-          selectedVideoId={selectedVideoId}
-          onSelectVideo={handleSelectVideo}
+        <NavPanel
+          header="Videos"
+          items={selectedVideoCategory.videos.map((video, idx) => ({
+            id: video.id,
+            label: video.title,
+            shortLabel: String(idx + 1),
+          }))}
+          selectedId={selectedVideoId}
+          onSelect={handleSelectVideo}
           isCollapsed={isL4Collapsed}
           onToggleCollapse={() => nav.toggleCollapse(4)}
+          expandedWidth="min-w-[8rem] max-w-[9rem]"
+          collapsedWidth="min-w-8 max-w-8"
+          bg="bg-muted/5"
         />
       )}
 
@@ -2436,7 +1729,16 @@ export default function Academy() {
       {activeSection === "video" && (
         <>
           {selectedVideo ? (
-            <VideoPlayerPage video={selectedVideo} />
+            <VideoExperienceRenderer block={{
+              id: selectedVideo.id,
+              type: "video-experience",
+              embedId: selectedVideo.youtubeId,
+              title: selectedVideo.title,
+              description: selectedVideo.description,
+              creator: selectedVideo.creator,
+              tags: selectedVideo.tags,
+              youtubeUrl: selectedVideo.youtubeUrl,
+            }} />
           ) : selectedVideoCategory ? (
             <VideoCategoryOverview
               category={selectedVideoCategory}

@@ -29,20 +29,24 @@ class AuthStorage implements IAuthStorage {
   }
 
   async upsertUser(userData: UpsertUser, hasAdminRole: boolean = false): Promise<User> {
-    const isAdminByEnv = userData.id === process.env.ADMIN_USER_ID;
-    const isAdmin = isAdminByEnv || hasAdminRole;
-    
+    // Admin is determined by ADMIN_USER_ID env var or OIDC role.
+    // The is_admin flag persists in the DB — set it once, it sticks.
+    const isAdminByEnv = Boolean(process.env.ADMIN_USER_ID) && userData.id === process.env.ADMIN_USER_ID;
+    const shouldPromote = isAdminByEnv || hasAdminRole;
+
     const [user] = await db
       .insert(users)
       .values({
         ...userData,
-        isAdmin: isAdmin,
+        isAdmin: shouldPromote,
       })
       .onConflictDoUpdate({
         target: users.id,
         set: {
           ...userData,
-          isAdmin: isAdmin ? true : undefined,
+          // Only promote to admin, never demote — the DB flag is the source of truth.
+          // To demote, update the DB directly.
+          ...(shouldPromote ? { isAdmin: true } : {}),
           updatedAt: new Date(),
         },
       })

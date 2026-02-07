@@ -38,6 +38,13 @@ export interface SchemaField {
   example?: string;
 }
 
+/** Describes the single logical output of a flow */
+export interface FlowOutput {
+  name: string;
+  type: "string" | "number" | "boolean" | "object" | "array";
+  description: string;
+}
+
 /** A complete inspectable flow definition */
 export interface FlowDefinition {
   id: string;
@@ -48,10 +55,12 @@ export interface FlowDefinition {
   location: "landing" | "academy" | "admin";
   /** The React component that renders this flow */
   componentPath: string;
-  /** Ordered steps */
+  /** Steps (order in array is irrelevant — graph is defined by dependsOn) */
   steps: FlowStep[];
   /** Tags for filtering */
   tags: string[];
+  /** The single logical output of the flow (can be complex) */
+  output?: FlowOutput;
 }
 
 /** Runtime execution data captured from a step */

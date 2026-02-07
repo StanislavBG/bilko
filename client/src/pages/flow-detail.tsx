@@ -1,11 +1,15 @@
 /**
- * Flow Detail - The step-level inspector for a single PER-002 flow.
+ * Flow Detail — Full inspection page for a single PER-002 flow.
  *
- * Split-pane layout: FlowTimeline on the left, StepDetail on the right.
- * Browse steps, inspect prompts, schemas, and execution data.
+ * Features:
+ * - Execution history browser (persisted past runs)
+ * - Execution summary bar (duration, tokens, cost, status)
+ * - Step-through mode (walk completed steps in order)
+ * - DAG canvas with search, minimap, keyboard shortcuts
+ * - Step inspector panel (slide-in right)
  */
 
-import { useState } from "react";
+import { useState, useMemo, useCallback, useSyncExternalStore } from "react";
 import { useRoute, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,25 +17,158 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
   Workflow,
-  Play,
   GitBranch,
   MapPin,
+  PanelRightClose,
+  Clock,
+  Zap,
+  DollarSign,
+  ChevronLeft,
+  ChevronRight,
+  History,
+  Play,
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  Circle,
+  Sparkles,
 } from "lucide-react";
 import { getFlowById } from "@/lib/flow-inspector/registry";
-import { FlowTimeline, StepDetail } from "@/components/flow-inspector";
+import { FlowCanvas, StepDetail, CanvasBuilder } from "@/components/flow-inspector";
 import { useExecutionStore } from "@/lib/flow-engine";
+import {
+  getExecutionHistory,
+  subscribe as storeSubscribe,
+} from "@/lib/flow-engine/execution-store";
+import type { FlowDefinition, FlowExecution, StepExecution } from "@/lib/flow-inspector/types";
+import type { MutationResult } from "@/lib/flow-engine/flow-mutations";
+
+// ── Cost estimation (rough Gemini Flash pricing) ─────────
+const COST_PER_1K_INPUT = 0.00015;
+const COST_PER_1K_OUTPUT = 0.0006;
+
+function estimateCost(steps: Record<string, StepExecution>): number {
+  let cost = 0;
+  for (const step of Object.values(steps)) {
+    if (step.usage) {
+      cost += (step.usage.promptTokens / 1000) * COST_PER_1K_INPUT;
+      cost += (step.usage.completionTokens / 1000) * COST_PER_1K_OUTPUT;
+    }
+  }
+  return cost;
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function formatCost(cost: number): string {
+  if (cost < 0.001) return "<$0.001";
+  return `$${cost.toFixed(4)}`;
+}
+
+// ── Main component ───────────────────────────────────────
 
 export default function FlowDetail() {
   const [, setLocation] = useLocation();
   const [match, params] = useRoute("/flows/:flowId");
-
   const flowId = params?.flowId;
   const flow = flowId ? getFlowById(flowId) : undefined;
 
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
+  const [viewingHistoryId, setViewingHistoryId] = useState<string | null>(null);
+  const [stepThroughIdx, setStepThroughIdx] = useState<number | null>(null);
 
-  // Read live execution data from the global store
-  const execution = useExecutionStore(flowId ?? "");
+  // Voice builder state
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [multiSelectIds, setMultiSelectIds] = useState<Set<string>>(new Set());
+  const [liveFlow, setLiveFlow] = useState<FlowDefinition | null>(null);
+
+  const handleToggleSelect = useCallback((stepId: string) => {
+    setMultiSelectIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(stepId)) next.delete(stepId);
+      else next.add(stepId);
+      return next;
+    });
+  }, []);
+
+  const handleApplyMutation = useCallback((result: MutationResult) => {
+    setLiveFlow(result.flow);
+    // Clear multi-selection after applying
+    setMultiSelectIds(new Set());
+  }, []);
+
+  const handleBuilderClose = useCallback(() => {
+    setBuilderOpen(false);
+    setMultiSelectIds(new Set());
+  }, []);
+
+  // Live execution from global store
+  const liveExecution = useExecutionStore(flowId ?? "");
+
+  // History list (reactive)
+  const historyList = useSyncExternalStore(
+    storeSubscribe,
+    () => getExecutionHistory(flowId ?? ""),
+  );
+
+  // Determine which execution to display
+  const execution: FlowExecution | undefined = viewingHistoryId
+    ? historyList.find((e) => e.id === viewingHistoryId)
+    : liveExecution;
+
+  // Step-through: sorted completed steps
+  const completedSteps = useMemo(() => {
+    if (!execution) return [];
+    return Object.values(execution.steps)
+      .filter((s) => s.completedAt != null)
+      .sort((a, b) => (a.completedAt ?? 0) - (b.completedAt ?? 0));
+  }, [execution]);
+
+  const isSteppingThrough = stepThroughIdx !== null;
+  const currentStepThrough = isSteppingThrough ? completedSteps[stepThroughIdx!] : null;
+
+  const startStepThrough = useCallback(() => {
+    if (completedSteps.length > 0) {
+      setStepThroughIdx(0);
+      setSelectedStepId(completedSteps[0].stepId);
+    }
+  }, [completedSteps]);
+
+  const stepPrev = useCallback(() => {
+    if (stepThroughIdx !== null && stepThroughIdx > 0) {
+      const next = stepThroughIdx - 1;
+      setStepThroughIdx(next);
+      setSelectedStepId(completedSteps[next].stepId);
+    }
+  }, [stepThroughIdx, completedSteps]);
+
+  const stepNext = useCallback(() => {
+    if (stepThroughIdx !== null && stepThroughIdx < completedSteps.length - 1) {
+      const next = stepThroughIdx + 1;
+      setStepThroughIdx(next);
+      setSelectedStepId(completedSteps[next].stepId);
+    }
+  }, [stepThroughIdx, completedSteps]);
+
+  const exitStepThrough = useCallback(() => {
+    setStepThroughIdx(null);
+  }, []);
+
+  // Execution stats
+  const stats = useMemo(() => {
+    if (!execution) return null;
+    const steps = Object.values(execution.steps);
+    const totalTokens = steps.reduce((sum, s) => sum + (s.usage?.totalTokens ?? 0), 0);
+    const totalDuration = steps.reduce((sum, s) => sum + (s.durationMs ?? 0), 0);
+    const cost = estimateCost(execution.steps);
+    const completed = steps.filter((s) => s.status === "success").length;
+    const errored = steps.filter((s) => s.status === "error").length;
+    const running = steps.filter((s) => s.status === "running").length;
+    return { totalTokens, totalDuration, cost, completed, errored, running, total: steps.length };
+  }, [execution]);
 
   if (!match || !flow) {
     return (
@@ -47,33 +184,24 @@ export default function FlowDetail() {
     );
   }
 
+  // The flow to render: liveFlow (after mutations) or the registry flow
+  const activeFlow = liveFlow ?? flow;
+
   const selectedStep = selectedStepId
-    ? flow.steps.find((s) => s.id === selectedStepId)
+    ? activeFlow.steps.find((s) => s.id === selectedStepId)
     : null;
 
   const selectedExecution = selectedStepId
     ? execution?.steps[selectedStepId]
     : undefined;
 
-  // Build a dependency graph for visualization
-  const dependencyPairs: Array<[string, string]> = [];
-  for (const step of flow.steps) {
-    for (const dep of step.dependsOn) {
-      dependencyPairs.push([dep, step.id]);
-    }
-  }
-
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Top bar */}
+      {/* ── Top bar ──────────────────────────────────────── */}
       <div className="shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="px-6 py-4">
+        <div className="px-4 py-3">
           <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setLocation("/flows")}
-            >
+            <Button variant="ghost" size="sm" onClick={() => setLocation("/flows")}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <Separator orientation="vertical" className="h-6" />
@@ -82,114 +210,176 @@ export default function FlowDetail() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold">{flow.name}</h1>
-                <Badge variant="outline" className="text-xs">
-                  v{flow.version}
-                </Badge>
+                <h1 className="text-lg font-bold">{activeFlow.name}</h1>
+                <Badge variant="outline" className="text-xs">v{activeFlow.version}</Badge>
+                {liveFlow && (
+                  <Badge variant="default" className="text-xs gap-1">
+                    <Sparkles className="h-3 w-3" /> Modified
+                  </Badge>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground truncate">
-                {flow.description}
-              </p>
+              <p className="text-xs text-muted-foreground truncate">{activeFlow.description}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant={builderOpen ? "default" : "outline"}
+                size="sm"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => setBuilderOpen((o) => !o)}
+              >
+                <Sparkles className="h-3 w-3" />
+                Voice Builder
+              </Button>
               <Badge variant="secondary" className="gap-1 text-xs">
-                <MapPin className="h-3 w-3" />
-                {flow.location}
+                <MapPin className="h-3 w-3" /> {activeFlow.location}
               </Badge>
               <Badge variant="secondary" className="gap-1 text-xs">
-                <GitBranch className="h-3 w-3" />
-                {flow.steps.length} steps
+                <GitBranch className="h-3 w-3" /> {activeFlow.steps.length} steps
               </Badge>
+              {activeFlow.output && (
+                <Badge variant="secondary" className="gap-1 text-xs">
+                  out: {activeFlow.output.name}
+                </Badge>
+              )}
             </div>
           </div>
-
-          {/* Dependency graph mini-bar */}
-          {dependencyPairs.length > 0 && (
-            <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground">Flow:</span>
-              {flow.steps.map((step, i) => (
-                <span key={step.id} className="flex items-center gap-1">
-                  <button
-                    className={`text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                      selectedStepId === step.id
-                        ? "border-primary bg-primary/10 text-primary font-medium"
-                        : "border-muted-foreground/20 text-muted-foreground hover:border-primary/50"
-                    }`}
-                    onClick={() => setSelectedStepId(step.id)}
-                  >
-                    {step.name}
-                  </button>
-                  {i < flow.steps.length - 1 && (
-                    <span className="text-muted-foreground/40 text-xs">
-                      {step.parallel ? "||" : "\u2192"}
-                    </span>
-                  )}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Split pane: Timeline left, Detail right */}
+      {/* ── Execution summary + controls bar ─────────────── */}
+      <div className="shrink-0 border-b bg-muted/20 px-4 py-2 flex items-center gap-3 flex-wrap">
+        {/* History selector */}
+        <div className="flex items-center gap-1.5">
+          <History className="h-3.5 w-3.5 text-muted-foreground" />
+          <select
+            className="text-xs bg-transparent border rounded px-2 py-1 outline-none cursor-pointer"
+            value={viewingHistoryId ?? "live"}
+            onChange={(e) => {
+              const val = e.target.value;
+              setViewingHistoryId(val === "live" ? null : val);
+              setStepThroughIdx(null);
+            }}
+          >
+            <option value="live">
+              Live {liveExecution ? `(${liveExecution.status})` : "(no data)"}
+            </option>
+            {historyList.map((exec, i) => (
+              <option key={exec.id} value={exec.id}>
+                Run #{historyList.length - i} — {exec.status} — {new Date(exec.startedAt).toLocaleTimeString()}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="w-px h-4 bg-border" />
+
+        {/* Step-through controls */}
+        {completedSteps.length > 0 && (
+          <>
+            {isSteppingThrough ? (
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={stepPrev} disabled={stepThroughIdx === 0}>
+                  <ChevronLeft className="h-3 w-3" />
+                </Button>
+                <span className="text-xs font-mono text-muted-foreground">
+                  {(stepThroughIdx ?? 0) + 1}/{completedSteps.length}
+                </span>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={stepNext} disabled={stepThroughIdx === completedSteps.length - 1}>
+                  <ChevronRight className="h-3 w-3" />
+                </Button>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={exitStepThrough}>
+                  Exit
+                </Button>
+              </div>
+            ) : (
+              <Button variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1" onClick={startStepThrough}>
+                <Play className="h-3 w-3" /> Step through
+              </Button>
+            )}
+            <div className="w-px h-4 bg-border" />
+          </>
+        )}
+
+        {/* Stats */}
+        {stats && (
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              {stats.running > 0 ? (
+                <Loader2 className="h-3 w-3 animate-spin text-primary" />
+              ) : stats.errored > 0 ? (
+                <AlertTriangle className="h-3 w-3 text-red-500" />
+              ) : stats.completed > 0 ? (
+                <CheckCircle2 className="h-3 w-3 text-green-500" />
+              ) : (
+                <Circle className="h-3 w-3" />
+              )}
+              {stats.completed}/{stats.total} steps
+            </span>
+            {stats.totalDuration > 0 && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {formatDuration(stats.totalDuration)}
+              </span>
+            )}
+            {stats.totalTokens > 0 && (
+              <span className="flex items-center gap-1">
+                <Zap className="h-3 w-3" />
+                {stats.totalTokens.toLocaleString()} tokens
+              </span>
+            )}
+            {stats.cost > 0 && (
+              <span className="flex items-center gap-1">
+                <DollarSign className="h-3 w-3" />
+                {formatCost(stats.cost)}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Main area: Canvas + optional detail/builder panel ── */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left panel - Timeline */}
-        <div className="w-[380px] shrink-0 border-r overflow-auto p-4">
-          <FlowTimeline
-            flow={flow}
+        <div className="flex-1 overflow-hidden">
+          <FlowCanvas
+            flow={activeFlow}
             selectedStepId={selectedStepId}
             onSelectStep={setSelectedStepId}
+            onDeselectStep={() => setSelectedStepId(null)}
             executions={execution?.steps}
+            highlightStepId={currentStepThrough?.stepId}
+            selectedStepIds={builderOpen ? multiSelectIds : undefined}
+            onToggleSelect={builderOpen ? handleToggleSelect : undefined}
           />
         </div>
 
-        {/* Right panel - Step detail */}
-        <div className="flex-1 overflow-auto p-4">
-          {selectedStep ? (
-            <StepDetail
-              step={selectedStep}
-              execution={selectedExecution}
+        {/* Voice Builder panel (takes priority over step inspector) */}
+        {builderOpen ? (
+          <div className="w-[420px] shrink-0 border-l overflow-hidden">
+            <CanvasBuilder
+              flow={activeFlow}
+              selectedStepIds={multiSelectIds}
+              onApplyMutation={handleApplyMutation}
+              onClose={handleBuilderClose}
             />
-          ) : (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center space-y-4 max-w-md">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto">
-                  <Workflow className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-lg">Select a step to inspect</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Click any step in the timeline to view its prompts,
-                    input/output schemas, and execution data.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2 items-center">
-                  <p className="text-xs text-muted-foreground">
-                    This flow has {flow.steps.length} steps across{" "}
-                    {new Set(flow.steps.map((s) => s.type)).size} step types
-                  </p>
-                  <div className="flex gap-1 flex-wrap justify-center">
-                    {flow.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <div className="pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedStepId(flow.steps[0]?.id ?? null)}
-                  >
-                    <Play className="h-3 w-3 mr-1" />
-                    Start with Step 1
-                  </Button>
-                </div>
-              </div>
+          </div>
+        ) : selectedStep ? (
+          <div className="w-[420px] shrink-0 border-l overflow-auto">
+            <div className="flex items-center justify-between px-3 pt-3">
+              <span className="text-xs text-muted-foreground font-medium">Step Inspector</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => setSelectedStepId(null)}
+              >
+                <PanelRightClose className="h-3.5 w-3.5" />
+              </Button>
             </div>
-          )}
-        </div>
+            <div className="p-3">
+              <StepDetail step={selectedStep} flow={activeFlow} execution={selectedExecution} />
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
