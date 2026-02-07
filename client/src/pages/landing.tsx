@@ -5,7 +5,7 @@
  * No chat frame. The entire page canvas is the dialogue.
  *
  * Bilko speaks (typewriter + TTS), the user responds by clicking
- * option cards or by voice. Each interaction adds a new turn.
+ * option cards or by voice. Agent results render as content blocks.
  */
 
 import { useState, useCallback, useMemo, type ReactNode } from "react";
@@ -15,17 +15,15 @@ import {
   type ConversationTurn,
   type OptionChoice,
 } from "@/components/conversation-canvas";
+import type { ContentBlock } from "@/components/content-blocks/types";
 import { PromptPlayground } from "@/components/prompt-playground";
 import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
+import { bilkoSays } from "@/lib/bilko-persona";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Play,
   Sparkles,
-  GraduationCap,
   Trophy,
-  ChevronRight,
   MessageCircle,
   Compass,
   Zap,
@@ -53,7 +51,132 @@ const MODE_OPTIONS: OptionChoice[] = LEARNING_MODES.map((mode) => ({
   voiceTriggers: mode.voiceTriggers,
 }));
 
-// ── Experience renderers ─────────────────────────────────
+// ── Content block definitions for each mode ──────────────
+
+const QUIZ_BLOCKS: ContentBlock[] = [
+  {
+    id: "quiz-intro",
+    type: "callout",
+    variant: "insight",
+    title: "AI Knowledge Quiz",
+    body: "Three questions to test your AI fundamentals. No pressure — this is how we learn.",
+  },
+  {
+    id: "q1",
+    type: "quiz",
+    question: "What does AI stand for?",
+    options: [
+      { id: "a", text: "Artificial Intelligence" },
+      { id: "b", text: "Automated Internet" },
+      { id: "c", text: "Advanced Information" },
+      { id: "d", text: "Analog Interface" },
+    ],
+    correctIndex: 0,
+    explanation: "Artificial Intelligence — the field of computer science focused on creating systems that can perform tasks typically requiring human intelligence.",
+  },
+  {
+    id: "q2",
+    type: "quiz",
+    question: "Which of these is an AI language model?",
+    options: [
+      { id: "a", text: "GPT-4" },
+      { id: "b", text: "HTML" },
+      { id: "c", text: "SQL" },
+      { id: "d", text: "CSS" },
+    ],
+    correctIndex: 0,
+    explanation: "GPT-4 is a large language model by OpenAI. HTML, SQL, and CSS are web/database technologies, not AI models.",
+  },
+  {
+    id: "q3",
+    type: "quiz",
+    question: "What is a 'prompt' in AI?",
+    options: [
+      { id: "a", text: "A type of computer virus" },
+      { id: "b", text: "The input you give to an AI" },
+      { id: "c", text: "A programming language" },
+      { id: "d", text: "A hardware component" },
+    ],
+    correctIndex: 1,
+    explanation: "A prompt is the text you provide to an AI model to get a response. Good prompts lead to better results — that's a key skill we'll practice here.",
+  },
+];
+
+const EXPLORE_BLOCKS: ContentBlock[] = [
+  {
+    id: "explore-heading",
+    type: "heading",
+    text: "Training Tracks",
+    level: 2,
+  },
+  {
+    id: "explore-intro",
+    type: "text",
+    content: "The Mental Gym is organized into three tracks. Each builds on the last, taking you from beginner to architect.",
+    variant: "lead",
+  },
+  {
+    id: "explore-tracks",
+    type: "comparison",
+    columns: ["Track", "Focus", "Levels"],
+    rows: [
+      { label: "Recruit", values: ["From Zero to Builder", "Fundamentals, prompts, first projects", "10"] },
+      { label: "Specialist", values: ["Deep Technical Mastery", "Advanced techniques, fine-tuning, evaluation", "10"] },
+      { label: "Architect", values: ["Enterprise Scale", "System design, orchestration, production", "10"] },
+    ],
+  },
+  {
+    id: "explore-tip",
+    type: "callout",
+    variant: "tip",
+    body: "Start with Recruit even if you have experience. The levels are designed to fill gaps you might not know you have.",
+  },
+];
+
+const QUICK_START_BLOCKS: ContentBlock[] = [
+  {
+    id: "qs-heading",
+    type: "heading",
+    text: "Three Steps. Three Minutes.",
+    level: 2,
+  },
+  {
+    id: "qs-steps",
+    type: "steps",
+    steps: [
+      {
+        title: "Learn to Prompt",
+        body: "Good prompts lead to better results. We'll teach you the patterns that work — specificity, context, constraints, and iteration.",
+      },
+      {
+        title: "Practice Hands-On",
+        body: "Try real exercises with immediate feedback. The Gym gives you structured challenges that build real skill, not just knowledge.",
+      },
+      {
+        title: "Track Progress",
+        body: "Level up through three tracks. Earn badges. Build a portfolio of completed challenges that proves you know your stuff.",
+      },
+    ],
+  },
+  {
+    id: "qs-callout",
+    type: "callout",
+    variant: "insight",
+    body: "Most people learn AI by reading about it. At the Mental Gym, you learn by doing it. Every concept comes with practice.",
+  },
+];
+
+// ── Bilko's contextual responses per mode ────────────────
+
+function getBilkoResponse(mode: LearningModeId): { text: string; speech: string } {
+  const speech = bilkoSays({
+    event: "choice-made",
+    topic: LEARNING_MODES.find((m) => m.id === mode)?.label,
+  });
+  return { text: speech.text, speech: speech.speech };
+}
+
+// ── Experience back button ───────────────────────────────
 
 function ExperienceBack({ onBack }: { onBack: () => void }) {
   return (
@@ -70,11 +193,6 @@ function ExperienceBack({ onBack }: { onBack: () => void }) {
 
 // ── Main component ───────────────────────────────────────
 
-/**
- * Reusable landing experience content.
- * skipWelcome=true skips the greeting and goes straight to the question
- * (used for authenticated users who already know the app).
- */
 export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean }) {
   const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
 
@@ -86,16 +204,16 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     setSelectedMode(null);
   }, []);
 
-  // Build the conversation turns dynamically based on state
   const turns = useMemo<ConversationTurn[]>(() => {
     const t: ConversationTurn[] = [];
 
-    // Turn 1: Bilko's greeting (skip for returning users)
+    // Turn 1: Bilko's greeting
     if (!skipWelcome) {
+      const greeting = bilkoSays({ event: "greeting" });
       t.push({
         type: "bilko",
-        text: "Welcome to Bilko's Mental Gym.",
-        speech: "Welcome to Bilko's Mental Gym!",
+        text: greeting.text,
+        speech: greeting.speech,
         delay: 200,
       });
     }
@@ -109,54 +227,33 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     });
 
     // Turn 3: User's response options
-    t.push({
-      type: "user-choice",
-      options: MODE_OPTIONS,
-    });
+    t.push({ type: "user-choice", options: MODE_OPTIONS });
 
     // Turn 4+: If user picked, show Bilko's response + experience
     if (selectedMode) {
-      const chosen = LEARNING_MODES.find((m) => m.id === selectedMode);
-      const responses: Record<string, { text: string; speech: string }> = {
-        video: {
-          text: "Great choice. Let's find something worth watching.",
-          speech: "Great choice. Let's find something worth watching.",
-        },
-        quiz: {
-          text: "Challenge accepted. Let's see what you know.",
-          speech: "Challenge accepted. Let's see what you know.",
-        },
-        prompt: {
-          text: "Hands on. I like it. Go ahead, type anything.",
-          speech: "Hands on. I like it. Go ahead, type anything.",
-        },
-        explore: {
-          text: "Let me show you around the gym.",
-          speech: "Let me show you around the gym.",
-        },
-        chat: {
-          text: "Let's talk. Ask me anything.",
-          speech: "Let's talk. Ask me anything.",
-        },
-        quick: {
-          text: "Three steps. Three minutes. Let's go.",
-          speech: "Three steps. Three minutes. Let's go.",
-        },
-      };
-
-      const response = responses[selectedMode] ?? {
-        text: `Let's do ${chosen?.label ?? "this"}.`,
-        speech: `Let's do ${chosen?.label ?? "this"}.`,
-      };
-
+      const response = getBilkoResponse(selectedMode);
       t.push({ type: "bilko", ...response, delay: 200 });
 
-      // The actual experience content
+      // Modes that use content blocks
+      if (selectedMode === "quiz") {
+        t.push({ type: "content-blocks", blocks: QUIZ_BLOCKS });
+      } else if (selectedMode === "explore") {
+        t.push({ type: "content-blocks", blocks: EXPLORE_BLOCKS });
+      } else if (selectedMode === "quick") {
+        t.push({ type: "content-blocks", blocks: QUICK_START_BLOCKS });
+      } else {
+        // Modes that still use raw content (video discovery, prompt playground)
+        t.push({
+          type: "content",
+          render: () => <ExperiencePanel mode={selectedMode} onBack={handleBack} />,
+        });
+        return t;
+      }
+
+      // Back button for block-based modes
       t.push({
         type: "content",
-        render: () => (
-          <ExperiencePanel mode={selectedMode} onBack={handleBack} />
-        ),
+        render: () => <ExperienceBack onBack={handleBack} />,
       });
     }
 
@@ -171,7 +268,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   );
 }
 
-// ── Experience panel ─────────────────────────────────────
+// ── Experience panel (for non-block modes) ───────────────
 
 function ExperiencePanel({
   mode,
@@ -186,8 +283,6 @@ function ExperiencePanel({
 
       {mode === "video" && <VideoDiscoveryFlow />}
 
-      {mode === "quiz" && <QuizExperience />}
-
       {mode === "prompt" && (
         <PromptPlayground
           title="Your First AI Prompt"
@@ -196,8 +291,6 @@ function ExperiencePanel({
           showModelSelector={true}
         />
       )}
-
-      {mode === "explore" && <ExploreExperience />}
 
       {mode === "chat" && (
         <PromptPlayground
@@ -208,8 +301,6 @@ function ExperiencePanel({
           showModelSelector={false}
         />
       )}
-
-      {mode === "quick" && <QuickStartGuide />}
     </div>
   );
 }
@@ -222,176 +313,6 @@ export default function Landing() {
       <main className="flex-1 flex flex-col pt-14">
         <LandingContent />
       </main>
-    </div>
-  );
-}
-
-// ── Mini-experiences ─────────────────────────────────────
-
-function QuizExperience() {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [score, setScore] = useState(0);
-  const [answered, setAnswered] = useState(false);
-  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-
-  const questions = [
-    {
-      question: "What does AI stand for?",
-      options: [
-        "Artificial Intelligence",
-        "Automated Internet",
-        "Advanced Information",
-        "Analog Interface",
-      ],
-      correct: 0,
-    },
-    {
-      question: "Which of these is an AI language model?",
-      options: ["GPT-4", "HTML", "SQL", "CSS"],
-      correct: 0,
-    },
-    {
-      question: "What is a 'prompt' in AI?",
-      options: [
-        "A type of computer virus",
-        "The input you give to an AI",
-        "A programming language",
-        "A hardware component",
-      ],
-      correct: 1,
-    },
-  ];
-
-  const handleAnswer = (index: number) => {
-    if (answered) return;
-    setSelectedAnswer(index);
-    setAnswered(true);
-    if (index === questions[currentQuestion].correct) {
-      setScore(score + 1);
-    }
-  };
-
-  const nextQuestion = () => {
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setAnswered(false);
-      setSelectedAnswer(null);
-    }
-  };
-
-  const isComplete = currentQuestion === questions.length - 1 && answered;
-  const q = questions[currentQuestion];
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-500" />
-            <CardTitle>AI Knowledge Quiz</CardTitle>
-          </div>
-          <Badge variant="outline">
-            Question {currentQuestion + 1}/{questions.length}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {!isComplete ? (
-          <>
-            <h3 className="text-xl font-semibold mb-6">{q.question}</h3>
-            <div className="space-y-3">
-              {q.options.map((option, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleAnswer(index)}
-                  disabled={answered}
-                  className={`w-full p-4 rounded-lg border text-left transition-all ${
-                    answered
-                      ? index === q.correct
-                        ? "bg-green-500/20 border-green-500"
-                        : index === selectedAnswer
-                        ? "bg-red-500/20 border-red-500"
-                        : "opacity-50"
-                      : "hover:bg-muted cursor-pointer"
-                  }`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-            {answered && (
-              <Button onClick={nextQuestion} className="mt-6 w-full">
-                Next Question <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            )}
-          </>
-        ) : (
-          <div className="text-center py-8">
-            <Trophy className="h-16 w-16 mx-auto mb-4 text-yellow-500" />
-            <h3 className="text-2xl font-bold mb-2">Quiz Complete!</h3>
-            <p className="text-lg text-muted-foreground">
-              You scored {score} out of {questions.length}
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ExploreExperience() {
-  const tracks = [
-    { name: "Recruit", tagline: "From Zero to Builder", levels: 10, color: "text-emerald-500" },
-    { name: "Specialist", tagline: "Deep Technical Mastery", levels: 10, color: "text-blue-500" },
-    { name: "Architect", tagline: "Enterprise Scale", levels: 10, color: "text-purple-500" },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="grid md:grid-cols-3 gap-4">
-        {tracks.map((track) => (
-          <Card key={track.name} className="hover:shadow-lg transition-shadow">
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <GraduationCap className={`h-10 w-10 mx-auto mb-3 ${track.color}`} />
-                <h3 className={`text-lg font-bold ${track.color}`}>{track.name}</h3>
-                <p className="text-muted-foreground text-sm mt-1">{track.tagline}</p>
-                <Badge variant="outline" className="mt-3">{track.levels} Levels</Badge>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function QuickStartGuide() {
-  const steps = [
-    { title: "Learn to Prompt", description: "Good prompts = better results. Start here.", icon: Sparkles },
-    { title: "Practice Hands-On", description: "Try real exercises with immediate feedback.", icon: Play },
-    { title: "Track Progress", description: "Level up. Earn badges. Get certified.", icon: Trophy },
-  ];
-
-  return (
-    <div className="space-y-4">
-      {steps.map((step, index) => {
-        const Icon = step.icon;
-        return (
-          <Card key={index}>
-            <CardContent className="flex items-center gap-5 p-5">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-lg font-bold text-primary">{index + 1}</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold">{step.title}</h3>
-                <p className="text-sm text-muted-foreground">{step.description}</p>
-              </div>
-              <Icon className="h-6 w-6 text-muted-foreground" />
-            </CardContent>
-          </Card>
-        );
-      })}
     </div>
   );
 }

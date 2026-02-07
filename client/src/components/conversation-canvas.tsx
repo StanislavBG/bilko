@@ -4,15 +4,18 @@
  * A full-page layout engine that renders a dialogue between Bilko and the user.
  * No chat frame. The main content area IS the conversation.
  *
- * Each "turn" is either:
- * - Bilko speaking (typewriter text + TTS)
- * - The user responding (clicking option cards or voice)
- * - A content panel (experience rendered after user's choice)
+ * Turn types:
+ * - bilko: Bilko speaking (typewriter text + TTS)
+ * - user-choice: User responding (clicking option cards or voice)
+ * - content: Raw React content (escape hatch)
+ * - content-blocks: Structured agent results rendered via block system
  */
 
 import { useState, useCallback, useRef, useEffect, type ReactNode } from "react";
 import { BilkoMessage } from "@/components/bilko-message";
-import { useVoice, useVoiceCommands } from "@/contexts/voice-context";
+import { BlockSequence } from "@/components/content-blocks";
+import type { ContentBlock, AgentContentResult } from "@/components/content-blocks/types";
+import { useVoiceCommands } from "@/contexts/voice-context";
 import type { VoiceTriggerOption } from "@/hooks/use-voice-recognition";
 
 // ── Turn types ───────────────────────────────────────────
@@ -43,17 +46,24 @@ export interface ContentTurn {
   render: () => ReactNode;
 }
 
-export type ConversationTurn = BilkoTurn | UserChoiceTurn | ContentTurn;
-
-// ── Conversation state ───────────────────────────────────
-
-interface ConversationEntry {
-  turn: ConversationTurn;
-  /** For user-choice turns: what the user picked */
-  chosenId?: string;
-  /** Has this entry finished animating/speaking */
-  settled: boolean;
+/**
+ * Structured content blocks from an agent result.
+ * The canvas renders these using the block system.
+ */
+export interface ContentBlocksTurn {
+  type: "content-blocks";
+  blocks: ContentBlock[];
+  /** Quiz answer callback */
+  onQuizAnswer?: (blockId: string, correct: boolean) => void;
+  /** Widget registry for custom components */
+  widgets?: Record<string, React.ComponentType<Record<string, unknown>>>;
 }
+
+export type ConversationTurn =
+  | BilkoTurn
+  | UserChoiceTurn
+  | ContentTurn
+  | ContentBlocksTurn;
 
 // ── Props ────────────────────────────────────────────────
 
@@ -64,6 +74,52 @@ interface ConversationCanvasProps {
   onChoice: (choiceId: string) => void;
   /** Optional class on the outer wrapper */
   className?: string;
+}
+
+// ── Helper: build turns from AgentContentResult ──────────
+
+/**
+ * Convert an AgentContentResult into conversation turns.
+ * Use this when an agent returns structured content.
+ */
+export function agentResultToTurns(
+  result: AgentContentResult,
+): ConversationTurn[] {
+  const turns: ConversationTurn[] = [];
+
+  // Bilko introduces the content
+  if (result.introduction) {
+    turns.push({
+      type: "bilko",
+      text: result.introduction.text,
+      speech: result.introduction.speech ?? result.introduction.text,
+      delay: 200,
+    });
+  }
+
+  // The content blocks
+  if (result.blocks.length > 0) {
+    turns.push({
+      type: "content-blocks",
+      blocks: result.blocks,
+    });
+  }
+
+  // Follow-up options
+  if (result.followUp && result.followUp.length > 0) {
+    turns.push({
+      type: "user-choice",
+      options: result.followUp.map((f) => ({
+        id: f.id,
+        label: f.label,
+        description: f.description,
+        icon: <span className="text-lg">{f.icon ?? ">"}</span>,
+        voiceTriggers: f.voiceTriggers ?? [],
+      })),
+    });
+  }
+
+  return turns;
 }
 
 // ── Component ────────────────────────────────────────────
@@ -128,7 +184,6 @@ interface TurnRendererProps {
 
 function TurnRenderer({
   turn,
-  index,
   isSettled,
   isLatest,
   onSettled,
@@ -156,6 +211,10 @@ function TurnRenderer({
     );
   }
 
+  if (turn.type === "content-blocks") {
+    return <ContentBlocksView turn={turn} onSettled={onSettled} />;
+  }
+
   if (turn.type === "content") {
     return <ContentView turn={turn} onSettled={onSettled} />;
   }
@@ -175,7 +234,6 @@ function BilkoTurnView({
   onSettled: () => void;
 }) {
   if (isSettled) {
-    // Already done — show static text
     return (
       <div className="animate-in fade-in duration-300">
         <p className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight leading-tight text-foreground">
@@ -216,7 +274,6 @@ function UserChoiceView({
   const [pickedId, setPickedId] = useState<string | null>(null);
   const settledCalled = useRef(false);
 
-  // Voice commands — active only when this is the latest unsettled choice
   const voiceOptions: VoiceTriggerOption[] = turn.options.map((o) => ({
     id: o.id,
     voiceTriggers: o.voiceTriggers,
@@ -224,10 +281,9 @@ function UserChoiceView({
 
   const handlePick = useCallback(
     (id: string) => {
-      if (pickedId) return; // Already picked
+      if (pickedId) return;
       setPickedId(id);
       onChoice(id);
-      // Settle after a brief flash so the user sees their pick
       setTimeout(() => {
         if (!settledCalled.current) {
           settledCalled.current = true;
@@ -245,7 +301,6 @@ function UserChoiceView({
     isLatest && !isSettled,
   );
 
-  // If already settled (scrolled past), show compact "you chose X"
   if (isSettled && pickedId) {
     const chosen = turn.options.find((o) => o.id === pickedId);
     if (chosen) {
@@ -303,7 +358,35 @@ function UserChoiceView({
   );
 }
 
-// ── Content turn ─────────────────────────────────────────
+// ── Content blocks turn ──────────────────────────────────
+
+function ContentBlocksView({
+  turn,
+  onSettled,
+}: {
+  turn: ContentBlocksTurn;
+  onSettled: () => void;
+}) {
+  const settledRef = useRef(false);
+  useEffect(() => {
+    if (!settledRef.current) {
+      settledRef.current = true;
+      onSettled();
+    }
+  }, [onSettled]);
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <BlockSequence
+        blocks={turn.blocks}
+        onQuizAnswer={turn.onQuizAnswer}
+        widgets={turn.widgets}
+      />
+    </div>
+  );
+}
+
+// ── Content turn (raw React — escape hatch) ──────────────
 
 function ContentView({
   turn,
@@ -312,7 +395,6 @@ function ContentView({
   turn: ContentTurn;
   onSettled: () => void;
 }) {
-  // Content turns settle immediately — they're just rendered
   const settledRef = useRef(false);
   useEffect(() => {
     if (!settledRef.current) {
