@@ -71,6 +71,10 @@ interface FlowCanvasProps {
   executions?: Record<string, StepExecution>;
   /** Externally-controlled highlighted step (e.g. from step-through) */
   highlightStepId?: string | null;
+  /** Multi-select: set of selected step IDs (voice builder mode) */
+  selectedStepIds?: Set<string>;
+  /** Multi-select: toggle a step in/out of selection */
+  onToggleSelect?: (stepId: string) => void;
 }
 
 export function FlowCanvas({
@@ -80,6 +84,8 @@ export function FlowCanvas({
   onDeselectStep,
   executions,
   highlightStepId,
+  selectedStepIds,
+  onToggleSelect,
 }: FlowCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -167,7 +173,15 @@ export function FlowCanvas({
 
   const onSelectStepRef = useRef(onSelectStep);
   onSelectStepRef.current = onSelectStep;
-  const handleNodeClick = useCallback((stepId: string) => onSelectStepRef.current(stepId), []);
+  const onToggleSelectRef = useRef(onToggleSelect);
+  onToggleSelectRef.current = onToggleSelect;
+  const handleNodeClick = useCallback((stepId: string, shiftKey: boolean) => {
+    if (shiftKey && onToggleSelectRef.current) {
+      onToggleSelectRef.current(stepId);
+    } else {
+      onSelectStepRef.current(stepId);
+    }
+  }, []);
 
   // ── Keyboard shortcuts ─────────────────────────────────
   useEffect(() => {
@@ -317,6 +331,12 @@ export function FlowCanvas({
           <TooltipContent>Shortcuts (?)</TooltipContent>
         </Tooltip>
 
+        {selectedStepIds && selectedStepIds.size > 0 && (
+          <Badge variant="default" className="text-xs gap-1">
+            {selectedStepIds.size} selected
+          </Badge>
+        )}
+
         <Badge variant="outline" className="text-xs">
           {flow.steps.length} steps &middot; {layout.columns} cols
         </Badge>
@@ -402,6 +422,7 @@ export function FlowCanvas({
                 status={getStatus(step.id)}
                 isSelected={selectedStepId === step.id}
                 isHighlighted={highlightStepId === step.id}
+                isMultiSelected={selectedStepIds?.has(step.id) ?? false}
                 dimmed={dimmed}
                 onClick={handleNodeClick}
               />
@@ -482,11 +503,12 @@ interface CanvasNodeProps {
   status: StepStatus;
   isSelected: boolean;
   isHighlighted: boolean;
+  isMultiSelected: boolean;
   dimmed: boolean;
-  onClick: (stepId: string) => void;
+  onClick: (stepId: string, shiftKey: boolean) => void;
 }
 
-const CanvasNode = memo(function CanvasNode({ step, x, y, status, isSelected, isHighlighted, dimmed, onClick }: CanvasNodeProps) {
+const CanvasNode = memo(function CanvasNode({ step, x, y, status, isSelected, isHighlighted, isMultiSelected, dimmed, onClick }: CanvasNodeProps) {
   const config = TYPE_CONFIG[step.type];
   const TypeIcon = config.icon;
   const StatusIcon = STATUS_ICON[status];
@@ -494,12 +516,13 @@ const CanvasNode = memo(function CanvasNode({ step, x, y, status, isSelected, is
   return (
     <button
       data-step-node
-      onClick={() => onClick(step.id)}
+      onClick={(e) => onClick(step.id, e.shiftKey)}
       className={cn(
         "absolute rounded-lg border bg-background shadow-sm transition-all",
         "hover:shadow-md hover:border-primary/50 text-left",
         isSelected ? "border-primary ring-2 ring-primary/20 shadow-md" : config.border,
-        isHighlighted && !isSelected && "ring-2 ring-yellow-400/50 border-yellow-400/60",
+        isMultiSelected && !isSelected && "ring-2 ring-blue-400/50 border-blue-400/60 bg-blue-500/5",
+        isHighlighted && !isSelected && !isMultiSelected && "ring-2 ring-yellow-400/50 border-yellow-400/60",
         status === "running" && "border-primary/60",
         status === "error" && "border-red-500/60",
         dimmed && "opacity-20",

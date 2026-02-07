@@ -8,3 +8,10 @@ export { useFlowExecution, useExecutionStore } from "./use-flow-execution";
 export type { TrackStepResult, UseFlowExecutionReturn } from "./use-flow-execution";
 
 export { getExecutionHistory, getHistoricalExecution, clearHistory } from "./execution-store";
+
+export {
+  applyMutation,
+  generateStepId,
+  createBlankStep,
+} from "./flow-mutations";
+export type { FlowMutation, MutationResult } from "./flow-mutations";
