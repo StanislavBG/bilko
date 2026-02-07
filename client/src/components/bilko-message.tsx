@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useVoice } from "@/contexts/voice-context";
+import { useConversationDesign } from "@/contexts/conversation-design-context";
 import { ENTRANCE_DELAY_MS, TYPEWRITER_SPEED_MS } from "@/lib/bilko-persona/pacing";
 
 interface BilkoMessageProps {
@@ -40,6 +41,7 @@ export function BilkoMessage({
   const [started, setStarted] = useState(false);
   const [complete, setComplete] = useState(false);
   const { speak, ttsSupported } = useVoice();
+  const { bilkoStartedSpeaking, bilkoFinishedSpeaking } = useConversationDesign();
   const completeCalled = useRef(false);
   const words = text.split(/\s+/);
 
@@ -65,7 +67,10 @@ export function BilkoMessage({
   // TTS: speak when the typewriter starts
   useEffect(() => {
     if (!started || !speakAloud || !ttsSupported) return;
-    speak(speech || text);
+    bilkoStartedSpeaking();
+    speak(speech || text).then(() => {
+      bilkoFinishedSpeaking();
+    });
   }, [started, speakAloud, ttsSupported]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fire onComplete once

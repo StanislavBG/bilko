@@ -8,6 +8,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
 import { NavigationProvider } from "@/contexts/navigation-context";
 import { VoiceProvider } from "@/contexts/voice-context";
+import { ConversationDesignProvider } from "@/contexts/conversation-design-context";
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
@@ -96,8 +97,10 @@ function App() {
       <ThemeProvider defaultTheme="system" storageKey="bilko-ui-theme">
         <TooltipProvider>
           <VoiceProvider>
-            <Toaster />
-            <AuthenticatedApp />
+            <ConversationDesignProvider>
+              <Toaster />
+              <AuthenticatedApp />
+            </ConversationDesignProvider>
           </VoiceProvider>
         </TooltipProvider>
       </ThemeProvider>
