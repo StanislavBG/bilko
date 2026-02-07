@@ -39,21 +39,10 @@ function AuthenticatedApp() {
     );
   }
 
-  // Public routes — accessible to everyone (no auth required)
+  // All routes require authentication
   return (
     <Switch>
-      <Route path="/flows">
-        <PublicShell>
-          <FlowExplorer />
-        </PublicShell>
-      </Route>
-      <Route path="/flows/:flowId">
-        <PublicShell>
-          <FlowDetail />
-        </PublicShell>
-      </Route>
-
-      {/* Everything else goes through the auth gate */}
+      {/* Everything goes through the auth gate */}
       <Route>
         {() => {
           if (!isAuthenticated || !user) {
@@ -81,6 +70,8 @@ function AuthenticatedApp() {
                           <Route path="/workflows" component={AgenticWorkflows} />
                           <Route path="/memory" component={MemoryExplorer} />
                           <Route path="/rules" component={RulesExplorer} />
+                          <Route path="/flows" component={FlowExplorer} />
+                          <Route path="/flows/:flowId" component={FlowDetail} />
                           <Route component={NotFound} />
                         </Switch>
                       </main>
@@ -93,18 +84,6 @@ function AuthenticatedApp() {
         }}
       </Route>
     </Switch>
-  );
-}
-
-/** Minimal shell for public pages (header + content, no sidebar) */
-function PublicShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col h-screen w-full">
-      <GlobalHeader variant="landing" />
-      <main className="flex-1 flex overflow-hidden pt-14">
-        {children}
-      </main>
-    </div>
   );
 }
 
