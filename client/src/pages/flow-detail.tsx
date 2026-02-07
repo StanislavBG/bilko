@@ -31,15 +31,17 @@ import {
   CheckCircle2,
   Loader2,
   Circle,
+  Sparkles,
 } from "lucide-react";
 import { getFlowById } from "@/lib/flow-inspector/registry";
-import { FlowCanvas, StepDetail } from "@/components/flow-inspector";
+import { FlowCanvas, StepDetail, CanvasBuilder } from "@/components/flow-inspector";
 import { useExecutionStore } from "@/lib/flow-engine";
 import {
   getExecutionHistory,
   subscribe as storeSubscribe,
 } from "@/lib/flow-engine/execution-store";
-import type { FlowExecution, StepExecution } from "@/lib/flow-inspector/types";
+import type { FlowDefinition, FlowExecution, StepExecution } from "@/lib/flow-inspector/types";
+import type { MutationResult } from "@/lib/flow-engine/flow-mutations";
 
 // ── Cost estimation (rough Gemini Flash pricing) ─────────
 const COST_PER_1K_INPUT = 0.00015;
@@ -77,6 +79,31 @@ export default function FlowDetail() {
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [viewingHistoryId, setViewingHistoryId] = useState<string | null>(null);
   const [stepThroughIdx, setStepThroughIdx] = useState<number | null>(null);
+
+  // Voice builder state
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [multiSelectIds, setMultiSelectIds] = useState<Set<string>>(new Set());
+  const [liveFlow, setLiveFlow] = useState<FlowDefinition | null>(null);
+
+  const handleToggleSelect = useCallback((stepId: string) => {
+    setMultiSelectIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(stepId)) next.delete(stepId);
+      else next.add(stepId);
+      return next;
+    });
+  }, []);
+
+  const handleApplyMutation = useCallback((result: MutationResult) => {
+    setLiveFlow(result.flow);
+    // Clear multi-selection after applying
+    setMultiSelectIds(new Set());
+  }, []);
+
+  const handleBuilderClose = useCallback(() => {
+    setBuilderOpen(false);
+    setMultiSelectIds(new Set());
+  }, []);
 
   // Live execution from global store
   const liveExecution = useExecutionStore(flowId ?? "");
@@ -157,8 +184,11 @@ export default function FlowDetail() {
     );
   }
 
+  // The flow to render: liveFlow (after mutations) or the registry flow
+  const activeFlow = liveFlow ?? flow;
+
   const selectedStep = selectedStepId
-    ? flow.steps.find((s) => s.id === selectedStepId)
+    ? activeFlow.steps.find((s) => s.id === selectedStepId)
     : null;
 
   const selectedExecution = selectedStepId
@@ -180,21 +210,35 @@ export default function FlowDetail() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-lg font-bold">{flow.name}</h1>
-                <Badge variant="outline" className="text-xs">v{flow.version}</Badge>
+                <h1 className="text-lg font-bold">{activeFlow.name}</h1>
+                <Badge variant="outline" className="text-xs">v{activeFlow.version}</Badge>
+                {liveFlow && (
+                  <Badge variant="default" className="text-xs gap-1">
+                    <Sparkles className="h-3 w-3" /> Modified
+                  </Badge>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground truncate">{flow.description}</p>
+              <p className="text-xs text-muted-foreground truncate">{activeFlow.description}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant={builderOpen ? "default" : "outline"}
+                size="sm"
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => setBuilderOpen((o) => !o)}
+              >
+                <Sparkles className="h-3 w-3" />
+                Voice Builder
+              </Button>
               <Badge variant="secondary" className="gap-1 text-xs">
-                <MapPin className="h-3 w-3" /> {flow.location}
+                <MapPin className="h-3 w-3" /> {activeFlow.location}
               </Badge>
               <Badge variant="secondary" className="gap-1 text-xs">
-                <GitBranch className="h-3 w-3" /> {flow.steps.length} steps
+                <GitBranch className="h-3 w-3" /> {activeFlow.steps.length} steps
               </Badge>
-              {flow.output && (
+              {activeFlow.output && (
                 <Badge variant="secondary" className="gap-1 text-xs">
-                  out: {flow.output.name}
+                  out: {activeFlow.output.name}
                 </Badge>
               )}
             </div>
@@ -293,20 +337,32 @@ export default function FlowDetail() {
         )}
       </div>
 
-      {/* ── Main area: Canvas + optional detail panel ───── */}
+      {/* ── Main area: Canvas + optional detail/builder panel ── */}
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 overflow-hidden">
           <FlowCanvas
-            flow={flow}
+            flow={activeFlow}
             selectedStepId={selectedStepId}
             onSelectStep={setSelectedStepId}
             onDeselectStep={() => setSelectedStepId(null)}
             executions={execution?.steps}
             highlightStepId={currentStepThrough?.stepId}
+            selectedStepIds={builderOpen ? multiSelectIds : undefined}
+            onToggleSelect={builderOpen ? handleToggleSelect : undefined}
           />
         </div>
 
-        {selectedStep && (
+        {/* Voice Builder panel (takes priority over step inspector) */}
+        {builderOpen ? (
+          <div className="w-[420px] shrink-0 border-l overflow-hidden">
+            <CanvasBuilder
+              flow={activeFlow}
+              selectedStepIds={multiSelectIds}
+              onApplyMutation={handleApplyMutation}
+              onClose={handleBuilderClose}
+            />
+          </div>
+        ) : selectedStep ? (
           <div className="w-[420px] shrink-0 border-l overflow-auto">
             <div className="flex items-center justify-between px-3 pt-3">
               <span className="text-xs text-muted-foreground font-medium">Step Inspector</span>
@@ -320,10 +376,10 @@ export default function FlowDetail() {
               </Button>
             </div>
             <div className="p-3">
-              <StepDetail step={selectedStep} flow={flow} execution={selectedExecution} />
+              <StepDetail step={selectedStep} flow={activeFlow} execution={selectedExecution} />
             </div>
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

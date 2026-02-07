@@ -2,7 +2,7 @@
 
 Rule ID: ARCH-005
 Priority: CRITICAL
-Version: 1.0.0
+Version: 1.1.0
 Type: Architecture
 Dependencies: ARCH-000, ARCH-001
 Cross-References: PER-002, APP-LANDING-001
@@ -184,6 +184,48 @@ When a user makes a choice, Bilko responds contextually before the experience re
 
 ---
 
+## Voice Builder Contract
+
+Flows are built and modified exclusively through voice commands and node selection — never through traditional drag-and-drop builders.
+
+### V1: Voice-First Mutation
+
+All structural changes to a flow must go through a `FlowMutation` object. Users express intent via voice (or text), Bilko interprets via LLM, produces a mutation, and the user confirms before application.
+
+### V2: Pure Mutations
+
+Every mutation is a pure function: `applyMutation(flow, mutation) → MutationResult`. Mutations do not side-effect — they produce a new `FlowDefinition` and a validation result.
+
+### V3: Pre-Apply Validation
+
+Every mutation result is validated against the steel frame invariants (I1–I7) **before** application. Invalid mutations are shown to the user with specific errors. The user may still choose to apply (forcing the mutation), but Bilko warns explicitly.
+
+### V4: Node Selection Context
+
+The voice builder receives the set of currently selected node IDs as context. Multi-select (shift+click) is the targeting mechanism — the user selects what they want to change, then speaks the change.
+
+### V5: Mutation Types
+
+The following mutation types are supported:
+- `add-step` — Add a new step (optionally after a selected step)
+- `remove-step` — Remove a step (cleans up dangling dependencies)
+- `update-step` — Modify step fields (name, description, prompt, etc.)
+- `connect` — Add a dependency edge between two steps
+- `disconnect` — Remove a dependency edge
+- `change-type` — Change a step's type (llm, transform, etc.)
+- `reorder-deps` — Reorder a step's dependency list
+- `batch` — Apply multiple mutations atomically
+
+### V6: Confirm Before Apply
+
+No mutation is applied silently. Bilko always shows a preview (description + validation status) and waits for explicit confirmation — by voice ("yes", "do it") or by click.
+
+### V7: No Traditional Builder UI
+
+There are no toolboxes, property panels, drag handles, or drop zones. The only building interface is: select nodes → speak to Bilko → confirm. This is a deliberate design constraint, not a limitation.
+
+---
+
 ## Validation
 
 A runtime validator (`validateFlowDefinition()`) enforces all invariants at application startup. Flows that fail validation are logged with specific errors and excluded from the registry.
@@ -211,6 +253,9 @@ interface FlowValidationError {
 | Orphan step disconnected from roots | Violates I3 | Every step must be reachable |
 | Duplicate step IDs | Violates I5 | Use unique kebab-case IDs |
 | Hardcoded model strings scattered | Drift risk | Use `model` field, default in config |
+| Applying mutations without confirmation | Violates V6 | Always preview + confirm |
+| Drag-and-drop step creation | Violates V7 | Use voice + selection only |
+| Direct flow state mutation | Violates V2 | Use `applyMutation()` pure function |
 
 ---
 
@@ -230,10 +275,19 @@ Before registering a new flow:
 - [ ] Flow registered in registry.ts (R1)
 - [ ] Version bumped if structure changed (R2)
 - [ ] `validateFlowDefinition()` passes
+- [ ] Voice builder mutations go through `applyMutation()` (V2)
+- [ ] Mutations are validated before application (V3)
+- [ ] User confirms before mutation is applied (V6)
 
 ---
 
 ## Changelog
+
+### v1.1.0 (2026-02-07)
+- Voice Builder Contract (V1-V7): Voice-first flow building via mutations
+- Pure mutation functions with pre-apply validation
+- Node selection as targeting mechanism (shift+click multi-select)
+- Explicit "no traditional builder" design constraint
 
 ### v1.0.0 (2026-02-07)
 - Initial steel frame: 7 structural invariants, 5 step type contracts
