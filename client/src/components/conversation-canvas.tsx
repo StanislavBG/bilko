@@ -39,6 +39,8 @@ export interface OptionChoice {
 export interface UserChoiceTurn {
   type: "user-choice";
   options: OptionChoice[];
+  /** Pre-selected option ID (for session restore) */
+  selectedId?: string;
 }
 
 export interface ContentTurn {
@@ -76,6 +78,8 @@ interface ConversationCanvasProps {
   className?: string;
   /** Compact mode for side-panel usage (smaller text, tighter spacing) */
   compact?: boolean;
+  /** Number of turns already settled on mount (restored from session) */
+  initialSettledCount?: number;
 }
 
 // ── Helper: build turns from AgentContentResult ──────────
@@ -131,8 +135,9 @@ export function ConversationCanvas({
   onChoice,
   className = "",
   compact = false,
+  initialSettledCount = 0,
 }: ConversationCanvasProps) {
-  const [settledCount, setSettledCount] = useState(0);
+  const [settledCount, setSettledCount] = useState(initialSettledCount);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new content appears
@@ -290,8 +295,17 @@ function UserChoiceView({
   onSettled: () => void;
   compact?: boolean;
 }) {
-  const [pickedId, setPickedId] = useState<string | null>(null);
-  const settledCalled = useRef(false);
+  const [pickedId, setPickedId] = useState<string | null>(turn.selectedId ?? null);
+  const settledCalled = useRef(!!turn.selectedId);
+
+  // If pre-selected (restored from session), fire settled immediately
+  useEffect(() => {
+    if (turn.selectedId && !isSettled) {
+      onSettled();
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const voiceOptions: VoiceTriggerOption[] = turn.options.map((o) => ({
     id: o.id,
