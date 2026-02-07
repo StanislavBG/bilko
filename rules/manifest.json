@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "2.0.0",
-  "lastUpdated": "2026-02-06T00:00:00Z",
+  "lastUpdated": "2026-02-07T00:00:00Z",
   "bootstrap": {
     "_instruction": "AI developers: READ ALL RULES in the /rules/ directory. This manifest indexes them for routing, but you must read the actual .md files.",
     "primaryDirective": "ARCH-000",
@@ -175,6 +175,37 @@
         "ARCH-002"
       ],
       "description": "How to create, modify, and version rules. Includes replit.md governance."
+    },
+    "ARCH-005": {
+      "id": "ARCH-005",
+      "title": "Flow Steel Frame",
+      "path": "rules/architecture/005-flow-steel-frame.md",
+      "partition": "architecture",
+      "priority": "CRITICAL",
+      "version": "1.0.0",
+      "triggers": [
+        "flow",
+        "steel frame",
+        "invariant",
+        "DAG",
+        "step type",
+        "flow validation",
+        "flow inspector",
+        "flow registry",
+        "flow definition",
+        "step contract",
+        "execution contract",
+        "canvas contract"
+      ],
+      "dependencies": [
+        "ARCH-000",
+        "ARCH-001"
+      ],
+      "crossReferences": [
+        "PER-002",
+        "APP-LANDING-001"
+      ],
+      "description": "Non-negotiable structural invariants for all in-platform flows. Defines DAG rules, step type contracts, execution contracts, and conversational canvas contracts."
     },
     "INT-003": {
       "id": "INT-003",
@@ -915,6 +946,12 @@
         "pattern": "agentic|llm|gemini|voice|speech|video discovery|learning mode|chat tutor|in-platform",
         "partitions": [
           "apps",
+          "architecture"
+        ]
+      },
+      {
+        "pattern": "flow|steel frame|DAG|step type|flow inspector|flow registry|flow definition|execution trace|step contract",
+        "partitions": [
           "architecture"
         ]
       },

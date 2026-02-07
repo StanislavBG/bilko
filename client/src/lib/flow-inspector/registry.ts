@@ -3,11 +3,15 @@
  *
  * All inspectable PER-002 flows are registered here.
  * Each entry describes the flow's steps, prompts, and I/O schemas.
+ *
+ * Validated at import time by ARCH-005 steel frame validator.
+ * Invalid flows are logged and excluded.
  */
 
 import type { FlowDefinition } from "./types";
+import { validateRegistry } from "./validate";
 
-export const flowRegistry: FlowDefinition[] = [
+const allFlows: FlowDefinition[] = [
   {
     id: "video-discovery",
     name: "AI Video Discovery",
@@ -179,6 +183,9 @@ Rules:
     ],
   },
 ];
+
+/** Validated registry — only flows passing ARCH-005 invariants */
+export const flowRegistry: FlowDefinition[] = validateRegistry(allFlows);
 
 export function getFlowById(id: string): FlowDefinition | undefined {
   return flowRegistry.find((f) => f.id === id);
