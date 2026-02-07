@@ -30,7 +30,7 @@ export interface ConversationMessage {
   timestamp: number;
   meta?: {
     /** What kind of message this is */
-    type?: "greeting" | "question" | "acknowledgment" | "choice" | "back";
+    type?: "greeting" | "question" | "acknowledgment" | "choice" | "back" | "voice" | "guidance" | "subflow-summary";
     /** If user chose a mode */
     modeId?: string;
     modeLabel?: string;
