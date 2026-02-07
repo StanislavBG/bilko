@@ -39,41 +39,72 @@ function AuthenticatedApp() {
     );
   }
 
-  if (!isAuthenticated || !user) {
-    return <Landing />;
-  }
-
+  // Public routes — accessible to everyone (no auth required)
   return (
-    <ViewModeProvider>
-      <SidebarProvider>
-        <NavigationProvider>
-          <div className="flex flex-col h-screen w-full">
-            <GlobalHeader />
-            <div className="flex flex-1 overflow-hidden">
-              <AppSidebar />
-              <main className="flex-1 flex overflow-hidden">
-                <Switch>
-                  <Route path="/">
-                    <ConversationProvider>
-                      <LandingContent skipWelcome />
-                    </ConversationProvider>
-                  </Route>
-                  <Route path="/academy" component={Academy} />
-                  <Route path="/academy/:levelId" component={Academy} />
-                  <Route path="/projects/:projectId?" component={Projects} />
-                  <Route path="/workflows" component={AgenticWorkflows} />
-                  <Route path="/memory" component={MemoryExplorer} />
-                  <Route path="/rules" component={RulesExplorer} />
-                  <Route path="/flows" component={FlowExplorer} />
-                  <Route path="/flows/:flowId" component={FlowDetail} />
-                  <Route component={NotFound} />
-                </Switch>
-              </main>
-            </div>
-          </div>
-        </NavigationProvider>
-      </SidebarProvider>
-    </ViewModeProvider>
+    <Switch>
+      <Route path="/flows">
+        <PublicShell>
+          <FlowExplorer />
+        </PublicShell>
+      </Route>
+      <Route path="/flows/:flowId">
+        <PublicShell>
+          <FlowDetail />
+        </PublicShell>
+      </Route>
+
+      {/* Everything else goes through the auth gate */}
+      <Route>
+        {() => {
+          if (!isAuthenticated || !user) {
+            return <Landing />;
+          }
+
+          return (
+            <ViewModeProvider>
+              <SidebarProvider>
+                <NavigationProvider>
+                  <div className="flex flex-col h-screen w-full">
+                    <GlobalHeader />
+                    <div className="flex flex-1 overflow-hidden">
+                      <AppSidebar />
+                      <main className="flex-1 flex overflow-hidden">
+                        <Switch>
+                          <Route path="/">
+                            <ConversationProvider>
+                              <LandingContent skipWelcome />
+                            </ConversationProvider>
+                          </Route>
+                          <Route path="/academy" component={Academy} />
+                          <Route path="/academy/:levelId" component={Academy} />
+                          <Route path="/projects/:projectId?" component={Projects} />
+                          <Route path="/workflows" component={AgenticWorkflows} />
+                          <Route path="/memory" component={MemoryExplorer} />
+                          <Route path="/rules" component={RulesExplorer} />
+                          <Route component={NotFound} />
+                        </Switch>
+                      </main>
+                    </div>
+                  </div>
+                </NavigationProvider>
+              </SidebarProvider>
+            </ViewModeProvider>
+          );
+        }}
+      </Route>
+    </Switch>
+  );
+}
+
+/** Minimal shell for public pages (header + content, no sidebar) */
+function PublicShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col h-screen w-full">
+      <GlobalHeader variant="landing" />
+      <main className="flex-1 flex overflow-hidden pt-14">
+        {children}
+      </main>
+    </div>
   );
 }
 

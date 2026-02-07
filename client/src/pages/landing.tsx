@@ -16,9 +16,6 @@ import {
   ConversationCanvas,
   type ConversationTurn,
 } from "@/components/conversation-canvas";
-import type { ContentBlock } from "@/components/content-blocks/types";
-import { BlockSequence } from "@/components/content-blocks";
-import { PromptPlayground } from "@/components/prompt-playground";
 import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
 import {
   AiConsultationFlow,
@@ -34,10 +31,7 @@ import { Button } from "@/components/ui/button";
 import {
   Play,
   Sparkles,
-  Trophy,
   MessageCircle,
-  Compass,
-  Zap,
   ArrowLeft,
   Lightbulb,
   Briefcase,
@@ -61,11 +55,7 @@ interface ModeOption {
 
 const iconMap: Record<string, ReactNode> = {
   Play: <Play className="h-5 w-5" />,
-  Trophy: <Trophy className="h-5 w-5" />,
-  Sparkles: <Sparkles className="h-5 w-5" />,
-  Compass: <Compass className="h-5 w-5" />,
   MessageCircle: <MessageCircle className="h-5 w-5" />,
-  Zap: <Zap className="h-5 w-5" />,
   Lightbulb: <Lightbulb className="h-5 w-5" />,
   Briefcase: <Briefcase className="h-5 w-5" />,
   GraduationCap: <GraduationCap className="h-5 w-5" />,
@@ -97,121 +87,6 @@ Rules:
 
 const GREETING_FALLBACK =
   "Welcome to the Mental Gym. I'm Bilko — your AI training partner. What would you like to work on today?";
-
-// ── Content block definitions for each mode ──────────────
-
-const QUIZ_BLOCKS: ContentBlock[] = [
-  {
-    id: "quiz-intro",
-    type: "callout",
-    variant: "insight",
-    title: "AI Knowledge Quiz",
-    body: "Three questions to test your AI fundamentals. No pressure — this is how we learn.",
-  },
-  {
-    id: "q1",
-    type: "quiz",
-    question: "What does AI stand for?",
-    options: [
-      { id: "a", text: "Artificial Intelligence" },
-      { id: "b", text: "Automated Internet" },
-      { id: "c", text: "Advanced Information" },
-      { id: "d", text: "Analog Interface" },
-    ],
-    correctIndex: 0,
-    explanation: "Artificial Intelligence — the field of computer science focused on creating systems that can perform tasks typically requiring human intelligence.",
-  },
-  {
-    id: "q2",
-    type: "quiz",
-    question: "Which of these is an AI language model?",
-    options: [
-      { id: "a", text: "GPT-4" },
-      { id: "b", text: "HTML" },
-      { id: "c", text: "SQL" },
-      { id: "d", text: "CSS" },
-    ],
-    correctIndex: 0,
-    explanation: "GPT-4 is a large language model by OpenAI. HTML, SQL, and CSS are web/database technologies, not AI models.",
-  },
-  {
-    id: "q3",
-    type: "quiz",
-    question: "What is a 'prompt' in AI?",
-    options: [
-      { id: "a", text: "A type of computer virus" },
-      { id: "b", text: "The input you give to an AI" },
-      { id: "c", text: "A programming language" },
-      { id: "d", text: "A hardware component" },
-    ],
-    correctIndex: 1,
-    explanation: "A prompt is the text you provide to an AI model to get a response. Good prompts lead to better results — that's a key skill we'll practice here.",
-  },
-];
-
-const EXPLORE_BLOCKS: ContentBlock[] = [
-  {
-    id: "explore-heading",
-    type: "heading",
-    text: "Training Tracks",
-    level: 2,
-  },
-  {
-    id: "explore-intro",
-    type: "text",
-    content: "The Mental Gym is organized into three tracks. Each builds on the last, taking you from beginner to architect.",
-    variant: "lead",
-  },
-  {
-    id: "explore-tracks",
-    type: "comparison",
-    columns: ["Track", "Focus", "Levels"],
-    rows: [
-      { label: "Recruit", values: ["From Zero to Builder", "Fundamentals, prompts, first projects", "10"] },
-      { label: "Specialist", values: ["Deep Technical Mastery", "Advanced techniques, fine-tuning, evaluation", "10"] },
-      { label: "Architect", values: ["Enterprise Scale", "System design, orchestration, production", "10"] },
-    ],
-  },
-  {
-    id: "explore-tip",
-    type: "callout",
-    variant: "tip",
-    body: "Start with Recruit even if you have experience. The levels are designed to fill gaps you might not know you have.",
-  },
-];
-
-const QUICK_START_BLOCKS: ContentBlock[] = [
-  {
-    id: "qs-heading",
-    type: "heading",
-    text: "Three Steps. Three Minutes.",
-    level: 2,
-  },
-  {
-    id: "qs-steps",
-    type: "steps",
-    steps: [
-      {
-        title: "Learn to Prompt",
-        body: "Good prompts lead to better results. We'll teach you the patterns that work — specificity, context, constraints, and iteration.",
-      },
-      {
-        title: "Practice Hands-On",
-        body: "Try real exercises with immediate feedback. The Gym gives you structured challenges that build real skill, not just knowledge.",
-      },
-      {
-        title: "Track Progress",
-        body: "Level up through three tracks. Earn badges. Build a portfolio of completed challenges that proves you know your stuff.",
-      },
-    ],
-  },
-  {
-    id: "qs-callout",
-    type: "callout",
-    variant: "insight",
-    body: "Most people learn AI by reading about it. At the Mental Gym, you learn by doing it. Every concept comes with practice.",
-  },
-];
 
 // ── Experience back button ───────────────────────────────
 
@@ -413,7 +288,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         {selectedMode ? (
           <div className="flex-1 max-w-4xl mx-auto px-6 py-6 w-full">
             <ExperienceBack onBack={handleBack} />
-            <RightPanelContent mode={selectedMode} onBack={handleBack} />
+            <RightPanelContent mode={selectedMode} />
           </div>
         ) : (
           <ModeSelectionGrid onSelect={handleChoice} />
@@ -429,7 +304,7 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
   return (
     <div className="flex-1 flex items-center justify-center p-8">
       <div className="max-w-3xl w-full space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {MODE_OPTIONS.map((option, i) => (
             <button
               key={option.id}
@@ -459,71 +334,18 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
   );
 }
 
-// ── Right panel content (experience rendering) ──────────
+// ── Right panel: subflow experience rendering ────────────
+// Each mode is a subflow of the main conversation. The left panel
+// continues logging independently while the subflow runs here.
 
-function RightPanelContent({
-  mode,
-  onBack,
-}: {
-  mode: LearningModeId;
-  onBack: () => void;
-}) {
-  if (mode === "quiz") {
-    return <BlockSequenceWrapper blocks={QUIZ_BLOCKS} />;
-  }
-  if (mode === "explore") {
-    return <BlockSequenceWrapper blocks={EXPLORE_BLOCKS} />;
-  }
-  if (mode === "quick") {
-    return <BlockSequenceWrapper blocks={QUICK_START_BLOCKS} />;
-  }
-
-  // Interactive modes (video, prompt, chat, interviewer, etc.)
-  return <ExperiencePanel mode={mode} onBack={onBack} />;
-}
-
-function BlockSequenceWrapper({ blocks }: { blocks: ContentBlock[] }) {
+function RightPanelContent({ mode }: { mode: LearningModeId }) {
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <BlockSequence blocks={blocks} />
-    </div>
-  );
-}
-
-// ── Experience panel (for non-block modes) ───────────────
-
-function ExperiencePanel({
-  mode,
-}: {
-  mode: LearningModeId;
-  onBack?: () => void;
-}) {
-  return (
-    <div className="w-full">
+    <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
       {mode === "video" && <VideoDiscoveryFlow />}
-
-      {mode === "prompt" && (
-        <PromptPlayground
-          title="Your First AI Prompt"
-          description="Try asking AI anything! Start with something simple like 'Explain AI to a 5 year old'."
-          placeholder="Type your prompt here and press Enter..."
-          showModelSelector={true}
-        />
-      )}
-
       {mode === "chat" && <AiConsultationFlow />}
-
-      {mode === "interviewer" && (
-        <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} />
-      )}
-
-      {mode === "linkedin" && (
-        <AiConsultationFlow config={LINKEDIN_STRATEGIST_CONFIG} />
-      )}
-
-      {mode === "socratic" && (
-        <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} />
-      )}
+      {mode === "interviewer" && <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} />}
+      {mode === "linkedin" && <AiConsultationFlow config={LINKEDIN_STRATEGIST_CONFIG} />}
+      {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} />}
     </div>
   );
 }
