@@ -1437,6 +1437,627 @@ Coming soon.`,
 ];
 
 // ============================================
+// BILKO'S WAY TRACK - Meta-Knowledge
+// ============================================
+const bilkosWayLevels: AcademyLevel[] = [
+  // ── Guide 1: Environment Setup ─────────────────────────
+  {
+    id: "bilkos-way-level-0",
+    levelRange: "0-10",
+    rank: "The Machinist",
+    coreSkill: "Environment Setup (Expert)",
+    skillSummary: "Deep technical understanding of the Replit + Git + Claude development stack.",
+    lesson: `This guide breaks down the three foundational tools that power Bilko's Mental Gym—and most modern AI-assisted development. You're reading this as someone who already ships code. Here's how these tools interconnect at the systems level.
+
+**Replit** is a cloud-native IDE built on containerized Linux (Nix-based). Each Repl runs in an isolated container with its own filesystem, network, and process space. For Bilko's project, Replit provides: a full Node.js runtime (Express backend + Vite dev server), a PostgreSQL database via Replit's managed DB, automatic HTTPS and deployment, and persistent storage across sessions. The development server runs on port 5000 with hot module replacement via Vite. The \`replit.nix\` file pins system dependencies. Replit Auth provides user authentication without external OAuth setup.
+
+**Git** operates as the distributed version control backbone. In this project, Git is not just "save points"—it's the collaboration protocol between human developers and AI agents. Every branch represents an isolated experiment. The branching model follows feature-branch workflow: \`main\` is production, feature branches like \`claude/add-environment-setup-topic-5CZEL\` represent AI-assisted development sessions. Git's DAG (directed acyclic graph) of commits mirrors the Flow Engine's own DAG architecture (ARCH-005)—both are about tracking directed, non-circular progressions of state.
+
+**Claude Code** is an AI-powered CLI that runs inside the Replit terminal. It's not a chatbot—it's an agentic coding tool. Claude reads files, searches codebases, executes commands, and writes code through a tool-use protocol. It has access to: Bash (command execution), Read/Write/Edit (file operations), Grep/Glob (search), and Task (spawning sub-agents for complex work). In Bilko's project, Claude Code follows the rules-first architecture (ARCH-000)—it reads \`CLAUDE.md\` and the \`/rules/\` directory before making any changes, ensuring AI-generated code respects the project's governance structure.
+
+**How they connect**: Replit provides the runtime environment → Git manages the code's history and branching → Claude Code operates within both to write, test, and iterate. The feedback loop is: Claude reads the codebase (via Replit's filesystem) → proposes changes (tracked by Git) → tests them (via Replit's runtime) → commits and pushes (via Git) → deployment happens automatically (via Replit). This is a concrete example of the human-AI collaboration loop: you define the intent, Claude executes, Git records, Replit runs.`,
+    keyPrinciples: [
+      "Replit provides containerized, reproducible environments with built-in deployment",
+      "Git's DAG model tracks directed progression of state—same pattern as flow DAGs",
+      "Claude Code is agentic, not conversational—it uses tools to read, write, and execute",
+      "The three tools form a feedback loop: environment → version control → AI assistance",
+      "Rules-first development (ARCH-000) governs how AI agents interact with the codebase",
+    ],
+    quests: [
+      {
+        id: "bw-q0-1",
+        type: "prompt",
+        title: "Map the Architecture",
+        platform: "Claude Code",
+        description: "Use Claude Code to explore Bilko's project structure. Run 'ls' at the root level and map every top-level directory to its architectural purpose using CLAUDE.md as reference.",
+      },
+      {
+        id: "bw-q0-2",
+        type: "quiz",
+        title: "DevOps Connections",
+        description: "Test your understanding of how Replit, Git, and Claude Code interconnect.",
+        tasks: [
+          "What container technology does Replit use under the hood?",
+          "How does Git's DAG model relate to ARCH-005's flow validation?",
+          "What is Claude Code's tool-use protocol and how does it differ from a chatbot?",
+          "Trace the path of a code change from intent to deployment in this stack",
+        ],
+      },
+      {
+        id: "bw-q0-3",
+        type: "build",
+        title: "Branch Inspector",
+        platform: "Terminal",
+        description: "Use git log --graph --oneline to visualize the commit DAG. Identify feature branches, merge points, and map them to development sessions.",
+      },
+    ],
+    subTopics: [
+      {
+        id: "bw-st0-replit",
+        title: "Replit Internals",
+        description: "How Replit's container architecture powers the development environment.",
+        keyTechniques: [
+          "Nix-based dependency management pins exact system package versions",
+          "Each Repl is an isolated Linux container with persistent filesystem",
+          "Port 5000 is the default dev server—Vite proxies frontend, Express handles API",
+          "Replit Auth provides zero-config authentication via headers",
+        ],
+        platforms: ["Replit", "Nix", "Node.js"],
+      },
+      {
+        id: "bw-st0-git",
+        title: "Git as Collaboration Protocol",
+        description: "Git's role beyond version control—as the bridge between human and AI development.",
+        keyTechniques: [
+          "Feature branches isolate AI-assisted changes from production code",
+          "Commit messages document AI agent decisions for human review",
+          "Git diff provides context for AI agents to understand changes",
+          "Branch naming conventions (claude/*) signal AI-generated work",
+        ],
+        platforms: ["Git", "GitHub"],
+      },
+    ],
+    order: 0,
+  },
+  {
+    id: "bilkos-way-level-1",
+    levelRange: "11-20",
+    rank: "The Tinkerer",
+    coreSkill: "Environment Setup (Intermediate)",
+    skillSummary: "Practical understanding of how Replit, Git, and Claude work together.",
+    lesson: `You use tools every day—editors, terminals, version control. This guide shows you how three specific tools work together to build an AI-powered application, using Bilko's Mental Gym as a real example.
+
+**Replit** is where the code lives and runs. Think of it as your development computer in the cloud. You don't need to install Node.js, PostgreSQL, or any dependencies—Replit handles all of that. When you open Bilko's project in Replit, you get: a code editor, a terminal, a running web server, and a live preview of the app. Hit "Run" and the whole application starts—the React frontend, the Express backend, and the database connection. Changes you make appear in real-time.
+
+**Git** is how you track and manage changes. Every time you make a meaningful change, you "commit" it—like saving a checkpoint in a video game. You can always go back to any previous checkpoint. Git also enables branching: creating a parallel version of the code where you can experiment without affecting the main version. In Bilko's project, when Claude Code works on a feature, it creates a branch (like \`claude/add-environment-setup-topic-5CZEL\`), makes its changes there, and then those changes can be reviewed and merged into the main codebase.
+
+**Claude Code** is your AI development partner. It runs in the terminal and can: read your project files to understand the codebase, search for patterns across hundreds of files, write new code or modify existing code, run commands to test changes, and create Git commits. It's different from ChatGPT or Claude.ai because it has direct access to your project files. You tell it what you want to build, and it figures out which files to change and how.
+
+**How they work together in Bilko's project**: When adding a new feature to the Academy (like what you're reading right now), the workflow is: Claude Code reads the existing data structure in \`academy-levels.ts\` → understands the Track/Level/Quest pattern → writes new content following that structure → tests that TypeScript compiles without errors → commits the changes to a Git branch → pushes to GitHub. Replit runs the dev server the whole time, so you can see changes live as they're made.`,
+    keyPrinciples: [
+      "Replit = your development computer in the cloud (code, run, deploy)",
+      "Git = your checkpoint system (track changes, branch experiments, merge results)",
+      "Claude Code = your AI partner that reads and writes code directly in the project",
+      "Together they form a build loop: write → run → test → save → repeat",
+      "The project you're reading was built using exactly this workflow",
+    ],
+    quests: [
+      {
+        id: "bw-q1-1",
+        type: "prompt",
+        title: "Tool Walkthrough",
+        platform: "Replit",
+        description: "Open Bilko's project in Replit. Identify the editor, terminal, and preview panes. Run 'npm run dev' and verify the app starts. Note the port number and URL.",
+      },
+      {
+        id: "bw-q1-2",
+        type: "build",
+        title: "Your First Branch",
+        platform: "Terminal",
+        description: "Create a new Git branch, make a small change to any file, commit it with a descriptive message, and then switch back to the main branch. Verify your change disappeared (it's safe on the branch).",
+      },
+      {
+        id: "bw-q1-3",
+        type: "prompt",
+        title: "Ask Claude Code",
+        platform: "Claude Code",
+        description: "Ask Claude Code to explain any file in the project. Try: 'What does client/src/data/academy-levels.ts do?' Note how it reads the file before answering.",
+      },
+      {
+        id: "bw-q1-4",
+        type: "quiz",
+        title: "Workflow Check",
+        description: "Test your understanding of the development workflow.",
+        tasks: [
+          "What happens when you hit 'Run' in Replit?",
+          "What is a Git branch and why would you use one?",
+          "How is Claude Code different from a regular AI chatbot?",
+          "Describe the workflow for adding a new feature to this project",
+        ],
+      },
+    ],
+    order: 1,
+  },
+  {
+    id: "bilkos-way-level-2",
+    levelRange: "21-30",
+    rank: "The First Timer",
+    coreSkill: "Environment Setup (Novice)",
+    skillSummary: "Understanding the tools behind this project, explained simply.",
+    lesson: `Imagine you're building a treehouse. You need three things: a place to build it, a way to remember what you did, and a helper who's really good at construction. That's exactly what Replit, Git, and Claude are for Bilko's Mental Gym.
+
+**Replit is your workshop.** It's like having a fully equipped workshop that exists on the internet. You don't need to buy tools or set anything up—everything is already there. When the creator of Bilko's Mental Gym opens Replit, they see the project's files on the left (like folders in a filing cabinet), a place to write code in the middle (like a workbench), and a preview of the actual website on the right (like a window showing the finished product). If they change something, the preview updates immediately—like magic.
+
+**Git is your journal.** Imagine keeping a detailed diary of every change you make to the treehouse. "Tuesday: Added a window. Wednesday: Painted the door blue. Thursday: Actually, changed the door to red." Git does this for code. Every change is recorded with a note about what was done and why. The best part? You can always go back. If the red door looks terrible, you can flip back to Wednesday and get the blue door back. Git also lets you try experiments safely—like sketching a design on a separate piece of paper before committing to building it.
+
+**Claude is your expert helper.** Imagine having a really knowledgeable friend who can look at your treehouse plans, understand them, and then help you build. That's Claude Code. The creator of Bilko's project tells Claude things like "Add a new topic to the Academy about how our tools work," and Claude figures out which files need to change, writes the new content, and makes sure everything still works. It's like having a construction partner who never gets tired and can read blueprints instantly.
+
+**How they work together—a real example:** The page you're reading right now was created this way: The creator told Claude "Add a new topic about our tools." Claude opened the right files in Replit, wrote the content (these very words!), saved the progress in Git (so nothing gets lost), and the website updated automatically. Three tools, working together, to build something you can see and use right now.`,
+    keyPrinciples: [
+      "Replit is your workshop—everything you need to build, all in one place on the internet",
+      "Git is your journal—it remembers every change so you can always go back",
+      "Claude is your expert helper—it reads your project and helps you build",
+      "Together they let one person (with AI help) build a whole website",
+      "This very page was built using these three tools working together",
+    ],
+    quests: [
+      {
+        id: "bw-q2-1",
+        type: "prompt",
+        title: "Spot the Tools",
+        platform: "Any",
+        description: "Look at any website you use daily. Can you guess what tools were used to build it? Every website has a 'workshop' (hosting), a 'journal' (version control), and 'helpers' (developers or AI).",
+      },
+      {
+        id: "bw-q2-2",
+        type: "quiz",
+        title: "The Treehouse Quiz",
+        description: "Test your understanding using the treehouse analogy.",
+        tasks: [
+          "If Replit is the workshop, what is a 'file' in the workshop?",
+          "If Git is a journal, what is a 'branch'?",
+          "If Claude is a helper, what makes it different from asking a friend?",
+          "What happens when all three work together?",
+        ],
+      },
+      {
+        id: "bw-q2-3",
+        type: "game",
+        title: "Build a Story",
+        description: "Explain to someone (or write down) how a website gets built, using only everyday objects as analogies. No technical words allowed. Can you make a 5-year-old understand?",
+      },
+    ],
+    order: 2,
+  },
+  // ── Guide 2: What is an Agent ──────────────────────────
+  {
+    id: "bilkos-way-level-3",
+    levelRange: "31-40",
+    rank: "The Puppeteer",
+    coreSkill: "What is an Agent (Expert)",
+    skillSummary: "Agents as executable DAGs with tool access, memory, and autonomous decision-making.",
+    lesson: `An agent is an autonomous software entity that perceives its environment, makes decisions, and takes actions to achieve goals—without step-by-step human instruction for each action. In Bilko's codebase, agents manifest at two architectural layers (ARCH-001): background agents in n8n and in-platform flows powered by the Flow Engine.
+
+**Agent as Directed Acyclic Graph (DAG):** Every in-platform flow in Bilko's project is structurally a DAG—a directed graph with no cycles (ARCH-005 Invariant I1). The Video Discovery flow demonstrates this: \`research-topics\` → \`prefetch-videos\` (parallel) → \`validate-videos\` → \`select-topic\` (user-input) → \`display-video\`. Each node is a step with a type contract: \`llm\` steps require a prompt and output schema, \`validate\` steps verify data integrity, \`user-input\` steps pause for human interaction, and \`display\` steps render results. The DAG enforces that dependencies flow forward—step B can depend on step A's output, but never vice versa.
+
+**Agent as Dataflow:** Data flows through the DAG like water through pipes. Each step transforms its inputs into outputs. The \`research-topics\` step outputs \`{topics: [...]}\`. The \`prefetch-videos\` step consumes that array and outputs \`{videos: [...]}\` for each topic—running in parallel (the \`parallel: true\` flag). The \`validate-videos\` step filters invalid YouTube IDs. This is a dataflow architecture: the computation is defined by data transformations, not control flow.
+
+**Agent as Input/Output Sequence:** At the most fundamental level, an agent is a sequence of input→process→output operations. In the Flow Engine: Step receives input (from dependencies or user) → Processes it (LLM call, validation, transformation) → Produces output (structured data). The \`StepExecution\` trace captures this precisely: \`startedAt\`, \`input\`, \`output\`, \`completedAt\`, \`tokenUsage\`. Every agent action is auditable.
+
+**The Flow Inspector** (accessible at \`/flows\`) visualizes all of this. It renders the DAG as an interactive canvas with Sugiyama-style layout, where you can inspect each step's prompt, schema, execution trace, and dependency chain. The inspector itself is a teaching tool—it exposes the agent's internals as a browsable interface.
+
+**Beyond flows—n8n agents:** The background layer (n8n) hosts PER-001 agents: scheduled workflows that run autonomously. Content pipelines that generate daily briefings. Monitoring agents that check system health. These are true proactive agents—they don't wait for user input; they operate on schedules and triggers.`,
+    keyPrinciples: [
+      "An agent is an autonomous entity that perceives, decides, and acts toward goals",
+      "In-platform flows are executable DAGs validated by ARCH-005 steel frame invariants",
+      "Dataflow architecture: computation defined by data transformations, not control flow",
+      "Every agent action produces auditable StepExecution traces with timing and I/O",
+      "The Flow Inspector at /flows exposes agent internals as an interactive visualization",
+    ],
+    quests: [
+      {
+        id: "bw-q3-1",
+        type: "build",
+        title: "Trace the DAG",
+        platform: "Bilko's Flow Inspector",
+        description: "Open /flows in the app. Select the Video Discovery flow. Map every step's dependencies and identify which steps run in parallel vs sequential. Draw the DAG on paper.",
+      },
+      {
+        id: "bw-q3-2",
+        type: "prompt",
+        title: "Agent Anatomy",
+        platform: "Claude Code",
+        description: "Read client/src/lib/flow-inspector/registry.ts. For each step in the video-discovery flow, identify: step type, input schema, output schema, and dependencies.",
+      },
+      {
+        id: "bw-q3-3",
+        type: "quiz",
+        title: "Agent Architecture Quiz",
+        description: "Test your understanding of agent internals.",
+        tasks: [
+          "What ARCH-005 invariant prevents circular dependencies in a flow?",
+          "What is the difference between an llm step and a validate step?",
+          "How does the parallel flag change execution behavior?",
+          "What data does a StepExecution trace capture?",
+        ],
+      },
+      {
+        id: "bw-q3-4",
+        type: "capstone",
+        title: "Design an Agent",
+        platform: "Paper + Code",
+        description: "Design a new flow as a DAG: define steps, types, dependencies, and I/O schemas. Validate it mentally against ARCH-005 invariants (no cycles, unique IDs, valid deps).",
+      },
+    ],
+    subTopics: [
+      {
+        id: "bw-st3-dag",
+        title: "DAG Architecture",
+        description: "How directed acyclic graphs structure agent execution in the Flow Engine.",
+        keyTechniques: [
+          "I1: No cycles—dependencies must flow forward only",
+          "I2: At least one root step (no dependencies) to start execution",
+          "I3: No orphan steps—every step must be reachable from a root",
+          "Sugiyama layout algorithm converts DAG to visual coordinates",
+        ],
+        platforms: ["Flow Engine", "Flow Inspector"],
+      },
+      {
+        id: "bw-st3-dataflow",
+        title: "Dataflow Patterns",
+        description: "How data transforms as it moves through agent steps.",
+        keyTechniques: [
+          "Each step's output becomes available to dependent steps' inputs",
+          "Parallel steps process the same input concurrently (fan-out pattern)",
+          "Validation steps filter bad data before it reaches downstream steps",
+          "User-input steps pause the dataflow for human interaction",
+        ],
+        platforms: ["Flow Engine", "chatJSON"],
+      },
+    ],
+    order: 3,
+  },
+  {
+    id: "bilkos-way-level-4",
+    levelRange: "41-50",
+    rank: "The Flow Walker",
+    coreSkill: "What is an Agent (Intermediate)",
+    skillSummary: "Agents as organized sequences of AI-powered steps that work together.",
+    lesson: `An agent is like a smart assembly line. Instead of one AI answering one question, an agent breaks a complex task into steps, handles each step with the right tool, and delivers a complete result.
+
+**Think of it like a restaurant kitchen.** When you order a meal, there isn't one person doing everything. There's someone who takes the order, someone who preps ingredients, someone who cooks, someone who plates, and someone who delivers. Each person has a specific job, and they pass their work to the next person. An AI agent works the same way.
+
+**In Bilko's project, the Flow Engine is the kitchen.** Take the Video Discovery feature on the landing page. When Bilko suggests "Let me find some AI videos for you," here's what actually happens behind the scenes:
+1. **Research step** — AI generates 5 trending AI topics (like a chef deciding today's specials)
+2. **Video search step** — For each topic, AI finds 3 real YouTube videos (like sourcing ingredients)
+3. **Validation step** — The system checks that the YouTube videos actually exist and can be played (quality control)
+4. **User choice step** — You pick which topic interests you (the waiter takes your order)
+5. **Display step** — The selected video is presented with full details (plating and serving)
+
+**Each step has a clear job.** Some steps use AI (the "llm" type), some wait for your input (the "user-input" type), some check data quality (the "validate" type), and some show results (the "display" type). The steps are connected—each one knows which previous steps it needs data from.
+
+**You can actually see this in action.** Bilko's project has a Flow Inspector (at /flows) that shows a visual diagram of each agent. Each step is a box, and arrows show how data flows between them. It's like looking at the blueprint of the kitchen.
+
+**Agent as workflow:** At its core, an agent is just a workflow—a planned sequence of actions. But unlike a simple automation that follows the same path every time, an agent can make decisions. The AI steps can produce different outputs based on context. The validation steps can filter out bad data. The user-input steps can redirect the flow based on your choices.`,
+    keyPrinciples: [
+      "An agent breaks a complex task into manageable steps, each with a specific job",
+      "Steps are connected—data flows from one step to the next like an assembly line",
+      "Different step types handle different jobs: AI calls, validation, user input, display",
+      "The Flow Inspector shows you a visual diagram of how agent steps connect",
+      "Agents are smarter than simple automations because AI steps can make decisions",
+    ],
+    quests: [
+      {
+        id: "bw-q4-1",
+        type: "prompt",
+        title: "Kitchen Blueprint",
+        platform: "Any",
+        description: "Think of a task you do that has multiple steps (planning a trip, cooking a recipe, organizing an event). Break it into 5 steps and label each as: AI step, human step, or check step.",
+      },
+      {
+        id: "bw-q4-2",
+        type: "build",
+        title: "Explore the Inspector",
+        platform: "Bilko's App",
+        description: "Navigate to /flows in Bilko's app. Click on any flow and explore the visual diagram. Identify which steps use AI and which wait for user input.",
+      },
+      {
+        id: "bw-q4-3",
+        type: "quiz",
+        title: "Agent Basics",
+        description: "Test your understanding of agent concepts.",
+        tasks: [
+          "What's the difference between a simple automation and an agent?",
+          "Why are steps connected with arrows (dependencies)?",
+          "What happens when a validation step finds bad data?",
+          "How does a user-input step change the flow?",
+        ],
+      },
+      {
+        id: "bw-q4-4",
+        type: "game",
+        title: "Step Type Sorting",
+        description: "Given 10 tasks (like 'ask AI to summarize', 'show results on screen', 'check if link works', 'ask user to pick'), sort them into step types: llm, validate, user-input, display.",
+      },
+    ],
+    order: 4,
+  },
+  {
+    id: "bilkos-way-level-5",
+    levelRange: "51-60",
+    rank: "The Storyteller",
+    coreSkill: "What is an Agent (Novice)",
+    skillSummary: "Understanding AI agents through everyday stories.",
+    lesson: `Have you ever asked someone to plan a birthday party for you? Not just "get a cake"—the whole thing. They need to figure out a theme, find a venue, make a guest list, send invitations, order food, set up decorations, and make sure everything happens in the right order. That person is acting like an agent.
+
+**An AI agent works the same way.** Instead of you telling the AI every single thing to do one at a time, you give it a goal: "Find me interesting AI videos to watch." Then the agent figures out the steps on its own:
+- First, it thinks about what AI topics are popular right now
+- Then, it searches for good videos about each topic
+- Then, it checks that the videos actually work (no broken links!)
+- Then, it shows you the options and lets you pick
+- Finally, it presents your chosen video with all the details
+
+**Each step is like giving a task to a different helper.** One helper is great at research (the AI brain). Another is great at checking things (the quality checker). Another waits for you to decide (the assistant who asks "which one do you prefer?"). And the last one presents the final result beautifully (the presenter).
+
+**The helpers pass notes to each other.** The researcher writes down the topics and passes the note to the video finder. The video finder writes down the videos and passes the note to the quality checker. Each helper needs the previous helper's work before they can do their job. It's like a relay race—each runner needs the baton from the previous runner.
+
+**You can actually peek behind the curtain.** In Bilko's app, there's a special page called "Flows" that shows you a picture of how the helpers are connected. It looks like a map with boxes (the helpers) and arrows (the notes being passed). It's like seeing the birthday party planning board with all the tasks and who does what.
+
+**Why is this exciting?** Because instead of you doing all the work yourself, or even asking AI one question at a time, the agent handles the whole process. You say what you want, and it figures out how to get there. It's like the difference between driving a car yourself and having a self-driving car—you set the destination, and the system handles the journey.`,
+    keyPrinciples: [
+      "An agent is like a party planner—you give it a goal, it figures out the steps",
+      "Different helpers handle different jobs: thinking, checking, asking, and showing",
+      "The helpers pass notes to each other—each one needs the previous one's work",
+      "You can peek behind the curtain in the Flows page to see how helpers connect",
+      "Agents let you say what you want instead of telling AI every single step",
+    ],
+    quests: [
+      {
+        id: "bw-q5-1",
+        type: "game",
+        title: "Party Planner",
+        description: "Plan a birthday party by breaking it into steps. Who does what? What order? Which steps need previous steps to finish first? Draw it as a simple map with boxes and arrows.",
+      },
+      {
+        id: "bw-q5-2",
+        type: "prompt",
+        title: "Agent Spotter",
+        platform: "Any",
+        description: "Think of 3 things in daily life that work like agents (GPS navigation, recipe apps, customer service). What are the 'helpers' in each one? What 'notes' do they pass?",
+      },
+      {
+        id: "bw-q5-3",
+        type: "quiz",
+        title: "Helper Matching",
+        description: "Match everyday jobs to agent step types.",
+        tasks: [
+          "A librarian who finds books → which type of helper?",
+          "A proofreader who checks for errors → which type of helper?",
+          "A waiter who asks 'what would you like?' → which type of helper?",
+          "A presenter who shows the final result → which type of helper?",
+        ],
+      },
+    ],
+    order: 5,
+  },
+  // ── Guide 3: Prompt → Agent → Reactive AI → Proactive AI ──
+  {
+    id: "bilkos-way-level-6",
+    levelRange: "61-70",
+    rank: "The Philosopher",
+    coreSkill: "The AI Spectrum (Expert)",
+    skillSummary: "From single prompts to autonomous proactive systems—the full evolution of AI capability.",
+    lesson: `AI capability exists on a spectrum. Understanding where you are on this spectrum—and where you're heading—is essential for designing systems. This guide maps the four stages and how Bilko's architecture embodies each one.
+
+**Stage 1: Prompt (Stateless Interaction)**
+A prompt is a single input→output exchange with zero memory. You send text, you get text back. This is \`chatJSON<T>()\` in its simplest form—one call to Gemini, one structured response. No state persists between calls. No tools are invoked. The LLM is a pure function: f(prompt) → response. In Bilko's project, the Prompt Playground (interactive quests in the Academy) operates at this level. Users type a prompt, get a response, and the conversation resets.
+
+**Stage 2: Agent (Multi-Step with Tools)**
+An agent chains multiple prompts into a workflow, adds tool access, and maintains state across steps. The Flow Engine elevates from prompt to agent: multiple \`chatJSON<T>()\` calls connected in a DAG, with validation steps, user-input steps, and structured I/O between steps. The agent maintains execution state (StepExecution traces), has access to tools (YouTube validation, data transformation), and can make conditional decisions based on intermediate results. Claude Code itself is an agent—it reads files, reasons about changes, writes code, and tests results across multiple interactions.
+
+**Stage 3: Reactive AI (Event-Driven Response)**
+Reactive AI responds to external triggers without human initiation. It monitors events and acts when conditions are met. In Bilko's architecture, this is the n8n integration layer: webhooks trigger workflows (\`POST /api/workflows/callback\`), scheduled triggers run workflows at set times, and the orchestrator (\`POST /api/orchestrate/:workflowId\`) bridges external events to internal processing. The system doesn't wait for you to ask—it responds to events. Form submissions trigger processing. New content triggers categorization. Errors trigger alerts.
+
+**Stage 4: Proactive AI (Autonomous Goal Pursuit)**
+Proactive AI initiates actions toward goals without being triggered. It monitors, analyzes, decides, and acts. This is the frontier. In Bilko's vision, proactive AI would: monitor Academy usage patterns and generate new content for popular topics before users ask, detect knowledge gaps from quiz results and create targeted lessons, optimize content pipelines based on engagement metrics, and self-correct when content quality drops. The architecture supports this—n8n's scheduled workflows plus the orchestrator pattern enable autonomous operation. But the governance structure (ARCH-000) requires human oversight at decision points. True proactive AI requires trust boundaries.
+
+**The evolution is not replacement—it's layering.** Proactive AI still uses prompts. Agents still make individual LLM calls. Reactive systems still contain agent workflows. Each stage builds on the previous one, adding autonomy, context, and initiative.`,
+    keyPrinciples: [
+      "Prompt = stateless single exchange, Agent = multi-step with tools and state",
+      "Reactive AI = event-driven (responds to triggers), Proactive AI = goal-driven (initiates actions)",
+      "Each stage builds on the previous—proactive systems contain reactive, agentic, and prompt layers",
+      "Bilko's architecture embodies all four stages across its dual-layer design (ARCH-001)",
+      "Proactive AI requires trust boundaries and governance (ARCH-000) for safe autonomous operation",
+    ],
+    quests: [
+      {
+        id: "bw-q6-1",
+        type: "prompt",
+        title: "Spectrum Mapper",
+        platform: "Claude Code",
+        description: "Read the codebase and identify one concrete example of each stage: a pure prompt call, an agent flow, a reactive trigger, and a design pattern that enables proactive behavior.",
+      },
+      {
+        id: "bw-q6-2",
+        type: "build",
+        title: "Classify the System",
+        platform: "Bilko's App",
+        description: "Map every API endpoint in Bilko's project to a spectrum stage. Is /api/llm/chat a prompt or agent? Is /api/workflows/callback reactive? Document your classification.",
+      },
+      {
+        id: "bw-q6-3",
+        type: "quiz",
+        title: "AI Spectrum Quiz",
+        description: "Test your understanding of the four stages.",
+        tasks: [
+          "What makes an agent different from a sequence of prompts?",
+          "What distinguishes reactive AI from proactive AI?",
+          "Why does proactive AI need governance boundaries?",
+          "How do the four stages layer on top of each other?",
+        ],
+      },
+      {
+        id: "bw-q6-4",
+        type: "capstone",
+        title: "Design a Proactive System",
+        platform: "Paper + Architecture",
+        description: "Design a proactive AI system for Bilko's Academy that detects when students struggle with a topic and automatically generates supplementary content. Define: triggers, agent flows, trust boundaries.",
+      },
+    ],
+    subTopics: [
+      {
+        id: "bw-st6-reactive",
+        title: "Reactive Patterns",
+        description: "How event-driven architectures enable AI systems that respond to the world.",
+        keyTechniques: [
+          "Webhook triggers: external events fire n8n workflows automatically",
+          "Orchestrator pattern: POST /api/orchestrate/:workflowId bridges events to processing",
+          "Callback system: n8n reports execution results back to Bilko for tracking",
+          "Scheduled triggers: cron-based workflows run without human initiation",
+        ],
+        platforms: ["n8n", "Express", "Webhooks"],
+      },
+      {
+        id: "bw-st6-proactive",
+        title: "Proactive Patterns",
+        description: "Design patterns for AI systems that initiate actions toward goals autonomously.",
+        keyTechniques: [
+          "Monitoring loops: continuously observe metrics and detect anomalies",
+          "Self-correction: detect quality degradation and adjust parameters",
+          "Goal decomposition: break high-level goals into sub-tasks autonomously",
+          "Trust boundaries: governance rules that limit autonomous scope (ARCH-000)",
+        ],
+        platforms: ["n8n", "ARCH-000", "Autonomous Systems"],
+      },
+    ],
+    order: 6,
+  },
+  {
+    id: "bilkos-way-level-7",
+    levelRange: "71-80",
+    rank: "The Pathfinder",
+    coreSkill: "The AI Spectrum (Intermediate)",
+    skillSummary: "Understanding the four levels of AI capability and where current tools fit.",
+    lesson: `AI tools aren't all the same. They exist on a spectrum from simple to sophisticated. Understanding this spectrum helps you choose the right tool for each job—and see where the technology is heading.
+
+**Level 1: Prompt — Ask and receive.**
+This is the simplest interaction with AI. You type a question or instruction, and you get a response. Like texting a knowledgeable friend. Each conversation starts fresh—the AI doesn't remember previous conversations. In Bilko's app, when you use the Prompt Playground to test an exercise, that's prompt-level AI. You send a message, you get a response, done.
+
+**Level 2: Agent — A team that works together.**
+An agent is a step up. Instead of one question and one answer, an agent handles a whole task by breaking it into steps. Bilko's Video Discovery feature is an agent: it researches topics, finds videos, checks they work, lets you choose, and presents the result. Five steps, all coordinated automatically. The agent remembers what happened in previous steps and uses that information to make the next step better. It can also use tools—like checking if a YouTube link actually works.
+
+**Level 3: Reactive AI — Responds to events automatically.**
+This is AI that doesn't need you to push a button. Something happens in the world (someone submits a form, a new article is published, a scheduled time arrives), and the AI system responds automatically. In Bilko's project, n8n workflows can run on schedules or respond to webhooks. A content pipeline might automatically process new content every morning without anyone asking it to. You set it up once, and it reacts to events on its own.
+
+**Level 4: Proactive AI — Takes initiative.**
+This is the frontier—AI that doesn't just respond to events, but actively pursues goals. Instead of waiting for you to ask "are there any problems?", proactive AI monitors the system and tells you "I noticed students are struggling with RAG concepts, so I created a supplementary guide." It identifies opportunities and acts on them. This is where AI starts to feel less like a tool and more like a colleague. Bilko's project is designed to eventually support this—the architecture is there, but true proactive behavior is still being explored.
+
+**Where are we today?** Most AI tools you use are at Level 1 (prompts) or Level 2 (agents). Level 3 (reactive) is growing fast—tools like n8n, Zapier, and Make are making it accessible. Level 4 (proactive) is experimental and requires careful design to ensure the AI makes good decisions without constant supervision.`,
+    keyPrinciples: [
+      "Prompt = one question, one answer, no memory between interactions",
+      "Agent = multiple steps coordinated together, with memory and tool access",
+      "Reactive AI = responds to events automatically without you pushing a button",
+      "Proactive AI = takes initiative and acts toward goals on its own",
+      "Most tools today are at Level 1-2; Level 3 is growing; Level 4 is the frontier",
+    ],
+    quests: [
+      {
+        id: "bw-q7-1",
+        type: "prompt",
+        title: "Level Your Tools",
+        platform: "Any",
+        description: "List 5 AI tools or features you've used. Classify each as Prompt, Agent, Reactive, or Proactive. Which level do most of them fall into?",
+      },
+      {
+        id: "bw-q7-2",
+        type: "game",
+        title: "Spectrum Sorting",
+        description: "Sort these into the right level: ChatGPT conversation (___), email auto-responder (___), Bilko's Video Discovery (___), spam filter that learns (___), calendar that suggests meeting times (___), AI that writes weekly reports automatically (___).",
+      },
+      {
+        id: "bw-q7-3",
+        type: "quiz",
+        title: "Four Levels Quiz",
+        description: "Test your understanding of the AI spectrum.",
+        tasks: [
+          "What's the key difference between Level 1 and Level 2?",
+          "Give an example of Reactive AI you might use daily",
+          "Why is Proactive AI harder to build than Reactive AI?",
+          "Can a system use multiple levels at once?",
+        ],
+      },
+      {
+        id: "bw-q7-4",
+        type: "build",
+        title: "Upgrade a Prompt",
+        platform: "Conceptual",
+        description: "Take a simple prompt-level task (like 'summarize this article') and design how you'd upgrade it to each level: Agent (multi-step), Reactive (triggered automatically), and Proactive (initiates on its own).",
+      },
+    ],
+    order: 7,
+  },
+  {
+    id: "bilkos-way-level-8",
+    levelRange: "81-90",
+    rank: "The Wonderer",
+    coreSkill: "The AI Spectrum (Novice)",
+    skillSummary: "How AI goes from answering questions to doing things on its own.",
+    lesson: `Let's talk about four levels of helpfulness, using something everyone understands: having a personal assistant.
+
+**Level 1: The Answer Machine.**
+You ask a question, you get an answer. "What's the weather today?" → "Sunny and 72 degrees." That's it. Next time you ask, they don't remember the previous conversation. It's like calling a help line—each call starts fresh. This is what most AI chatbots do: you type, they respond, conversation over. Useful, but limited.
+
+**Level 2: The Task Handler.**
+Now imagine your assistant doesn't just answer questions—they handle entire tasks. You say "Plan a movie night," and they: look up what's playing, check review scores, find showtimes that work for your schedule, and present you with three options. Multiple steps, all handled for you. They remember what they learned in step 1 when they get to step 3. This is what an AI agent does. In Bilko's app, when it finds AI videos for you, it's doing exactly this—researching, searching, checking, and presenting, all from a single request.
+
+**Level 3: The Responsive Helper.**
+Your assistant starts doing things without you asking—but only when something happens. Your flight gets delayed? They automatically rebook your connecting flight and notify your hotel. A bill arrives? They schedule the payment. They're watching for events and responding. You set up the rules once ("if my flight changes, handle it"), and they take it from there. This is reactive AI—it responds to things happening in the world.
+
+**Level 4: The Initiative Taker.**
+This is the most advanced level. Your assistant doesn't just respond to events—they look ahead and act. They notice you have a busy week coming up, so they pre-order groceries. They see a pattern in your spending and suggest a budget adjustment. They find an interesting article about a topic you've been curious about and share it before you ask. They take initiative. This is proactive AI—and it's what the future looks like.
+
+**From Bilko's perspective:** Right now, Bilko's app mostly works at Level 1 (the Prompt Playground) and Level 2 (the Video Discovery agent). The n8n workflows behind the scenes add Level 3 capabilities. Level 4 is the dream—imagine if the Academy noticed you were interested in agents and automatically created more content about that topic. That's where this is heading.
+
+**The exciting part:** We're living through this evolution right now. Five years ago, most people had never talked to an AI. Today, agents are becoming mainstream. Tomorrow, AI helpers that take initiative will be normal. You're watching it happen.`,
+    keyPrinciples: [
+      "Level 1 (Answer Machine): Ask a question, get an answer, that's it",
+      "Level 2 (Task Handler): Give a task, the AI handles all the steps for you",
+      "Level 3 (Responsive Helper): The AI watches for events and acts automatically",
+      "Level 4 (Initiative Taker): The AI looks ahead and does things before you ask",
+      "We're living through this evolution right now—most tools are at Level 1-2",
+    ],
+    quests: [
+      {
+        id: "bw-q8-1",
+        type: "game",
+        title: "Level the Helpers",
+        description: "Think of 5 'helpers' in your daily life (apps, services, people). What level is each one? A calculator? A GPS? A spam filter? A personal shopper? Your mom who packs your lunch before you ask?",
+      },
+      {
+        id: "bw-q8-2",
+        type: "prompt",
+        title: "Future Vision",
+        platform: "Any",
+        description: "Pick something you do every week that's tedious. Describe what a Level 4 (Initiative Taker) AI assistant would do about it. How would it notice the problem? What would it do about it?",
+      },
+      {
+        id: "bw-q8-3",
+        type: "quiz",
+        title: "The Helpfulness Quiz",
+        description: "Match the description to the level.",
+        tasks: [
+          "You ask 'What's 2+2?' and get '4' → which level?",
+          "You say 'Plan my vacation' and get a full itinerary → which level?",
+          "Your thermostat adjusts when you leave the house → which level?",
+          "Your fridge orders milk before you run out → which level?",
+        ],
+      },
+    ],
+    order: 8,
+  },
+];
+
+// ============================================
 // TRACK DEFINITIONS
 // ============================================
 export const academyTracks: Track[] = [
@@ -1547,6 +2168,42 @@ export const academyTracks: Track[] = [
       },
     ],
     levels: architectLevels,
+  },
+  {
+    id: "bilkos-way",
+    name: "Bilko's Way",
+    tagline: "Understanding the Machine",
+    description:
+      "A meta-knowledge track about the tools, concepts, and AI evolution behind Bilko's Mental Gym. Three guides—Environment Setup, What is an Agent, and the AI Capability Spectrum—each explained at three depth levels: Expert, Intermediate, and Novice.",
+    difficulty: "intermediate",
+    color: "amber",
+    journey: [
+      {
+        id: "bilkos-way-toolkit",
+        name: "Your Toolkit",
+        levelRange: "0-30",
+        description:
+          "Understand Replit, Git, and Claude Code—the three tools that built this project—at your comfort level.",
+        icon: "seedling",
+      },
+      {
+        id: "bilkos-way-agents",
+        name: "Understanding Agents",
+        levelRange: "31-60",
+        description:
+          "What is an AI agent? Explore agents as DAGs, workflows, and sequences of helpers through Bilko's Flow Engine.",
+        icon: "zap",
+      },
+      {
+        id: "bilkos-way-spectrum",
+        name: "The AI Spectrum",
+        levelRange: "61-90",
+        description:
+          "From simple prompts to proactive AI—the four stages of AI capability and where we are today.",
+        icon: "sparkles",
+      },
+    ],
+    levels: bilkosWayLevels,
   },
 ];
 

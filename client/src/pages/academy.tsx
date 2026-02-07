@@ -1406,7 +1406,7 @@ export default function Academy() {
 
   // URL sync
   useEffect(() => {
-    if (location.startsWith("/academy/recruit-level-") || location.startsWith("/academy/specialist-level-") || location.startsWith("/academy/architect-level-")) {
+    if (location.startsWith("/academy/recruit-level-") || location.startsWith("/academy/specialist-level-") || location.startsWith("/academy/architect-level-") || location.startsWith("/academy/bilkos-way-level-")) {
       const levelId = location.replace("/academy/", "");
       setSelectedLevelId(levelId);
       // Auto-select the track based on level
