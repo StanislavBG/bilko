@@ -1,18 +1,41 @@
-import { ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { ExternalLink, AlertTriangle } from "lucide-react";
 import type { VideoBlock } from "./types";
 
 export function VideoRenderer({ block }: { block: VideoBlock }) {
+  const [hasError, setHasError] = useState(false);
+  const watchUrl = `https://www.youtube.com/watch?v=${block.embedId}`;
+  const embedUrl = `https://www.youtube.com/embed/${block.embedId}?rel=0&origin=${encodeURIComponent(window.location.origin)}`;
+
   return (
     <div className="rounded-xl border border-border overflow-hidden bg-card">
       {/* Player */}
-      <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-        <iframe
-          className="absolute inset-0 w-full h-full"
-          src={`https://www.youtube-nocookie.com/embed/${block.embedId}?rel=0`}
-          title={block.title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
+      <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
+        {hasError ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/50 text-muted-foreground gap-3 p-4">
+            <AlertTriangle className="h-8 w-8" />
+            <p className="text-sm text-center">This video couldn't be loaded in the embed player.</p>
+            <a
+              href={watchUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary hover:underline flex items-center gap-1"
+            >
+              Watch on YouTube <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        ) : (
+          <iframe
+            className="absolute inset-0 w-full h-full"
+            src={embedUrl}
+            title={block.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            loading="lazy"
+            onError={() => setHasError(true)}
+          />
+        )}
       </div>
       {/* Metadata */}
       <div className="p-4">
@@ -24,7 +47,7 @@ export function VideoRenderer({ block }: { block: VideoBlock }) {
             )}
           </div>
           <a
-            href={`https://www.youtube.com/watch?v=${block.embedId}`}
+            href={watchUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"

@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  AlertTriangle,
 } from "lucide-react";
 import { chat } from "@/lib/flow-engine";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
@@ -44,6 +45,7 @@ interface TranscriptMessage {
 
 export function VideoExperienceRenderer({ block }: { block: VideoExperienceBlock }) {
   const { speak } = useVoice();
+  const [videoError, setVideoError] = useState(false);
 
   // Summary panel state
   const [summaryState, setSummaryState] = useState<PanelState>("idle");
@@ -243,15 +245,33 @@ ${transcript}`),
         </div>
       </div>
 
-      {/* Video Player — privacy-enhanced embed */}
-      <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
-        <iframe
-          className="absolute inset-0 w-full h-full"
-          src={`https://www.youtube-nocookie.com/embed/${block.embedId}?rel=0`}
-          title={block.title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
+      {/* Video Player */}
+      <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
+        {videoError ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/50 text-muted-foreground gap-3 p-4">
+            <AlertTriangle className="h-8 w-8" />
+            <p className="text-sm text-center">This video couldn't be loaded in the embed player.</p>
+            <a
+              href={youtubeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary hover:underline flex items-center gap-1"
+            >
+              Watch on YouTube <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        ) : (
+          <iframe
+            className="absolute inset-0 w-full h-full"
+            src={`https://www.youtube.com/embed/${block.embedId}?rel=0&origin=${encodeURIComponent(window.location.origin)}`}
+            title={block.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            loading="lazy"
+            onError={() => setVideoError(true)}
+          />
+        )}
       </div>
 
       {/* Description */}
