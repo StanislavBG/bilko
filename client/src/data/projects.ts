@@ -47,6 +47,30 @@ export const projects: Project[] = [
     imageUrl: "https://images.unsplash.com/photo-1515703407324-5f753afd8be8?w=800&h=800&fit=crop&q=80",
     status: "live",
     techStack: ["Python", "TensorFlow", "React", "PostgreSQL"]
+  },
+  {
+    id: "timeline-experiences",
+    title: "Timeline Experiences",
+    tagline: "Interactive Visual Storytelling",
+    description: "An interactive timeline platform for visualizing experiences, events, and milestones. Navigate through curated moments with rich media and immersive storytelling.",
+    url: "https://timeline-experiences.replit.app/",
+    features: ["Interactive Timeline", "Rich Media", "Visual Storytelling", "Event Navigation"],
+    category: "Interactive Media",
+    imageUrl: "https://images.unsplash.com/photo-1501139083538-0139583c060f?w=800&h=800&fit=crop&q=80",
+    status: "live",
+    techStack: ["React", "TypeScript"]
+  },
+  {
+    id: "euro-school-tennis",
+    title: "Euro School Tennis",
+    tagline: "European Tennis Academy Platform",
+    description: "A demo platform for a European tennis school featuring program schedules, court bookings, and player development tracking. Designed to streamline academy operations and student engagement.",
+    url: "https://euro-school-tennis-demo.replit.app/",
+    features: ["Program Schedules", "Court Booking", "Player Development", "Academy Management"],
+    category: "Sports & Education",
+    imageUrl: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=800&fit=crop&q=80",
+    status: "beta",
+    techStack: ["React", "TypeScript"]
   }
 ];
 
