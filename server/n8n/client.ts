@@ -1,4 +1,5 @@
 import type { WorkflowDefinition } from "../workflows/types";
+import { getCallbackUrl } from "../lib/utils";
 import { createLogger } from "../logger";
 
 const log = createLogger("n8n");
@@ -339,7 +340,7 @@ function buildEuropeanFootballDailyNodes(webhookPath: string): {
   nodes: N8nNode[];
   connections: Record<string, unknown>;
 } {
-  const callbackUrl = process.env.BILKO_CALLBACK_URL || "https://bilkobibitkov.replit.app/api/n8n/callback";
+  const callbackUrl = getCallbackUrl();
   
   const nodes: N8nNode[] = [
     {

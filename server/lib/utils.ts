@@ -2,8 +2,9 @@ import { randomUUID } from "crypto";
 
 /**
  * Production callback URL fallback
+ * Uses /api/workflows/callback — canonical path per INT-005 and ENV-001
  */
-const PROD_CALLBACK_URL = "https://bilkobibitkov.replit.app/api/n8n/callback";
+const PROD_CALLBACK_URL = "https://bilkobibitkov.replit.app/api/workflows/callback";
 
 /**
  * Generate a unique trace ID for workflow execution tracking
@@ -23,7 +24,7 @@ export function getCallbackUrl(): string {
 
   if (process.env.REPLIT_DOMAINS) {
     const currentDomain = process.env.REPLIT_DOMAINS.split(",")[0];
-    return `https://${currentDomain}/api/n8n/callback`;
+    return `https://${currentDomain}/api/workflows/callback`;
   }
 
   return PROD_CALLBACK_URL;
