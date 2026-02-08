@@ -59,6 +59,22 @@ const registry: EndpointRegistry = {
   "GET /api/auth/user": {
     method: "GET",
     description: "Returns current authenticated user profile"
+  },
+  "GET /api/projects/unfurl": {
+    method: "GET",
+    description: "Extracts OG image, title, description, and favicon from a project URL"
+  },
+  "GET /api/projects/proxy-image": {
+    method: "GET",
+    description: "Proxies an external image URL to avoid CORS issues"
+  },
+  "POST /api/projects/unfurl-batch": {
+    method: "POST",
+    description: "Batch unfurl multiple project URLs at once"
+  },
+  "POST /api/projects/unfurl-cache/clear": {
+    method: "POST",
+    description: "Clears the unfurl metadata cache"
   }
 };
 
