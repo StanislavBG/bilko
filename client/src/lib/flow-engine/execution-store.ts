@@ -23,6 +23,8 @@ const liveExecutions = new Map<string, FlowExecution>();
 /** Historical completed executions per flow */
 let history: Record<string, FlowExecution[]> = {};
 const listeners = new Set<Listener>();
+/** Cached snapshots for useSyncExternalStore (must return stable references) */
+const historySnapshots = new Map<string, FlowExecution[]>();
 
 // ── Persistence ──────────────────────────────────────────
 
@@ -58,6 +60,7 @@ history = loadHistory();
 // ── Notify ───────────────────────────────────────────────
 
 function notify(): void {
+  historySnapshots.clear();
   listeners.forEach((fn) => fn());
 }
 
@@ -98,9 +101,14 @@ export function getAllExecutions(): FlowExecution[] {
   return Array.from(liveExecutions.values());
 }
 
-/** Get execution history for a flow (newest-first). */
+/** Get execution history for a flow (newest-first). Cached for useSyncExternalStore stability. */
 export function getExecutionHistory(flowId: string): FlowExecution[] {
-  return [...(history[flowId] ?? [])].reverse();
+  let cached = historySnapshots.get(flowId);
+  if (!cached) {
+    cached = [...(history[flowId] ?? [])].reverse();
+    historySnapshots.set(flowId, cached);
+  }
+  return cached;
 }
 
 /** Get a specific historical execution by ID. */

@@ -502,7 +502,11 @@ Rules:
         name: "Configure Expert",
         type: "user-input",
         description: "User fills in: Expert Role, Goal, Desired Output. These values are interpolated into the system prompt.",
-        inputSchema: [],
+        inputSchema: [
+          { name: "expertise", type: "string", description: "Prompt for expert role selection" },
+          { name: "goal", type: "string", description: "Prompt for goal definition" },
+          { name: "output", type: "string", description: "Prompt for desired output format" },
+        ],
         outputSchema: [
           { name: "expertise", type: "string", description: "The expert role" },
           { name: "goal", type: "string", description: "What the user wants to achieve" },
