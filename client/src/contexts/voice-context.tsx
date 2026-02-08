@@ -662,9 +662,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Auto-start on mount if user previously enabled voice
+  // Auto-start on mount — voice is on by default unless user explicitly disabled it
   useEffect(() => {
-    if (!autoStartedRef.current && isSupported && localStorage.getItem(VOICE_STORAGE_KEY) === "true") {
+    if (!autoStartedRef.current && isSupported && localStorage.getItem(VOICE_STORAGE_KEY) !== "false") {
       autoStartedRef.current = true;
       startListening();
     }
