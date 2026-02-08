@@ -46,6 +46,13 @@ export const LEARNING_MODES = [
     icon: "GraduationCap",
     voiceTriggers: ["socratic", "architect", "custom", "configure", "expert"],
   },
+  {
+    id: "work-with-me",
+    label: "Work With Me",
+    description: "Tell me your goal and I'll guide you through each website step by step — I see what you see",
+    icon: "Handshake",
+    voiceTriggers: ["work with me", "guide", "help me", "walk me through", "assist", "task"],
+  },
 ] as const;
 
 export type LearningModeId = typeof LEARNING_MODES[number]["id"];
@@ -128,6 +135,7 @@ export const welcomeFlow: Workflow = {
         interviewer: "chat-experience",
         linkedin: "chat-experience",
         socratic: "chat-experience",
+        "work-with-me": "chat-experience",
       },
       defaultBranch: "chat-experience",
     },

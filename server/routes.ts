@@ -10,6 +10,7 @@ import { registerProjectRoutes } from "./projects/routes";
 import { getAllEndpoints } from "./endpoint-registry";
 import llmRoutes from "./llm/routes";
 import ttsRoutes from "./tts/routes";
+import webProxyRoutes from "./web-proxy/routes";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -42,6 +43,9 @@ export async function registerRoutes(
 
   // TTS routes (OpenAI Text-to-Speech)
   app.use("/api/tts", ttsRoutes);
+
+  // Web proxy routes for Work With Me flow (page fetching + structure extraction)
+  app.use("/api/web-proxy", webProxyRoutes);
 
   // Endpoint registry for UI info icons
   app.get("/api/endpoints", (_req, res) => {
