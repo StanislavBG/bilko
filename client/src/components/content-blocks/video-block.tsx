@@ -5,7 +5,7 @@ import type { VideoBlock } from "./types";
 export function VideoRenderer({ block }: { block: VideoBlock }) {
   const [hasError, setHasError] = useState(false);
   const watchUrl = `https://www.youtube.com/watch?v=${block.embedId}`;
-  const embedUrl = `https://www.youtube.com/embed/${block.embedId}?rel=0&origin=${encodeURIComponent(window.location.origin)}`;
+  const embedUrl = `https://www.youtube-nocookie.com/embed/${block.embedId}?rel=0`;
 
   return (
     <div className="rounded-xl border border-border overflow-hidden bg-card">
@@ -31,7 +31,6 @@ export function VideoRenderer({ block }: { block: VideoBlock }) {
             title={block.title}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
             loading="lazy"
             onError={() => setHasError(true)}
           />

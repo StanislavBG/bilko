@@ -481,7 +481,8 @@ function VoiceStatusBar({
           ) : isListening ? (
             // Mic active, idle
             <p className="text-xs text-muted-foreground/60">Listening...</p>
-          ) : floor === "bilko" ? (
+          ) : floor === "bilko" && isSpeaking ? (
+            // Only show "Bilko is speaking" when TTS is actually active
             <p className="text-xs text-muted-foreground/60">Bilko is speaking...</p>
           ) : (
             <p className="text-xs text-muted-foreground/40">Tap mic to talk to Bilko</p>

@@ -68,9 +68,14 @@ export function BilkoMessage({
   useEffect(() => {
     if (!started || !speakAloud || !ttsSupported) return;
     bilkoStartedSpeaking();
-    speak(speech || text).then(() => {
-      bilkoFinishedSpeaking();
-    });
+    speak(speech || text)
+      .then(() => {
+        bilkoFinishedSpeaking();
+      })
+      .catch(() => {
+        // If TTS fails for any reason, still release the floor
+        bilkoFinishedSpeaking();
+      });
   }, [started, speakAloud, ttsSupported]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fire onComplete once

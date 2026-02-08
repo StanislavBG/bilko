@@ -73,20 +73,32 @@ router.post("/validate-videos", async (req: Request, res: Response) => {
     }
 
     const results = await Promise.all(
-      videos.map(async (video: { embedId?: string }) => {
+      videos.map(async (video: { embedId?: string; title?: string }) => {
         if (!video.embedId) return null;
+        // Basic format check: YouTube video IDs are 11 characters, alphanumeric + dash + underscore
+        if (!/^[a-zA-Z0-9_-]{11}$/.test(video.embedId)) {
+          console.warn(`[validate-videos] Invalid embed ID format: "${video.embedId}"`);
+          return null;
+        }
         try {
           const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${encodeURIComponent(video.embedId)}&format=json`;
-          const resp = await fetch(oembedUrl, { signal: AbortSignal.timeout(5000) });
-          if (resp.ok) return video;
+          const resp = await fetch(oembedUrl, { signal: AbortSignal.timeout(8000) });
+          if (resp.ok) {
+            console.info(`[validate-videos] OK: "${video.title ?? video.embedId}"`);
+            return video;
+          }
+          console.warn(`[validate-videos] Rejected (${resp.status}): "${video.title ?? video.embedId}" [${video.embedId}]`);
           return null;
-        } catch {
+        } catch (err) {
+          console.warn(`[validate-videos] Network error for "${video.embedId}":`, err instanceof Error ? err.message : err);
           return null;
         }
       })
     );
 
-    res.json({ videos: results.filter(Boolean) });
+    const validated = results.filter(Boolean);
+    console.info(`[validate-videos] ${validated.length}/${videos.length} videos passed validation`);
+    res.json({ videos: validated });
   } catch (error) {
     console.error("Video validation error:", error);
     res.status(500).json({ error: "Failed to validate videos" });
