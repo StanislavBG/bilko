@@ -1,8 +1,8 @@
 # ENV-002: n8n Workflow Registry
 
 **Priority**: HIGH  
-**Version**: 2.0.0  
-**Last Updated**: 2026-02-01
+**Version**: 2.1.0
+**Last Updated**: 2026-02-08
 
 ## Purpose
 
@@ -13,6 +13,7 @@ Central registry of all n8n workflows. This is the authoritative source for loca
 | Workflow ID | Name | n8n ID | Webhook Path | Status |
 |-------------|------|--------|--------------|--------|
 | `european-football-daily` | European Football Daily | `oV6WGX5uBeTZ9tRa` | `european-football-daily` | Active |
+| `football-video-pipeline` | Football Video Pipeline | (pending sync) | `football-video-pipeline` | Pending |
 | `echo-test` | Bilko Echo Test | (simple test) | `bilko-echo-test` | Active |
 
 ## Artifact Locations
@@ -22,6 +23,7 @@ Workflow artifacts are stored in `rules/env/artifacts/workflows/` with the n8n I
 | Workflow ID | Artifact File |
 |-------------|---------------|
 | `european-football-daily` | `oV6WGX5uBeTZ9tRa-european-football-daily.md` |
+| `football-video-pipeline` | N/A (pending first sync — n8n ID assigned on creation) |
 | `echo-test` | N/A (simple test workflow) |
 
 ## Artifact Contents
@@ -40,6 +42,12 @@ When creating or updating workflows:
 4. Follow PER-001 for development cycle (FETCH → ANALYZE → MODIFY → PUSH → BACKUP → VERIFY)
 
 ## Changelog
+
+### v2.1.0 (2026-02-08)
+- Added `football-video-pipeline` workflow (Research & Curation + Video Content Chain)
+- 5-phase pipeline: News Hound → Deep Diver → Journalist → Video Architect → Image Stylist
+- Uses Gemini 2.5 Flash with rate limiting (Wait nodes between phases)
+- Produces 65-second video script with 3 news segments + image generation prompts
 
 ### v2.0.0 (2026-02-01)
 - **BREAKING**: Removed dev/prod artifact separation
