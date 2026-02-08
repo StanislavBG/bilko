@@ -50,8 +50,9 @@ function resetSession() {
   // Clear sessionStorage (conversation state)
   sessionStorage.removeItem("bilko-conversation");
 
-  // Clear localStorage items (keep theme preference)
-  localStorage.removeItem("bilko-voice-enabled");
+  // Clear localStorage items (keep theme + voice preferences)
+  // Voice preference is a user setting, not session state — preserve it
+  // so Bilko's greeting TTS and mic auto-start work after reset.
   localStorage.removeItem("bilko-execution-history");
 
   // Clear all React Query cache
