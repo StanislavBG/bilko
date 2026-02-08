@@ -63,7 +63,7 @@ function resetSession() {
 }
 
 function ToolsMenu() {
-  const { speak, stopSpeaking, isSpeaking, ttsSupported, ttsUnlocked } = useVoice();
+  const { speak, stopSpeaking, isSpeaking, ttsSupported, ttsUnlocked, ttsBackend } = useVoice();
 
   const handleTestTTS = () => {
     if (isSpeaking) {
@@ -107,6 +107,9 @@ function ToolsMenu() {
           )}
           {ttsSupported && !ttsUnlocked && (
             <span className="ml-auto text-[10px] text-amber-400">locked</span>
+          )}
+          {ttsSupported && ttsUnlocked && (
+            <span className="ml-auto text-[10px] text-emerald-400">{ttsBackend === "openai" ? "OpenAI" : "browser"}</span>
           )}
         </Button>
         <Button
