@@ -1,17 +1,20 @@
 /**
  * Flow Explorer - Browse and inspect PER-002 agentic flows.
  *
- * Lists all registered flows. Click to open the step-level inspector.
+ * Two tabs:
+ * - Flows: Lists all registered flows. Click to open the step-level inspector.
+ * - Components: Browsable catalog of the 5 step types with I/O, use cases, references.
+ *
  * This is the admin's "private n8n" for in-platform workflows.
  */
 
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
-import { Workflow } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Workflow, Blocks } from "lucide-react";
 import { flowRegistry } from "@/lib/flow-inspector";
-import { FlowCard } from "@/components/flow-inspector";
-import type { FlowDefinition } from "@/lib/flow-inspector/types";
+import { FlowCard, ComponentCatalog } from "@/components/flow-inspector";
 
 export default function FlowExplorer() {
   const [, setLocation] = useLocation();
@@ -41,43 +44,65 @@ export default function FlowExplorer() {
           </div>
         </div>
 
-        {/* Tag filters */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge
-            variant={filter === null ? "default" : "outline"}
-            className="cursor-pointer"
-            onClick={() => setFilter(null)}
-          >
-            All ({flowRegistry.length})
-          </Badge>
-          {allTags.map((tag) => (
-            <Badge
-              key={tag}
-              variant={filter === tag ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => setFilter(filter === tag ? null : tag)}
-            >
-              {tag}
-            </Badge>
-          ))}
-        </div>
+        {/* Tabs: Flows | Components */}
+        <Tabs defaultValue="flows">
+          <TabsList>
+            <TabsTrigger value="flows" className="gap-1.5">
+              <Workflow className="h-3.5 w-3.5" />
+              Flows
+            </TabsTrigger>
+            <TabsTrigger value="components" className="gap-1.5">
+              <Blocks className="h-3.5 w-3.5" />
+              Components
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Flow list */}
-        <div className="grid gap-4">
-          {filtered.map((flow) => (
-            <FlowCard
-              key={flow.id}
-              flow={flow}
-              onClick={() => setLocation(`/flows/${flow.id}`)}
-            />
-          ))}
-        </div>
+          {/* Flows tab (existing content) */}
+          <TabsContent value="flows" className="space-y-4 mt-4">
+            {/* Tag filters */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge
+                variant={filter === null ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => setFilter(null)}
+              >
+                All ({flowRegistry.length})
+              </Badge>
+              {allTags.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant={filter === tag ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setFilter(filter === tag ? null : tag)}
+                >
+                  {tag}
+                </Badge>
+              ))}
+            </div>
 
-        {filtered.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <p>No flows match this filter.</p>
-          </div>
-        )}
+            {/* Flow list */}
+            <div className="grid gap-4">
+              {filtered.map((flow) => (
+                <FlowCard
+                  key={flow.id}
+                  flow={flow}
+                  onClick={() => setLocation(`/flows/${flow.id}`)}
+                />
+              ))}
+            </div>
+
+            {filtered.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>No flows match this filter.</p>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Components tab */}
+          <TabsContent value="components" className="mt-4">
+            <ComponentCatalog />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

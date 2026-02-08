@@ -5,6 +5,7 @@ import { registerOrchestratorRoutes } from "./orchestrator";
 import { registerRulesRoutes } from "./rules/routes";
 import { registerWorkflowRoutes } from "./workflows/routes";
 import { registerImageRoutes } from "./images/routes";
+import { registerComponentRoutes } from "./components/routes";
 import { getAllEndpoints } from "./endpoint-registry";
 import llmRoutes from "./llm/routes";
 import ttsRoutes from "./tts/routes";
@@ -28,6 +29,9 @@ export async function registerRoutes(
   
   // Image processing routes (branding, etc.)
   registerImageRoutes(app);
+
+  // Component definitions catalog (step type descriptions)
+  registerComponentRoutes(app);
 
   // LLM proxy routes for PromptPlayground
   app.use("/api/llm", llmRoutes);
