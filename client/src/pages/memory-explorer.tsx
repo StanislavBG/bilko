@@ -199,13 +199,13 @@ export default function MemoryExplorer() {
   const { toast } = useToast();
 
   const { data, isLoading, refetch, isRefetching } = useQuery<TracesResponse>({
-    queryKey: ["/api/traces", page],
+    queryKey: ["/api/n8n/traces", page],
     queryFn: async () => {
       const params = new URLSearchParams({
         limit: String(PAGE_SIZE),
         offset: String(page * PAGE_SIZE)
       });
-      const res = await fetch(`/api/traces?${params}`, { credentials: "include" });
+      const res = await fetch(`/api/n8n/traces?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch traces");
       return res.json();
     }
@@ -404,7 +404,7 @@ export default function MemoryExplorer() {
             id: "refresh",
             label: "Refresh",
             icon: <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />,
-            endpoint: "/api/traces",
+            endpoint: "/api/n8n/traces",
             method: "GET",
             description: "Reload trace list",
             onClick: () => refetch(),
