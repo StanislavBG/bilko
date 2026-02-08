@@ -104,6 +104,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const ttsBackendRef = useRef<TTSBackend>("browser");
   const audioContextRef = useRef<AudioContext | null>(null);
   const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const doSpeakRef = useRef<(text: string) => Promise<void>>(async () => {});
 
   // End-of-speech detection
   const utteranceEndCallbacksRef = useRef<Set<(text: string) => void>>(new Set());
@@ -405,6 +406,32 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Mic permission granted — unlock TTS and flush any pending welcome speech.
+    // The user just interacted with a permission dialog, so the browser may now
+    // allow audio playback. This ensures Bilko's welcome message is heard.
+    if (!ttsUnlockedRef.current) {
+      ttsUnlockedRef.current = true;
+      setTtsUnlocked(true);
+
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContext();
+      }
+      if (audioContextRef.current.state === "suspended") {
+        audioContextRef.current.resume();
+      }
+
+      // Flush pending speak (e.g. Bilko's welcome message queued before unlock)
+      if (pendingSpeakRef.current !== null) {
+        const text = pendingSpeakRef.current;
+        const resolve = pendingSpeakResolveRef.current;
+        pendingSpeakRef.current = null;
+        pendingSpeakResolveRef.current = null;
+        setTimeout(() => {
+          doSpeakRef.current(text).then(() => resolve?.());
+        }, 100);
+      }
+    }
+
     try {
       recognitionRef.current.start();
       setIsListening(true);
@@ -592,6 +619,11 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     return doSpeakBrowser(text);
   }, [doSpeakOpenAI, doSpeakBrowser]);
 
+  // Keep ref in sync so startListening can call doSpeak without circular deps
+  useEffect(() => {
+    doSpeakRef.current = doSpeak;
+  }, [doSpeak]);
+
   // ── Public speak: gates on TTS unlock, queues if needed ──
   // If TTS hasn't been unlocked by a user gesture yet, we queue the
   // request and play it as soon as the user clicks/taps anything.
@@ -662,9 +694,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Auto-start on mount if user previously enabled voice
+  // Auto-start on mount — voice is on by default unless user explicitly disabled it
   useEffect(() => {
-    if (!autoStartedRef.current && isSupported && localStorage.getItem(VOICE_STORAGE_KEY) === "true") {
+    if (!autoStartedRef.current && isSupported && localStorage.getItem(VOICE_STORAGE_KEY) !== "false") {
       autoStartedRef.current = true;
       startListening();
     }
