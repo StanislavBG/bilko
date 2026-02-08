@@ -103,59 +103,90 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const isSupported = getSpeechRecognition() !== null;
   const ttsSupported = typeof window !== "undefined" && "speechSynthesis" in window;
 
-  // ── TTS warm-up on first user interaction ──
-  // Many browsers (Safari, some Chrome configs, embedded webviews) require
-  // a user gesture before speechSynthesis.speak() will produce audio.
-  // We "unlock" TTS by speaking a silent utterance on the first click/tap/keypress.
+  // ── TTS auto-unlock ──
+  // Try to unlock speechSynthesis immediately on mount (auto-play).
+  // Many browsers allow this on revisited sites. If the browser blocks it,
+  // fall back to unlocking on first user interaction (click/tap/keypress).
   useEffect(() => {
     if (!ttsSupported || ttsUnlockedRef.current) return;
 
-    const unlock = () => {
+    const markUnlocked = () => {
       if (ttsUnlockedRef.current) return;
       ttsUnlockedRef.current = true;
       setTtsUnlocked(true);
+    };
 
-      // Warm up speechSynthesis with a silent utterance
-      try {
-        const warmUp = new SpeechSynthesisUtterance("");
-        warmUp.volume = 0;
-        warmUp.lang = "en-US";
-        window.speechSynthesis.speak(warmUp);
-        // Small delay then cancel — just enough to unlock the audio context
-        setTimeout(() => {
-          window.speechSynthesis.cancel();
-        }, 50);
-      } catch (e) {
-        // If warm-up fails, TTS may still work — just mark as unlocked
-        console.warn("[TTS] warm-up failed:", e);
-      }
-
-      // If there's a pending speak call waiting for unlock, execute it now
+    const flushPending = () => {
       if (pendingSpeakRef.current !== null) {
         const text = pendingSpeakRef.current;
         const resolve = pendingSpeakResolveRef.current;
         pendingSpeakRef.current = null;
         pendingSpeakResolveRef.current = null;
-        // Small delay to let warm-up clear
         setTimeout(() => {
           doSpeak(text).then(() => resolve?.());
         }, 100);
       }
-
-      // Remove listeners after first interaction
-      document.removeEventListener("click", unlock, true);
-      document.removeEventListener("touchstart", unlock, true);
-      document.removeEventListener("keydown", unlock, true);
     };
 
-    document.addEventListener("click", unlock, true);
-    document.addEventListener("touchstart", unlock, true);
-    document.addEventListener("keydown", unlock, true);
+    // Proactive auto-unlock: attempt a silent utterance without user gesture.
+    // If the browser allows it, TTS is ready immediately for Bilko's greeting.
+    try {
+      const probe = new SpeechSynthesisUtterance("");
+      probe.volume = 0;
+      probe.lang = "en-US";
+
+      probe.onend = () => {
+        markUnlocked();
+        flushPending();
+        // Auto-unlock succeeded — remove gesture listeners
+        document.removeEventListener("click", gestureUnlock, true);
+        document.removeEventListener("touchstart", gestureUnlock, true);
+        document.removeEventListener("keydown", gestureUnlock, true);
+      };
+      probe.onerror = () => {
+        // Browser blocked auto-play — gesture listeners will handle it
+      };
+
+      window.speechSynthesis.speak(probe);
+      setTimeout(() => {
+        window.speechSynthesis.cancel();
+      }, 50);
+    } catch (e) {
+      // speechSynthesis not available or threw — gesture listeners will handle it
+    }
+
+    // Fallback: unlock on first user interaction
+    const gestureUnlock = () => {
+      if (ttsUnlockedRef.current) return;
+      markUnlocked();
+
+      try {
+        const warmUp = new SpeechSynthesisUtterance("");
+        warmUp.volume = 0;
+        warmUp.lang = "en-US";
+        window.speechSynthesis.speak(warmUp);
+        setTimeout(() => {
+          window.speechSynthesis.cancel();
+        }, 50);
+      } catch (e) {
+        console.warn("[TTS] warm-up failed:", e);
+      }
+
+      flushPending();
+
+      document.removeEventListener("click", gestureUnlock, true);
+      document.removeEventListener("touchstart", gestureUnlock, true);
+      document.removeEventListener("keydown", gestureUnlock, true);
+    };
+
+    document.addEventListener("click", gestureUnlock, true);
+    document.addEventListener("touchstart", gestureUnlock, true);
+    document.addEventListener("keydown", gestureUnlock, true);
 
     return () => {
-      document.removeEventListener("click", unlock, true);
-      document.removeEventListener("touchstart", unlock, true);
-      document.removeEventListener("keydown", unlock, true);
+      document.removeEventListener("click", gestureUnlock, true);
+      document.removeEventListener("touchstart", gestureUnlock, true);
+      document.removeEventListener("keydown", gestureUnlock, true);
     };
   }, [ttsSupported]); // eslint-disable-line react-hooks/exhaustive-deps
 
