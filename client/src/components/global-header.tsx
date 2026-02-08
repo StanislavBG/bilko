@@ -28,7 +28,7 @@ export function GlobalHeader({ variant = "authenticated" }: GlobalHeaderProps) {
           <DebugButton />
           <ThemeToggle />
           <Button variant="ghost" size="sm" asChild>
-            <a href="/api/login">Sign In</a>
+            <a href="/api/auth/login">Sign In</a>
           </Button>
         </div>
       </header>
@@ -167,7 +167,7 @@ function AuthenticatedHeader() {
         <DebugButton />
         <ThemeToggle />
         <Button variant="ghost" size="icon" asChild data-testid="button-logout">
-          <a href="/api/logout">
+          <a href="/api/auth/logout">
             <LogOut className="h-4 w-4" />
             <span className="sr-only">Sign out</span>
           </a>
