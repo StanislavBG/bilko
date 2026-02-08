@@ -95,10 +95,10 @@ interface WorkflowOutput {
 
 export function useExecutionPolling(executionId: string | null) {
   return useQuery<ExecutionStatus>({
-    queryKey: ["/api/executions", executionId, "poll"],
+    queryKey: ["/api/n8n/executions", executionId, "poll"],
     queryFn: async () => {
       if (!executionId) throw new Error("No execution ID");
-      const res = await fetch(`/api/executions/${executionId}`, { credentials: "include" });
+      const res = await fetch(`/api/n8n/executions/${executionId}`, { credentials: "include" });
       if (!res.ok) throw new Error(`Failed to fetch execution: ${res.status}`);
       return res.json();
     },
@@ -109,10 +109,10 @@ export function useExecutionPolling(executionId: string | null) {
 
 export function useExecutionDetail(executionId: string | null) {
   return useQuery<ExecutionDetailResponse>({
-    queryKey: ["/api/executions", executionId],
+    queryKey: ["/api/n8n/executions", executionId],
     queryFn: async () => {
       if (!executionId) throw new Error("No execution ID");
-      const res = await fetch(`/api/executions/${executionId}`, { credentials: "include" });
+      const res = await fetch(`/api/n8n/executions/${executionId}`, { credentials: "include" });
       if (!res.ok) throw new Error(`Failed to fetch execution: ${res.status}`);
       return res.json();
     },
@@ -122,10 +122,10 @@ export function useExecutionDetail(executionId: string | null) {
 
 export function useExecutionsList(workflowId: string | null) {
   return useQuery<ExecutionsResponse>({
-    queryKey: ["/api/workflows", workflowId, "executions"],
+    queryKey: ["/api/n8n/workflows", workflowId, "executions"],
     queryFn: async () => {
       if (!workflowId) throw new Error("No workflow ID");
-      const res = await fetch(`/api/workflows/${workflowId}/executions`, { credentials: "include" });
+      const res = await fetch(`/api/n8n/workflows/${workflowId}/executions`, { credentials: "include" });
       if (!res.ok) throw new Error(`Failed to fetch executions: ${res.status}`);
       return res.json();
     },
@@ -136,10 +136,10 @@ export function useExecutionsList(workflowId: string | null) {
 
 export function useWorkflowOutput(workflowId: string | null) {
   return useQuery<WorkflowOutput>({
-    queryKey: ["/api/workflows", workflowId, "output"],
+    queryKey: ["/api/n8n/workflows", workflowId, "output"],
     queryFn: async () => {
       if (!workflowId) throw new Error("No workflow ID");
-      const res = await fetch(`/api/workflows/${workflowId}/output`, { credentials: "include" });
+      const res = await fetch(`/api/n8n/workflows/${workflowId}/output`, { credentials: "include" });
       if (!res.ok) throw new Error(`Failed to fetch output: ${res.status}`);
       return res.json();
     },
@@ -147,10 +147,10 @@ export function useWorkflowOutput(workflowId: string | null) {
   });
 }
 
-export type { 
-  ExecutionStatus, 
-  ExecutionListItem, 
-  ExecutionsResponse, 
+export type {
+  ExecutionStatus,
+  ExecutionListItem,
+  ExecutionsResponse,
   WorkflowOutput,
   ExecutionDetailResponse,
   WorkflowExecution,

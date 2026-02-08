@@ -124,9 +124,9 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
   const [showTraces, setShowTraces] = useState(false);
   
   const { data, isLoading, refetch, isRefetching } = useQuery<WorkflowOutput>({
-    queryKey: ["/api/workflows", workflowId, "output"],
+    queryKey: ["/api/n8n/workflows", workflowId, "output"],
     queryFn: async () => {
-      const res = await fetch(`/api/workflows/${workflowId}/output`);
+      const res = await fetch(`/api/n8n/workflows/${workflowId}/output`);
       return res.json();
     },
   });
@@ -526,7 +526,7 @@ export default function AgenticWorkflows() {
     const pollInterval = setInterval(async () => {
       for (const executionId of allRunningExecutionIds) {
         try {
-          const res = await fetch(`/api/executions/${executionId}`, { credentials: "include" });
+          const res = await fetch(`/api/n8n/executions/${executionId}`, { credentials: "include" });
           if (!res.ok) continue;
           
           const data: ExecutionStatus = await res.json();
@@ -542,9 +542,9 @@ export default function AgenticWorkflows() {
               title: "Workflow completed",
               description: "Processing finished successfully. Refreshing output...",
             });
-            queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/workflows", execWorkflowId, "output"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/workflows", execWorkflowId, "executions"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/n8n/traces"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/n8n/workflows", execWorkflowId, "output"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/n8n/workflows", execWorkflowId, "executions"] });
           } else if (status === "failed") {
             setRunningExecutions(prev => {
               const updated = { ...prev };
@@ -556,8 +556,8 @@ export default function AgenticWorkflows() {
               description: "Processing encountered an error",
               variant: "destructive",
             });
-            queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/workflows", execWorkflowId, "executions"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/n8n/traces"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/n8n/workflows", execWorkflowId, "executions"] });
           }
         } catch {
           // Ignore polling errors
@@ -595,7 +595,7 @@ export default function AgenticWorkflows() {
           description: `${wfId} did not complete within 10 minutes. Check the execution history for details.`,
           variant: "destructive",
         });
-        queryClient.invalidateQueries({ queryKey: ["/api/workflows", wfId, "executions"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/n8n/workflows", wfId, "executions"] });
       });
     }, 30000); // Check every 30 seconds
     return () => clearInterval(interval);
@@ -614,7 +614,7 @@ export default function AgenticWorkflows() {
 
   const executeMutation = useMutation({
     mutationFn: async (workflowId: string) => {
-      const response = await apiRequest("POST", `/api/workflows/${workflowId}/execute`, {
+      const response = await apiRequest("POST", `/api/n8n/workflows/${workflowId}/execute`, {
         action: "execute",
         payload: { message: "Test from Agentic Workflows UI", timestamp: new Date().toISOString() },
       });
@@ -642,10 +642,10 @@ export default function AgenticWorkflows() {
             title: "Workflow executed",
             description: `${result.metadata.workflowId} completed in ${result.metadata.durationMs}ms`,
           });
-          queryClient.invalidateQueries({ queryKey: ["/api/traces"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/n8n/traces"] });
           if (selectedWorkflow) {
-            queryClient.invalidateQueries({ queryKey: ["/api/workflows", selectedWorkflow.id, "output"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/workflows", selectedWorkflow.id, "executions"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/n8n/workflows", selectedWorkflow.id, "output"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/n8n/workflows", selectedWorkflow.id, "executions"] });
           }
         }
       } else {
@@ -684,7 +684,7 @@ export default function AgenticWorkflows() {
           label: buttonState.label,
           icon: buttonState.icon,
           method: "POST" as const,
-          endpoint: `/api/workflows/${selectedWorkflow.id}/execute`,
+          endpoint: `/api/n8n/workflows/${selectedWorkflow.id}/execute`,
           description: isWorkflowRunning ? "Workflow is processing..." : "Send test payload to n8n",
           onClick: () => executeMutation.mutate(selectedWorkflow.id),
           disabled: buttonState.disabled,
