@@ -49,15 +49,7 @@ function AuthenticatedApp() {
       <Route>
         {() => {
           if (!isAuthenticated || !user) {
-            return (
-              <Switch>
-                <Route path="/flows/:flowId" component={FlowDetail} />
-                <Route path="/flows" component={FlowExplorer} />
-                <Route>
-                  <Landing />
-                </Route>
-              </Switch>
-            );
+            return <Landing />;
           }
 
           return (
@@ -83,8 +75,8 @@ function AuthenticatedApp() {
                           <Route path="/workflows" component={AgenticWorkflows} />
                           <Route path="/memory" component={MemoryExplorer} />
                           <Route path="/rules" component={RulesExplorer} />
-                          <Route path="/flows" component={FlowExplorer} />
                           <Route path="/flows/:flowId" component={FlowDetail} />
+                          <Route path="/flows" component={FlowExplorer} />
                           <Route component={NotFound} />
                         </Switch>
                       </main>
