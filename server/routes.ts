@@ -7,6 +7,7 @@ import { registerWorkflowRoutes } from "./workflows/routes";
 import { registerImageRoutes } from "./images/routes";
 import { getAllEndpoints } from "./endpoint-registry";
 import llmRoutes from "./llm/routes";
+import ttsRoutes from "./tts/routes";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -30,6 +31,9 @@ export async function registerRoutes(
 
   // LLM proxy routes for PromptPlayground
   app.use("/api/llm", llmRoutes);
+
+  // TTS routes (OpenAI Text-to-Speech)
+  app.use("/api/tts", ttsRoutes);
 
   // Endpoint registry for UI info icons
   app.get("/api/endpoints", (_req, res) => {
