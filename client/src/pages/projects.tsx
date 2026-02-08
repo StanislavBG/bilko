@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageContent } from "@/components/page-content";
 import { NavPanel } from "@/components/nav";
+import { ProjectImage } from "@/components/project-image";
 import { projects, getProjectById, type Project } from "@/data/projects";
 
 function StatusBadge({ status }: { status: Project["status"] }) {
@@ -49,14 +50,11 @@ function ProjectDetailPanel({
         className="block relative group"
         data-testid="link-project-hero"
       >
-        <div className="aspect-square max-h-[320px] w-full overflow-hidden bg-muted">
-          <img
-            src={project.imageUrl}
-            alt={project.title}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            data-testid="img-project-hero"
-          />
-        </div>
+        <ProjectImage
+          projectUrl={project.url}
+          projectTitle={project.title}
+          className="aspect-square max-h-[320px] w-full"
+        />
         {/* Overlay on hover */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-white font-medium">
@@ -201,13 +199,11 @@ export default function Projects() {
                     onClick={() => handleSelectProject(project.id)}
                     data-testid={`card-desktop-project-${project.id}`}
                   >
-                    <div className="aspect-square overflow-hidden bg-muted">
-                      <img
-                        src={project.imageUrl}
-                        alt={project.title}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </div>
+                    <ProjectImage
+                      projectUrl={project.url}
+                      projectTitle={project.title}
+                      className="aspect-square"
+                    />
                     <div className="p-3">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-sm truncate">{project.title}</span>
@@ -234,13 +230,11 @@ export default function Projects() {
                     data-testid={`card-project-${project.id}`}
                   >
                     {/* Project thumbnail */}
-                    <div className="aspect-video overflow-hidden bg-muted">
-                      <img
-                        src={project.imageUrl}
-                        alt={project.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    <ProjectImage
+                      projectUrl={project.url}
+                      projectTitle={project.title}
+                      className="aspect-video"
+                    />
                     <div className="p-4">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <span className="font-medium text-sm">{project.title}</span>
