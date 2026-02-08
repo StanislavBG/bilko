@@ -6,7 +6,6 @@ export interface Project {
   url: string;
   features: string[];
   category: string;
-  imageUrl: string;
   status: "live" | "beta" | "development";
   techStack?: string[];
 }
@@ -20,7 +19,6 @@ export const projects: Project[] = [
     url: "https://family-frame.replit.app/",
     features: ["Google Photos Integration", "Multi-household Sync", "Shared Calendar", "Live Weather"],
     category: "Connected Living",
-    imageUrl: "https://images.unsplash.com/photo-1511895426328-dc8714191300?w=800&h=800&fit=crop&q=80",
     status: "live",
     techStack: ["React", "Google Photos API", "Firebase"]
   },
@@ -32,7 +30,6 @@ export const projects: Project[] = [
     url: "https://provocations.replit.app/",
     features: ["Deep Analysis", "Critical Thinking", "Source Material Processing"],
     category: "AI Thinking Tools",
-    imageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=800&fit=crop&q=80",
     status: "live",
     techStack: ["React", "Claude AI", "n8n"]
   },
@@ -44,7 +41,6 @@ export const projects: Project[] = [
     url: "https://puckpredict.com/",
     features: ["Game Predictions", "Player Analytics", "ML Models", "Betting Insights"],
     category: "Sports Analytics",
-    imageUrl: "https://images.unsplash.com/photo-1515703407324-5f753afd8be8?w=800&h=800&fit=crop&q=80",
     status: "live",
     techStack: ["Python", "TensorFlow", "React", "PostgreSQL"]
   },
@@ -56,7 +52,6 @@ export const projects: Project[] = [
     url: "https://timeline-experiences.replit.app/",
     features: ["Interactive Timeline", "Rich Media", "Visual Storytelling", "Event Navigation"],
     category: "Interactive Media",
-    imageUrl: "https://images.unsplash.com/photo-1501139083538-0139583c060f?w=800&h=800&fit=crop&q=80",
     status: "live",
     techStack: ["React", "TypeScript"]
   },
@@ -68,9 +63,19 @@ export const projects: Project[] = [
     url: "https://euro-school-tennis-demo.replit.app/",
     features: ["Program Schedules", "Court Booking", "Player Development", "Academy Management"],
     category: "Sports & Education",
-    imageUrl: "https://images.unsplash.com/photo-1554068865-24cecd4e34b8?w=800&h=800&fit=crop&q=80",
     status: "beta",
     techStack: ["React", "TypeScript"]
+  },
+  {
+    id: "vibe-index",
+    title: "Vibe Index",
+    tagline: "Measure the Vibe of Any Project",
+    description: "An AI-powered tool that analyzes and scores the overall 'vibe' of projects, codebases, and digital products. Get instant insights into code quality, design coherence, and developer experience.",
+    url: "https://vibe-index.replit.app",
+    features: ["Project Analysis", "Vibe Scoring", "AI-Powered Insights", "Quality Metrics"],
+    category: "Developer Tools",
+    status: "live",
+    techStack: ["React", "TypeScript", "AI"]
   }
 ];
 
