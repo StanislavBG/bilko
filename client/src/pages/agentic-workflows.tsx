@@ -92,11 +92,57 @@ interface WorkflowOutput {
       data: {
         success?: boolean;
         data?: {
+          // EFD fields
           postContent?: string;
           imagePrompt?: string;
           imageUrl?: string | null;
           transparencyPost?: string;
           sourceUrls?: SourceUrl[];
+          // FVP fields
+          pipeline?: string;
+          researchPhase?: {
+            topicCount: number;
+            summaries: Array<{
+              title: string;
+              summary: string;
+              dataTable?: string;
+              category?: string;
+            }>;
+          };
+          videoPhase?: {
+            totalDuration: number;
+            script?: {
+              totalDuration: number;
+              segments: Array<{
+                id: string;
+                duration: number;
+                type: string;
+                title?: string;
+                text?: string;
+                spokenScript?: string;
+                wordCount?: number;
+                sceneDescriptions?: string[];
+              }>;
+            };
+            imagePrompts?: Array<{
+              segmentId: string;
+              sceneIndex: number;
+              originalDescription?: string;
+              imagePrompt: string;
+              style?: string;
+            }>;
+            segmentImages?: Record<string, Array<{
+              segmentId: string;
+              sceneIndex: number;
+              imagePrompt: string;
+            }>>;
+          };
+          timingTable?: Array<{
+            segment: string;
+            duration: string;
+            visuals: string;
+            audio: string;
+          }>;
         };
       };
     } | null;
@@ -111,6 +157,14 @@ interface WorkflowOutput {
       data: {
         articles?: Array<{ title: string; source: string }>;
         count?: number;
+      };
+    } | null;
+    research: {
+      traceId: string;
+      timestamp: string;
+      data: {
+        topicCount?: number;
+        topics?: string[];
       };
     } | null;
   };
@@ -153,6 +207,7 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
   }
 
   const finalData = data.outputs?.final?.data?.data;
+  const isVideoPipeline = finalData?.pipeline === "football-video-pipeline";
   const postContent = finalData?.postContent;
   const imagePrompt = finalData?.imagePrompt;
   const imageUrl = finalData?.imageUrl;
@@ -248,188 +303,382 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
         </Card>
       )}
 
-      <div className="flex flex-col md:flex-row gap-4">
-        {/* Image - full width on mobile, fixed width on desktop */}
-        <div className="w-full md:w-[280px] flex-shrink-0">
-          {(imageUrl || imagePrompt) && (
-            <Card data-testid="card-infographic" className="h-full">
+      {/* ── Video Pipeline Output (FVP) ── */}
+      {isVideoPipeline && finalData && (
+        <div className="space-y-3">
+          {/* Timing Table */}
+          {finalData.timingTable && finalData.timingTable.length > 0 && (
+            <Card data-testid="card-timing-table">
               <CardHeader className="py-2 px-3">
-                <div className="flex items-center justify-between gap-1">
-                  <div className="flex items-center gap-1">
-                    <Image className="h-3 w-3 text-muted-foreground" />
-                    <CardTitle className="text-xs">Infographic</CardTitle>
-                  </div>
-                  {imageUrl && (
-                    <div className="flex items-center">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowFullscreenImage(true)}
-                            data-testid="button-fullscreen-image"
-                          >
-                            <Maximize2 className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Fullscreen</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => downloadImage(imageUrl, `infographic-${workflowId}.png`)}
-                            data-testid="button-download-image"
-                          >
-                            <Download className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Download</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => copyImageToClipboard(imageUrl, toast)}
-                            data-testid="button-copy-image"
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Copy</TooltipContent>
-                      </Tooltip>
-                    </div>
-                  )}
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-muted-foreground" />
+                  <CardTitle className="text-xs">Video Timing ({finalData.videoPhase?.totalDuration || 65}s)</CardTitle>
                 </div>
               </CardHeader>
               <CardContent className="p-2 pt-0">
-                {imageUrl ? (
-                  <div 
-                    className="rounded overflow-hidden cursor-pointer"
-                    onClick={() => setShowFullscreenImage(true)}
-                  >
-                    <img 
-                      src={imageUrl} 
-                      alt="Generated infographic" 
-                      className="w-full h-auto"
-                      data-testid="img-infographic"
-                    />
-                  </div>
-                ) : (
-                  <div className="bg-muted rounded p-3 flex items-center justify-center border border-dashed h-32">
-                    <div className="text-center text-xs text-muted-foreground">
-                      <Image className="h-6 w-6 mx-auto mb-1 opacity-30" />
-                      <p className="font-medium">Prompt only</p>
-                    </div>
-                  </div>
-                )}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-1 pr-2 font-medium text-muted-foreground">Segment</th>
+                        <th className="text-left py-1 pr-2 font-medium text-muted-foreground">Duration</th>
+                        <th className="text-left py-1 pr-2 font-medium text-muted-foreground">Visuals</th>
+                        <th className="text-left py-1 font-medium text-muted-foreground">Audio</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {finalData.timingTable.map((row, idx) => (
+                        <tr key={idx} className="border-b last:border-b-0">
+                          <td className="py-1 pr-2 font-medium">{row.segment}</td>
+                          <td className="py-1 pr-2">
+                            <Badge variant="outline" className="text-[10px]">{row.duration}</Badge>
+                          </td>
+                          <td className="py-1 pr-2 text-muted-foreground">{row.visuals}</td>
+                          <td className="py-1 text-muted-foreground truncate max-w-[200px]">{row.audio}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
           )}
-        </div>
 
-        {/* Post and Sources */}
-        <div className="flex-1 space-y-3 min-w-0 w-full">
-          {postContent && (
-            <Card data-testid="card-facebook-post">
+          {/* Video Script Segments */}
+          {finalData.videoPhase?.script?.segments && (
+            <div className="space-y-2">
+              {finalData.videoPhase.script.segments.map((segment, idx) => (
+                <Card key={segment.id} data-testid={`card-segment-${segment.id}`}>
+                  <CardHeader className="py-2 px-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={segment.type === "headline" ? "default" : "secondary"} className="text-[10px]">
+                          {segment.type === "headline" ? "INTRO" : `TOPIC ${idx}`}
+                        </Badge>
+                        <CardTitle className="text-xs">{segment.title || segment.text || "Intro"}</CardTitle>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className="text-[10px]">{segment.duration}s</Badge>
+                        {segment.wordCount && (
+                          <span className="text-[10px] text-muted-foreground">{segment.wordCount}w</span>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-2 pt-0 space-y-2">
+                    {segment.spokenScript && (
+                      <div className="bg-muted rounded p-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] font-medium text-muted-foreground">Spoken Script</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 px-1"
+                            onClick={() => copy(segment.spokenScript!, `script-${segment.id}`, "Script copied")}
+                          >
+                            {isCopied(`script-${segment.id}`) ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                          </Button>
+                        </div>
+                        <p className="text-xs">{segment.spokenScript}</p>
+                      </div>
+                    )}
+                    {segment.sceneDescriptions && segment.sceneDescriptions.length > 0 && (
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-medium text-muted-foreground">Scene Descriptions</span>
+                        {segment.sceneDescriptions.map((scene, si) => (
+                          <div key={si} className="flex items-start gap-1 text-xs">
+                            <Image className="h-3 w-3 text-muted-foreground mt-0.5 flex-shrink-0" />
+                            <span className="text-muted-foreground">{scene}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Research Summaries */}
+          {finalData.researchPhase?.summaries && finalData.researchPhase.summaries.length > 0 && (
+            <Card data-testid="card-research-summaries">
               <CardHeader className="py-2 px-3">
                 <div className="flex items-center justify-between gap-1">
                   <div className="flex items-center gap-1">
                     <FileText className="h-3 w-3 text-muted-foreground" />
-                    <CardTitle className="text-xs">Facebook Post</CardTitle>
+                    <CardTitle className="text-xs">Research Summaries ({finalData.researchPhase.topicCount})</CardTitle>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowFullPost(true)}
-                          data-testid="button-expand-post"
-                        >
-                          <Maximize2 className="h-3 w-3" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>View full post</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copy(postContent, "post-content", "Post copied")}
-                          data-testid="button-copy-post"
-                        >
-                          {isCopied("post-content") ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Copy post</TooltipContent>
-                    </Tooltip>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 px-2 text-[10px]"
+                    onClick={() => {
+                      const allSummaries = finalData.researchPhase!.summaries
+                        .map((s, i) => `## Topic ${i + 1}: ${s.title}\n\n${s.summary}${s.dataTable ? '\n\n' + s.dataTable : ''}`)
+                        .join('\n\n---\n\n');
+                      copy(allSummaries, "all-summaries", "All summaries copied");
+                    }}
+                  >
+                    {isCopied("all-summaries") ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                    <span className="ml-1">Copy All</span>
+                  </Button>
                 </div>
               </CardHeader>
-              <CardContent className="p-2 pt-0">
-                <div 
-                  className="bg-muted rounded p-2 cursor-pointer"
-                  onClick={() => setShowFullPost(true)}
-                >
-                  <p className="text-xs line-clamp-4" data-testid="text-post-content">{postContent}</p>
-                </div>
+              <CardContent className="p-2 pt-0 space-y-2">
+                {finalData.researchPhase.summaries.map((summary, idx) => (
+                  <div key={idx} className="bg-muted rounded p-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium">{summary.title}</span>
+                      {summary.category && (
+                        <Badge variant="outline" className="text-[10px]">{summary.category}</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-4">{summary.summary}</p>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           )}
 
-          {/* Source Links */}
-          {sourceUrls.length > 0 && (
-            <Card data-testid="card-sources">
+          {/* Image Prompts */}
+          {finalData.videoPhase?.imagePrompts && finalData.videoPhase.imagePrompts.length > 0 && (
+            <Card data-testid="card-image-prompts">
               <CardHeader className="py-2 px-3">
-                <div className="flex items-center gap-1">
-                  <Link className="h-3 w-3 text-muted-foreground" />
-                  <CardTitle className="text-xs">Sources ({sourceUrls.length})</CardTitle>
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1">
+                    <Image className="h-3 w-3 text-muted-foreground" />
+                    <CardTitle className="text-xs">Image Prompts ({finalData.videoPhase.imagePrompts.length})</CardTitle>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 px-2 text-[10px]"
+                    onClick={() => {
+                      const allPrompts = finalData.videoPhase!.imagePrompts!
+                        .map((p, i) => `[${p.segmentId} Scene ${p.sceneIndex + 1}]\n${p.imagePrompt}`)
+                        .join('\n\n');
+                      copy(allPrompts, "all-image-prompts", "All image prompts copied");
+                    }}
+                  >
+                    {isCopied("all-image-prompts") ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                    <span className="ml-1">Copy All</span>
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="p-2 pt-0">
-                <div className="space-y-1">
-                  {sourceUrls.map((item, idx) => {
-                    // Handle both string URLs and {url, title} objects
-                    const url = typeof item === "string" ? item : item?.url;
-                    if (!url) return null;
-                    return (
-                      <a
-                        key={idx}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground hover:underline truncate"
-                        data-testid={`source-link-${idx + 1}`}
+                <div className="grid gap-2 grid-cols-1 md:grid-cols-3">
+                  {finalData.videoPhase.imagePrompts.map((prompt, idx) => (
+                    <div key={idx} className="bg-muted rounded p-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-[8px]">{prompt.segmentId}</Badge>
+                        <span className="text-[10px] text-muted-foreground">Scene {prompt.sceneIndex + 1}</span>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground line-clamp-3">{prompt.imagePrompt}</p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 px-1 text-[10px] w-full"
+                        onClick={() => copy(prompt.imagePrompt, `img-prompt-${idx}`, "Prompt copied")}
                       >
-                        <span className="font-medium">[{idx + 1}]</span>
-                        <ExternalLink className="h-2 w-2 flex-shrink-0" />
-                        <span className="truncate">{url.replace(/^https?:\/\//, "").substring(0, 50)}...</span>
-                      </a>
-                    );
-                  })}
+                        {isCopied(`img-prompt-${idx}`) ? <Check className="h-2 w-2 text-green-600" /> : <Copy className="h-2 w-2" />}
+                        <span className="ml-1">Copy</span>
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
           )}
         </div>
-      </div>
-
-      {!postContent && !imagePrompt && (
-        <Card className="border-dashed">
-          <CardContent className="py-6 text-center text-muted-foreground">
-            <p className="text-sm">Output received but content not yet available</p>
-            <p className="text-xs mt-1">The workflow may still be processing</p>
-          </CardContent>
-        </Card>
       )}
 
-      {/* Fullscreen Image Modal */}
+      {/* ── EFD Output (European Football Daily) ── */}
+      {!isVideoPipeline && (
+        <>
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Image - full width on mobile, fixed width on desktop */}
+            <div className="w-full md:w-[280px] flex-shrink-0">
+              {(imageUrl || imagePrompt) && (
+                <Card data-testid="card-infographic" className="h-full">
+                  <CardHeader className="py-2 px-3">
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1">
+                        <Image className="h-3 w-3 text-muted-foreground" />
+                        <CardTitle className="text-xs">Infographic</CardTitle>
+                      </div>
+                      {imageUrl && (
+                        <div className="flex items-center">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowFullscreenImage(true)}
+                                data-testid="button-fullscreen-image"
+                              >
+                                <Maximize2 className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Fullscreen</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => downloadImage(imageUrl, `infographic-${workflowId}.png`)}
+                                data-testid="button-download-image"
+                              >
+                                <Download className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Download</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyImageToClipboard(imageUrl, toast)}
+                                data-testid="button-copy-image"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Copy</TooltipContent>
+                          </Tooltip>
+                        </div>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-2 pt-0">
+                    {imageUrl ? (
+                      <div
+                        className="rounded overflow-hidden cursor-pointer"
+                        onClick={() => setShowFullscreenImage(true)}
+                      >
+                        <img
+                          src={imageUrl}
+                          alt="Generated infographic"
+                          className="w-full h-auto"
+                          data-testid="img-infographic"
+                        />
+                      </div>
+                    ) : (
+                      <div className="bg-muted rounded p-3 flex items-center justify-center border border-dashed h-32">
+                        <div className="text-center text-xs text-muted-foreground">
+                          <Image className="h-6 w-6 mx-auto mb-1 opacity-30" />
+                          <p className="font-medium">Prompt only</p>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Post and Sources */}
+            <div className="flex-1 space-y-3 min-w-0 w-full">
+              {postContent && (
+                <Card data-testid="card-facebook-post">
+                  <CardHeader className="py-2 px-3">
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1">
+                        <FileText className="h-3 w-3 text-muted-foreground" />
+                        <CardTitle className="text-xs">Facebook Post</CardTitle>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowFullPost(true)}
+                              data-testid="button-expand-post"
+                            >
+                              <Maximize2 className="h-3 w-3" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>View full post</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => copy(postContent, "post-content", "Post copied")}
+                              data-testid="button-copy-post"
+                            >
+                              {isCopied("post-content") ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Copy post</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-2 pt-0">
+                    <div
+                      className="bg-muted rounded p-2 cursor-pointer"
+                      onClick={() => setShowFullPost(true)}
+                    >
+                      <p className="text-xs line-clamp-4" data-testid="text-post-content">{postContent}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Source Links */}
+              {sourceUrls.length > 0 && (
+                <Card data-testid="card-sources">
+                  <CardHeader className="py-2 px-3">
+                    <div className="flex items-center gap-1">
+                      <Link className="h-3 w-3 text-muted-foreground" />
+                      <CardTitle className="text-xs">Sources ({sourceUrls.length})</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-2 pt-0">
+                    <div className="space-y-1">
+                      {sourceUrls.map((item, idx) => {
+                        // Handle both string URLs and {url, title} objects
+                        const url = typeof item === "string" ? item : item?.url;
+                        if (!url) return null;
+                        return (
+                          <a
+                            key={idx}
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground hover:underline truncate"
+                            data-testid={`source-link-${idx + 1}`}
+                          >
+                            <span className="font-medium">[{idx + 1}]</span>
+                            <ExternalLink className="h-2 w-2 flex-shrink-0" />
+                            <span className="truncate">{url.replace(/^https?:\/\//, "").substring(0, 50)}...</span>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+
+          {!postContent && !imagePrompt && (
+            <Card className="border-dashed">
+              <CardContent className="py-6 text-center text-muted-foreground">
+                <p className="text-sm">Output received but content not yet available</p>
+                <p className="text-xs mt-1">The workflow may still be processing</p>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+
+      {/* Fullscreen Image Modal (EFD) */}
       {showFullscreenImage && imageUrl && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 cursor-pointer"
           onClick={() => setShowFullscreenImage(false)}
           data-testid="modal-fullscreen-image"
@@ -443,23 +692,23 @@ function WorkflowOutputPreview({ workflowId }: { workflowId: string }) {
           >
             <X className="h-6 w-6" />
           </Button>
-          <img 
-            src={imageUrl} 
-            alt="Generated infographic" 
+          <img
+            src={imageUrl}
+            alt="Generated infographic"
             className="max-w-full max-h-full object-contain"
             onClick={(e) => e.stopPropagation()}
           />
         </div>
       )}
 
-      {/* Full Post Modal */}
+      {/* Full Post Modal (EFD) */}
       {showFullPost && postContent && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
           onClick={() => setShowFullPost(false)}
           data-testid="modal-full-post"
         >
-          <Card 
+          <Card
             className="max-w-2xl w-full max-h-[80vh] overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >

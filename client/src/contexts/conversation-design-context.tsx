@@ -420,12 +420,26 @@ export function ConversationDesignProvider({ children }: { children: ReactNode }
     }
   }, [transcript, dispatchUtterance]);
 
-  // Sync: when voice context detects Bilko is speaking, update floor
+  // Sync: keep floor in sync with voice context's isSpeaking state.
+  // When Bilko starts speaking → floor = "bilko".
+  // When Bilko stops speaking → trigger bilkoFinishedSpeaking() to
+  // hand the floor back to the user (with the standard TTS buffer).
   useEffect(() => {
     if (isSpeaking && floorRef.current !== "bilko") {
       setFloor("bilko");
+    } else if (!isSpeaking && floorRef.current === "bilko") {
+      // isSpeaking went false but floor is still "bilko" — release it.
+      // Use the same deferred handoff as bilkoFinishedSpeaking().
+      autoListenTimerRef.current = setTimeout(() => {
+        setFloor("user");
+        keywordFiredRef.current = false;
+        if (micActiveRef.current && !isListening) {
+          startListening();
+        }
+        autoListenTimerRef.current = null;
+      }, POST_TTS_BUFFER_MS + 200);
     }
-  }, [isSpeaking]);
+  }, [isSpeaking, startListening, isListening]);
 
   // Cleanup timers
   useEffect(() => {

@@ -10,6 +10,16 @@
       "instructions": "Runs daily at 00:00 via n8n Schedule Trigger. Uses Gemini 2.0 Flash with google_search tool for real-time news discovery. Produces image with text overlay and FB post with [1], [2] style citations linking to sources.",
       "category": "content",
       "architecture": "Webhook → Discover Topics (Gemini+GoogleSearch) → Topic Analyst → Compliance Checker → Research Topic → Stats Extraction → Post Generation → Image Pipeline → Imagen API → Callback"
+    },
+    {
+      "id": "football-video-pipeline",
+      "name": "[FVP] Football Video Pipeline",
+      "mode": "n8n",
+      "webhookPath": "football-video-pipeline",
+      "description": "AI-powered research, curation, and video content generation pipeline for European football news. Three-phase workflow: (1) News Hound discovers top 3 viral topics via Gemini web search, (2) Deep Diver verifies each topic with additional sources, (3) Journalist writes 150-word summaries. Then generates a 65-second video script with intro slide + 3 news segments (20s each), plus image generation prompts for each scene.",
+      "instructions": "Runs daily at 00:00 via n8n Schedule Trigger or on-demand via webhook. Uses Gemini 2.5 Flash for all AI steps with rate limiting between calls. Produces structured JSON output with video script, image prompts, and timing data.",
+      "category": "content",
+      "architecture": "Webhook/Schedule → News Hound (Gemini Search) → Deep Diver (Loop+Verify) → Journalist (Summarize) → Video Architect (Script) → Image Stylist (Prompts) → Callback"
     }
   ]
 }
