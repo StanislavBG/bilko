@@ -16,17 +16,17 @@ const registry: EndpointRegistry = {
     method: "GET",
     description: "Returns single rule content with markdown body"
   },
-  "GET /api/audit/protocol": {
+  "GET /api/auth/login": {
     method: "GET",
-    description: "Returns the Rule Architect Protocol markdown content"
+    description: "Initiates Replit OIDC login flow"
   },
-  "GET /api/audits": {
+  "GET /api/auth/callback": {
     method: "GET",
-    description: "Returns all saved rule audit reports"
+    description: "OIDC callback handler after authentication"
   },
-  "POST /api/audits": {
-    method: "POST",
-    description: "Saves a new rule audit report"
+  "GET /api/auth/logout": {
+    method: "GET",
+    description: "Destroys session and redirects to OIDC logout"
   },
   "GET /api/n8n/traces": {
     method: "GET",
