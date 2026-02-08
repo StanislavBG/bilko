@@ -133,7 +133,7 @@ function AuthenticatedHeader() {
     <header className="h-11 shrink-0 border-b bg-sidebar flex items-center gap-2 px-2" data-testid="global-header">
       <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
       {!isCollapsed && (
-        <Link href="/" className="font-semibold text-sm shrink-0 hover:opacity-80 transition-opacity cursor-pointer" data-testid="logo-text">
+        <Link href="/academy" className="font-semibold text-sm shrink-0 hover:opacity-80 transition-opacity cursor-pointer" data-testid="logo-text">
           AI School
         </Link>
       )}
