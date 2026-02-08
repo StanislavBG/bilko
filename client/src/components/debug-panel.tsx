@@ -32,7 +32,9 @@ function DebugEntryRow({ entry }: { entry: DebugEntry }) {
       className={`text-xs font-mono px-2 py-1.5 rounded ${
         entry.level === "error"
           ? "bg-red-500/10 text-red-400"
-          : "bg-amber-500/10 text-amber-400"
+          : entry.level === "warn"
+          ? "bg-amber-500/10 text-amber-400"
+          : "bg-blue-500/10 text-blue-400"
       }`}
     >
       <span className="text-[10px] text-muted-foreground mr-2">

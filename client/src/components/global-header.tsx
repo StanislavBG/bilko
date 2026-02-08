@@ -1,9 +1,11 @@
-import { LogOut, Eye, EyeOff, Settings } from "lucide-react";
+import { LogOut, Eye, EyeOff, Wrench, Volume2, VolumeX } from "lucide-react";
 import { Link } from "wouter";
 import { useViewMode } from "@/contexts/view-mode-context";
+import { useVoice } from "@/contexts/voice-context";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { DebugButton } from "@/components/debug-panel";
 
@@ -21,6 +23,7 @@ export function GlobalHeader({ variant = "authenticated" }: GlobalHeaderProps) {
         </span>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
+          <ToolsMenu />
           <DebugButton />
           <ThemeToggle />
           <Button variant="ghost" size="sm" asChild>
@@ -33,6 +36,60 @@ export function GlobalHeader({ variant = "authenticated" }: GlobalHeaderProps) {
 
   // Authenticated user header - needs ViewMode and Sidebar context
   return <AuthenticatedHeader />;
+}
+
+const TTS_TEST_PHRASE = "Hello! This is Bilko's Mental Gym testing text-to-speech. Can you hear me?";
+
+function ToolsMenu() {
+  const { speak, stopSpeaking, isSpeaking, ttsSupported, ttsUnlocked } = useVoice();
+
+  const handleTestTTS = () => {
+    if (isSpeaking) {
+      stopSpeaking();
+      console.info("[TTS] Test stopped by user");
+    } else {
+      console.info("[TTS] Test triggered from tools menu");
+      speak(TTS_TEST_PHRASE);
+    }
+  };
+
+  return (
+    <Popover>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" data-testid="button-tools">
+              <Wrench className="h-4 w-4" />
+              <span className="sr-only">Tools</span>
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Tools</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-56 p-2">
+        <p className="text-xs font-medium text-muted-foreground px-2 py-1">Dev Tools</p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-xs"
+          onClick={handleTestTTS}
+        >
+          {isSpeaking ? (
+            <VolumeX className="h-3.5 w-3.5 text-red-500" />
+          ) : (
+            <Volume2 className="h-3.5 w-3.5" />
+          )}
+          {isSpeaking ? "Stop TTS" : "Test TTS"}
+          {!ttsSupported && (
+            <span className="ml-auto text-[10px] text-red-400">unsupported</span>
+          )}
+          {ttsSupported && !ttsUnlocked && (
+            <span className="ml-auto text-[10px] text-amber-400">locked</span>
+          )}
+        </Button>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 function AuthenticatedHeader() {
@@ -74,21 +131,7 @@ function AuthenticatedHeader() {
             </TooltipContent>
           </Tooltip>
         )}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              disabled
-              className="opacity-50"
-              data-testid="button-settings"
-            >
-              <Settings className="h-4 w-4" />
-              <span className="sr-only">Settings</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Settings (coming soon)</TooltipContent>
-        </Tooltip>
+        <ToolsMenu />
         <DebugButton />
         <ThemeToggle />
         <Button variant="ghost" size="icon" asChild data-testid="button-logout">
