@@ -24,6 +24,7 @@ import {
   SOCRATIC_ARCHITECT_CONFIG,
 } from "@/components/ai-consultation-flow";
 import { LinkedInStrategistFlow } from "@/components/linkedin-strategist-flow";
+import { WorkWithMeFlow } from "@/components/work-with-me-flow";
 import { bilkoSays } from "@/lib/bilko-persona";
 import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
@@ -37,6 +38,7 @@ import {
   Lightbulb,
   Briefcase,
   GraduationCap,
+  Handshake,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
@@ -64,6 +66,7 @@ const iconMap: Record<string, ReactNode> = {
   Lightbulb: <Lightbulb className="h-5 w-5" />,
   Briefcase: <Briefcase className="h-5 w-5" />,
   GraduationCap: <GraduationCap className="h-5 w-5" />,
+  Handshake: <Handshake className="h-5 w-5" />,
 };
 
 const MODE_OPTIONS: ModeOption[] = LEARNING_MODES.map((mode) => ({
@@ -112,8 +115,8 @@ const GUIDANCE_MESSAGES = [
     speech: "Still here. You can pick a training mode by name, or just tap one of the options on the right side.",
   },
   {
-    text: "No rush. The modes are: Video Discovery, AI Consultation, Recursive Interview, LinkedIn Strategist, and Socratic Architect. Say any of those or tap one.",
-    speech: "No rush. The modes are Video Discovery, AI Consultation, Recursive Interview, LinkedIn Strategist, and Socratic Architect. Say any of those, or tap one.",
+    text: "No rush. The modes are: Video Discovery, AI Consultation, Recursive Interview, LinkedIn Strategist, Socratic Architect, and Work With Me. Say any of those or tap one.",
+    speech: "No rush. The modes are Video Discovery, AI Consultation, Recursive Interview, LinkedIn Strategist, Socratic Architect, and Work With Me. Say any of those, or tap one.",
   },
 ];
 
@@ -468,6 +471,7 @@ function RightPanelContent({ mode }: { mode: LearningModeId }) {
       {mode === "interviewer" && <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} />}
       {mode === "linkedin" && <LinkedInStrategistFlow />}
       {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} />}
+      {mode === "work-with-me" && <WorkWithMeFlow />}
     </div>
   );
 }

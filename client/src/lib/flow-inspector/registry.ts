@@ -12,6 +12,193 @@ import type { FlowDefinition } from "./types";
 import { validateRegistry } from "./validate";
 
 const allFlows: FlowDefinition[] = [
+  // ── Work With Me — Guided web task assistant ─────────────
+  {
+    id: "work-with-me",
+    name: "Work With Me",
+    description:
+      "Tell the agent your objective (e.g. 'register a business in WA') and it finds every step, then wireframes each website inside the app so the agent can see through your eyes and guide you with element-level overlays — every recommendation justified.",
+    version: "1.0.0",
+    location: "landing",
+    componentPath: "client/src/components/work-with-me-flow.tsx",
+    tags: ["landing", "guidance", "web", "assistant", "wireframe", "gemini"],
+    output: {
+      name: "completedSteps",
+      type: "object",
+      description: "The steps the user completed with guidance from the agent",
+    },
+    steps: [
+      {
+        id: "objective-input",
+        name: "User Enters Objective",
+        type: "user-input",
+        description:
+          "User describes their goal in natural language (e.g. 'Register a business in Washington State'). Free-text input with example suggestions.",
+        inputSchema: [],
+        outputSchema: [
+          {
+            name: "objective",
+            type: "string",
+            description: "The user's goal in natural language",
+          },
+        ],
+        dependsOn: [],
+      },
+      {
+        id: "research-steps",
+        name: "Research Step-by-Step Plan",
+        type: "llm",
+        description:
+          "Agent analyzes the objective and finds 3-7 concrete steps with real, actionable URLs from official sources. Each step includes a title, description, URL, estimated time, and justification.",
+        prompt:
+          "Given a user objective, find the exact step-by-step process with real URLs from official websites.",
+        userMessage: 'Find the step-by-step process for: "{objective}"',
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "objective",
+            type: "string",
+            description: "The user's goal",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "taskTitle",
+            type: "string",
+            description: "Short title for the task",
+          },
+          {
+            name: "overview",
+            type: "string",
+            description: "1-2 sentence overview",
+          },
+          {
+            name: "steps",
+            type: "array",
+            description:
+              "Array of steps with stepNumber, title, description, url, estimatedTime, whyThisStep",
+          },
+        ],
+        dependsOn: ["objective-input"],
+      },
+      {
+        id: "select-step",
+        name: "User Picks Step",
+        type: "user-input",
+        description:
+          "Displays the step-by-step plan as cards. User picks which step to work on. Completed steps are shown with a green checkmark.",
+        inputSchema: [
+          {
+            name: "steps",
+            type: "array",
+            description: "The researched steps",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "selectedStep",
+            type: "object",
+            description: "The step the user chose to work on",
+          },
+        ],
+        dependsOn: ["research-steps"],
+      },
+      {
+        id: "fetch-page",
+        name: "Fetch & Parse Website",
+        type: "transform",
+        description:
+          "Server-side proxy fetches the selected URL, parses the HTML with jsdom, and extracts a structured representation of the page: headings, links, buttons, form fields, paragraphs, lists, and images.",
+        inputSchema: [
+          {
+            name: "url",
+            type: "string",
+            description: "The URL to fetch",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "pageStructure",
+            type: "object",
+            description:
+              "Structured page with url, title, description, and elements array",
+          },
+        ],
+        dependsOn: ["select-step"],
+      },
+      {
+        id: "analyze-page",
+        name: "Generate Visual Guidance",
+        type: "llm",
+        description:
+          "Agent reads the page structure and generates element-level guidance: which elements to click, fill, or read — each with a justification explaining why that action matters for the user's goal.",
+        prompt:
+          "Analyze the page structure and generate element-level guidance with justifications for achieving the user's objective.",
+        userMessage:
+          "Guide the user through this page to help them achieve their goal.",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "objective",
+            type: "string",
+            description: "The user's original goal",
+          },
+          {
+            name: "stepContext",
+            type: "object",
+            description: "The current step being worked on",
+          },
+          {
+            name: "pageStructure",
+            type: "object",
+            description: "The structured page representation",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "pageSummary",
+            type: "string",
+            description: "What this page is about",
+          },
+          {
+            name: "guidanceItems",
+            type: "array",
+            description:
+              "Element-level guidance with elementId, action, instruction, justification, order, priority",
+          },
+          {
+            name: "nextAction",
+            type: "string",
+            description: "What happens after following the guidance",
+          },
+        ],
+        dependsOn: ["fetch-page"],
+      },
+      {
+        id: "guided-view",
+        name: "Interactive Wireframe",
+        type: "display",
+        description:
+          "Renders the website as a wireframe with guidance overlays. Highlighted elements have colored borders and inline tooltips. Links are clickable and navigate to the next page (which gets fetched and analyzed in turn). User can mark steps complete and move to the next one.",
+        inputSchema: [
+          {
+            name: "pageStructure",
+            type: "object",
+            description: "The structured page to wireframe",
+          },
+          {
+            name: "guidance",
+            type: "object",
+            description: "The agent's element-level guidance",
+          },
+        ],
+        outputSchema: [],
+        dependsOn: ["analyze-page"],
+      },
+    ],
+  },
+
+
   {
     id: "video-discovery",
     name: "AI Video Discovery",
