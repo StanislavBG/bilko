@@ -17,7 +17,7 @@ export function GlobalHeader({ variant = "authenticated" }: GlobalHeaderProps) {
     return (
       <header className="h-14 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center gap-3 px-4 fixed top-0 left-0 right-0 z-50">
         <span className="font-bold text-lg shrink-0">
-          Bilko's Mental Gym
+          Bilko's AI School
         </span>
         <div className="flex-1" />
         <div className="flex items-center gap-2">
@@ -45,7 +45,7 @@ function AuthenticatedHeader() {
       <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
       {!isCollapsed && (
         <Link href="/" className="font-semibold text-sm shrink-0 hover:opacity-80 transition-opacity cursor-pointer" data-testid="logo-text">
-          Mental Gym
+          AI School
         </Link>
       )}
       <div className="flex-1" />
