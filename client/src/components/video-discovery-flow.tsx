@@ -44,6 +44,7 @@ import type { VideoCandidate } from "@/lib/flow-engine";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
+import { useVoice } from "@/contexts/voice-context";
 import { VideoExperienceRenderer } from "@/components/content-blocks";
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -136,6 +137,7 @@ export function VideoDiscoveryFlow() {
   // Flow execution tracker — bridges to Flow Explorer inspector
   const { trackStep, resolveUserInput } = useFlowExecution("video-discovery");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("video-discovery", "Video Discovery");
+  const { speak } = useVoice();
 
   const [steps, setSteps] = useState<WorkflowStep[]>([
     { id: "research", name: "Researching AI Trends", status: "active", detail: "Our AI agent is scanning the latest developments..." },
@@ -232,6 +234,8 @@ export function VideoDiscoveryFlow() {
       updateStep("select", "active", "Pick a topic — videos are loading in the background");
       setFlowState("select-topic");
 
+      speak(`Found ${fetchedTopics.length} trending topics. Pick one that interests you.`);
+
       // Fire parallel video searches for all topics
       fetchedTopics.forEach((t) => searchVideosForTopic(t));
     } catch (err) {
@@ -243,8 +247,9 @@ export function VideoDiscoveryFlow() {
       );
       updateStep("research", "error", "Something went wrong");
       setFlowState("error");
+      speak("Something went wrong. Let me try again.");
     }
-  }, [searchVideosForTopic, trackStep]);
+  }, [searchVideosForTopic, trackStep, speak]);
 
   // Auto-start on mount
   useEffect(() => {
@@ -401,6 +406,7 @@ export function VideoDiscoveryFlow() {
           busSend("main", "summary", {
             summary: `Discovered "${video.title}" by ${video.creator} on the topic of ${selectedTopic?.title ?? "AI"}.`,
           });
+          speak(`Loading ${video.title} by ${video.creator}.`);
         },
       }));
     }
@@ -579,6 +585,7 @@ export function VideoDiscoveryFlow() {
                   busSend("main", "summary", {
                     summary: `Discovered "${video.title}" by ${video.creator} on the topic of ${selectedTopic?.title ?? "AI"}.`,
                   });
+                  speak(`Loading ${video.title} by ${video.creator}.`);
                 }}
               >
                 <CardContent className="p-4">
@@ -643,6 +650,8 @@ export function VideoDiscoveryFlow() {
             creator: selectedVideo.creator,
             description: selectedVideo.description,
             youtubeUrl: selectedVideo.url,
+            autoSummary: true,
+            autoTranscript: true,
           }} />
 
           <div className="flex justify-center gap-3 flex-wrap">

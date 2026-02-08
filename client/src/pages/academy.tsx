@@ -261,7 +261,7 @@ function LevelsOverview({
             <Target className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold mb-1">Mental Gym</h1>
+            <h1 className="text-2xl font-bold mb-1">AI School</h1>
             <p className="text-muted-foreground">
               Three paths to AI mastery. Choose your journey based on your experience level.
             </p>

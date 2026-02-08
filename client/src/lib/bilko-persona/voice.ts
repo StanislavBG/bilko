@@ -92,8 +92,8 @@ type PhraseBank = Record<string, string[]>;
 
 const SPEECH: PhraseBank = {
   greeting: [
-    "Welcome to the Mental Gym. I'm Bilko, your AI training partner.",
-    "Welcome to Bilko's Mental Gym. Let's build something in that brain of yours.",
+    "Welcome to the AI School. I'm Bilko, your AI training partner.",
+    "Welcome to Bilko's AI School. Let's build something in that brain of yours.",
     "Hey there. Welcome to the Gym. I'm Bilko — let's get to work.",
   ],
   returning: [

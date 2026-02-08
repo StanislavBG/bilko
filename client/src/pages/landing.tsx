@@ -77,7 +77,7 @@ const MODE_OPTIONS: ModeOption[] = LEARNING_MODES.map((mode) => ({
 // ── LLM greeting prompt ──────────────────────────────────
 
 const GREETING_SYSTEM_PROMPT = bilkoSystemPrompt(
-  `You are greeting a new visitor to the Mental Gym. This is their first interaction with you.
+  `You are greeting a new visitor to the AI School. This is their first interaction with you.
 
 Generate a warm, natural opening. Welcome them, introduce yourself briefly as Bilko their AI training partner, and ask how they'd like to learn today. Make it feel like meeting a friendly coach — not a scripted bot.
 
@@ -92,7 +92,7 @@ Rules:
 );
 
 const GREETING_FALLBACK =
-  "Welcome to the Mental Gym. I'm Bilko — your AI training partner. What would you like to work on today?";
+  "Welcome to the AI School. I'm Bilko — your AI training partner. What would you like to work on today?";
 
 // ── Bilko's patience ────────────────────────────────────
 // Bilko doesn't jump in after every utterance. He gives the user
@@ -171,7 +171,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     chat(
       [
         { role: "system", content: GREETING_SYSTEM_PROMPT },
-        { role: "user", content: "A new visitor just arrived at the Mental Gym." },
+        { role: "user", content: "A new visitor just arrived at the AI School." },
       ],
       { temperature: 0.9 },
     )
@@ -282,7 +282,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 
   // ── Conversation design: voice turn-taking ──
   const { floor, onUserUtterance, screenOptions } = useConversationDesign();
-  const { isListening, isMuted, isSpeaking, toggleListening, transcript, ttsUnlocked, ttsSupported } = useVoice();
+  const { isListening, isMuted, isSpeaking, toggleListening, transcript } = useVoice();
 
   // ── Bilko's patience: voice → option matching with breathing room ──
   // The user gets a few tries before Bilko jumps in. If a mode is matched
@@ -397,8 +397,6 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
           isSpeaking={isSpeaking}
           transcript={transcript}
           onToggleListen={toggleListening}
-          ttsSupported={ttsSupported}
-          ttsUnlocked={ttsUnlocked}
         />
         {/* Flow status pinned to bottom of chat panel */}
         <FlowStatusIndicator onReset={handleReset} />
@@ -431,8 +429,6 @@ function VoiceStatusBar({
   isSpeaking,
   transcript,
   onToggleListen,
-  ttsSupported,
-  ttsUnlocked,
 }: {
   floor: "bilko" | "user" | "idle";
   isListening: boolean;
@@ -440,8 +436,6 @@ function VoiceStatusBar({
   isSpeaking: boolean;
   transcript: string;
   onToggleListen: () => void;
-  ttsSupported: boolean;
-  ttsUnlocked: boolean;
 }) {
   // Derive the mic button style from conversational state
   const micActive = isListening && !isMuted;
@@ -473,9 +467,7 @@ function VoiceStatusBar({
 
         {/* Conversational status — shows what's happening in the conversation */}
         <div className="flex-1 min-w-0">
-          {ttsSupported && !ttsUnlocked ? (
-            <p className="text-xs text-amber-500 animate-pulse">Tap anywhere to enable Bilko's voice</p>
-          ) : isListening && isMuted && isSpeaking ? (
+          {isListening && isMuted && isSpeaking ? (
             // Mic is on but paused while Bilko speaks via TTS
             <p className="text-xs text-amber-500/80">Bilko is speaking... mic will resume</p>
           ) : isListening && transcript ? (

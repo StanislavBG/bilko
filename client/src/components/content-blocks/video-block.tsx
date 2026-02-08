@@ -8,7 +8,7 @@ export function VideoRenderer({ block }: { block: VideoBlock }) {
       <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
         <iframe
           className="absolute inset-0 w-full h-full"
-          src={`https://www.youtube.com/embed/${block.embedId}?rel=0`}
+          src={`https://www.youtube-nocookie.com/embed/${block.embedId}?rel=0`}
           title={block.title}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
