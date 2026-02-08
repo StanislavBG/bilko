@@ -101,11 +101,18 @@ export function registerWorkflowRoutes(app: Express): void {
         if (status === "success" && output && typeof output === "object") {
           const outputData = output as Record<string, unknown>;
           const selectedTopic = outputData.selectedTopic as Record<string, unknown> | undefined;
+          const outputDataNested = outputData.data as Record<string, unknown> | undefined;
 
           log.debug(`selectedTopic keys: ${selectedTopic ? Object.keys(selectedTopic).join(', ') : 'null'}`);
 
-          // Use sourceHeadline (original RSS title) for duplicate prevention, fallback to headline
-          const headlineToRecord = (selectedTopic?.sourceHeadline || selectedTopic?.headline) as string | undefined;
+          // Use sourceHeadline (original RSS title) for duplicate prevention
+          // EFD: output.selectedTopic.sourceHeadline
+          // FVP: output.data.sourceHeadline
+          const headlineToRecord = (
+            selectedTopic?.sourceHeadline ||
+            selectedTopic?.headline ||
+            outputDataNested?.sourceHeadline
+          ) as string | undefined;
           if (headlineToRecord && typeof headlineToRecord === "string") {
             try {
               await orchestratorStorage.recordUsedTopic(
@@ -373,6 +380,70 @@ export function registerWorkflowRoutes(app: Express): void {
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // n8n push workflow — push locally-built workflow nodes to n8n (admin only)
+  app.post("/api/n8n/push/:workflowId", async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    if (!user) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const adminId = process.env.ADMIN_USER_ID;
+    if (user.id !== adminId) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    try {
+      const { workflowId } = req.params;
+      const client = createN8nClient();
+      if (!client) {
+        return res.status(500).json({ error: "n8n client not configured" });
+      }
+
+      const workflow = getWorkflow(workflowId);
+      if (!workflow) {
+        return res.status(404).json({ error: `Workflow '${workflowId}' not found in registry` });
+      }
+
+      const { buildWorkflowNodes } = await import("../n8n/client");
+      const { nodes, connections } = buildWorkflowNodes(workflow);
+
+      if (nodes.length === 0) {
+        return res.status(400).json({ error: `No local node definitions for '${workflowId}'` });
+      }
+
+      const existingWorkflow = await client.findWorkflowByName(workflow.name);
+      if (!existingWorkflow) {
+        return res.status(404).json({ error: `Workflow '${workflow.name}' not found in n8n` });
+      }
+
+      await client.deactivateWorkflow(existingWorkflow.id);
+
+      await client.updateWorkflow(existingWorkflow.id, {
+        name: workflow.name,
+        nodes,
+        connections,
+        settings: { executionOrder: "v1" },
+      });
+
+      await client.activateWorkflow(existingWorkflow.id);
+
+      log.info(`Pushed ${workflowId} to n8n (${existingWorkflow.id})`);
+
+      res.json({
+        success: true,
+        message: `Workflow '${workflowId}' pushed to n8n successfully`,
+        n8nWorkflowId: existingWorkflow.id,
+        nodeCount: nodes.length,
+      });
+    } catch (error) {
+      log.error("Push workflow error", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
       });
     }
   });
