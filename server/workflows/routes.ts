@@ -9,7 +9,12 @@ import * as fs from "fs";
 import * as path from "path";
 import { createLogger } from "../logger";
 
-const log = createLogger("workflows");
+const log = createLogger("n8n-routes");
+
+// Static FB2 disclosure text — single source of truth
+const FB2_DISCLOSURE_TEXT = `I've developed this AI-driven system to efficiently curate European football news, serving as a professional 'proof of work' for AI integration. Grounded in transparency and the human-in-the-loop principle, this project demonstrates how AI can enhance specialized content. Follow for updates, or visit my bio to learn how to build similar systems.
+
+Bilko Bibitkov Human-Centric AI Curation`;
 
 const jsonValue: z.ZodType<unknown> = z.lazy(() =>
   z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(jsonValue), z.record(jsonValue)])
@@ -30,22 +35,25 @@ const callbackSchema = z.object({
 export function registerWorkflowRoutes(app: Express): void {
   initializeHandlers();
 
-  app.post("/api/workflows/callback", async (req: Request, res: Response) => {
+  // ─── n8n-specific routes (/api/n8n/*) ────────────────────────────
+
+  // n8n callback endpoint — receives step results from n8n workflows
+  app.post("/api/n8n/callback", async (req: Request, res: Response) => {
     try {
       const parsed = callbackSchema.safeParse(req.body);
-      
+
       if (!parsed.success) {
-        return res.status(400).json({ 
-          success: false, 
+        return res.status(400).json({
+          success: false,
           error: "Invalid callback payload",
           details: parsed.error.flatten().fieldErrors
         });
       }
 
       const { workflowId, step, stepIndex, traceId, output, executionId, status, errorMessage, details } = parsed.data;
-      
+
       let execution = await orchestratorStorage.getExecutionByTriggerTrace(traceId);
-      
+
       if (!execution) {
         execution = await orchestratorStorage.createExecution({
           workflowId,
@@ -78,13 +86,8 @@ export function registerWorkflowRoutes(app: Express): void {
       });
 
       if (step === "final-output") {
-        // Static FB2 disclosure text for easy copy-paste
-        const FB2_DISCLOSURE_TEXT = `I've developed this AI-driven system to efficiently curate European football news, serving as a professional 'proof of work' for AI integration. Grounded in transparency and the human-in-the-loop principle, this project demonstrates how AI can enhance specialized content. Follow for updates, or visit my bio to learn how to build similar systems.
-
-Bilko Bibitkov Human-Centric AI Curation`;
-
         // Inject FB2 disclosure text into the output
-        const enrichedOutput = output && typeof output === "object" 
+        const enrichedOutput = output && typeof output === "object"
           ? { ...output as Record<string, unknown>, fb2DisclosureText: FB2_DISCLOSURE_TEXT }
           : output;
 
@@ -94,14 +97,14 @@ Bilko Bibitkov Human-Centric AI Curation`;
           finalOutput: enrichedOutput as Record<string, unknown> | undefined,
         });
         log.info(`Execution ${execution.id} completed with final output (FB2 disclosure added)`);
-        
+
         // Record the used topic to prevent duplicates
         if (status === "success" && output && typeof output === "object") {
           const outputData = output as Record<string, unknown>;
           const selectedTopic = outputData.selectedTopic as Record<string, unknown> | undefined;
-          
+
           log.debug(`selectedTopic keys: ${selectedTopic ? Object.keys(selectedTopic).join(', ') : 'null'}`);
-          
+
           // Use sourceHeadline (original RSS title) for duplicate prevention, fallback to headline
           const headlineToRecord = (selectedTopic?.sourceHeadline || selectedTopic?.headline) as string | undefined;
           if (headlineToRecord && typeof headlineToRecord === "string") {
@@ -109,8 +112,8 @@ Bilko Bibitkov Human-Centric AI Curation`;
               await orchestratorStorage.recordUsedTopic(
                 workflowId,
                 headlineToRecord,
-                JSON.stringify({ 
-                  traceId, 
+                JSON.stringify({
+                  traceId,
                   executionId: execution.id,
                   analyzedHeadline: selectedTopic?.headline,
                   sourceHeadlineHash: selectedTopic?.sourceHeadlineHash
@@ -128,35 +131,29 @@ Bilko Bibitkov Human-Centric AI Curation`;
 
       log.debug(`${workflowId}/${step}: Received (trace: ${traceId}, step: ${stepIndex})`);
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         traceId,
         executionId: execution.id,
-        traceRecordId: trace.id 
+        traceRecordId: trace.id
       });
     } catch (error) {
       log.error("Callback error", error);
-      res.status(500).json({ 
-        success: false, 
-        error: error instanceof Error ? error.message : "Internal error" 
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Internal error"
       });
     }
   });
 
-  app.get("/api/workflows", (_req: Request, res: Response) => {
-    const workflows = listWorkflows();
-    res.json({ workflows });
-  });
-
-  // API endpoint to view used topics for deduplication verification
-  // Must be before parameterized routes to avoid being caught by :id
-  app.get("/api/workflows/used-topics", async (req: Request, res: Response) => {
+  // n8n used topics — deduplication verification
+  app.get("/api/n8n/used-topics", async (req: Request, res: Response) => {
     try {
       const workflowId = (req.query.workflowId as string) || "european-football-daily";
       const hoursBack = parseInt(req.query.hoursBack as string) || 48;
-      
+
       const topics = await orchestratorStorage.getRecentTopics(workflowId, hoursBack);
-      
+
       res.json({
         workflowId,
         hoursBack,
@@ -170,22 +167,18 @@ Bilko Bibitkov Human-Centric AI Curation`;
       });
     } catch (error) {
       log.error("Used topics error", error);
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Internal error" 
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Internal error"
       });
     }
   });
 
-  app.get("/api/workflows/:id/output", async (req: Request, res: Response) => {
-    // Static FB2 disclosure text for easy copy-paste
-    const FB2_DISCLOSURE_TEXT = `I've developed this AI-driven system to efficiently curate European football news, serving as a professional 'proof of work' for AI integration. Grounded in transparency and the human-in-the-loop principle, this project demonstrates how AI can enhance specialized content. Follow for updates, or visit my bio to learn how to build similar systems.
-
-Bilko Bibitkov Human-Centric AI Curation`;
-
+  // n8n workflow output — latest output from an n8n workflow execution
+  app.get("/api/n8n/workflows/:id/output", async (req: Request, res: Response) => {
     try {
       const workflowId = req.params.id;
       const traces = await orchestratorStorage.getRecentTraces(50);
-      
+
       const workflowTraces = traces
         .filter(t => t.workflowId === workflowId && t.sourceService === "n8n")
         .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
@@ -195,23 +188,23 @@ Bilko Bibitkov Human-Centric AI Curation`;
       const articlesOutput = workflowTraces.find(t => t.action === "extract-articles");
 
       if (!finalOutput && !sentimentOutput && !articlesOutput) {
-        return res.json({ 
+        return res.json({
           hasOutput: false,
           message: "No workflow output found. Execute the workflow to see results.",
-          fb2DisclosureText: FB2_DISCLOSURE_TEXT // Always available for copy-paste
+          fb2DisclosureText: FB2_DISCLOSURE_TEXT
         });
       }
 
       // Get execution stats for this workflow
-      const execution = finalOutput?.executionId 
+      const execution = finalOutput?.executionId
         ? await orchestratorStorage.getExecution(finalOutput.executionId)
         : null;
-      
+
       // Get all traces for this execution to show communication flow
-      const executionTraces = execution 
+      const executionTraces = execution
         ? await orchestratorStorage.getExecutionTraces(execution.id)
         : [];
-      
+
       // Calculate execution duration
       const startTime = execution?.startedAt ? new Date(execution.startedAt) : null;
       const endTime = execution?.completedAt ? new Date(execution.completedAt) : null;
@@ -219,13 +212,13 @@ Bilko Bibitkov Human-Centric AI Curation`;
 
       // Extract source URLs from final output for citations
       const finalData = finalOutput?.responsePayload as Record<string, unknown> | undefined;
-      const sourceUrls = finalData?.data 
+      const sourceUrls = finalData?.data
         ? (finalData.data as Record<string, unknown>).sourceUrls as string[] | undefined
         : undefined;
 
       res.json({
         hasOutput: true,
-        fb2DisclosureText: FB2_DISCLOSURE_TEXT, // Always available for copy-paste
+        fb2DisclosureText: FB2_DISCLOSURE_TEXT,
         executionStats: execution ? {
           id: execution.id,
           status: execution.status,
@@ -263,14 +256,15 @@ Bilko Bibitkov Human-Centric AI Curation`;
       });
     } catch (error) {
       log.error("Output error", error);
-      res.status(500).json({ 
+      res.status(500).json({
         hasOutput: false,
-        error: error instanceof Error ? error.message : "Internal error" 
+        error: error instanceof Error ? error.message : "Internal error"
       });
     }
   });
 
-  app.get("/api/workflows/n8n/status", async (_req: Request, res: Response) => {
+  // n8n status — check sync status with n8n instance
+  app.get("/api/n8n/status", async (_req: Request, res: Response) => {
     try {
       const status = await getN8nWorkflowStatus();
       res.json(status);
@@ -282,7 +276,8 @@ Bilko Bibitkov Human-Centric AI Curation`;
     }
   });
 
-  app.post("/api/workflows/n8n/sync", async (req: Request, res: Response) => {
+  // n8n sync — push workflow definitions to n8n (admin only)
+  app.post("/api/n8n/sync", async (req: Request, res: Response) => {
     const user = (req as any).user;
     if (!user) {
       return res.status(401).json({ error: "Authentication required" });
@@ -308,7 +303,8 @@ Bilko Bibitkov Human-Centric AI Curation`;
     }
   });
 
-  app.post("/api/workflows/n8n/push-prod", async (req: Request, res: Response) => {
+  // n8n push-prod — push production workflow to n8n (admin only)
+  app.post("/api/n8n/push-prod", async (req: Request, res: Response) => {
     const user = (req as any).user;
     if (!user) {
       return res.status(401).json({ error: "Authentication required" });
@@ -331,7 +327,7 @@ Bilko Bibitkov Human-Centric AI Curation`;
       }
 
       const prodWorkflow = JSON.parse(fs.readFileSync(prodFilePath, "utf-8"));
-      
+
       // Search by both new and old names for resilience across runs
       let existingWorkflow = await client.findWorkflowByName("[PROD] European Football Daily");
       if (!existingWorkflow) {
@@ -343,7 +339,7 @@ Bilko Bibitkov Human-Centric AI Curation`;
       }
 
       await client.deactivateWorkflow(existingWorkflow.id);
-      
+
       await client.updateWorkflow(existingWorkflow.id, {
         name: prodWorkflow.name,
         nodes: prodWorkflow.nodes,
@@ -368,51 +364,45 @@ Bilko Bibitkov Human-Centric AI Curation`;
     }
   });
 
-  app.get("/api/workflows/:id", (req: Request, res: Response) => {
-    const workflowId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const workflow = getWorkflow(workflowId);
-    if (!workflow) {
-      return res.status(404).json({ error: "Workflow not found" });
-    }
-    res.json(workflow);
-  });
-
-  app.get("/api/workflows/:id/executions", async (req: Request, res: Response) => {
+  // n8n workflow executions list
+  app.get("/api/n8n/workflows/:id/executions", async (req: Request, res: Response) => {
     try {
-      const workflowId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+      const workflowId = req.params.id;
       const limit = parseInt(req.query.limit as string) || 20;
-      
+
       const executions = await orchestratorStorage.getWorkflowExecutions(workflowId, limit);
       res.json({ executions });
     } catch (error) {
       log.error("Executions error", error);
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Internal error" 
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Internal error"
       });
     }
   });
 
-  app.get("/api/executions/:id", async (req: Request, res: Response) => {
+  // n8n execution detail (with traces)
+  app.get("/api/n8n/executions/:id", async (req: Request, res: Response) => {
     try {
-      const executionId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-      
+      const executionId = req.params.id;
+
       const execution = await orchestratorStorage.getExecution(executionId);
       if (!execution) {
         return res.status(404).json({ error: "Execution not found" });
       }
 
       const traces = await orchestratorStorage.getExecutionTracesWithPayloads(executionId);
-      
+
       res.json({ execution, traces });
     } catch (error) {
       log.error("Execution error", error);
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Internal error" 
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Internal error"
       });
     }
   });
 
-  app.post("/api/workflows/:id/execute", async (req: Request, res: Response) => {
+  // n8n workflow execute — trigger an n8n workflow
+  app.post("/api/n8n/workflows/:id/execute", async (req: Request, res: Response) => {
     const user = (req as any).user;
     if (!user) {
       return res.status(401).json({ error: "Authentication required" });
@@ -425,7 +415,7 @@ Bilko Bibitkov Human-Centric AI Curation`;
       return res.status(400).json({ error: "User ID not found in authentication" });
     }
 
-    const workflowId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const workflowId = req.params.id;
     const { action = "execute", payload = {} } = req.body;
 
     const sourceService = "replit:shell" as const;
@@ -438,7 +428,7 @@ Bilko Bibitkov Human-Centric AI Curation`;
         sourceService,
         String(userId)
       );
-      
+
       if (result.success) {
         res.json(result);
       } else {
@@ -454,5 +444,23 @@ Bilko Bibitkov Human-Centric AI Curation`;
         },
       });
     }
+  });
+
+  // ─── Bilko workflow registry routes (/api/workflows/*) ──────────
+
+  // List all registered Bilko workflows (both local and n8n-backed)
+  app.get("/api/workflows", (_req: Request, res: Response) => {
+    const workflows = listWorkflows();
+    res.json({ workflows });
+  });
+
+  // Get a single Bilko workflow definition
+  app.get("/api/workflows/:id", (req: Request, res: Response) => {
+    const workflowId = req.params.id;
+    const workflow = getWorkflow(workflowId);
+    if (!workflow) {
+      return res.status(404).json({ error: "Workflow not found" });
+    }
+    res.json(workflow);
   });
 }
