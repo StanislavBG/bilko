@@ -16,7 +16,6 @@ import {
   Send,
   Loader2,
   Mic,
-  MicOff,
   Lightbulb,
   Sparkles,
   ArrowRight,
@@ -46,6 +45,7 @@ import { chatJSON, jsonPrompt, useFlowExecution } from "@/lib/flow-engine";
 import { useVoice } from "@/contexts/voice-context";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
+import { VoiceStatusBar } from "@/components/voice-status-bar";
 
 // ── Config type ──────────────────────────────────────────
 
@@ -652,7 +652,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { trackStep, resolveUserInput } = useFlowExecution(c.flowId);
-  const { isListening, isSupported, transcript, toggleListening, speak, onUtteranceEnd } = useVoice();
+  const { isListening, isSupported, transcript, speak, onUtteranceEnd } = useVoice();
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(c.flowId, c.title);
 
   const accent = c.accentColor ?? "yellow";
@@ -1222,47 +1222,34 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
 
             {/* Input area */}
             {phase === "questioning" && currentQuestion && !isThinking && (
-              <div className="sticky bottom-0 border-t bg-background p-3 space-y-2">
-                <div className="flex gap-2">
-                  <Textarea
-                    ref={inputRef}
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Type your answer or use voice..."
-                    rows={2}
-                    className="resize-none flex-1"
-                    disabled={isThinking}
-                  />
-                  <div className="flex flex-col gap-1">
-                    {isSupported && (
-                      <Button
-                        variant={isListening ? "default" : "outline"}
-                        size="icon"
-                        className="h-9 w-9"
-                        onClick={toggleListening}
-                        title={isListening ? "Stop listening" : "Start voice input"}
-                      >
-                        {isListening ? (
-                          <Mic className="h-4 w-4 animate-pulse" />
-                        ) : (
-                          <MicOff className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
+              <div className="sticky bottom-0 bg-background">
+                <div className="border-t p-3 space-y-2">
+                  <div className="flex gap-2">
+                    <Textarea
+                      ref={inputRef}
+                      value={userInput}
+                      onChange={(e) => setUserInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="Type your answer or use voice..."
+                      rows={2}
+                      className="resize-none flex-1"
+                      disabled={isThinking}
+                    />
                     <Button
                       size="icon"
-                      className="h-9 w-9"
-                      onClick={submitAnswer}
+                      className="h-9 w-9 self-end"
+                      onClick={() => submitAnswer()}
                       disabled={!userInput.trim() || isThinking}
                     >
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Press Enter to send
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Press Enter to send{isSupported ? " · Click mic for voice" : ""}
-                </p>
+                {/* Unified voice status — same component as the chat panel */}
+                <VoiceStatusBar />
               </div>
             )}
           </div>
