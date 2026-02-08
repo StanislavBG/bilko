@@ -93,14 +93,18 @@ function videoSystemPrompt(topicTitle: string): string {
   return bilkoSystemPrompt(`Find 3 real YouTube videos about "${topicTitle}" for beginners.
 
 Return ONLY valid JSON. Example:
-{"videos":[{"title":"Video Title","creator":"Channel","description":"Short desc","url":"https://www.youtube.com/watch?v=ID","embedId":"ID","whyRecommended":"Why good for beginners","views":"1.2M","likes":"45K","comments":"2.3K"}]}
+{"videos":[{"title":"Video Title","creator":"Channel","description":"Short desc","url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ","embedId":"dQw4w9WgXcQ","whyRecommended":"Why good for beginners","views":"1.2M","likes":"45K","comments":"2.3K"}]}
 
-Rules:
-- Use REAL YouTube videos from known AI education channels (3Blue1Brown, Fireship, Two Minute Papers, Andrej Karpathy, Computerphile, Yannic Kilcher, etc.)
+CRITICAL RULES:
+- You MUST use REAL YouTube video IDs that you are confident actually exist. Do NOT invent or guess video IDs.
+- The embedId MUST be the exact 11-character YouTube video ID from the URL (e.g. "dQw4w9WgXcQ" from youtube.com/watch?v=dQw4w9WgXcQ).
+- Only recommend videos you have high confidence are real and published by these channels: 3Blue1Brown, Fireship, Two Minute Papers, Andrej Karpathy, Computerphile, Yannic Kilcher, Lex Fridman, StatQuest, Sentdex, etc.
+- Prefer well-known, highly-viewed videos over obscure ones — popular videos are more likely to still be available.
+- If you are not confident a video ID is real, do NOT include it. It is better to return fewer videos than to hallucinate IDs.
 - Rank by engagement: views > likes > comments
 - Keep description under 15 words
 - Keep whyRecommended under 15 words
-- Return exactly 3 videos, ordered best first
+- Return up to 3 videos, ordered best first
 - No markdown, ONLY the JSON object`);
 }
 
@@ -129,8 +133,6 @@ export function VideoDiscoveryFlow() {
   const [statusMessage, setStatusMessage] = useState(RESEARCH_STATUS_MESSAGES[0]);
   const hasStarted = useRef(false);
   const videoCache = useRef<Record<string, VideoCandidate[]>>({});
-  /** Raw LLM candidates before oEmbed validation — fallback if all fail */
-  const videoFallbackCache = useRef<Record<string, VideoCandidate[]>>({});
   const videoCacheStatus = useRef<Record<string, "loading" | "done" | "error">>({});
   const [, forceUpdate] = useState(0);
 
@@ -193,14 +195,12 @@ export function VideoDiscoveryFlow() {
 
       const candidates = videoData.videos ?? [];
 
-      // Keep raw candidates as fallback (oEmbed may reject all)
-      videoFallbackCache.current[key] = candidates;
-
-      // Validate via API client
+      // Validate embed IDs via YouTube oEmbed API — only use videos
+      // that YouTube confirms actually exist. Never fall back to
+      // unvalidated candidates since LLMs frequently hallucinate video IDs.
       const validated = await validateVideos(candidates);
 
-      // Use validated videos, or fall back to raw candidates if all rejected
-      videoCache.current[key] = validated.length > 0 ? validated : candidates;
+      videoCache.current[key] = validated;
       videoCacheStatus.current[key] = "done";
     } catch {
       videoCacheStatus.current[key] = "error";
@@ -365,7 +365,6 @@ export function VideoDiscoveryFlow() {
     setSelectedVideo(null);
     setError(null);
     videoCache.current = {};
-    videoFallbackCache.current = {};
     videoCacheStatus.current = {};
     setSteps([
       { id: "research", name: "Researching AI Trends", status: "active", detail: "Our AI agent is scanning the latest developments..." },
