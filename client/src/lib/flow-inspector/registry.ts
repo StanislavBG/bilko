@@ -188,7 +188,7 @@ Rules:
     id: "ai-consultation",
     name: "AI Leverage Consultation",
     description:
-      "Multi-turn interview flow where an AI expert asks questions about the user's work, then delivers 2 obvious and 2 non-obvious AI leverage recommendations.",
+      "Pick your field (marketing, tech, small business, education, or healthcare) and an AI expert asks simple questions about your daily work. You'll get 2 quick wins you can start using right away, plus 2 surprising AI opportunities you probably haven't thought of — with specific tool recommendations.",
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
@@ -340,7 +340,7 @@ Rules:
     id: "recursive-interviewer",
     name: "The Recursive Interviewer",
     description:
-      "Deep-dive strategy session using the Recursive Interviewer framework: role anchoring, constraint-based iteration, and AI-judged completion. Delivers confirmed insights and hidden patterns.",
+      "Choose a topic — career change, product launch, team productivity, or business growth — then have a deep conversation where each question builds on your last answer. The AI digs deeper until it truly understands your situation, then delivers confirmed insights and hidden patterns you haven't considered.",
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
@@ -486,7 +486,7 @@ Rules:
     id: "socratic-architect",
     name: "The Socratic Architect",
     description:
-      "User-configurable consultation template. User defines the expert role, goal, and desired output, then undergoes a Socratic deep-dive interview tailored to those parameters.",
+      "Pick a ready-made expert (business coach, career advisor, writing coach, tech strategist, or wellness coach) or design your own. The AI becomes your chosen specialist, interviews you with targeted questions, and delivers custom findings — both the expected insights and the surprising ones.",
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
