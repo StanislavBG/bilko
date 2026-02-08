@@ -28,21 +28,29 @@ const registry: EndpointRegistry = {
     method: "POST",
     description: "Saves a new rule audit report"
   },
-  "GET /api/traces": {
+  "GET /api/n8n/traces": {
     method: "GET",
-    description: "Returns orchestration layer communication traces"
+    description: "Returns n8n orchestration layer communication traces"
   },
-  "GET /api/traces/:traceId": {
+  "GET /api/n8n/traces/:traceId": {
     method: "GET",
-    description: "Returns single trace with full request/response details"
+    description: "Returns single n8n trace with full request/response details"
   },
-  "POST /api/orchestrate/:workflowId": {
+  "POST /api/n8n/orchestrate/:workflowId": {
     method: "POST",
     description: "Forwards request to n8n workflow via orchestration layer"
   },
-  "POST /api/test-connection": {
+  "POST /api/n8n/workflows/:id/execute": {
     method: "POST",
-    description: "Tests connection to an n8n workflow"
+    description: "Triggers an n8n workflow execution"
+  },
+  "GET /api/n8n/workflows/:id/output": {
+    method: "GET",
+    description: "Returns latest output from an n8n workflow execution"
+  },
+  "POST /api/n8n/callback": {
+    method: "POST",
+    description: "Receives step-by-step callbacks from n8n workflows"
   },
   "GET /api/auth/user": {
     method: "GET",

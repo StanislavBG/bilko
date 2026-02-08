@@ -1,4 +1,4 @@
-import { LogOut, Eye, EyeOff, Wrench, Volume2, VolumeX } from "lucide-react";
+import { LogOut, Eye, EyeOff, Wrench, Volume2, VolumeX, RotateCcw } from "lucide-react";
 import { Link } from "wouter";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { useVoice } from "@/contexts/voice-context";
@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { DebugButton } from "@/components/debug-panel";
+import { queryClient } from "@/lib/queryClient";
 
 interface GlobalHeaderProps {
   variant?: "authenticated" | "landing";
@@ -39,6 +40,26 @@ export function GlobalHeader({ variant = "authenticated" }: GlobalHeaderProps) {
 }
 
 const TTS_TEST_PHRASE = "Hello! This is Bilko's Mental Gym testing text-to-speech. Can you hear me?";
+
+/**
+ * Clears all client-side session state for a fresh start.
+ * Clears: sessionStorage (conversation), localStorage (voice, execution history),
+ * and React Query cache. Does NOT log the user out.
+ */
+function resetSession() {
+  // Clear sessionStorage (conversation state)
+  sessionStorage.removeItem("bilko-conversation");
+
+  // Clear localStorage items (keep theme preference)
+  localStorage.removeItem("bilko-voice-enabled");
+  localStorage.removeItem("bilko-execution-history");
+
+  // Clear all React Query cache
+  queryClient.clear();
+
+  // Reload the page for a clean start
+  window.location.href = "/";
+}
 
 function ToolsMenu() {
   const { speak, stopSpeaking, isSpeaking, ttsSupported, ttsUnlocked } = useVoice();
@@ -86,6 +107,17 @@ function ToolsMenu() {
           {ttsSupported && !ttsUnlocked && (
             <span className="ml-auto text-[10px] text-amber-400">locked</span>
           )}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-xs text-amber-600 dark:text-amber-400"
+          onClick={resetSession}
+          data-testid="button-reset-session"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+          Reset Session
+          <span className="ml-auto text-[10px] text-muted-foreground">fresh start</span>
         </Button>
       </PopoverContent>
     </Popover>

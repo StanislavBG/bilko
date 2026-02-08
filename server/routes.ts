@@ -16,13 +16,13 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
   
-  // Orchestrator routes for n8n communication
+  // n8n orchestrator routes (/api/n8n/orchestrate, /api/n8n/traces, /api/n8n/topics)
   registerOrchestratorRoutes(app);
-  
+
   // Rules catalog and preview routes
   registerRulesRoutes(app);
-  
-  // Workflow router for unified workflow execution
+
+  // n8n workflow routes (/api/n8n/*) + Bilko workflow registry (/api/workflows)
   registerWorkflowRoutes(app);
   
   // Image processing routes (branding, etc.)

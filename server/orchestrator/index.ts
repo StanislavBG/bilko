@@ -74,8 +74,9 @@ async function callN8nWorkflow(
 }
 
 export function registerOrchestratorRoutes(app: Express) {
+  // n8n orchestration — forward requests to n8n workflows
   app.post(
-    "/api/orchestrate/:workflowId",
+    "/api/n8n/orchestrate/:workflowId",
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const workflowId = req.params.workflowId as string;
@@ -158,7 +159,8 @@ export function registerOrchestratorRoutes(app: Express) {
     }
   };
 
-  app.get("/api/traces", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  // n8n communication traces
+  app.get("/api/n8n/traces", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
       const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
@@ -180,7 +182,7 @@ export function registerOrchestratorRoutes(app: Express) {
     }
   });
 
-  app.get("/api/traces/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  app.get("/api/n8n/traces/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const trace = await orchestratorStorage.getTrace(req.params.id as string);
       if (!trace) {
@@ -192,7 +194,8 @@ export function registerOrchestratorRoutes(app: Express) {
     }
   });
 
-  app.get("/api/topics/:workflowId", async (req: Request, res: Response, next: NextFunction) => {
+  // n8n topic deduplication
+  app.get("/api/n8n/topics/:workflowId", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const workflowId = req.params.workflowId as string;
       const hoursBackParam = Array.isArray(req.query.hoursBack) ? req.query.hoursBack[0] : req.query.hoursBack;
@@ -213,7 +216,7 @@ export function registerOrchestratorRoutes(app: Express) {
     }
   });
 
-  app.post("/api/topics/:workflowId", async (req: Request, res: Response, next: NextFunction) => {
+  app.post("/api/n8n/topics/:workflowId", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const workflowId = req.params.workflowId as string;
       const { headline, metadata } = req.body as { headline: string; metadata?: string };
@@ -229,7 +232,7 @@ export function registerOrchestratorRoutes(app: Express) {
     }
   });
 
-  app.delete("/api/topics/cleanup", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
+  app.delete("/api/n8n/topics/cleanup", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const hoursOldParam = Array.isArray(req.query.hoursOld) ? req.query.hoursOld[0] : req.query.hoursOld;
       const hoursOld = parseInt(hoursOldParam as string) || 48;
