@@ -86,9 +86,11 @@ export async function validateVideos(
       options,
     );
     return result.videos ?? [];
-  } catch {
-    // Validation is best-effort; return unvalidated on failure
-    return videos;
+  } catch (err) {
+    // Never return unvalidated videos — hallucinated IDs will produce broken embeds.
+    // Return empty so the caller knows validation couldn't confirm anything.
+    console.warn("[validateVideos] Validation failed, returning empty:", err instanceof Error ? err.message : err);
+    return [];
   }
 }
 
