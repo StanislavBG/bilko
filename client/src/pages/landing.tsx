@@ -21,9 +21,9 @@ import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
 import {
   AiConsultationFlow,
   RECURSIVE_INTERVIEWER_CONFIG,
-  LINKEDIN_STRATEGIST_CONFIG,
   SOCRATIC_ARCHITECT_CONFIG,
 } from "@/components/ai-consultation-flow";
+import { LinkedInStrategistFlow } from "@/components/linkedin-strategist-flow";
 import { bilkoSays } from "@/lib/bilko-persona";
 import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
@@ -555,7 +555,7 @@ function RightPanelContent({ mode }: { mode: LearningModeId }) {
       {mode === "video" && <VideoDiscoveryFlow />}
       {mode === "chat" && <AiConsultationFlow />}
       {mode === "interviewer" && <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} />}
-      {mode === "linkedin" && <AiConsultationFlow config={LINKEDIN_STRATEGIST_CONFIG} />}
+      {mode === "linkedin" && <LinkedInStrategistFlow />}
       {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} />}
     </div>
   );
