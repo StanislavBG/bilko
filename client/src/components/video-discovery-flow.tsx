@@ -109,6 +109,29 @@ function videoUserMessage(topic: AITopic): string {
   return `Find 3 best YouTube videos for a beginner about: "${topic.title}" - ${topic.description}`;
 }
 
+/** Retry prompt — used when first attempt produced zero validated videos */
+function videoRetrySystemPrompt(topicTitle: string, failedIds: string[]): string {
+  return bilkoSystemPrompt(`Your previous video recommendations for "${topicTitle}" all had INVALID YouTube video IDs that do not exist.
+
+The following embed IDs FAILED validation — do NOT reuse them:
+${failedIds.map((id) => `- ${id}`).join("\n")}
+
+Try again with DIFFERENT videos. Use ONLY the most famous, viral, highly-viewed YouTube videos you are absolutely certain exist. Think of videos with millions of views from major channels.
+
+Return ONLY valid JSON. Same format:
+{"videos":[{"title":"Video Title","creator":"Channel","description":"Short desc","url":"https://www.youtube.com/watch?v=REAL_ID","embedId":"REAL_11_CHAR_ID","whyRecommended":"Why good for beginners","views":"1.2M","likes":"45K","comments":"2.3K"}]}
+
+RULES:
+- The embedId MUST be exactly 11 characters (letters, numbers, dash, underscore)
+- Only use video IDs you have VERY HIGH confidence are real
+- Return 1-3 videos — fewer is fine if you're more confident
+- No markdown, ONLY the JSON object`);
+}
+
+function videoRetryUserMessage(topic: AITopic): string {
+  return `Try again: find real YouTube videos about "${topic.title}". Only include videos you are absolutely certain exist on YouTube right now.`;
+}
+
 // ── Status messages ──────────────────────────────────────────────────
 
 const RESEARCH_STATUS_MESSAGES = [
@@ -226,6 +249,7 @@ export function VideoDiscoveryFlow() {
     forceUpdate((n) => n + 1);
 
     try {
+      // Attempt 1: standard prompt
       const { data: videoData } = await chatJSON<VideosResponse>(
         jsonPrompt(videoSystemPrompt(topic.title), videoUserMessage(topic)),
       );
@@ -233,8 +257,33 @@ export function VideoDiscoveryFlow() {
       const candidates = videoData.videos ?? [];
       const validated = await validateVideos(candidates);
 
-      videoCache.current[key] = validated;
+      if (validated.length > 0) {
+        videoCache.current[key] = validated;
+        videoCacheStatus.current[key] = "done";
+        forceUpdate((n) => n + 1);
+        return;
+      }
+
+      // Attempt 2: retry with stricter prompt + blacklisted IDs
+      console.warn(`[video-search] All ${candidates.length} videos failed validation for "${key}", retrying...`);
+      const failedIds = candidates.map((c) => c.embedId);
+
+      const { data: retryData } = await chatJSON<VideosResponse>(
+        jsonPrompt(
+          videoRetrySystemPrompt(topic.title, failedIds),
+          videoRetryUserMessage(topic),
+        ),
+      );
+
+      const retryCandidates = retryData.videos ?? [];
+      const retryValidated = await validateVideos(retryCandidates);
+
+      videoCache.current[key] = retryValidated;
       videoCacheStatus.current[key] = "done";
+
+      if (retryValidated.length === 0) {
+        console.warn(`[video-search] Retry also failed for "${key}" — 0 validated videos after 2 attempts`);
+      }
     } catch {
       videoCacheStatus.current[key] = "error";
       videoCache.current[key] = [];
