@@ -21,6 +21,21 @@ import {
   Sparkles,
   ArrowRight,
   RotateCcw,
+  Megaphone,
+  Code,
+  Store,
+  GraduationCap,
+  Stethoscope,
+  Shuffle,
+  Rocket,
+  Users,
+  TrendingUp,
+  Briefcase,
+  PenTool,
+  Cpu,
+  HeartPulse,
+  CheckCircle2,
+  ListOrdered,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,6 +49,21 @@ import { useFlowRegistration } from "@/contexts/flow-bus-context";
 
 // ── Config type ──────────────────────────────────────────
 
+export interface FlowPreset {
+  /** Unique preset ID */
+  id: string;
+  /** Friendly name shown on the card */
+  label: string;
+  /** 1-sentence description of who this is for */
+  description: string;
+  /** Icon component (lucide) */
+  icon: ReactNode;
+  /** For flows with setupPhase: pre-fills the setup fields */
+  setupValues?: Record<string, string>;
+  /** For flows without setupPhase: extra context injected into the first question prompt */
+  contextHint?: string;
+}
+
 export interface ConsultationConfig {
   /** Unique flow ID for execution tracking */
   flowId: string;
@@ -43,6 +73,13 @@ export interface ConsultationConfig {
   introHeading: string;
   /** Intro screen description */
   introDescription: string;
+  /** Rich explanation bullets shown below description */
+  introExplainer?: {
+    /** "What you'll get" bullets */
+    whatYouGet: string[];
+    /** "How it works" steps */
+    howItWorks: string[];
+  };
   /** Header icon color (tailwind class) */
   accentColor?: string;
   /** Header icon */
@@ -65,6 +102,8 @@ export interface ConsultationConfig {
   secondaryBadge: string;
   /** Estimated time badge */
   estimatedTime?: string;
+  /** Quick-start presets — clickable cards that skip or pre-fill configuration */
+  presets?: FlowPreset[];
   /** Optional setup phase — user fills in fields before interview starts */
   setupPhase?: {
     heading: string;
@@ -90,7 +129,56 @@ const DEFAULT_CONFIG: ConsultationConfig = {
   title: "AI Leverage Consultation",
   introHeading: "Where Should You Leverage AI?",
   introDescription:
-    "I'll ask you a few questions about your work, workflows, and goals. Then I'll give you 2 obvious and 2 non-obvious ways to leverage AI in your life.",
+    "A friendly AI expert asks you simple questions about your day-to-day work. No tech knowledge needed — just describe what you do, and you'll get personalized suggestions for where AI can save you time and effort.",
+  introExplainer: {
+    whatYouGet: [
+      "2 quick wins you can start using right away",
+      "2 surprising ideas you probably haven't thought of",
+      "Specific tool recommendations for each suggestion",
+    ],
+    howItWorks: [
+      "Answer 5-7 simple questions about your work",
+      "The AI builds a picture of your daily routine",
+      "You get a personalized report with next steps",
+    ],
+  },
+  presets: [
+    {
+      id: "marketing",
+      label: "Marketing & Content",
+      description: "I write content, manage social media, or run campaigns",
+      icon: <Megaphone className="h-5 w-5" />,
+      contextHint: "The user works in marketing, content creation, or social media management. They likely deal with writing copy, scheduling posts, analyzing engagement metrics, and managing campaigns.",
+    },
+    {
+      id: "software",
+      label: "Software & Tech",
+      description: "I write code, build products, or manage tech teams",
+      icon: <Code className="h-5 w-5" />,
+      contextHint: "The user is a software developer, engineer, or technical manager. They likely deal with writing code, reviewing pull requests, debugging, documentation, and sprint planning.",
+    },
+    {
+      id: "small-business",
+      label: "Small Business Owner",
+      description: "I run my own business and wear many hats",
+      icon: <Store className="h-5 w-5" />,
+      contextHint: "The user runs a small business. They likely handle sales, customer service, bookkeeping, hiring, marketing, and operations all at once.",
+    },
+    {
+      id: "education",
+      label: "Teacher or Trainer",
+      description: "I teach students, run workshops, or create courses",
+      icon: <GraduationCap className="h-5 w-5" />,
+      contextHint: "The user works in education or training. They likely create lesson plans, grade assignments, give feedback, design curricula, and manage student engagement.",
+    },
+    {
+      id: "healthcare",
+      label: "Healthcare Professional",
+      description: "I work in healthcare, wellness, or patient care",
+      icon: <Stethoscope className="h-5 w-5" />,
+      contextHint: "The user works in healthcare. They likely handle patient documentation, treatment planning, scheduling, research, and compliance tasks.",
+    },
+  ],
   accentColor: "yellow",
   systemPrompt: `You are an elite AI strategy consultant. Your job is to interview the user to deeply understand their work, then recommend where AI can create the most impact.
 
@@ -224,9 +312,51 @@ Rules:
 export const RECURSIVE_INTERVIEWER_CONFIG: ConsultationConfig = {
   flowId: "recursive-interviewer",
   title: "The Recursive Interviewer",
-  introHeading: "Deep-Dive AI Strategy Session",
+  introHeading: "Deep-Dive Strategy Session",
   introDescription:
-    "An AI expert will interview you using the Recursive Interviewer framework — asking one question at a time, building on each answer, until it has enough context to deliver precise, actionable recommendations.",
+    "Think of this as a conversation with a very smart advisor. Each question builds on your last answer, digging deeper until the AI truly understands your situation. Then it gives you clear, specific advice — not generic tips.",
+  introExplainer: {
+    whatYouGet: [
+      "2 insights that confirm what you already suspect",
+      "2 hidden patterns or angles you haven't considered",
+      "Specific tools and next steps for each insight",
+    ],
+    howItWorks: [
+      "Pick a topic you'd like to explore (or start fresh)",
+      "Answer 5-7 questions — each one builds on the last",
+      "The AI delivers a personalized strategy report",
+    ],
+  },
+  presets: [
+    {
+      id: "career-change",
+      label: "Career Change",
+      description: "I'm thinking about switching careers or roles",
+      icon: <Shuffle className="h-5 w-5" />,
+      contextHint: "The user is considering a career transition. They want to explore what skills transfer, what gaps to fill, and whether the change makes sense for them right now.",
+    },
+    {
+      id: "product-launch",
+      label: "Product or Service Launch",
+      description: "I'm planning to launch something new",
+      icon: <Rocket className="h-5 w-5" />,
+      contextHint: "The user is planning a product or service launch. They want strategic advice on positioning, audience, timing, and go-to-market approach.",
+    },
+    {
+      id: "team-efficiency",
+      label: "Team Productivity",
+      description: "I want my team to work better together",
+      icon: <Users className="h-5 w-5" />,
+      contextHint: "The user wants to improve team efficiency and collaboration. They're looking for patterns in how their team works and where the biggest bottlenecks are.",
+    },
+    {
+      id: "business-growth",
+      label: "Growing My Business",
+      description: "I need a strategy to scale or grow revenue",
+      icon: <TrendingUp className="h-5 w-5" />,
+      contextHint: "The user wants to grow their business. They're looking for strategies to scale revenue, reach new markets, or improve their business model.",
+    },
+  ],
   accentColor: "emerald",
   headerIcon: <Lightbulb className="h-5 w-5 text-emerald-500" />,
   introIcon: <Lightbulb className="h-6 w-6 text-emerald-500" />,
@@ -296,9 +426,78 @@ Rules:
 export const SOCRATIC_ARCHITECT_CONFIG: ConsultationConfig = {
   flowId: "socratic-architect",
   title: "The Socratic Architect",
-  introHeading: "Configure Your Expert",
+  introHeading: "Build Your Own Expert Session",
   introDescription:
-    "Define the expertise, goal, and output you want — then the Socratic Architect will conduct a deep-dive interview and deliver tailored results.",
+    "Pick a ready-made expert below, or design your own. The AI becomes whatever specialist you need — a business coach, career advisor, writing mentor, or anything else — then interviews you and delivers custom insights.",
+  introExplainer: {
+    whatYouGet: [
+      "A custom AI expert tailored to your exact need",
+      "A deep-dive interview that uncovers what matters",
+      "Structured findings: what you expected + what surprises you",
+    ],
+    howItWorks: [
+      "Choose a preset expert or define your own",
+      "Answer 5-7 targeted questions from your expert",
+      "Receive a personalized analysis with actionable insights",
+    ],
+  },
+  presets: [
+    {
+      id: "business-coach",
+      label: "Business Coach",
+      description: "Get strategic advice on growing or improving your business",
+      icon: <Briefcase className="h-5 w-5" />,
+      setupValues: {
+        expertise: "Business Strategy Consultant with 20 years of experience advising startups and SMBs",
+        goal: "Create an actionable growth plan for my business",
+        output: "2 obvious growth strategies I should double down on + 2 non-obvious opportunities I'm missing",
+      },
+    },
+    {
+      id: "career-advisor",
+      label: "Career Advisor",
+      description: "Map out your next career move with expert guidance",
+      icon: <TrendingUp className="h-5 w-5" />,
+      setupValues: {
+        expertise: "Senior Career Development Coach who specializes in career transitions and professional growth",
+        goal: "Map out my best career options and next steps",
+        output: "2 confirmed career paths that fit my skills + 2 unexpected opportunities I should explore",
+      },
+    },
+    {
+      id: "writing-coach",
+      label: "Writing Coach",
+      description: "Improve your writing, storytelling, or content strategy",
+      icon: <PenTool className="h-5 w-5" />,
+      setupValues: {
+        expertise: "Creative Writing Expert and Content Strategist with published work and editorial experience",
+        goal: "Improve my writing quality and develop a stronger voice",
+        output: "2 key structural improvements for my writing + 2 creative techniques to make it stand out",
+      },
+    },
+    {
+      id: "tech-advisor",
+      label: "Tech Strategy Advisor",
+      description: "Get advice on technology choices, tools, or architecture",
+      icon: <Cpu className="h-5 w-5" />,
+      setupValues: {
+        expertise: "Technology Strategy Consultant and Solutions Architect with deep experience across cloud, AI, and modern stacks",
+        goal: "Choose the right technology approach for my project or business",
+        output: "2 solid technology choices I should commit to + 2 innovative alternatives I haven't considered",
+      },
+    },
+    {
+      id: "wellness-coach",
+      label: "Wellness & Productivity Coach",
+      description: "Optimize your energy, habits, and daily routine",
+      icon: <HeartPulse className="h-5 w-5" />,
+      setupValues: {
+        expertise: "Holistic Wellness and Productivity Coach combining behavioral science with practical habit design",
+        goal: "Design a sustainable routine that improves my energy and output",
+        output: "2 obvious habit changes for immediate impact + 2 surprising adjustments that create long-term results",
+      },
+    },
+  ],
   accentColor: "violet",
   headerIcon: <Sparkles className="h-5 w-5 text-violet-500" />,
   introIcon: <Sparkles className="h-6 w-6 text-violet-500" />,
@@ -422,7 +621,7 @@ interface AnalysisResponse {
   nonObvious: Recommendation[];
 }
 
-type Phase = "intro" | "setup" | "questioning" | "analyzing" | "complete";
+type Phase = "intro" | "presets" | "setup" | "questioning" | "analyzing" | "complete";
 
 // ── Component ────────────────────────────────────────────
 
@@ -462,6 +661,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
   useEffect(() => {
     const statusMap: Record<Phase, "running" | "complete" | "error"> = {
       intro: "running",
+      presets: "running",
       setup: "running",
       questioning: "running",
       analyzing: "running",
@@ -551,6 +751,40 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
   }, [trackStep, speak]);
 
   const startConsultation = useCallback(() => {
+    if (c.presets && c.presets.length > 0) {
+      setPhase("presets");
+    } else if (hasSetup) {
+      setPhase("setup");
+    } else {
+      startInterview();
+    }
+  }, [c.presets, hasSetup, startInterview]);
+
+  // ── Preset selection handler ──────────────────────────────
+
+  const handlePresetSelect = useCallback((preset: FlowPreset) => {
+    if (preset.setupValues && c.setupPhase) {
+      // Socratic Architect: pre-fill setup values and go straight to interview
+      setSetupValues(preset.setupValues);
+      resolvedPromptsRef.current = {
+        system: c.setupPhase.buildSystemPrompt(preset.setupValues),
+        firstQuestion: c.setupPhase.buildFirstQuestionPrompt(preset.setupValues),
+        analysis: c.setupPhase.buildAnalysisPrompt(preset.setupValues),
+      };
+      startInterview();
+    } else if (preset.contextHint) {
+      // Non-setup flows: inject context hint into first question prompt
+      resolvedPromptsRef.current = {
+        ...resolvedPromptsRef.current,
+        firstQuestion: `${c.firstQuestionPrompt}\n\nContext about this user: ${preset.contextHint}\n\nUse this background to ask a more targeted, relevant first question. Don't repeat this context back to them — just let it inform your question.`,
+      };
+      startInterview();
+    } else {
+      startInterview();
+    }
+  }, [c, startInterview]);
+
+  const handleStartFromScratch = useCallback(() => {
     if (hasSetup) {
       setPhase("setup");
     } else {
@@ -691,7 +925,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
             {headerIcon}
             <span className="font-semibold text-sm">{c.title}</span>
           </div>
-          {phase !== "intro" && phase !== "setup" && (
+          {phase !== "intro" && phase !== "setup" && phase !== "presets" && (
             <div className="flex items-center gap-2">
               {phase === "questioning" && (
                 <Badge variant="outline" className="text-xs">
@@ -713,34 +947,125 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
           )}
         </div>
 
-        {/* Intro screen */}
+        {/* Intro screen — rich explanation */}
         {phase === "intro" && (
-          <div className="p-6 text-center space-y-4">
-            <div className={`mx-auto w-12 h-12 rounded-full bg-${accent}-500/10 flex items-center justify-center`}>
-              {introIcon}
+          <div className="p-6 space-y-5">
+            <div className="text-center space-y-3">
+              <div className={`mx-auto w-12 h-12 rounded-full bg-${accent}-500/10 flex items-center justify-center`}>
+                {introIcon}
+              </div>
+              <div>
+                <h3 className="font-semibold text-lg">{c.introHeading}</h3>
+                <p className="text-sm text-muted-foreground mt-1.5 max-w-lg mx-auto leading-relaxed">
+                  {c.introDescription}
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                {isSupported && (
+                  <Badge variant="secondary" className="text-xs gap-1">
+                    <Mic className="h-3 w-3" /> Voice supported
+                  </Badge>
+                )}
+                {c.estimatedTime && (
+                  <Badge variant="secondary" className="text-xs">
+                    {c.estimatedTime}
+                  </Badge>
+                )}
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-lg">{c.introHeading}</h3>
-              <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-                {c.introDescription}
+
+            {/* What you'll get + How it works */}
+            {c.introExplainer && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+                <div className="rounded-lg border border-border/50 bg-muted/20 p-3.5 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className={`h-3.5 w-3.5 text-${accent}-500`} />
+                    <span className="text-xs font-semibold">What you'll get</span>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {c.introExplainer.whatYouGet.map((item, i) => (
+                      <li key={i} className="text-xs text-muted-foreground leading-relaxed flex gap-1.5">
+                        <span className={`text-${accent}-500 shrink-0`}>-</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-lg border border-border/50 bg-muted/20 p-3.5 space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <ListOrdered className={`h-3.5 w-3.5 text-${accent}-500`} />
+                    <span className="text-xs font-semibold">How it works</span>
+                  </div>
+                  <ol className="space-y-1.5">
+                    {c.introExplainer.howItWorks.map((item, i) => (
+                      <li key={i} className="text-xs text-muted-foreground leading-relaxed flex gap-1.5">
+                        <span className={`text-${accent}-500 font-medium shrink-0`}>{i + 1}.</span>
+                        {item}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+            )}
+
+            <div className="text-center">
+              <Button onClick={startConsultation} className="gap-2">
+                {c.presets ? "Choose a Starting Point" : hasSetup ? "Configure & Start" : "Start Consultation"}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Preset selection screen — grandma-friendly cards */}
+        {phase === "presets" && c.presets && (
+          <div className="p-5 space-y-4">
+            <div className="text-center space-y-1">
+              <h3 className="font-semibold text-base">Which sounds most like you?</h3>
+              <p className="text-xs text-muted-foreground">
+                Pick one to get started faster, or start from scratch.
               </p>
             </div>
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              {isSupported && (
-                <Badge variant="secondary" className="text-xs gap-1">
-                  <Mic className="h-3 w-3" /> Voice supported
-                </Badge>
-              )}
-              {c.estimatedTime && (
-                <Badge variant="secondary" className="text-xs">
-                  {c.estimatedTime}
-                </Badge>
-              )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {c.presets.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => handlePresetSelect(preset)}
+                  className={`group text-left rounded-lg border-2 border-border p-3.5 transition-all duration-200
+                    hover:border-${accent}-500/50 hover:bg-${accent}-500/5 hover:shadow-sm`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0
+                      bg-muted text-muted-foreground group-hover:bg-${accent}-500/10 group-hover:text-${accent}-600 transition-colors`}>
+                      {preset.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-sm">{preset.label}</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                        {preset.description}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
-            <Button onClick={startConsultation} className="gap-2">
-              {hasSetup ? "Configure & Start" : "Start Consultation"}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+
+            <div className="flex items-center gap-3 pt-1">
+              <div className="flex-1 border-t border-border/50" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="flex-1 border-t border-border/50" />
+            </div>
+
+            <div className="flex items-center justify-center gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setPhase("intro")} className="text-xs">
+                Back
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleStartFromScratch} className="text-xs gap-1.5">
+                {hasSetup ? "Design my own expert" : "Start from scratch"}
+                <ArrowRight className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         )}
 
