@@ -1465,11 +1465,11 @@ export default function Academy() {
       }
       // Apply L4 selection collapse rules (expands L3, collapses L1+L2)
       nav.selectAtLevel(4, levelId);
-      window.history.pushState({}, "", `/${levelId}`);
+      window.history.pushState({}, "", `/academy/${levelId}`);
     } else {
       // Going back from L4
       nav.goBack(4);
-      window.history.pushState({}, "", "/");
+      window.history.pushState({}, "", "/academy");
     }
   };
 
@@ -1483,7 +1483,7 @@ export default function Academy() {
     setSelectedVideoId(null);
     // Reset all navigation states when switching sections
     nav.resetAll();
-    window.history.pushState({}, "", "/");
+    window.history.pushState({}, "", "/academy");
   };
 
   // Video handlers
@@ -1567,7 +1567,7 @@ export default function Academy() {
     setSelectedLevelId(null);
     // Go back from L4 - restores L2 and L3
     nav.goBack(4);
-    window.history.pushState({}, "", "/");
+    window.history.pushState({}, "", "/academy");
   };
 
   return (
