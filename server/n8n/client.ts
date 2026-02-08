@@ -714,7 +714,8 @@ function buildFootballVideoPipelineNodes(webhookPath: string): {
   const callbackUrl = getCallbackUrl();
 
   // Shared Gemini HTTP Request config (D10, D12)
-  const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+  // Use gemini-2.5-flash (gemini-2.0-flash retires March 31, 2026)
+  const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
   const geminiHeaders = {
     parameters: [
       { name: "Content-Type", value: "application/json" },
@@ -803,7 +804,7 @@ return [{ json: { geminiApiKey, geminiRequestBody: requestBody, recentTopics } }
         specifyBody: "json",
         jsonBody: "={{ JSON.stringify($json.geminiRequestBody) }}",
         options: {
-          batching: { batch: { batchSize: 1, batchInterval: 2000 } }
+          batching: { batch: { batchSize: 1, batchInterval: 15000 } }
         }
       }
     },
@@ -879,7 +880,7 @@ return [{ json: { geminiApiKey, geminiRequestBody: requestBody, originalTopics: 
         specifyBody: "json",
         jsonBody: "={{ JSON.stringify($json.geminiRequestBody) }}",
         options: {
-          batching: { batch: { batchSize: 1, batchInterval: 2000 } }
+          batching: { batch: { batchSize: 1, batchInterval: 15000 } }
         }
       }
     },
@@ -904,13 +905,14 @@ return [{ json: { verifiedTopics: parsed.verifiedTopics || [], originalTopics, g
     },
 
     // ── Wait between Deep Diver and Journalist (D11) ──
+    // Free tier: 5 RPM → need 12-15s between Gemini calls to avoid 429
     {
       name: "Wait After Verify",
       type: "n8n-nodes-base.wait",
       typeVersion: 1,
       position: [2000, 125],
       parameters: {
-        amount: 3,
+        amount: 15,
         unit: "seconds"
       }
     },
@@ -970,7 +972,7 @@ return [{ json: { geminiApiKey, geminiRequestBody: requestBody, verifiedTopics }
         specifyBody: "json",
         jsonBody: "={{ JSON.stringify($json.geminiRequestBody) }}",
         options: {
-          batching: { batch: { batchSize: 1, batchInterval: 2000 } }
+          batching: { batch: { batchSize: 1, batchInterval: 15000 } }
         }
       }
     },
@@ -1021,13 +1023,14 @@ return [{ json: { summaries: parsed.summaries || [], verifiedTopics, geminiApiKe
     },
 
     // ── Wait between Journalist and Video Architect (D11) ──
+    // Free tier: 5 RPM → need 12-15s between Gemini calls to avoid 429
     {
       name: "Wait After Summaries",
       type: "n8n-nodes-base.wait",
       typeVersion: 1,
       position: [3000, 125],
       parameters: {
-        amount: 3,
+        amount: 15,
         unit: "seconds"
       }
     },
@@ -1094,7 +1097,7 @@ return [{ json: { geminiApiKey, geminiRequestBody: requestBody, summaries } }];`
         specifyBody: "json",
         jsonBody: "={{ JSON.stringify($json.geminiRequestBody) }}",
         options: {
-          batching: { batch: { batchSize: 1, batchInterval: 2000 } }
+          batching: { batch: { batchSize: 1, batchInterval: 15000 } }
         }
       }
     },
@@ -1119,13 +1122,14 @@ return [{ json: { videoScript: parsed.videoScript || null, summaries, geminiApiK
     },
 
     // ── Wait between Video Architect and Image Stylist (D11) ──
+    // Free tier: 5 RPM → need 12-15s between Gemini calls to avoid 429
     {
       name: "Wait After Script",
       type: "n8n-nodes-base.wait",
       typeVersion: 1,
       position: [4000, 125],
       parameters: {
-        amount: 3,
+        amount: 15,
         unit: "seconds"
       }
     },
@@ -1198,7 +1202,7 @@ return [{ json: { geminiApiKey, geminiRequestBody: requestBody, videoScript, sum
         specifyBody: "json",
         jsonBody: "={{ JSON.stringify($json.geminiRequestBody) }}",
         options: {
-          batching: { batch: { batchSize: 1, batchInterval: 2000 } }
+          batching: { batch: { batchSize: 1, batchInterval: 15000 } }
         }
       }
     },

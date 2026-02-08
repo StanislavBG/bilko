@@ -189,10 +189,13 @@ export function registerWorkflowRoutes(app: Express): void {
         .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
 
       const finalOutput = workflowTraces.find(t => t.action === "final-output");
+      // EFD-specific steps
       const sentimentOutput = workflowTraces.find(t => t.action === "sentiment-analysis");
       const articlesOutput = workflowTraces.find(t => t.action === "extract-articles");
+      // FVP-specific steps
+      const researchOutput = workflowTraces.find(t => t.action === "research-complete");
 
-      if (!finalOutput && !sentimentOutput && !articlesOutput) {
+      if (!finalOutput && !sentimentOutput && !articlesOutput && !researchOutput) {
         return res.json({
           hasOutput: false,
           message: "No workflow output found. Execute the workflow to see results.",
@@ -256,6 +259,11 @@ export function registerWorkflowRoutes(app: Express): void {
             traceId: articlesOutput.traceId,
             timestamp: articlesOutput.requestedAt,
             data: articlesOutput.responsePayload
+          } : null,
+          research: researchOutput ? {
+            traceId: researchOutput.traceId,
+            timestamp: researchOutput.requestedAt,
+            data: researchOutput.responsePayload
           } : null
         }
       });
