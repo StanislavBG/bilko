@@ -1,6 +1,12 @@
 /**
  * Video Discovery Flow - Agentic workflow for finding AI learning videos
  *
+ * UI Design Principles:
+ *   - Thin StepTracker bar at top (3 lines: steps, activity, last result)
+ *   - Only ONE active step visible at a time — content fills the space
+ *   - User input steps are highlighted clearly
+ *   - Final step uses the platform's default VideoRenderer
+ *
  * Auto-starts immediately when rendered.
  * Step 1: Research 5 trending AI topics       (LLM → chatJSON)
  * Step 2: Pre-fetch videos for each topic     (LLM → chatJSON, parallel)
@@ -17,22 +23,19 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StepTracker, type TrackerStep } from "@/components/ui/step-tracker";
 import {
   Loader2,
   Play,
   CheckCircle2,
-  Circle,
-  Sparkles,
-  Youtube,
-  ExternalLink,
   Brain,
   TrendingUp,
-  Tv,
   ThumbsUp,
   MessageSquare,
   Eye,
+  RotateCcw,
+  ArrowLeft,
 } from "lucide-react";
 import {
   chatJSON,
@@ -45,14 +48,15 @@ import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
 import { useVoice } from "@/contexts/voice-context";
-import { VideoExperienceRenderer } from "@/components/content-blocks";
+import { VideoRenderer } from "@/components/content-blocks";
 
 // ── Types ────────────────────────────────────────────────────────────
 
 type FlowState =
   | "researching-topics"
   | "select-topic"
-  | "ready"
+  | "select-video"
+  | "watching"
   | "error";
 
 interface AITopic {
@@ -68,13 +72,6 @@ interface TopicsResponse {
 
 interface VideosResponse {
   videos: VideoCandidate[];
-}
-
-interface WorkflowStep {
-  id: string;
-  name: string;
-  status: "pending" | "active" | "complete" | "error";
-  detail?: string;
 }
 
 // ── Prompts (single source of truth — matches registry) ──────────────
@@ -112,6 +109,29 @@ function videoUserMessage(topic: AITopic): string {
   return `Find 3 best YouTube videos for a beginner about: "${topic.title}" - ${topic.description}`;
 }
 
+/** Retry prompt — used when first attempt produced zero validated videos */
+function videoRetrySystemPrompt(topicTitle: string, failedIds: string[]): string {
+  return bilkoSystemPrompt(`Your previous video recommendations for "${topicTitle}" all had INVALID YouTube video IDs that do not exist.
+
+The following embed IDs FAILED validation — do NOT reuse them:
+${failedIds.map((id) => `- ${id}`).join("\n")}
+
+Try again with DIFFERENT videos. Use ONLY the most famous, viral, highly-viewed YouTube videos you are absolutely certain exist. Think of videos with millions of views from major channels.
+
+Return ONLY valid JSON. Same format:
+{"videos":[{"title":"Video Title","creator":"Channel","description":"Short desc","url":"https://www.youtube.com/watch?v=REAL_ID","embedId":"REAL_11_CHAR_ID","whyRecommended":"Why good for beginners","views":"1.2M","likes":"45K","comments":"2.3K"}]}
+
+RULES:
+- The embedId MUST be exactly 11 characters (letters, numbers, dash, underscore)
+- Only use video IDs you have VERY HIGH confidence are real
+- Return 1-3 videos — fewer is fine if you're more confident
+- No markdown, ONLY the JSON object`);
+}
+
+function videoRetryUserMessage(topic: AITopic): string {
+  return `Try again: find real YouTube videos about "${topic.title}". Only include videos you are absolutely certain exist on YouTube right now.`;
+}
+
 // ── Status messages ──────────────────────────────────────────────────
 
 const RESEARCH_STATUS_MESSAGES = [
@@ -131,6 +151,7 @@ export function VideoDiscoveryFlow() {
   const [selectedVideo, setSelectedVideo] = useState<VideoCandidate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState(RESEARCH_STATUS_MESSAGES[0]);
+  const [lastResult, setLastResult] = useState<string | undefined>(undefined);
   const hasStarted = useRef(false);
   const videoCache = useRef<Record<string, VideoCandidate[]>>({});
   const videoCacheStatus = useRef<Record<string, "loading" | "done" | "error">>({});
@@ -141,28 +162,68 @@ export function VideoDiscoveryFlow() {
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("video-discovery", "Video Discovery");
   const { speak } = useVoice();
 
-  const [steps, setSteps] = useState<WorkflowStep[]>([
-    { id: "research", name: "Researching AI Trends", status: "active", detail: "Our AI agent is scanning the latest developments..." },
-    { id: "select", name: "Pick a Topic", status: "pending" },
-    { id: "ready", name: "Choose Your Video", status: "pending" },
-  ]);
+  // ── StepTracker state (derived from flowState) ─────────────────────
 
-  const updateStep = (
-    stepId: string,
-    status: WorkflowStep["status"],
-    detail?: string
-  ) => {
-    setSteps((prev) =>
-      prev.map((s) => (s.id === stepId ? { ...s, status, detail } : s))
-    );
-  };
+  const trackerSteps = useMemo<TrackerStep[]>(() => {
+    const stateToSteps: Record<FlowState, TrackerStep[]> = {
+      "researching-topics": [
+        { id: "research", label: "Research", status: "active" },
+        { id: "topic", label: "Topic", status: "pending" },
+        { id: "video", label: "Video", status: "pending" },
+        { id: "watch", label: "Watch", status: "pending" },
+      ],
+      "select-topic": [
+        { id: "research", label: "Research", status: "complete" },
+        { id: "topic", label: "Topic", status: "active" },
+        { id: "video", label: "Video", status: "pending" },
+        { id: "watch", label: "Watch", status: "pending" },
+      ],
+      "select-video": [
+        { id: "research", label: "Research", status: "complete" },
+        { id: "topic", label: "Topic", status: "complete" },
+        { id: "video", label: "Video", status: "active" },
+        { id: "watch", label: "Watch", status: "pending" },
+      ],
+      "watching": [
+        { id: "research", label: "Research", status: "complete" },
+        { id: "topic", label: "Topic", status: "complete" },
+        { id: "video", label: "Video", status: "complete" },
+        { id: "watch", label: "Watch", status: "active" },
+      ],
+      "error": [
+        { id: "research", label: "Research", status: "error" },
+        { id: "topic", label: "Topic", status: "pending" },
+        { id: "video", label: "Video", status: "pending" },
+        { id: "watch", label: "Watch", status: "pending" },
+      ],
+    };
+    return stateToSteps[flowState];
+  }, [flowState]);
+
+  const trackerActivity = useMemo<string | undefined>(() => {
+    switch (flowState) {
+      case "researching-topics":
+        return statusMessage;
+      case "select-topic":
+        return "Pick a topic that interests you";
+      case "select-video":
+        return `Pick a video about ${selectedTopic?.title ?? "your topic"}`;
+      case "watching":
+        return selectedVideo?.title;
+      case "error":
+        return error ?? "Something went wrong";
+      default:
+        return undefined;
+    }
+  }, [flowState, statusMessage, selectedTopic, selectedVideo, error]);
 
   // Sync flowState changes to the flow bus
   useEffect(() => {
     const statusMap: Record<FlowState, "running" | "complete" | "error"> = {
       "researching-topics": "running",
       "select-topic": "running",
-      "ready": "complete",
+      "select-video": "running",
+      "watching": "complete",
       "error": "error",
     };
     setBusStatus(statusMap[flowState], flowState);
@@ -188,20 +249,41 @@ export function VideoDiscoveryFlow() {
     forceUpdate((n) => n + 1);
 
     try {
-      // LLM call via chatJSON — the core primitive
+      // Attempt 1: standard prompt
       const { data: videoData } = await chatJSON<VideosResponse>(
         jsonPrompt(videoSystemPrompt(topic.title), videoUserMessage(topic)),
       );
 
       const candidates = videoData.videos ?? [];
-
-      // Validate embed IDs via YouTube oEmbed API — only use videos
-      // that YouTube confirms actually exist. Never fall back to
-      // unvalidated candidates since LLMs frequently hallucinate video IDs.
       const validated = await validateVideos(candidates);
 
-      videoCache.current[key] = validated;
+      if (validated.length > 0) {
+        videoCache.current[key] = validated;
+        videoCacheStatus.current[key] = "done";
+        forceUpdate((n) => n + 1);
+        return;
+      }
+
+      // Attempt 2: retry with stricter prompt + blacklisted IDs
+      console.warn(`[video-search] All ${candidates.length} videos failed validation for "${key}", retrying...`);
+      const failedIds = candidates.map((c) => c.embedId);
+
+      const { data: retryData } = await chatJSON<VideosResponse>(
+        jsonPrompt(
+          videoRetrySystemPrompt(topic.title, failedIds),
+          videoRetryUserMessage(topic),
+        ),
+      );
+
+      const retryCandidates = retryData.videos ?? [];
+      const retryValidated = await validateVideos(retryCandidates);
+
+      videoCache.current[key] = retryValidated;
       videoCacheStatus.current[key] = "done";
+
+      if (retryValidated.length === 0) {
+        console.warn(`[video-search] Retry also failed for "${key}" — 0 validated videos after 2 attempts`);
+      }
     } catch {
       videoCacheStatus.current[key] = "error";
       videoCache.current[key] = [];
@@ -214,11 +296,10 @@ export function VideoDiscoveryFlow() {
   const researchTopics = useCallback(async () => {
     setFlowState("researching-topics");
     setError(null);
+    setLastResult(undefined);
     setStatusMessage(RESEARCH_STATUS_MESSAGES[0]);
-    updateStep("research", "active", "Our AI agent is scanning the latest developments...");
 
     try {
-      // Tracked LLM call — execution data flows to inspector
       const { data: result } = await trackStep(
         "research-topics",
         { prompt: TOPIC_SYSTEM_PROMPT, userMessage: TOPIC_USER_MESSAGE },
@@ -229,9 +310,7 @@ export function VideoDiscoveryFlow() {
 
       const fetchedTopics = result.data.topics.slice(0, 5);
       setTopics(fetchedTopics);
-
-      updateStep("research", "complete", `Found ${fetchedTopics.length} trending topics`);
-      updateStep("select", "active", "Pick a topic — videos are loading in the background");
+      setLastResult(`Found ${fetchedTopics.length} trending topics`);
       setFlowState("select-topic");
 
       speak(`Found ${fetchedTopics.length} trending topics. Pick one that interests you.`);
@@ -245,7 +324,6 @@ export function VideoDiscoveryFlow() {
           ? err.message
           : "Failed to research topics. Please try again."
       );
-      updateStep("research", "error", "Something went wrong");
       setFlowState("error");
       speak("Something went wrong. Let me try again.");
     }
@@ -281,12 +359,11 @@ export function VideoDiscoveryFlow() {
     const cacheStatus = videoCacheStatus.current[topic.title];
 
     if (cached && cached.length > 0) {
-      updateStep("select", "complete", topic.title);
-      updateStep("ready", "complete", `${cached.length} videos found`);
-      setFlowState("ready");
+      setLastResult(`Topic: ${topic.title}`);
+      setFlowState("select-video");
     } else if (cacheStatus === "loading") {
-      updateStep("select", "complete", topic.title);
-      updateStep("ready", "active", "Still searching for videos...");
+      // Show a temporary loading state, then transition
+      setLastResult(`Topic: ${topic.title} — loading videos...`);
       pendingInterval.current = setInterval(() => {
         const status = videoCacheStatus.current[topic.title];
         if (status === "done") {
@@ -294,35 +371,28 @@ export function VideoDiscoveryFlow() {
           pendingInterval.current = null;
           const videos = videoCache.current[topic.title] || [];
           if (videos.length > 0) {
-            updateStep("ready", "complete", `${videos.length} videos found`);
-            setFlowState("ready");
+            setLastResult(`Topic: ${topic.title}`);
+            setFlowState("select-video");
           } else {
-            // LLM returned no candidates at all — let user pick another topic
             setSelectedTopic(null);
-            updateStep("select", "active", "No videos found — pick another topic");
-            updateStep("ready", "pending");
+            setLastResult("No videos found — pick another topic");
             setFlowState("select-topic");
           }
         } else if (status === "error") {
           if (pendingInterval.current) clearInterval(pendingInterval.current);
           pendingInterval.current = null;
-          // Don't hard-error — let user pick another topic
           setSelectedTopic(null);
-          updateStep("select", "active", "Couldn't load videos — try another topic");
-          updateStep("ready", "pending");
+          setLastResult("Couldn't load videos — try another topic");
           setFlowState("select-topic");
         }
       }, 500);
     } else if (cacheStatus === "done" && (!cached || cached.length === 0)) {
-      // Completed but empty — let user pick another topic instead of hard error
       setSelectedTopic(null);
-      updateStep("select", "active", "No videos found — pick another topic");
-      updateStep("ready", "pending");
+      setLastResult("No videos found — pick another topic");
       setFlowState("select-topic");
     } else {
-      // Status is "error" or unknown — retry the video search
-      updateStep("select", "complete", topic.title);
-      updateStep("ready", "active", "Retrying video search...");
+      // Retry the video search
+      setLastResult(`Topic: ${topic.title} — retrying video search...`);
       videoCacheStatus.current[topic.title] = undefined as any;
       searchVideosForTopic(topic);
       pendingInterval.current = setInterval(() => {
@@ -332,24 +402,35 @@ export function VideoDiscoveryFlow() {
           pendingInterval.current = null;
           const videos = videoCache.current[topic.title] || [];
           if (videos.length > 0) {
-            updateStep("ready", "complete", `${videos.length} videos found`);
-            setFlowState("ready");
+            setLastResult(`Topic: ${topic.title}`);
+            setFlowState("select-video");
           } else {
             setSelectedTopic(null);
-            updateStep("select", "active", "No videos found — pick another topic");
-            updateStep("ready", "pending");
+            setLastResult("No videos found — pick another topic");
             setFlowState("select-topic");
           }
         } else if (status === "error") {
           if (pendingInterval.current) clearInterval(pendingInterval.current);
           pendingInterval.current = null;
           setSelectedTopic(null);
-          updateStep("select", "active", "Couldn't load videos — try another topic");
-          updateStep("ready", "pending");
+          setLastResult("Couldn't load videos — try another topic");
           setFlowState("select-topic");
         }
       }, 500);
     }
+  };
+
+  // ── Step: User picks video ─────────────────────────────────────────
+
+  const handleVideoSelect = (video: VideoCandidate) => {
+    setSelectedVideo(video);
+    resolveUserInput("select-video", { selectedVideo: video });
+    busSend("main", "summary", {
+      summary: `Discovered "${video.title}" by ${video.creator} on the topic of ${selectedTopic?.title ?? "AI"}.`,
+    });
+    setLastResult(`${selectedTopic?.title} → ${video.title}`);
+    setFlowState("watching");
+    speak(`Loading ${video.title} by ${video.creator}.`);
   };
 
   // ── Reset ──────────────────────────────────────────────────────────
@@ -364,13 +445,9 @@ export function VideoDiscoveryFlow() {
     setSelectedTopic(null);
     setSelectedVideo(null);
     setError(null);
+    setLastResult(undefined);
     videoCache.current = {};
     videoCacheStatus.current = {};
-    setSteps([
-      { id: "research", name: "Researching AI Trends", status: "active", detail: "Our AI agent is scanning the latest developments..." },
-      { id: "select", name: "Pick a Topic", status: "pending" },
-      { id: "ready", name: "Choose Your Video", status: "pending" },
-    ]);
     setTimeout(() => {
       hasStarted.current = true;
       researchTopics();
@@ -380,9 +457,6 @@ export function VideoDiscoveryFlow() {
   const videosForSelected = selectedTopic ? (videoCache.current[selectedTopic.title] || []) : [];
 
   // ── Register screen options for voice matching ─────────────────────
-  // When topic cards are visible, register them so the user can say
-  // "prompt engineering" or "AI agents" and the conversation matches it.
-  // When video cards are visible, register those instead.
 
   const screenOptions = useMemo<ScreenOption[]>(() => {
     if (flowState === "select-topic" && topics.length > 0) {
@@ -394,290 +468,235 @@ export function VideoDiscoveryFlow() {
       }));
     }
 
-    if (flowState === "ready" && selectedTopic && !selectedVideo && videosForSelected.length > 0) {
+    if (flowState === "select-video" && selectedTopic && videosForSelected.length > 0) {
       return videosForSelected.map((video) => ({
         id: `video-${video.embedId}`,
         label: video.title,
         keywords: [video.creator],
-        action: () => {
-          setSelectedVideo(video);
-          resolveUserInput("select-video", { selectedVideo: video });
-          busSend("main", "summary", {
-            summary: `Discovered "${video.title}" by ${video.creator} on the topic of ${selectedTopic?.title ?? "AI"}.`,
-          });
-          speak(`Loading ${video.title} by ${video.creator}.`);
-        },
+        action: () => handleVideoSelect(video),
       }));
     }
 
     return [];
-  }, [flowState, topics, selectedTopic, selectedVideo, videosForSelected, busSend, resolveUserInput]);
+  }, [flowState, topics, selectedTopic, videosForSelected, busSend, resolveUserInput]);
 
   useScreenOptions(screenOptions);
 
   // ── Render ─────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            AI Video Discovery
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Our AI agent is finding the perfect video for you — sit back and let it work.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center gap-3">
-                {step.status === "pending" && (
-                  <Circle className="h-5 w-5 text-muted-foreground" />
-                )}
-                {step.status === "active" && (
-                  <Loader2 className="h-5 w-5 text-primary animate-spin" />
-                )}
-                {step.status === "complete" && (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                )}
-                {step.status === "error" && (
-                  <Circle className="h-5 w-5 text-red-500" />
-                )}
-                <div className="flex-1">
-                  <p
-                    data-testid={`text-step-${step.id}`}
-                    className={`text-sm font-medium ${
-                      step.status === "pending"
-                        ? "text-muted-foreground"
-                        : step.status === "error"
-                        ? "text-red-500"
-                        : ""
-                    }`}
-                  >
-                    {step.name}
-                  </p>
-                  {step.detail && (
-                    <p className="text-xs text-muted-foreground">{step.detail}</p>
-                  )}
-                </div>
-                <Badge
-                  variant={
-                    step.status === "complete"
-                      ? "default"
-                      : step.status === "active"
-                      ? "secondary"
-                      : "outline"
-                  }
-                  className="text-xs"
-                >
-                  {index + 1}/3
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      {/* Thin StepTracker bar — always visible */}
+      <StepTracker
+        steps={trackerSteps}
+        activity={trackerActivity}
+        lastResult={lastResult}
+      />
 
+      {/* ── STEP 1: Researching ──────────────────────────────────── */}
       {flowState === "researching-topics" && (
-        <Card className="border-primary/20">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <div className="shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Brain className="h-6 w-6 text-primary animate-pulse" />
-              </div>
-              <div className="flex-1 space-y-3">
-                <h3 className="text-lg font-semibold">
-                  AI Agent Working...
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  {statusMessage}
-                </p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <TrendingUp className="h-3 w-3" />
-                  <span>Analyzing trends from the past 6 months to find what matters most for beginners</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-primary h-full rounded-full animate-pulse" style={{ width: "60%" }} />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+            <Brain className="h-8 w-8 text-primary animate-pulse" />
+          </div>
+          <h2 className="text-xl font-semibold text-center mb-2">
+            Discovering AI Topics
+          </h2>
+          <p className="text-muted-foreground text-center max-w-md mb-6">
+            {statusMessage}
+          </p>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+            <TrendingUp className="h-3 w-3" />
+            <span>Analyzing trends from the past 6 months</span>
+          </div>
+          <div className="w-48 bg-muted rounded-full h-1.5 overflow-hidden">
+            <div className="bg-primary h-full rounded-full animate-pulse" style={{ width: "60%" }} />
+          </div>
+        </div>
       )}
 
+      {/* ── STEP 2: Select Topic ─────────────────────────────────── */}
       {flowState === "select-topic" && topics.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="shrink-0 w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-              <TrendingUp className="h-5 w-5 text-green-500" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold" data-testid="text-topic-heading">
-                Pick a topic that interests you
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Videos are being pre-loaded in the background for each topic.
-              </p>
-            </div>
+          {/* Clear input prompt */}
+          <div className="text-center py-2">
+            <h2 className="text-xl font-semibold" data-testid="text-topic-heading">
+              What interests you?
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Tap a topic to explore videos
+            </p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+
+          {/* Topic cards — fill available space */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {topics.map((topic) => {
               const cacheStatus = videoCacheStatus.current[topic.title];
               return (
-                <Card
+                <button
                   key={topic.rank}
                   data-testid={`card-topic-${topic.rank}`}
-                  className="cursor-pointer hover:border-primary transition-colors"
+                  className="group relative rounded-xl border border-border bg-card p-5 text-left transition-all hover:border-primary hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   onClick={() => handleTopicSelect(topic)}
                 >
-                  <CardContent className="p-4 flex flex-col gap-2 h-full">
-                    <div className="flex items-center justify-between gap-1">
-                      <Badge variant="outline" className="text-xs shrink-0">#{topic.rank}</Badge>
-                      {cacheStatus === "loading" && (
-                        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                      )}
-                      {cacheStatus === "done" && (
-                        <CheckCircle2 className="h-3 w-3 text-green-500" />
-                      )}
-                    </div>
-                    <h4 className="font-medium text-sm leading-tight">{topic.title}</h4>
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {topic.description}
-                    </p>
-                    <div className="mt-auto pt-2">
-                      <Play className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </CardContent>
-                </Card>
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <Badge variant="outline" className="text-xs shrink-0">#{topic.rank}</Badge>
+                    {cacheStatus === "loading" && (
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    )}
+                    {cacheStatus === "done" && (
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                    )}
+                  </div>
+                  <h3 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
+                    {topic.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {topic.description}
+                  </p>
+                  <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground/60 group-hover:text-primary/60 transition-colors">
+                    <Play className="h-3.5 w-3.5" />
+                    <span>Explore videos</span>
+                  </div>
+                </button>
               );
             })}
           </div>
         </div>
       )}
 
-      {flowState === "ready" && selectedTopic && videosForSelected.length > 0 && !selectedVideo && (
+      {/* ── STEP 3: Select Video ─────────────────────────────────── */}
+      {flowState === "select-video" && selectedTopic && videosForSelected.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="shrink-0 w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
-              <Tv className="h-5 w-5 text-red-500" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold" data-testid="text-video-pick-heading">
-                {selectedTopic.title} — Pick a video
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {videosForSelected.length} videos ranked by engagement. Pick one to watch.
-              </p>
-            </div>
+          {/* Clear input prompt with topic context */}
+          <div className="text-center py-2">
+            <h2 className="text-xl font-semibold" data-testid="text-video-pick-heading">
+              Pick a video
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {videosForSelected.length} videos about <span className="font-medium text-foreground">{selectedTopic.title}</span>, ranked by engagement
+            </p>
           </div>
+
+          {/* Video cards — fill available space */}
           <div className="grid gap-3">
             {videosForSelected.map((video, idx) => (
-              <Card
+              <button
                 key={idx}
                 data-testid={`card-video-${idx}`}
-                className="cursor-pointer hover:border-red-500 transition-colors"
-                onClick={() => {
-                  setSelectedVideo(video);
-                  resolveUserInput("select-video", { selectedVideo: video });
-                  busSend("main", "summary", {
-                    summary: `Discovered "${video.title}" by ${video.creator} on the topic of ${selectedTopic?.title ?? "AI"}.`,
-                  });
-                  speak(`Loading ${video.title} by ${video.creator}.`);
-                }}
+                className="group relative rounded-xl border border-border bg-card p-5 text-left transition-all hover:border-primary hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                onClick={() => handleVideoSelect(video)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="shrink-0 w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
-                      <Play className="h-5 w-5 text-red-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm">{video.title}</h4>
-                      <p className="text-xs text-muted-foreground mt-0.5">{video.creator}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{video.whyRecommended}</p>
-                      <div className="flex items-center gap-4 mt-2 flex-wrap">
-                        {video.views && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Eye className="h-3 w-3" /> {video.views}
-                          </span>
-                        )}
-                        {video.likes && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <ThumbsUp className="h-3 w-3" /> {video.likes}
-                          </span>
-                        )}
-                        {video.comments && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <MessageSquare className="h-3 w-3" /> {video.comments}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <Badge variant={idx === 0 ? "default" : "outline"} className="shrink-0 text-xs">
-                      {idx === 0 ? "Top Pick" : `#${idx + 1}`}
-                    </Badge>
+                <div className="flex items-start gap-4">
+                  <div className="shrink-0 w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
+                    <Play className="h-6 w-6 text-red-500" />
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-semibold text-sm group-hover:text-primary transition-colors">
+                        {video.title}
+                      </h3>
+                      <Badge variant={idx === 0 ? "default" : "outline"} className="shrink-0 text-xs">
+                        {idx === 0 ? "Top Pick" : `#${idx + 1}`}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{video.creator}</p>
+                    <p className="text-sm text-muted-foreground mt-2">{video.whyRecommended}</p>
+                    <div className="flex items-center gap-4 mt-3 flex-wrap">
+                      {video.views && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Eye className="h-3 w-3" /> {video.views}
+                        </span>
+                      )}
+                      {video.likes && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <ThumbsUp className="h-3 w-3" /> {video.likes}
+                        </span>
+                      )}
+                      {video.comments && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <MessageSquare className="h-3 w-3" /> {video.comments}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </button>
             ))}
           </div>
+
+          {/* Back action */}
           <div className="flex justify-center">
             <Button
-              variant="outline"
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 setSelectedTopic(null);
-                updateStep("select", "active", "Pick a topic — videos are loaded");
-                updateStep("ready", "pending");
+                setLastResult("Found " + topics.length + " trending topics");
                 setFlowState("select-topic");
               }}
               data-testid="button-back-topics"
+              className="text-muted-foreground"
             >
+              <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
               Back to Topics
             </Button>
           </div>
         </div>
       )}
 
-      {flowState === "ready" && selectedVideo && (
+      {/* ── STEP 4: Watching — platform default VideoRenderer ────── */}
+      {flowState === "watching" && selectedVideo && (
         <div className="space-y-4">
-          <VideoExperienceRenderer block={{
+          <VideoRenderer block={{
             id: `discovered-${selectedVideo.embedId}`,
-            type: "video-experience",
+            type: "video",
             embedId: selectedVideo.embedId,
             title: selectedVideo.title,
             creator: selectedVideo.creator,
             description: selectedVideo.description,
-            youtubeUrl: selectedVideo.url,
-            autoSummary: true,
-            autoTranscript: true,
+            recommendation: selectedVideo.whyRecommended,
           }} />
 
           <div className="flex justify-center gap-3 flex-wrap">
             <Button
-              variant="outline"
-              onClick={() => setSelectedVideo(null)}
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedVideo(null);
+                setLastResult(`Topic: ${selectedTopic?.title}`);
+                setFlowState("select-video");
+              }}
               data-testid="button-pick-another-video"
+              className="text-muted-foreground"
             >
+              <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
               Pick Another Video
             </Button>
-            <Button variant="outline" onClick={reset} data-testid="button-start-over">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={reset}
+              data-testid="button-start-over"
+              className="text-muted-foreground"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
               Start Over
             </Button>
           </div>
         </div>
       )}
 
+      {/* ── Error state ──────────────────────────────────────────── */}
       {flowState === "error" && (
-        <Card className="border-red-200">
-          <CardContent className="pt-6 text-center">
-            <p className="text-red-500 mb-2 font-medium" data-testid="text-error-title">Something went wrong</p>
-            <p className="text-sm text-muted-foreground mb-4" data-testid="text-error-message">{error}</p>
-            <Button onClick={reset} variant="outline" data-testid="button-try-again">
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <p className="text-red-500 mb-2 font-medium" data-testid="text-error-title">Something went wrong</p>
+          <p className="text-sm text-muted-foreground mb-4 text-center max-w-md" data-testid="text-error-message">{error}</p>
+          <Button onClick={reset} variant="outline" size="sm" data-testid="button-try-again">
+            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+            Try Again
+          </Button>
+        </div>
       )}
     </div>
   );
