@@ -1,7 +1,7 @@
 /**
  * Welcome Flow - First interaction with unknown users
  *
- * This flow welcomes users to Bilko's Mental Gym
+ * This flow welcomes users to Bilko's AI School
  * and helps them choose how they want to learn.
  */
 
@@ -76,8 +76,8 @@ export const welcomeFlow: Workflow = {
       name: "Welcome Message",
       mode: "both",
       content: {
-        text: "Welcome to Bilko's Mental Gym",
-        speech: "Welcome to Bilko's Mental Gym! I'm excited to help you on your AI learning journey.",
+        text: "Welcome to Bilko's AI School",
+        speech: "Welcome to Bilko's AI School! I'm excited to help you on your AI learning journey.",
         component: "WelcomeHero",
       },
       duration: 3000,
@@ -151,7 +151,7 @@ export const welcomeFlow: Workflow = {
       type: "agent",
       name: "AI Tutor Chat",
       task: "converse",
-      prompt: `You are Bilko, a friendly AI tutor at Bilko's Mental Gym.
+      prompt: `You are Bilko, a friendly AI tutor at Bilko's AI School.
 The user is new and exploring. Help them understand what they can learn here.
 Be encouraging, concise, and guide them toward signing up to save their progress.`,
       next: "end-with-cta",

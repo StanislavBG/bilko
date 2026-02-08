@@ -1447,7 +1447,7 @@ const bilkosWayLevels: AcademyLevel[] = [
     rank: "The Machinist",
     coreSkill: "Environment Setup (Expert)",
     skillSummary: "Deep technical understanding of the Replit + Git + Claude development stack.",
-    lesson: `This guide breaks down the three foundational tools that power Bilko's Mental Gym—and most modern AI-assisted development. You're reading this as someone who already ships code. Here's how these tools interconnect at the systems level.
+    lesson: `This guide breaks down the three foundational tools that power Bilko's AI School—and most modern AI-assisted development. You're reading this as someone who already ships code. Here's how these tools interconnect at the systems level.
 
 **Replit** is a cloud-native IDE built on containerized Linux (Nix-based). Each Repl runs in an isolated container with its own filesystem, network, and process space. For Bilko's project, Replit provides: a full Node.js runtime (Express backend + Vite dev server), a PostgreSQL database via Replit's managed DB, automatic HTTPS and deployment, and persistent storage across sessions. The development server runs on port 5000 with hot module replacement via Vite. The \`replit.nix\` file pins system dependencies. Replit Auth provides user authentication without external OAuth setup.
 
@@ -1525,7 +1525,7 @@ const bilkosWayLevels: AcademyLevel[] = [
     rank: "The Tinkerer",
     coreSkill: "Environment Setup (Intermediate)",
     skillSummary: "Practical understanding of how Replit, Git, and Claude work together.",
-    lesson: `You use tools every day—editors, terminals, version control. This guide shows you how three specific tools work together to build an AI-powered application, using Bilko's Mental Gym as a real example.
+    lesson: `You use tools every day—editors, terminals, version control. This guide shows you how three specific tools work together to build an AI-powered application, using Bilko's AI School as a real example.
 
 **Replit** is where the code lives and runs. Think of it as your development computer in the cloud. You don't need to install Node.js, PostgreSQL, or any dependencies—Replit handles all of that. When you open Bilko's project in Replit, you get: a code editor, a terminal, a running web server, and a live preview of the app. Hit "Run" and the whole application starts—the React frontend, the Express backend, and the database connection. Changes you make appear in real-time.
 
@@ -1584,9 +1584,9 @@ const bilkosWayLevels: AcademyLevel[] = [
     rank: "The First Timer",
     coreSkill: "Environment Setup (Novice)",
     skillSummary: "Understanding the tools behind this project, explained simply.",
-    lesson: `Imagine you're building a treehouse. You need three things: a place to build it, a way to remember what you did, and a helper who's really good at construction. That's exactly what Replit, Git, and Claude are for Bilko's Mental Gym.
+    lesson: `Imagine you're building a treehouse. You need three things: a place to build it, a way to remember what you did, and a helper who's really good at construction. That's exactly what Replit, Git, and Claude are for Bilko's AI School.
 
-**Replit is your workshop.** It's like having a fully equipped workshop that exists on the internet. You don't need to buy tools or set anything up—everything is already there. When the creator of Bilko's Mental Gym opens Replit, they see the project's files on the left (like folders in a filing cabinet), a place to write code in the middle (like a workbench), and a preview of the actual website on the right (like a window showing the finished product). If they change something, the preview updates immediately—like magic.
+**Replit is your workshop.** It's like having a fully equipped workshop that exists on the internet. You don't need to buy tools or set anything up—everything is already there. When the creator of Bilko's AI School opens Replit, they see the project's files on the left (like folders in a filing cabinet), a place to write code in the middle (like a workbench), and a preview of the actual website on the right (like a window showing the finished product). If they change something, the preview updates immediately—like magic.
 
 **Git is your journal.** Imagine keeping a detailed diary of every change you make to the treehouse. "Tuesday: Added a window. Wednesday: Painted the door blue. Thursday: Actually, changed the door to red." Git does this for code. Every change is recorded with a note about what was done and why. The best part? You can always go back. If the red door looks terrible, you can flip back to Wednesday and get the blue door back. Git also lets you try experiments safely—like sketching a design on a separate piece of paper before committing to building it.
 
@@ -2174,7 +2174,7 @@ export const academyTracks: Track[] = [
     name: "Bilko's Way",
     tagline: "Understanding the Machine",
     description:
-      "A meta-knowledge track about the tools, concepts, and AI evolution behind Bilko's Mental Gym. Three guides—Environment Setup, What is an Agent, and the AI Capability Spectrum—each explained at three depth levels: Expert, Intermediate, and Novice.",
+      "A meta-knowledge track about the tools, concepts, and AI evolution behind Bilko's AI School. Three guides—Environment Setup, What is an Agent, and the AI Capability Spectrum—each explained at three depth levels: Expert, Intermediate, and Novice.",
     difficulty: "intermediate",
     color: "amber",
     journey: [

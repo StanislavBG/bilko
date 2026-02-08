@@ -5,7 +5,7 @@
  * meeting them at every step. This module defines the typed system for his
  * voice so agents can produce contextual, personality-rich responses.
  *
- * Bilko is NOT a chatbot. He's the host of the Mental Gym.
+ * Bilko is NOT a chatbot. He's the host of the AI School.
  * He speaks through the canvas, not in a chat bubble.
  */
 
