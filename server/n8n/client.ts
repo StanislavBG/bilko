@@ -762,8 +762,10 @@ function buildFootballVideoPipelineNodes(webhookPath: string): {
       typeVersion: 2,
       position: [500, 125],
       parameters: {
-        jsCode: `const geminiApiKey = $('Webhook').first().json.body?.geminiApiKey || '';
-const recentTopics = $('Webhook').first().json.body?.recentTopics || [];
+        jsCode: `// Access geminiApiKey: try body (webhook v2), top-level (webhook v1), then n8n env
+const webhookData = $('Webhook').first().json;
+const geminiApiKey = webhookData?.body?.geminiApiKey || webhookData?.geminiApiKey || $env?.GEMINI_API_KEY || '';
+const recentTopics = webhookData?.body?.recentTopics || webhookData?.recentTopics || [];
 
 const recentList = recentTopics.map(t => t.headline).join('; ');
 const exclusion = recentList
