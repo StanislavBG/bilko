@@ -1,6 +1,15 @@
 import { useViewMode } from "@/contexts/view-mode-context";
 import { PageContent } from "@/components/page-content";
+import { CalendarUpcoming, type CalendarEvent } from "@/components/calendar-upcoming";
 import type { User } from "@shared/models/auth";
+
+// Sample data — replace with real data source when available
+const upcomingEvents: CalendarEvent[] = [
+  { id: "1", title: "DL4100 SJC-SEA 1830 2045", startDate: "Mar 5", isShared: true },
+  { id: "2", title: "Microsoft Offsite", startDate: "Mar 9", endDate: "Mar 13", people: ["Petya"], isShared: true },
+  { id: "3", title: "DL3736 SEA-SJC 0830 1050", startDate: "Mar 16", isShared: true },
+  { id: "4", title: "Informatica Conference - Las Vegas", startDate: "May 19", endDate: "May 21", people: ["Stani"], isShared: true },
+];
 
 interface HomeDashboardProps {
   user: User;
@@ -23,6 +32,8 @@ export default function HomeDashboard({ user }: HomeDashboardProps) {
                 Admin Dashboard - Your command center.
               </p>
             </div>
+
+            <CalendarUpcoming events={upcomingEvents} />
 
             <div className="rounded-lg border bg-card p-6">
               <div className="flex flex-col gap-4">
