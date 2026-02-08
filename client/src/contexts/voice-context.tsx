@@ -114,6 +114,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       if (ttsUnlockedRef.current) return;
       ttsUnlockedRef.current = true;
       setTtsUnlocked(true);
+      console.info("[TTS] Unlocked via user gesture");
 
       // Warm up speechSynthesis with a silent utterance
       try {
@@ -172,6 +173,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
           voices.find((v) => v.lang.startsWith("en")) ||
           voices[0];
         selectedVoiceRef.current = preferred;
+        console.info(`[TTS] Voice selected: "${preferred.name}" (${preferred.lang}, local=${preferred.localService})`);
+      } else {
+        console.info("[TTS] No voices available yet");
       }
     };
     pickVoice();
@@ -359,7 +363,13 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   // 3. speechSynthesis silently pauses after ~15s — poke with resume()
   // 4. onend sometimes never fires — fallback timeout
   const doSpeak = useCallback(async (text: string) => {
-    if (!ttsSupported) return;
+    if (!ttsSupported) {
+      console.info("[TTS] doSpeak: speechSynthesis not supported");
+      return;
+    }
+
+    const preview = text.length > 60 ? text.slice(0, 60) + "..." : text;
+    console.info(`[TTS] doSpeak: "${preview}" (${text.split(/\s+/).length} words)`);
 
     // Cancel any in-progress speech
     window.speechSynthesis.cancel();
@@ -370,6 +380,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     // If voices haven't loaded yet, wait up to 2s
     const synth = window.speechSynthesis;
     if (synth.getVoices().length === 0 && typeof synth.addEventListener === "function") {
+      console.info("[TTS] Waiting for voices to load...");
       await new Promise<void>((resolve) => {
         const onLoad = () => {
           synth.removeEventListener("voiceschanged", onLoad);
@@ -405,11 +416,15 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       }
 
       utterance.onstart = () => {
+        console.info("[TTS] onstart fired — speaking");
         setIsSpeaking(true);
       };
-      utterance.onend = done;
+      utterance.onend = () => {
+        console.info("[TTS] onend fired — done");
+        done();
+      };
       utterance.onerror = (e) => {
-        console.warn("[TTS] speech error:", e.error || e);
+        console.warn("[TTS] onerror:", e.error || e);
         setIsSpeaking(false);
         setIsMuted(false);
         if (!resolved) {
@@ -421,6 +436,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       };
 
       utteranceRef.current = utterance;
+      console.info(`[TTS] Utterance created: voice=${utterance.voice?.name ?? "default"}, lang=${utterance.lang}, rate=${utterance.rate}`);
 
       // Chrome workaround: periodically poke speechSynthesis to prevent silent pause
       const resumeInterval = setInterval(() => {
@@ -432,6 +448,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       // Fallback timeout: ~150 WPM average, plus generous buffer
       const wordCount = text.split(/\s+/).length;
       const estimatedMs = Math.max((wordCount / 150) * 60 * 1000, 3000) + 2000;
+      console.info(`[TTS] Fallback timeout set: ${Math.round(estimatedMs)}ms`);
       const fallbackTimeout = setTimeout(() => {
         if (!resolved) {
           console.warn("[TTS] onend never fired — resolving via timeout fallback");
@@ -439,6 +456,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         }
       }, estimatedMs);
 
+      console.info("[TTS] Calling speechSynthesis.speak()");
       window.speechSynthesis.speak(utterance);
     });
   }, [ttsSupported]);
@@ -447,12 +465,16 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   // If TTS hasn't been unlocked by a user gesture yet, we queue the
   // request and play it as soon as the user clicks/taps anything.
   const speak = useCallback(async (text: string) => {
-    if (!ttsSupported) return;
+    if (!ttsSupported) {
+      console.info("[TTS] speak() called but speechSynthesis not supported");
+      return;
+    }
 
     if (ttsUnlockedRef.current) {
       return doSpeak(text);
     }
 
+    console.info("[TTS] speak() called before unlock — queuing");
     // TTS not yet unlocked — queue this speak and wait
     // It will be played when the user interacts with the page
     return new Promise<void>((resolve) => {
