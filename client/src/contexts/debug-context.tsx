@@ -18,7 +18,7 @@ import {
 
 export interface DebugEntry {
   id: number;
-  level: "error" | "warn";
+  level: "error" | "warn" | "info";
   message: string;
   timestamp: number;
 }
@@ -45,8 +45,9 @@ export function DebugProvider({ children }: { children: ReactNode }) {
   const nextIdRef = useRef(1);
   const originalConsoleError = useRef<typeof console.error>();
   const originalConsoleWarn = useRef<typeof console.warn>();
+  const originalConsoleInfo = useRef<typeof console.info>();
 
-  const addEntry = useCallback((level: "error" | "warn", message: string) => {
+  const addEntry = useCallback((level: "error" | "warn" | "info", message: string) => {
     const entry: DebugEntry = {
       id: nextIdRef.current++,
       level,
@@ -64,30 +65,30 @@ export function DebugProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     originalConsoleError.current = console.error;
     originalConsoleWarn.current = console.warn;
+    originalConsoleInfo.current = console.info;
+
+    const stringify = (a: any) =>
+      typeof a === "string" ? a : a instanceof Error ? a.message : JSON.stringify(a);
 
     console.error = (...args: any[]) => {
       originalConsoleError.current?.apply(console, args);
-      const msg = args
-        .map((a) =>
-          typeof a === "string" ? a : a instanceof Error ? a.message : JSON.stringify(a)
-        )
-        .join(" ");
-      addEntry("error", msg);
+      addEntry("error", args.map(stringify).join(" "));
     };
 
     console.warn = (...args: any[]) => {
       originalConsoleWarn.current?.apply(console, args);
-      const msg = args
-        .map((a) =>
-          typeof a === "string" ? a : a instanceof Error ? a.message : JSON.stringify(a)
-        )
-        .join(" ");
-      addEntry("warn", msg);
+      addEntry("warn", args.map(stringify).join(" "));
+    };
+
+    console.info = (...args: any[]) => {
+      originalConsoleInfo.current?.apply(console, args);
+      addEntry("info", args.map(stringify).join(" "));
     };
 
     return () => {
       if (originalConsoleError.current) console.error = originalConsoleError.current;
       if (originalConsoleWarn.current) console.warn = originalConsoleWarn.current;
+      if (originalConsoleInfo.current) console.info = originalConsoleInfo.current;
     };
   }, [addEntry]);
 
