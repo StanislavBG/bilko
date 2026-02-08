@@ -13,7 +13,7 @@
  * - Memoized nodes to skip re-renders during zoom/pan
  */
 
-import { useMemo, useRef, useState, useCallback, useEffect, memo, type WheelEvent } from "react";
+import { useMemo, useRef, useState, useCallback, useEffect, memo } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -133,15 +133,25 @@ export function FlowCanvas({
     setPan({ x: 0, y: 0 });
   }, [layout.width, layout.height]);
 
-  const handleWheel = useCallback((e: WheelEvent) => {
+  const handleWheel = useCallback((e: globalThis.WheelEvent) => {
+    // Always prevent default to stop browser zoom/scroll when pointer is over canvas
+    e.preventDefault();
+    e.stopPropagation();
     if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
       const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
       setZoom((z) => Math.min(Math.max(z + delta, ZOOM_MIN), ZOOM_MAX));
     } else {
       setPan((p) => ({ x: p.x - e.deltaX, y: p.y - e.deltaY }));
     }
   }, []);
+
+  // Attach wheel handler as non-passive native listener so preventDefault() works
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [handleWheel]);
 
   // ── Pan (drag) ─────────────────────────────────────────
   const onPointerDown = useCallback((e: React.PointerEvent) => {
@@ -369,7 +379,6 @@ export function FlowCanvas({
       <div
         ref={containerRef}
         className={cn("flex-1 overflow-hidden relative", isPanningState ? "cursor-grabbing" : "cursor-grab")}
-        onWheel={handleWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
