@@ -35,10 +35,9 @@ const callbackSchema = z.object({
 export function registerWorkflowRoutes(app: Express): void {
   initializeHandlers();
 
-  // ─── n8n-specific routes (/api/n8n/*) ────────────────────────────
+  // ─── n8n callback handler (shared by both route paths) ──────────
 
-  // n8n callback endpoint — receives step results from n8n workflows
-  app.post("/api/n8n/callback", async (req: Request, res: Response) => {
+  const handleN8nCallback = async (req: Request, res: Response) => {
     try {
       const parsed = callbackSchema.safeParse(req.body);
 
@@ -144,7 +143,13 @@ export function registerWorkflowRoutes(app: Express): void {
         error: error instanceof Error ? error.message : "Internal error"
       });
     }
-  });
+  };
+
+  // Register callback on BOTH paths:
+  // - /api/workflows/callback — canonical path used by PROD n8n workflows (per INT-005, ENV-001)
+  // - /api/n8n/callback — legacy path kept for backward compatibility
+  app.post("/api/workflows/callback", handleN8nCallback);
+  app.post("/api/n8n/callback", handleN8nCallback);
 
   // n8n used topics — deduplication verification
   app.get("/api/n8n/used-topics", async (req: Request, res: Response) => {

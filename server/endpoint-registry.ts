@@ -48,9 +48,13 @@ const registry: EndpointRegistry = {
     method: "GET",
     description: "Returns latest output from an n8n workflow execution"
   },
+  "POST /api/workflows/callback": {
+    method: "POST",
+    description: "Receives step-by-step callbacks from n8n workflows (canonical path per INT-005)"
+  },
   "POST /api/n8n/callback": {
     method: "POST",
-    description: "Receives step-by-step callbacks from n8n workflows"
+    description: "Receives step-by-step callbacks from n8n workflows (legacy alias)"
   },
   "GET /api/auth/user": {
     method: "GET",
