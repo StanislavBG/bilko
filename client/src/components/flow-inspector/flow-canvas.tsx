@@ -509,6 +509,10 @@ const CanvasNode = memo(function CanvasNode({ step, x, y, status, isSelected, is
   const TypeIcon = config.icon;
   const StatusIcon = STATUS_ICON[status];
 
+  const inputs = step.inputSchema ?? [];
+  const outputs = step.outputSchema ?? [];
+  const hasIO = inputs.length > 0 || outputs.length > 0;
+
   return (
     <button
       data-step-node
@@ -548,6 +552,20 @@ const CanvasNode = memo(function CanvasNode({ step, x, y, status, isSelected, is
         <p className="text-[10px] text-muted-foreground truncate mt-0.5 pl-[18px]">
           {step.description}
         </p>
+        {hasIO && (
+          <div className="flex items-center gap-1.5 mt-1 pl-[18px] overflow-hidden">
+            {inputs.length > 0 && (
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-mono text-muted-foreground/70 bg-muted rounded px-1 py-0.5 truncate max-w-[45%]" title={inputs.map(f => f.name).join(", ")}>
+                <span className="text-blue-400">↓</span>{inputs.length === 1 ? inputs[0].name : `${inputs.length}`}
+              </span>
+            )}
+            {outputs.length > 0 && (
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-mono text-muted-foreground/70 bg-muted rounded px-1 py-0.5 truncate max-w-[45%]" title={outputs.map(f => f.name).join(", ")}>
+                <span className="text-emerald-400">↑</span>{outputs.length === 1 ? outputs[0].name : `${outputs.length}`}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </button>
   );

@@ -41,8 +41,8 @@ export interface DAGLayout {
 }
 
 // Layout constants
-export const NODE_W = 200;
-export const NODE_H = 56;
+export const NODE_W = 220;
+export const NODE_H = 72;
 export const COL_GAP = 100;
 export const ROW_GAP = 24;
 export const PADDING = 40;
