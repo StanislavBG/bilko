@@ -1,4 +1,4 @@
-import { Activity, BookOpen, Home, Workflow, FolderOpen, GraduationCap, Sparkles, type LucideIcon } from "lucide-react";
+import { Activity, BookOpen, Home, LayoutDashboard, Workflow, FolderOpen, GraduationCap, Sparkles, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
   id: string;
@@ -15,6 +15,13 @@ export const navigationItems: NavItem[] = [
     title: "Home",
     url: "/",
     icon: Home,
+    adminOnly: false,
+  },
+  {
+    id: "dashboard",
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: LayoutDashboard,
     adminOnly: false,
   },
   {
