@@ -41,11 +41,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { chatJSON, jsonPrompt, useFlowExecution, useFlowDefinition } from "@/lib/flow-engine";
+import { chatJSON, jsonPrompt, useFlowExecution, useFlowDefinition, useFlowChat } from "@/lib/flow-engine";
 import { useVoice } from "@/contexts/voice-context";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { VoiceStatusBar } from "@/components/voice-status-bar";
+import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
 // ── Config type ──────────────────────────────────────────
 
@@ -655,6 +656,38 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
   const { definition: flowDef } = useFlowDefinition(c.flowId);
   const { isListening, isSupported, transcript, speak, onUtteranceEnd } = useVoice();
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(c.flowId, c.title);
+  const { pushMessage } = useFlowChat();
+
+  // Map flowId to the learning mode ID used in flow-agents.ts
+  const modeIdMap: Record<string, string> = {
+    "ai-consultation": "chat",
+    "recursive-interviewer": "interviewer",
+    "linkedin-strategist": "linkedin",
+    "socratic-architect": "socratic",
+  };
+  const agent = getFlowAgent(modeIdMap[c.flowId] ?? c.flowId);
+
+  // Push agent message to chat (we own it during execution)
+  const pushAgentMessage = useCallback((text: string, speech?: string) => {
+    pushMessage(c.flowId, {
+      speaker: "agent",
+      text,
+      speech: speech ?? text,
+      agentName: agent?.chatName,
+      agentDisplayName: agent?.name,
+      agentAccent: agent?.accentColor,
+    });
+  }, [pushMessage, c.flowId, agent]);
+
+  // Push greeting on mount
+  const didGreet = useRef(false);
+  useEffect(() => {
+    if (didGreet.current) return;
+    didGreet.current = true;
+    if (agent) {
+      pushAgentMessage(agent.greeting, agent.greetingSpeech);
+    }
+  }, [agent, pushAgentMessage]);
 
   const accent = c.accentColor ?? "yellow";
 
@@ -872,6 +905,9 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
           nonObvious: analysis.nonObvious,
         });
         setPhase("complete");
+        // Push summary to chat directly (we own the chat)
+        pushAgentMessage(`I've analyzed your responses. ${analysis.summary}`);
+        // Also send to FlowBus for activity logging
         busSend("main", "summary", { summary: analysis.summary });
         await speak(
           `I've analyzed your responses. ${analysis.summary}`,
@@ -882,7 +918,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
         setPhase("questioning");
       }
     },
-    [trackStep, speak, busSend],
+    [trackStep, speak, busSend, pushAgentMessage],
   );
 
   // ── Reset ───────────────────────────────────────────────
