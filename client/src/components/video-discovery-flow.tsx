@@ -161,7 +161,7 @@ const SEARCH_STATUS_MESSAGES = [
 
 // ── Component ────────────────────────────────────────────────────────
 
-export function VideoDiscoveryFlow() {
+export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
   const [flowState, setFlowState] = useState<FlowState>("generating-topics");
   const [topics, setTopics] = useState<TopicSuggestion[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string>("");
@@ -912,6 +912,16 @@ export function VideoDiscoveryFlow() {
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
               Start Over
             </Button>
+            {onComplete && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onComplete(`Watched "${selectedVideo.title}" by ${selectedVideo.creator} about ${selectedTopic}.`)}
+                data-testid="button-done"
+              >
+                Done
+              </Button>
+            )}
           </div>
         </div>
       )}

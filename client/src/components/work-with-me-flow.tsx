@@ -288,7 +288,7 @@ function getActionLabel(action: GuidanceItem["action"]): string {
 
 // ── Component ──────────────────────────────────────────────
 
-export function WorkWithMeFlow() {
+export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
   const [phase, setPhase] = useState<FlowPhase>("objective-input");
   const [objective, setObjective] = useState("");
   const [research, setResearch] = useState<ResearchResponse | null>(null);
@@ -827,11 +827,20 @@ export function WorkWithMeFlow() {
             })}
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-3">
             <Button variant="outline" size="sm" onClick={handleReset}>
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
               Start over with a new goal
             </Button>
+            {onComplete && completedSteps.size > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onComplete(`Completed ${completedSteps.size} steps for: ${research?.taskTitle ?? objective}.`)}
+              >
+                Done
+              </Button>
+            )}
           </div>
         </div>
       )}

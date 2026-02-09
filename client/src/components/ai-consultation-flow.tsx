@@ -626,7 +626,7 @@ type Phase = "intro" | "presets" | "setup" | "questioning" | "analyzing" | "comp
 
 // ── Component ────────────────────────────────────────────
 
-export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) {
+export function AiConsultationFlow({ config, onComplete }: { config?: ConsultationConfig; onComplete?: (summary?: string) => void }) {
   const c = config ?? DEFAULT_CONFIG;
   const hasSetup = !!c.setupPhase;
 
@@ -976,10 +976,22 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
                 </Badge>
               )}
               {phase === "complete" && (
-                <Button variant="ghost" size="sm" onClick={reset} className="h-7 gap-1">
-                  <RotateCcw className="h-3 w-3" />
-                  Start Over
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={reset} className="h-7 gap-1">
+                    <RotateCcw className="h-3 w-3" />
+                    Start Over
+                  </Button>
+                  {onComplete && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7"
+                      onClick={() => onComplete(result?.summary)}
+                    >
+                      Done
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           )}
