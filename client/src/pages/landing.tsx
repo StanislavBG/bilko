@@ -11,20 +11,17 @@
  *   ┌──────────────────────────────────────────────────────┐
  *   │                                                      │
  *   ▼                                                      │
- *  [greeting(context?)] → [mode-selection] → [run-subflow] │
+ *  [greeting] → [greeting-chat] → [mode-selection] → [run-subflow]
  *                                                │         │
  *                                       onComplete(summary)│
  *                                                └─────────┘
  *
- * The greeting node is the HEAD of the flow. It runs:
- * - First time: no context → fresh welcome
- * - After a sub-flow exits: with summary → personalized return
+ * The greeting node generates the text, the greeting-chat node
+ * publishes it to the FlowChat panel. This separation makes it
+ * explicit what gets pushed to the user-visible chat.
  *
- * Sub-flows are autonomous:
- * - They push their own messages to the Chat API
- * - They own the chat during execution
- * - When done, they call onComplete(summary) with an exit message
- * - That summary feeds back into the greeting node for recursive learning
+ * Active flows: Video Recommendation, Explore the Site (sidebar toggle)
+ * All other flows are on standby — see registry.ts.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -40,23 +37,18 @@ import {
 import { LinkedInStrategistFlow } from "@/components/linkedin-strategist-flow";
 import { WorkWithMeFlow } from "@/components/work-with-me-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
+import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 import { chat, useFlowExecution, FlowChatProvider, useFlowChat } from "@/lib/flow-engine";
 import { Button } from "@/components/ui/button";
 import {
   Play,
   Sparkles,
-  MessageCircle,
   ArrowLeft,
-  Lightbulb,
-  Briefcase,
-  GraduationCap,
-  Handshake,
   Compass,
-  Construction,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
-import { flowRegistry } from "@/lib/flow-inspector/registry";
+import { flowRegistry, activeFlowIds } from "@/lib/flow-inspector/registry";
 import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
 import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
@@ -67,8 +59,7 @@ import { useSidebarSafe } from "@/components/ui/sidebar";
 const OWNER_ID = "bilko-main";
 
 // ── Mode definitions for the delivery surface ────────────
-// Built dynamically from the flow registry (all landing-location flows
-// except the root bilko-main flow), plus special navigation tiles.
+// Only active flows appear as tiles. Standby flows are excluded.
 
 interface ModeOption {
   id: string;
@@ -79,16 +70,11 @@ interface ModeOption {
 
 const iconMap: Record<string, ReactNode> = {
   Play: <Play className="h-6 w-6" />,
-  MessageCircle: <MessageCircle className="h-6 w-6" />,
-  Lightbulb: <Lightbulb className="h-6 w-6" />,
-  Briefcase: <Briefcase className="h-6 w-6" />,
-  GraduationCap: <GraduationCap className="h-6 w-6" />,
-  Handshake: <Handshake className="h-6 w-6" />,
 };
 
-/** Menu items sourced from the flow registry — any landing flow (except bilko-main) becomes a tile */
+/** Menu items — only ACTIVE flows from the registry (excludes bilko-main and standby) */
 const MODE_OPTIONS: ModeOption[] = flowRegistry
-  .filter((f) => f.location === "landing" && f.id !== "bilko-main")
+  .filter((f) => f.location === "landing" && f.id !== "bilko-main" && activeFlowIds.has(f.id))
   .map((f) => ({
     id: f.id,
     label: f.name,
@@ -106,8 +92,6 @@ const SPECIAL_TILES: ModeOption[] = [
   },
 ];
 
-const EXPLORE_OPTION = SPECIAL_TILES[0];
-
 /** Maps flow registry IDs to the short mode IDs used by RightPanelContent */
 const FLOW_TO_MODE: Record<string, LearningModeId> = {
   "video-discovery": "video",
@@ -117,13 +101,6 @@ const FLOW_TO_MODE: Record<string, LearningModeId> = {
   "socratic-architect": "socratic",
   "work-with-me": "work-with-me",
 };
-
-const constructionBadge = (
-  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wider bg-amber-400/90 text-amber-950 border border-amber-500/50">
-    <Construction className="h-2.5 w-2.5" />
-    In Dev
-  </span>
-);
 
 // ── Subflow ID mapping ──────────────────────────────────
 
@@ -139,19 +116,20 @@ const MODE_TO_OWNER: Record<string, string> = {
 
 // ── LLM greeting prompts ────────────────────────────────
 
-/** Build greeting context from flow registry — available experiences listed dynamically */
-const menuFlowDescriptions = flowRegistry
-  .filter((f) => f.location === "landing" && f.id !== "bilko-main")
+/** Build greeting context from active flows only */
+const activeFlowDescriptions = flowRegistry
+  .filter((f) => f.location === "landing" && f.id !== "bilko-main" && activeFlowIds.has(f.id))
   .map((f) => `- ${f.name}: ${f.description}`)
   .join("\n");
 
-const GREETING_SYSTEM_PROMPT = bilkoSystemPrompt(
+const GREETING_FRESH_PROMPT = bilkoSystemPrompt(
   `You are greeting a new visitor to the AI School. This is their first interaction with you.
 
 Generate a warm, natural opening. Welcome them, introduce yourself briefly as Bilko their AI training partner, and ask how they'd like to learn today. Make it feel like meeting a friendly coach — not a scripted bot.
 
 Available experiences they can pick from:
-${menuFlowDescriptions}
+${activeFlowDescriptions}
+- Explore the Site: Browse the full AI School navigation
 
 Rules:
 - 2-3 sentences max. Keep it tight.
@@ -168,8 +146,9 @@ You'll be given what they did and a brief summary. Use it to:
 1. Acknowledge what they just accomplished (briefly — one sentence)
 2. Ask what they want to do next
 
-Available training modes:
-${LEARNING_MODES.map((m) => `- ${m.label}: ${m.description}`).join("\n")}
+Available options:
+${activeFlowDescriptions}
+- Explore the Site: Browse the full AI School navigation
 
 Rules:
 - 2-3 sentences max. Keep it warm and energetic.
@@ -187,11 +166,11 @@ const GREETING_RETURN_FALLBACK =
 // ── Bilko's patience ────────────────────────────────────
 const PATIENCE_THRESHOLD = 3;
 
-/** Build guidance from flow registry — lists available experiences dynamically */
-const menuFlowNames = flowRegistry
-  .filter((f) => f.location === "landing" && f.id !== "bilko-main")
+/** Build guidance from active flows only */
+const activeFlowNames = flowRegistry
+  .filter((f) => f.location === "landing" && f.id !== "bilko-main" && activeFlowIds.has(f.id))
   .map((f) => f.name);
-const flowNameList = menuFlowNames.join(", ");
+const flowNameList = [...activeFlowNames, "Explore the Site"].join(", ");
 
 const GUIDANCE_MESSAGES = [
   {
@@ -244,8 +223,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   // - First invocation: no context → fresh welcome
   // - After sub-flow exit: with summary → personalized return
   //
-  // The greeting node can be "recycled" — called again from the
-  // end of any sub-flow, creating the recursive learning loop.
+  // The greeting node generates text (LLM step), then immediately
+  // publishes it to the chat panel (CHAT step: greeting-chat).
 
   const runGreeting = useCallback(
     async (context?: { modeLabel: string; summary: string }) => {
@@ -264,6 +243,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
           stepId,
           { context: context ?? { visitor: "new" }, isReturn },
           async () => {
+            let text: string;
             try {
               const result = await chat(
                 [
@@ -272,21 +252,19 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
                 ],
                 { temperature: 0.9 },
               );
-              const text = result.data.trim();
-              pushMessage(OWNER_ID, {
-                speaker: "bilko",
-                text,
-                speech: text,
-              });
-              return { greeting: text };
+              text = result.data.trim();
             } catch {
-              pushMessage(OWNER_ID, {
-                speaker: "bilko",
-                text: fallback,
-                speech: fallback,
-              });
-              return { greeting: fallback };
+              text = fallback;
             }
+
+            // CHAT step: greeting-chat — push to the FlowChat panel
+            pushMessage(OWNER_ID, {
+              speaker: "bilko",
+              text,
+              speech: text,
+            });
+
+            return { greeting: text };
           },
         );
       } finally {
@@ -306,6 +284,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       // Authenticated users — shorter opening
       trackStep("greeting", { skipWelcome: true }, async () => {
         const text = "What do you want to train today?";
+        // CHAT step: push greeting to chat
         pushMessage(OWNER_ID, {
           speaker: "bilko",
           text,
@@ -328,16 +307,17 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   // 3. Claim chat for sub-flow
   // 4. Render sub-flow
   //
-  // No agent identity mapping — the sub-flow handles its own persona.
+  // "Explore the Site" opens the sidebar — no login redirect.
 
   const handleChoice = useCallback(
     (choiceId: string) => {
       // Special tiles — handle non-flow actions
       if (choiceId === "explore") {
+        // "Explore the Site" = open the sidebar navigation.
+        // Works for both auth and unauth (Landing is wrapped in SidebarProvider).
+        // Never redirects to login.
         if (sidebarCtx) {
           sidebarCtx.setOpen(true);
-        } else {
-          window.location.href = "/api/auth/login";
         }
         return;
       }
@@ -346,7 +326,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       const mode = FLOW_TO_MODE[choiceId] ?? (choiceId as LearningModeId);
       const flowDef = flowRegistry.find((f) => f.id === choiceId);
       const modeLabel = flowDef?.name ?? LEARNING_MODES.find((m) => m.id === mode)?.label;
-      const agent = getFlowAgent(choiceId);
+      const _agent = getFlowAgent(choiceId);
 
       // Auto-start mic on first interaction
       if (!isListening) {
@@ -449,9 +429,11 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       // If a mode is already selected, the subflow owns the screen
       if (selectedMode) return;
 
-      // 2. Fall back to flow registry voice trigger + name matching
+      // 2. Fall back to active flow voice trigger + name matching
       const lower = text.toLowerCase();
-      const menuFlows = flowRegistry.filter((f) => f.location === "landing" && f.id !== "bilko-main");
+      const menuFlows = flowRegistry.filter(
+        (f) => f.location === "landing" && f.id !== "bilko-main" && activeFlowIds.has(f.id),
+      );
       const matched = menuFlows.find((f) => {
         // Match on voice triggers defined in the flow registry
         if (f.voiceTriggers?.some((t) => lower.includes(t.toLowerCase()))) return true;
@@ -466,6 +448,13 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       if (matched) {
         unmatchedCountRef.current = 0;
         handleChoice(matched.id);
+        return;
+      }
+
+      // Check for "explore" voice trigger
+      if (lower.includes("explore") || lower.includes("browse") || lower.includes("navigate")) {
+        unmatchedCountRef.current = 0;
+        handleChoice("explore");
         return;
       }
 
@@ -492,7 +481,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   useEffect(() => {
     const unsub = subscribe("main", (msg) => {
       if (msg.type === "summary" && typeof msg.payload.summary === "string") {
-        const fromAgent = getFlowAgent(msg.from);
+        const _fromAgent = getFlowAgent(msg.from);
         const modeLabel = flowRegistry.find((f) => f.id === msg.from)?.name
           ?? LEARNING_MODES.find((m) => m.id === msg.from)?.label
           ?? msg.from;
@@ -543,6 +532,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 }
 
 // ── Mode selection grid (right panel) ─────────────────────
+// Shows only two tiles: Video Recommendation + Explore the Site
 
 function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
   const allScreenOptions = useMemo<ScreenOption[]>(() => [
@@ -565,21 +555,18 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
 
   return (
     <div className="flex-1 flex items-center justify-center p-8">
-      <div className="max-w-4xl w-full space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {/* Flow-registry-driven tiles */}
+      <div className="max-w-2xl w-full space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* Active flow tiles */}
           {MODE_OPTIONS.map((option, i) => (
             <button
               key={option.id}
               onClick={() => onSelect(option.id)}
-              className="group relative text-left rounded-xl border-2 border-border p-7 transition-all duration-300
+              className="group text-left rounded-xl border-2 border-border p-7 transition-all duration-300
                 hover:border-primary/50 hover:bg-muted/50 hover:shadow-lg hover:scale-[1.03]
                 animate-in fade-in slide-in-from-bottom-4 duration-500"
               style={{ animationDelay: `${i * 60}ms` }}
             >
-              <div className="absolute top-3 right-3">
-                {constructionBadge}
-              </div>
               <div className="flex flex-col gap-4">
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
                   bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
@@ -625,6 +612,8 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
 }
 
 // ── Right panel: subflow experience rendering ────────────
+// Only video-discovery is active. Other modes kept for backward compat
+// when standby flows are re-activated.
 
 function RightPanelContent({
   mode,
@@ -645,7 +634,7 @@ function RightPanelContent({
   );
 }
 
-/** Landing page shell for unauthenticated users */
+/** Landing page shell — wraps in SidebarProvider so "Explore the Site" works */
 export default function Landing() {
   return (
     <FlowBusProvider>

@@ -6,7 +6,7 @@
  * so the inspector can visualize and replay them.
  */
 
-export type StepType = "llm" | "user-input" | "transform" | "validate" | "display";
+export type StepType = "llm" | "user-input" | "transform" | "validate" | "display" | "chat";
 export type StepStatus = "idle" | "running" | "success" | "error" | "skipped";
 
 /** A single step in a flow */

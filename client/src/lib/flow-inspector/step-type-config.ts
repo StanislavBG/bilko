@@ -19,6 +19,7 @@ import {
   ArrowRightLeft,
   ShieldCheck,
   Monitor,
+  MessageSquare,
 } from "lucide-react";
 import type { StepType } from "./types";
 
@@ -101,5 +102,15 @@ export const STEP_TYPE_CONFIG: Record<StepType, StepTypeVisuals> = {
     accent: "border-cyan-500/30",
     border: "border-cyan-500/40",
     categoryLabel: "Presentation",
+  },
+  chat: {
+    icon: MessageSquare,
+    label: "Chat Publish",
+    shortLabel: "Chat",
+    color: "text-emerald-500",
+    bg: "bg-emerald-500/10",
+    accent: "border-emerald-500/30",
+    border: "border-emerald-500/40",
+    categoryLabel: "Chat",
   },
 };
