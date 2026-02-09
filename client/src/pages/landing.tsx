@@ -49,6 +49,7 @@ import {
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
+import { flowRegistry } from "@/lib/flow-inspector/registry";
 import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
 import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
@@ -56,6 +57,8 @@ import { useVoice } from "@/contexts/voice-context";
 import { useSidebarSafe } from "@/components/ui/sidebar";
 
 // ── Mode definitions for the delivery surface ────────────
+// Built dynamically from the flow registry (all landing-location flows
+// except the root bilko-main flow), plus special navigation tiles.
 
 interface ModeOption {
   id: string;
@@ -73,18 +76,36 @@ const iconMap: Record<string, ReactNode> = {
   Handshake: <Handshake className="h-6 w-6" />,
 };
 
-const MODE_OPTIONS: ModeOption[] = LEARNING_MODES.map((mode) => ({
-  id: mode.id,
-  label: mode.label,
-  description: mode.description,
-  icon: iconMap[mode.icon] ?? <Sparkles className="h-5 w-5" />,
-}));
+/** Menu items sourced from the flow registry — any landing flow (except bilko-main) becomes a tile */
+const MODE_OPTIONS: ModeOption[] = flowRegistry
+  .filter((f) => f.location === "landing" && f.id !== "bilko-main")
+  .map((f) => ({
+    id: f.id,
+    label: f.name,
+    description: f.description,
+    icon: f.icon ? (iconMap[f.icon] ?? <Sparkles className="h-5 w-5" />) : <Sparkles className="h-5 w-5" />,
+  }));
 
-const EXPLORE_OPTION: ModeOption = {
-  id: "explore",
-  label: "Explore the Site",
-  description: "Browse everything Bilko's AI School has to offer",
-  icon: <Compass className="h-6 w-6" />,
+/** Special tiles that aren't flows but appear in the menu */
+const SPECIAL_TILES: ModeOption[] = [
+  {
+    id: "explore",
+    label: "Explore the Site",
+    description: "Browse everything Bilko's AI School has to offer",
+    icon: <Compass className="h-6 w-6" />,
+  },
+];
+
+const EXPLORE_OPTION = SPECIAL_TILES[0];
+
+/** Maps flow registry IDs to the short mode IDs used by RightPanelContent */
+const FLOW_TO_MODE: Record<string, LearningModeId> = {
+  "video-discovery": "video",
+  "ai-consultation": "chat",
+  "recursive-interviewer": "interviewer",
+  "linkedin-strategist": "linkedin",
+  "socratic-architect": "socratic",
+  "work-with-me": "work-with-me",
 };
 
 const constructionBadge = (
@@ -96,13 +117,19 @@ const constructionBadge = (
 
 // ── LLM greeting prompt ──────────────────────────────────
 
+/** Build greeting context from flow registry — available experiences listed dynamically */
+const menuFlowDescriptions = flowRegistry
+  .filter((f) => f.location === "landing" && f.id !== "bilko-main")
+  .map((f) => `- ${f.name}: ${f.description}`)
+  .join("\n");
+
 const GREETING_SYSTEM_PROMPT = bilkoSystemPrompt(
   `You are greeting a new visitor to the AI School. This is their first interaction with you.
 
 Generate a warm, natural opening. Welcome them, introduce yourself briefly as Bilko their AI training partner, and ask how they'd like to learn today. Make it feel like meeting a friendly coach — not a scripted bot.
 
-Available training modes they can pick from:
-${LEARNING_MODES.map((m) => `- ${m.label}: ${m.description}`).join("\n")}
+Available experiences they can pick from:
+${menuFlowDescriptions}
 
 Rules:
 - 2-3 sentences max. Keep it tight.
@@ -117,18 +144,24 @@ const GREETING_FALLBACK =
 // ── Bilko's patience ────────────────────────────────────
 const PATIENCE_THRESHOLD = 3;
 
+/** Build guidance from flow registry — lists available experiences dynamically */
+const menuFlowNames = flowRegistry
+  .filter((f) => f.location === "landing" && f.id !== "bilko-main")
+  .map((f) => f.name);
+const flowNameList = menuFlowNames.join(", ");
+
 const GUIDANCE_MESSAGES = [
   {
-    text: "Take your time. When you're ready, just say something like \"video\", \"interview\", or \"chat\" — or tap one on the right.",
-    speech: "Take your time. When you're ready, just say something like video, interview, or chat, or tap one on the right.",
+    text: "Take your time. When you're ready, just say the name of an experience — or tap one on the right.",
+    speech: "Take your time. When you're ready, just say the name of an experience, or tap one on the right.",
   },
   {
-    text: "Still here. You can pick a training mode by name, or just tap one of the options on the right side.",
-    speech: "Still here. You can pick a training mode by name, or just tap one of the options on the right side.",
+    text: "Still here. You can pick an experience by name, or just tap one of the options on the right side.",
+    speech: "Still here. You can pick an experience by name, or just tap one of the options on the right side.",
   },
   {
-    text: "No rush. The modes are: Video Discovery, AI Consultation, Recursive Interview, LinkedIn Strategist, Socratic Architect, and Work With Me. Say any of those or tap one.",
-    speech: "No rush. The modes are Video Discovery, AI Consultation, Recursive Interview, LinkedIn Strategist, Socratic Architect, and Work With Me. Say any of those, or tap one.",
+    text: `No rush. The options are: ${flowNameList}. Say any of those or tap one.`,
+    speech: `No rush. The options are ${flowNameList}. Say any of those, or tap one.`,
   },
 ];
 
@@ -215,7 +248,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   // ── Flow Step 2: Mode Selection — user picks from right panel ──
   const handleChoice = useCallback(
     (choiceId: string) => {
-      // "Explore the Site" — open sidebar or redirect
+      // Special tiles — handle non-flow actions
       if (choiceId === "explore") {
         if (sidebarCtx) {
           sidebarCtx.setOpen(true);
@@ -225,9 +258,11 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         return;
       }
 
-      const mode = choiceId as LearningModeId;
-      const modeLabel = LEARNING_MODES.find((m) => m.id === mode)?.label;
-      const agent = getFlowAgent(mode);
+      // Resolve flow registry ID → short mode ID for component rendering
+      const mode = FLOW_TO_MODE[choiceId] ?? (choiceId as LearningModeId);
+      const flowDef = flowRegistry.find((f) => f.id === choiceId);
+      const modeLabel = flowDef?.name ?? LEARNING_MODES.find((m) => m.id === mode)?.label;
+      const agent = getFlowAgent(choiceId);
 
       // Auto-start mic on first interaction
       if (!isListening) {
@@ -346,18 +381,18 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       // If a mode is already selected, the subflow owns the screen
       if (selectedMode) return;
 
-      // 2. Fall back to static learning mode matching
+      // 2. Fall back to flow registry voice trigger + name matching
       const lower = text.toLowerCase();
-      const matched = LEARNING_MODES.find((m) => {
-        const label = m.label.toLowerCase();
-        const id = m.id.toLowerCase();
-        const desc = m.description.toLowerCase();
-        return (
-          lower.includes(label) ||
-          lower.includes(id) ||
-          label.split(/\s+/).some((w) => w.length > 3 && lower.includes(w)) ||
-          desc.split(/\s+/).some((w) => w.length > 5 && lower.includes(w))
-        );
+      const menuFlows = flowRegistry.filter((f) => f.location === "landing" && f.id !== "bilko-main");
+      const matched = menuFlows.find((f) => {
+        // Match on voice triggers defined in the flow registry
+        if (f.voiceTriggers?.some((t) => lower.includes(t.toLowerCase()))) return true;
+        // Match on flow name
+        const name = f.name.toLowerCase();
+        if (lower.includes(name)) return true;
+        // Match on significant words in name
+        if (name.split(/\s+/).some((w) => w.length > 3 && lower.includes(w))) return true;
+        return false;
       });
 
       if (matched) {
@@ -389,7 +424,9 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     const unsub = subscribe("main", (msg) => {
       if (msg.type === "summary" && typeof msg.payload.summary === "string") {
         const fromAgent = getFlowAgent(msg.from);
-        const modeLabel = LEARNING_MODES.find((m) => m.id === msg.from)?.label ?? msg.from;
+        const modeLabel = flowRegistry.find((f) => f.id === msg.from)?.name
+          ?? LEARNING_MODES.find((m) => m.id === msg.from)?.label
+          ?? msg.from;
 
         activityLogRef.current.push({
           modeId: msg.from,
@@ -459,12 +496,12 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
       keywords: opt.description.split(/\s+/).filter((w) => w.length > 4),
       action: () => onSelect(opt.id),
     })),
-    {
-      id: EXPLORE_OPTION.id,
-      label: EXPLORE_OPTION.label,
-      keywords: ["explore", "browse", "navigate", "site", "menu"],
-      action: () => onSelect(EXPLORE_OPTION.id),
-    },
+    ...SPECIAL_TILES.map((tile) => ({
+      id: tile.id,
+      label: tile.label,
+      keywords: tile.description.split(/\s+/).filter((w) => w.length > 4),
+      action: () => onSelect(tile.id),
+    })),
   ],
     [onSelect],
   );
@@ -474,6 +511,7 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
     <div className="flex-1 flex items-center justify-center p-8">
       <div className="max-w-4xl w-full space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {/* Flow-registry-driven tiles */}
           {MODE_OPTIONS.map((option, i) => (
             <button
               key={option.id}
@@ -500,27 +538,30 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
               </div>
             </button>
           ))}
-          {/* Explore the Site */}
-          <button
-            onClick={() => onSelect(EXPLORE_OPTION.id)}
-            className="group text-left rounded-xl border-2 border-dashed border-primary/40 p-7 transition-all duration-300
-              hover:border-primary hover:bg-primary/5 hover:shadow-lg hover:scale-[1.03]
-              animate-in fade-in slide-in-from-bottom-4 duration-500"
-            style={{ animationDelay: `${MODE_OPTIONS.length * 60}ms` }}
-          >
-            <div className="flex flex-col gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
-                bg-primary/10 text-primary group-hover:bg-primary/20">
-                {EXPLORE_OPTION.icon}
+          {/* Special tiles (non-flow navigation) */}
+          {SPECIAL_TILES.map((tile, i) => (
+            <button
+              key={tile.id}
+              onClick={() => onSelect(tile.id)}
+              className="group text-left rounded-xl border-2 border-dashed border-primary/40 p-7 transition-all duration-300
+                hover:border-primary hover:bg-primary/5 hover:shadow-lg hover:scale-[1.03]
+                animate-in fade-in slide-in-from-bottom-4 duration-500"
+              style={{ animationDelay: `${(MODE_OPTIONS.length + i) * 60}ms` }}
+            >
+              <div className="flex flex-col gap-4">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
+                  bg-primary/10 text-primary group-hover:bg-primary/20">
+                  {tile.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base">{tile.label}</h3>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                    {tile.description}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-base">{EXPLORE_OPTION.label}</h3>
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                  {EXPLORE_OPTION.description}
-                </p>
-              </div>
-            </div>
-          </button>
+            </button>
+          ))}
         </div>
       </div>
     </div>
