@@ -434,7 +434,7 @@ function UserChoiceView({
   return (
     <div className={`animate-in fade-in slide-in-from-bottom-4 duration-500 ${
       compact
-        ? "grid grid-cols-1 gap-2"
+        ? "grid grid-cols-1 sm:grid-cols-2 gap-3"
         : "grid grid-cols-2 md:grid-cols-3 gap-3"
     }`}>
       {turn.options.map((option, i) => {
@@ -447,8 +447,8 @@ function UserChoiceView({
             onClick={() => handlePick(option.id)}
             disabled={!!pickedId}
             className={`
-              group relative text-left rounded-xl border transition-all duration-300
-              ${compact ? "p-3" : "border-2 p-5"}
+              group relative text-left rounded-xl border-2 transition-all duration-300
+              ${compact ? "p-4" : "p-5"}
               ${isPicked
                 ? "border-primary bg-primary/5 scale-[1.02] shadow-lg"
                 : isDimmed
@@ -458,20 +458,18 @@ function UserChoiceView({
             `}
             style={{ animationDelay: `${i * 80}ms` }}
           >
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-start gap-3">
               <div className={`
-                ${compact ? "w-8 h-8 rounded-md" : "w-10 h-10 rounded-lg"} flex items-center justify-center shrink-0 transition-colors
+                w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors
                 ${isPicked ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"}
               `}>
                 {option.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className={`font-semibold ${compact ? "text-xs" : "text-sm"}`}>{option.label}</h3>
-                {!compact && (
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                    {option.description}
-                  </p>
-                )}
+                <h3 className={`font-semibold ${compact ? "text-sm" : "text-sm"}`}>{option.label}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                  {option.description}
+                </p>
               </div>
             </div>
           </button>

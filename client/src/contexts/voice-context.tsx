@@ -105,6 +105,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const doSpeakRef = useRef<(text: string) => Promise<void>>(async () => {});
+  const startListeningRef = useRef<() => Promise<void>>(async () => {});
 
   // End-of-speech detection
   const utteranceEndCallbacksRef = useRef<Set<(text: string) => void>>(new Set());
@@ -214,6 +215,12 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       }
 
       flushPending();
+
+      // Auto-start mic on first user gesture if not already listening
+      // and user hasn't explicitly disabled voice
+      if (!isListeningRef.current && localStorage.getItem(VOICE_STORAGE_KEY) !== "false") {
+        setTimeout(() => startListeningRef.current(), 300);
+      }
 
       document.removeEventListener("click", gestureUnlock, true);
       document.removeEventListener("touchstart", gestureUnlock, true);
@@ -619,15 +626,28 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     return doSpeakBrowser(text);
   }, [doSpeakOpenAI, doSpeakBrowser]);
 
-  // Keep ref in sync so startListening can call doSpeak without circular deps
+  // Keep refs in sync so gesture handlers can call these without circular deps
   useEffect(() => {
     doSpeakRef.current = doSpeak;
   }, [doSpeak]);
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  }, [startListening]);
 
   // ── Public speak: gates on TTS unlock, queues if needed ──
   // If TTS hasn't been unlocked by a user gesture yet, we queue the
   // request and play it as soon as the user clicks/taps anything.
+  // Latest speak always wins — if a newer message calls speak() before
+  // the previous one played, the previous one is discarded.
   const speak = useCallback(async (text: string) => {
+    // Clear any previous pending speak — newer message takes priority
+    if (pendingSpeakRef.current !== null) {
+      const prevResolve = pendingSpeakResolveRef.current;
+      pendingSpeakRef.current = null;
+      pendingSpeakResolveRef.current = null;
+      prevResolve?.();
+    }
+
     if (!ttsSupported) {
       console.info("[TTS] speak() called but speechSynthesis not supported");
       return;

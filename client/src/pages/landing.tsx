@@ -16,6 +16,7 @@ import { GlobalHeader } from "@/components/global-header";
 import {
   ConversationCanvas,
   type ConversationTurn,
+  type OptionChoice,
 } from "@/components/conversation-canvas";
 import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
 import {
@@ -50,6 +51,7 @@ import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
 import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
 import { VoiceStatusBar } from "@/components/voice-status-bar";
+import { useVoice } from "@/contexts/voice-context";
 
 // ── Mode definitions for the delivery surface ────────────
 
@@ -61,12 +63,12 @@ interface ModeOption {
 }
 
 const iconMap: Record<string, ReactNode> = {
-  Play: <Play className="h-5 w-5" />,
-  MessageCircle: <MessageCircle className="h-5 w-5" />,
-  Lightbulb: <Lightbulb className="h-5 w-5" />,
-  Briefcase: <Briefcase className="h-5 w-5" />,
-  GraduationCap: <GraduationCap className="h-5 w-5" />,
-  Handshake: <Handshake className="h-5 w-5" />,
+  Play: <Play className="h-6 w-6" />,
+  MessageCircle: <MessageCircle className="h-6 w-6" />,
+  Lightbulb: <Lightbulb className="h-6 w-6" />,
+  Briefcase: <Briefcase className="h-6 w-6" />,
+  GraduationCap: <GraduationCap className="h-6 w-6" />,
+  Handshake: <Handshake className="h-6 w-6" />,
 };
 
 const MODE_OPTIONS: ModeOption[] = LEARNING_MODES.map((mode) => ({
@@ -148,6 +150,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     reset: resetConversation,
   } = useConversation();
   const [, navigate] = useLocation();
+  const { startListening, isListening } = useVoice();
 
   const [greetingLoading, setGreetingLoading] = useState(false);
 
@@ -204,6 +207,11 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       const mode = choiceId as LearningModeId;
       const modeLabel = LEARNING_MODES.find((m) => m.id === mode)?.label;
 
+      // Auto-start mic on first interaction (user gesture present)
+      if (!isListening) {
+        startListening();
+      }
+
       // Record user's choice
       addMessage({
         role: "user",
@@ -225,7 +233,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 
       selectMode(mode);
     },
-    [addMessage, selectMode],
+    [addMessage, selectMode, isListening, startListening],
   );
 
   const handleBack = useCallback(() => {
@@ -245,6 +253,21 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     clearMode();
   }, [addMessage, clearMode]);
 
+  // ── Build inline choice options for conversation canvas ──
+  const inlineChoiceOptions = useMemo<OptionChoice[]>(() =>
+    MODE_OPTIONS.map((opt) => {
+      const mode = LEARNING_MODES.find((m) => m.id === opt.id);
+      return {
+        id: opt.id,
+        label: opt.label,
+        description: opt.description,
+        icon: opt.icon,
+        voiceTriggers: mode?.voiceTriggers ? [...mode.voiceTriggers] : [],
+      };
+    }),
+    [],
+  );
+
   // ── Derive conversation turns from actual messages (single source of truth) ──
   const conversationTurns = useMemo<ConversationTurn[]>(() => {
     // While LLM is generating the greeting, show typing indicator
@@ -263,7 +286,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       ];
     }
 
-    return messages.map((msg, i) => {
+    const turns: ConversationTurn[] = messages.map((msg, i) => {
       // Bilko messages → typewriter turns
       if (msg.role === "bilko") {
         return {
@@ -280,7 +303,25 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         text: msg.text,
       };
     });
-  }, [messages, greetingLoading]);
+
+    // After Bilko's greeting/question, show inline choice cards if no mode selected
+    if (!selectedMode) {
+      const lastMsg = messages[messages.length - 1];
+      if (
+        lastMsg?.role === "bilko" &&
+        (lastMsg.meta?.type === "greeting" ||
+          lastMsg.meta?.type === "question" ||
+          lastMsg.meta?.type === "guidance")
+      ) {
+        turns.push({
+          type: "user-choice" as const,
+          options: inlineChoiceOptions,
+        });
+      }
+    }
+
+    return turns;
+  }, [messages, greetingLoading, selectedMode, inlineChoiceOptions]);
 
   // ── Conversation design: voice turn-taking ──
   const { onUserUtterance, screenOptions } = useConversationDesign();
@@ -385,8 +426,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         <div className="flex-1 overflow-auto">
           <ConversationCanvas
             turns={conversationTurns}
-            onChoice={() => {}}
-            compact
+            onChoice={handleChoice}
             initialSettledCount={initialSettledCount}
           />
         </div>
@@ -428,25 +468,25 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
 
   return (
     <div className="flex-1 flex items-center justify-center p-8">
-      <div className="max-w-3xl w-full space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="max-w-4xl w-full space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {MODE_OPTIONS.map((option, i) => (
             <button
               key={option.id}
               onClick={() => onSelect(option.id)}
-              className="group text-left rounded-xl border-2 border-border p-5 transition-all duration-300
-                hover:border-primary/50 hover:bg-muted/50 hover:shadow-md hover:scale-[1.02]
+              className="group text-left rounded-xl border-2 border-border p-7 transition-all duration-300
+                hover:border-primary/50 hover:bg-muted/50 hover:shadow-lg hover:scale-[1.03]
                 animate-in fade-in slide-in-from-bottom-4 duration-500"
               style={{ animationDelay: `${i * 60}ms` }}
             >
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors
+              <div className="flex flex-col gap-4">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
                   bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
                   {option.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm">{option.label}</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                  <h3 className="font-semibold text-base">{option.label}</h3>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                     {option.description}
                   </p>
                 </div>
