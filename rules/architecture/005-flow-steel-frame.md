@@ -2,10 +2,10 @@
 
 Rule ID: ARCH-005
 Priority: CRITICAL
-Version: 1.1.0
+Version: 2.0.0
 Type: Architecture
 Dependencies: ARCH-000, ARCH-001
-Cross-References: PER-002, APP-LANDING-001
+Cross-References: PER-002, APP-LANDING-001, APP-CHAT-001
 
 ## Purpose
 
@@ -162,28 +162,6 @@ When a flow's step structure changes (steps added, removed, or dependencies modi
 
 ---
 
-## Conversational Canvas Contract
-
-Flows that run on the conversational canvas (the main website experience) follow additional rules.
-
-### C1: Bilko Speaks First
-
-Every conversation starts with Bilko. The first turn is always a `bilko` type turn with typewriter text and optional TTS.
-
-### C2: Options Are Responses
-
-User option cards are the user's way of responding to Bilko. They are not standalone UI — they exist within the conversation context.
-
-### C3: Voice Parity
-
-Every option that can be clicked must also have `voiceTriggers` defined so it can be selected by voice.
-
-### C4: Contextual Follow-Up
-
-When a user makes a choice, Bilko responds contextually before the experience renders. The response must acknowledge the specific choice (not generic "Loading...").
-
----
-
 ## Voice Builder Contract
 
 Flows are built and modified exclusively through voice commands and node selection — never through traditional drag-and-drop builders.
@@ -283,6 +261,10 @@ Before registering a new flow:
 
 ## Changelog
 
+### v2.0.0 (2026-02-09)
+- Removed Conversational Canvas Contract (C1-C4) — merged into APP-CHAT-001 D10-D13
+- Added APP-CHAT-001 to cross-references
+
 ### v1.1.0 (2026-02-07)
 - Voice Builder Contract (V1-V7): Voice-first flow building via mutations
 - Pure mutation functions with pre-apply validation
@@ -293,6 +275,6 @@ Before registering a new flow:
 - Initial steel frame: 7 structural invariants, 5 step type contracts
 - Execution contract (E1-E6) for inspector observability
 - Registration contract (R1-R2) for flow registry
-- Conversational canvas contract (C1-C4) for the website-as-conversation paradigm
+- Conversational canvas contract (C1-C4) — later moved to APP-CHAT-001 in v2.0.0
 - Anti-pattern registry
 - Runtime validation spec

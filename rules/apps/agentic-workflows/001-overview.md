@@ -3,7 +3,7 @@
 **Version**: 1.1.0  
 **Priority**: HIGH  
 **Partition**: apps  
-**Dependencies**: HUB-001, UI-006, HUB-004, DATA-002, INT-005
+**Dependencies**: HUB-001, UI-006, HUB-004, DATA-002, DATA-004
 
 ## Purpose
 
@@ -144,6 +144,6 @@ Workflow Registry (n8n) → API → Frontend
 
 - UI-006: Mobile Layout (carousel pattern, Sheet overlays, D6 stack-based drill-down)
 - HUB-004: Unified Navigation Structure (WorkflowNavLevel interface pattern)
-- INT-005: Callback Persistence Contract (execution data)
+- DATA-004: Callback Persistence Contract (execution data)
 - DATA-002: Communication Traces (trace linkage)
 - HUB-003: Nested Navigation Pattern (column layout)

@@ -2,7 +2,7 @@
 
 Rule ID: APP-CHAT-001
 Priority: HIGH
-Version: 1.0.0
+Version: 2.0.0
 
 ## Purpose
 
@@ -94,6 +94,8 @@ The conversation supports multiple specialist agents, each with a distinct ident
 
 ### D6: Per-Agent Voice Assignment
 
+**Status: FEATURE** — Not yet implemented. Currently all agents use the same hardcoded "onyx" voice.
+
 Every agent MUST have a distinct TTS voice. Voice is part of an agent's identity, not a global setting.
 
 Agent voice configuration:
@@ -131,6 +133,8 @@ Voice is central to the experience. The microphone should default to **on** for 
 
 ### D8: Voice Configuration in User Settings
 
+**Status: FEATURE** — Not yet implemented. Voice settings UI does not exist yet.
+
 Users must be able to configure voice preferences. This is not hardcoded.
 
 Required settings:
@@ -165,6 +169,22 @@ The user must always know where they are in a flow.
 - When a step completes, visually mark it as done before advancing
 - DO: Surface flow structure to the user — they are not in an open-ended chat
 - DON'T: Hide the flow structure behind the conversation — the flow IS the conversation
+
+### D10: Bilko Speaks First
+
+Every conversation starts with Bilko. The first turn is always a `bilko` type turn with typewriter text and optional TTS. No other agent or system message may precede the host's opening.
+
+### D11: Options Are Responses
+
+User option cards are the user's way of responding to Bilko. They are not standalone UI — they exist within the conversation context. Options should feel like natural replies, not detached buttons.
+
+### D12: Voice Parity
+
+Every option that can be clicked must also have `voiceTriggers` defined so it can be selected by voice. The voice and click pathways must be equivalent.
+
+### D13: Contextual Follow-Up
+
+When a user makes a choice, Bilko responds contextually before the experience renders. The response must acknowledge the specific choice — not generic "Loading..." or "Please wait" messages.
 
 ---
 
@@ -224,6 +244,11 @@ Flow Execution Engine
 ---
 
 ## Changelog
+
+### v2.0.0 (2026-02-09)
+- Merged Conversational Canvas Contract (C1-C4) from ARCH-005 as D10-D13
+- Marked D6 (Per-Agent Voice Assignment) as FEATURE
+- Marked D8 (Voice Configuration in User Settings) as FEATURE
 
 ### v1.0.0 (2026-02-09)
 - Initial rule defining conversation experience contract
