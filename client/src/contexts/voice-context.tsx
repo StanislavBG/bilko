@@ -1,12 +1,8 @@
 /**
- * Global Voice Context
+ * Global Voice Context — TTS only.
  *
- * First-class voice abstraction for the entire site.
- * Manages a single SpeechRecognition instance, persists mic preference,
- * and lets any page register/unregister voice command handlers.
- *
- * TTS: Gemini TTS exclusively via /api/tts/speak (no browser fallback).
- * STT: Web Speech API (SpeechRecognition).
+ * Manages Gemini TTS via /api/tts/speak.
+ * STT (browser SpeechRecognition) has been removed.
  */
 
 import {
@@ -18,14 +14,6 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import type { VoiceTriggerOption } from "@/hooks/use-voice-recognition";
-import {
-  POST_TTS_BUFFER_MS,
-  SILENCE_TIMEOUT_MS as PACING_SILENCE_TIMEOUT_MS,
-} from "@/lib/bilko-persona/pacing";
-
-const VOICE_STORAGE_KEY = "bilko-voice-enabled";
-
 /** A single TTS utterance waiting in the queue. */
 interface TtsQueueItem {
   text: string;
@@ -33,97 +21,37 @@ interface TtsQueueItem {
   resolve: () => void;
 }
 
-interface VoiceHandler {
-  options: readonly VoiceTriggerOption[];
-  onMatch: (matchedId: string) => void;
-}
-
-interface TranscriptEntry {
-  text: string;
-  timestamp: number;
-}
-
 interface VoiceContextType {
-  isListening: boolean;
   isSpeaking: boolean;
-  /** True when mic is suppressed during TTS playback */
-  isMuted: boolean;
-  isSupported: boolean;
   ttsSupported: boolean;
   /** True after first user interaction unlocked audio playback */
   ttsUnlocked: boolean;
-  permissionDenied: boolean;
-  transcript: string;
-  /** Accumulated session transcript log (all final results) */
-  transcriptLog: TranscriptEntry[];
-  toggleListening: () => Promise<void>;
-  startListening: () => Promise<void>;
-  stopListening: () => void;
   /** Bilko speaks — uses Gemini TTS exclusively. Optional voice param selects Gemini voice. */
   speak: (text: string, voice?: string) => Promise<void>;
   stopSpeaking: () => void;
-  registerHandler: (id: string, handler: VoiceHandler) => () => void;
-  clearTranscriptLog: () => void;
-  /**
-   * Register a callback for when the user finishes speaking.
-   * Fires after a silence gap following final speech results.
-   * Returns unsubscribe function.
-   */
-  onUtteranceEnd: (callback: (text: string) => void) => () => void;
 }
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);
 
-const getSpeechRecognition = () => {
-  if (typeof window === "undefined") return null;
-  return (
-    (window as any).SpeechRecognition ||
-    (window as any).webkitSpeechRecognition ||
-    null
-  );
-};
-
 export function VoiceProvider({ children }: { children: ReactNode }) {
-  const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [permissionDenied, setPermissionDenied] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [transcriptLog, setTranscriptLog] = useState<TranscriptEntry[]>([]);
   const [ttsUnlocked, setTtsUnlocked] = useState(false);
   const [ttsSupported, setTtsSupported] = useState(false);
-
-  const recognitionRef = useRef<any>(null);
-  const handlersRef = useRef<Map<string, VoiceHandler>>(new Map());
-  const isListeningRef = useRef(false);
-  const permissionDeniedRef = useRef(false);
-  const isMutedRef = useRef(false);
-  const autoStartedRef = useRef(false);
-  const ttsUnlockedRef = useRef(false);
-  const ttsSupportedRef = useRef(false);
 
   // Gemini TTS refs
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const doSpeakRef = useRef<(text: string, voice?: string) => Promise<void>>(async () => {});
-  const startListeningRef = useRef<() => Promise<void>>(async () => {});
+  const ttsUnlockedRef = useRef(false);
+  const ttsSupportedRef = useRef(false);
 
   // TTS queue — messages are played sequentially, FIFO order.
-  // Pre-unlock items accumulate; on unlock, the entire queue flushes in order.
   const ttsQueueRef = useRef<TtsQueueItem[]>([]);
   const processingQueueRef = useRef(false);
   const processQueueRef = useRef<() => void>(() => {});
 
-  // End-of-speech detection
-  const utteranceEndCallbacksRef = useRef<Set<(text: string) => void>>(new Set());
-  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingFinalTextRef = useRef("");
-  const SILENCE_TIMEOUT_MS = PACING_SILENCE_TIMEOUT_MS;
-
-  const isSupported = getSpeechRecognition() !== null;
-
-  // ── Check if OpenAI TTS is available on mount ──
+  // ── Check if Gemini TTS is available on mount ──
   useEffect(() => {
     fetch("/api/tts/status")
       .then((r) => r.json())
@@ -142,43 +70,25 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── TTS auto-unlock ──
-  // Audio playback requires a user gesture (autoplay policy).
-  // First user interaction marks TTS as unlocked and warms up
-  // the AudioContext so subsequent audio.play() calls succeed
-  // even when invoked from async callbacks.
   useEffect(() => {
     if (ttsUnlockedRef.current) return;
 
-    const markUnlocked = () => {
-      if (ttsUnlockedRef.current) return;
-      ttsUnlockedRef.current = true;
-      setTtsUnlocked(true);
-    };
-
-    // Unlock on first user interaction
     const gestureUnlock = () => {
       if (ttsUnlockedRef.current) return;
 
-      // Warm up the AudioContext — this registers the page for autoplay
-      // in browsers that require a user gesture. Without this, audio.play()
-      // called from async callbacks (e.g. after TTS fetch) would be blocked.
+      // Warm up the AudioContext
       try {
         const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         ctx.resume().then(() => ctx.close()).catch(() => {});
       } catch {
-        // AudioContext not available — fallback to silent audio
         const silence = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=");
         silence.play().catch(() => {});
       }
 
-      markUnlocked();
-      // Flush the TTS queue (items accumulated before unlock)
+      ttsUnlockedRef.current = true;
+      setTtsUnlocked(true);
+      // Flush the TTS queue
       setTimeout(() => processQueueRef.current(), 100);
-
-      // Auto-start mic on first user gesture only if user explicitly enabled voice
-      if (!isListeningRef.current && localStorage.getItem(VOICE_STORAGE_KEY) === "true") {
-        setTimeout(() => startListeningRef.current(), 300);
-      }
 
       document.removeEventListener("click", gestureUnlock, true);
       document.removeEventListener("touchstart", gestureUnlock, true);
@@ -194,198 +104,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("touchstart", gestureUnlock, true);
       document.removeEventListener("keydown", gestureUnlock, true);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Keep refs in sync with state so event handlers see current values
-  useEffect(() => {
-    isListeningRef.current = isListening;
-  }, [isListening]);
-  useEffect(() => {
-    permissionDeniedRef.current = permissionDenied;
-  }, [permissionDenied]);
-  useEffect(() => {
-    isMutedRef.current = isMuted;
-  }, [isMuted]);
-
-  // Initialize speech recognition once on mount
-  useEffect(() => {
-    const SR = getSpeechRecognition();
-    if (!SR) return;
-
-    const recognition = new SR();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    recognition.onresult = (event: any) => {
-      // Suppress recognition results while Bilko is speaking (echo cancellation)
-      if (isMutedRef.current) return;
-
-      let finalTranscript = "";
-      let interimTranscript = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript;
-        } else {
-          interimTranscript += result[0].transcript;
-        }
-      }
-
-      setTranscript(finalTranscript || interimTranscript);
-
-      // Accumulate final transcripts into the session log
-      if (finalTranscript) {
-        const trimmed = finalTranscript.trim();
-        if (trimmed) {
-          setTranscriptLog((prev) => [
-            ...prev,
-            { text: trimmed, timestamp: Date.now() },
-          ]);
-        }
-      }
-
-      // On final transcript, check all registered handlers for matches
-      if (finalTranscript) {
-        const normalized = finalTranscript.toLowerCase().trim();
-        for (const handler of Array.from(handlersRef.current.values())) {
-          for (const option of handler.options) {
-            for (const trigger of option.voiceTriggers) {
-              if (normalized.includes(trigger.toLowerCase())) {
-                handler.onMatch(option.id);
-                return; // First match wins
-              }
-            }
-          }
-        }
-      }
-
-      // ── End-of-speech detection ──
-      // Reset the silence timer on any speech activity.
-      // After SILENCE_TIMEOUT_MS of no new results, fire utteranceEnd.
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
-      }
-
-      if (finalTranscript) {
-        // Accumulate final text for the full utterance
-        pendingFinalTextRef.current =
-          (pendingFinalTextRef.current + " " + finalTranscript).trim();
-      }
-
-      if (pendingFinalTextRef.current) {
-        silenceTimerRef.current = setTimeout(() => {
-          const fullText = pendingFinalTextRef.current.trim();
-          if (fullText) {
-            for (const cb of utteranceEndCallbacksRef.current) {
-              cb(fullText);
-            }
-            pendingFinalTextRef.current = "";
-            setTranscript("");
-          }
-          silenceTimerRef.current = null;
-        }, SILENCE_TIMEOUT_MS);
-      }
-    };
-
-    recognition.onerror = (event: any) => {
-      // "no-speech" and "aborted" are normal when mic is open but user isn't talking.
-      // Only log real errors as errors; harmless ones go to debug.
-      const harmless = ["no-speech", "aborted"];
-      if (harmless.includes(event.error)) {
-        console.debug("[STT] Expected:", event.error);
-      } else {
-        console.warn("[STT] Speech recognition error:", event.error);
-      }
-      if (
-        event.error === "not-allowed" ||
-        event.error === "permission-denied"
-      ) {
-        setPermissionDenied(true);
-        localStorage.setItem(VOICE_STORAGE_KEY, "false");
-      }
-      // Don't stop listening for transient errors like no-speech
-      if (!harmless.includes(event.error)) {
-        setIsListening(false);
-      }
-    };
-
-    recognition.onend = () => {
-      // Auto-restart if still meant to be listening
-      if (isListeningRef.current && !permissionDeniedRef.current) {
-        try {
-          recognition.start();
-        } catch (e) {
-          // Ignore — might already be starting
-        }
-      }
-    };
-
-    recognitionRef.current = recognition;
-
-    return () => {
-      try {
-        recognition.stop();
-      } catch (e) {
-        // Ignore
-      }
-    };
   }, []);
-
-  const startListening = useCallback(async () => {
-    if (!recognitionRef.current) return;
-
-    // Request microphone permission
-    try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-      setPermissionDenied(false);
-    } catch (e) {
-      setPermissionDenied(true);
-      return;
-    }
-
-    // Mic permission granted — unlock TTS and flush any queued speech.
-    // The user just interacted with a permission dialog, so the browser may now
-    // allow audio playback. This ensures Bilko's welcome message is heard.
-    if (!ttsUnlockedRef.current) {
-      ttsUnlockedRef.current = true;
-      setTtsUnlocked(true);
-
-      // Flush the TTS queue (e.g. Bilko's welcome message queued before unlock)
-      setTimeout(() => processQueueRef.current(), 100);
-    }
-
-    try {
-      recognitionRef.current.start();
-      setIsListening(true);
-      setTranscript("");
-      localStorage.setItem(VOICE_STORAGE_KEY, "true");
-    } catch (e) {
-      // Might already be started
-    }
-  }, []);
-
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {
-        // Ignore
-      }
-    }
-    setIsListening(false);
-    localStorage.setItem(VOICE_STORAGE_KEY, "false");
-  }, []);
-
-  const toggleListening = useCallback(async () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      await startListening();
-    }
-  }, [isListening, startListening, stopListening]);
 
   // ── Get or create a shared AudioContext for Web Audio API playback ──
   const getAudioContext = useCallback((): AudioContext => {
@@ -398,8 +117,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── Gemini TTS: fetch audio from server and play via Web Audio API ──
-  // This is the raw playback function. It does NOT manage isSpeaking/isMuted —
-  // the queue processor owns that state to avoid flickering between queue items.
   const doSpeak = useCallback(async (text: string, voice?: string): Promise<void> => {
     const preview = text.length > 60 ? text.slice(0, 60) + "..." : text;
     const selectedVoice = voice || "Kore";
@@ -424,8 +141,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       throw new Error("Received empty audio response");
     }
 
-    // Try Web Audio API first (more reliable for programmatic playback),
-    // fall back to HTML Audio element if decoding fails.
+    // Try Web Audio API first, fall back to HTML Audio element if decoding fails.
     try {
       await this_playViaWebAudio(arrayBuffer);
       return;
@@ -433,12 +149,10 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       console.warn("[TTS:Gemini] Web Audio API failed, trying Audio element fallback:", webAudioErr);
     }
 
-    // Fallback: HTML Audio element with blob URL
     await this_playViaAudioElement(arrayBuffer, contentType);
 
     async function this_playViaWebAudio(data: ArrayBuffer): Promise<void> {
       const ctx = getAudioContext();
-      // Resume context if suspended (autoplay policy)
       if (ctx.state === "suspended") {
         await ctx.resume();
       }
@@ -503,13 +217,11 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, [getAudioContext]);
 
   // ── Queue processor — drains items sequentially ──
-  // Owns isSpeaking/isMuted to prevent flickering between queue items.
   const processQueue = useCallback(async () => {
-    if (processingQueueRef.current) return;          // already draining
-    if (!ttsUnlockedRef.current) return;             // wait for unlock
+    if (processingQueueRef.current) return;
+    if (!ttsUnlockedRef.current) return;
     processingQueueRef.current = true;
 
-    setIsMuted(true);
     setIsSpeaking(true);
 
     while (ttsQueueRef.current.length > 0) {
@@ -524,25 +236,17 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
     processingQueueRef.current = false;
     setIsSpeaking(false);
-    setTimeout(() => setIsMuted(false), POST_TTS_BUFFER_MS);
   }, [doSpeak]);
 
-  // Keep refs in sync so gesture handlers can call these without circular deps
+  // Keep refs in sync
   useEffect(() => {
     doSpeakRef.current = doSpeak;
   }, [doSpeak]);
-  useEffect(() => {
-    startListeningRef.current = startListening;
-  }, [startListening]);
-
-  // Keep processQueueRef in sync
   useEffect(() => {
     processQueueRef.current = processQueue;
   }, [processQueue]);
 
   // ── Public speak: pushes to the FIFO queue ──
-  // If TTS is unlocked, starts draining immediately.
-  // If locked, items accumulate and flush on first user gesture.
   const speak = useCallback(async (text: string, voice?: string) => {
     if (!ttsSupportedRef.current) {
       console.info("[TTS] speak() called but Gemini TTS not available");
@@ -555,95 +259,41 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
     return new Promise<void>((resolve) => {
       ttsQueueRef.current.push({ text, voice, resolve });
-      // Kick the processor — no-ops if already running or still locked
       processQueueRef.current();
     });
   }, []);
 
   const stopSpeaking = useCallback(() => {
-    // Drain the queue — resolve all pending items so callers aren't stuck
+    // Drain the queue
     for (const item of ttsQueueRef.current) {
       item.resolve();
     }
     ttsQueueRef.current = [];
     processingQueueRef.current = false;
 
-    // Stop current audio if playing (Audio element fallback)
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
     }
-    // Stop current Web Audio API source if playing
     if (currentSourceRef.current) {
       try {
         currentSourceRef.current.stop();
       } catch {
-        // Ignore — might already be stopped
+        // Ignore
       }
       currentSourceRef.current = null;
     }
     setIsSpeaking(false);
-    setIsMuted(false);
   }, []);
-
-  const registerHandler = useCallback(
-    (id: string, handler: VoiceHandler) => {
-      handlersRef.current.set(id, handler);
-      return () => {
-        handlersRef.current.delete(id);
-      };
-    },
-    []
-  );
-
-  const clearTranscriptLog = useCallback(() => {
-    setTranscriptLog([]);
-  }, []);
-
-  const onUtteranceEnd = useCallback((callback: (text: string) => void) => {
-    utteranceEndCallbacksRef.current.add(callback);
-    return () => {
-      utteranceEndCallbacksRef.current.delete(callback);
-    };
-  }, []);
-
-  // Clean up silence timer on unmount
-  useEffect(() => {
-    return () => {
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-      }
-    };
-  }, []);
-
-  // Auto-start on mount — voice is OFF by default; only start if user explicitly enabled it
-  useEffect(() => {
-    if (!autoStartedRef.current && isSupported && localStorage.getItem(VOICE_STORAGE_KEY) === "true") {
-      autoStartedRef.current = true;
-      startListening();
-    }
-  }, [isSupported, startListening]);
 
   return (
     <VoiceContext.Provider
       value={{
-        isListening,
         isSpeaking,
-        isMuted,
-        isSupported,
         ttsSupported,
         ttsUnlocked,
-        permissionDenied,
-        transcript,
-        transcriptLog,
-        toggleListening,
-        startListening,
-        stopListening,
         speak,
         stopSpeaking,
-        registerHandler,
-        clearTranscriptLog,
-        onUtteranceEnd,
       }}
     >
       {children}
@@ -658,27 +308,4 @@ export function useVoice() {
     throw new Error("useVoice must be used within a VoiceProvider");
   }
   return context;
-}
-
-/**
- * Register voice commands for a specific page/component.
- * Commands are automatically unregistered on unmount.
- */
-export function useVoiceCommands(
-  id: string,
-  options: readonly VoiceTriggerOption[],
-  onMatch: (matchedId: string) => void,
-  enabled = true
-) {
-  const { registerHandler } = useVoice();
-  const onMatchRef = useRef(onMatch);
-  onMatchRef.current = onMatch;
-
-  useEffect(() => {
-    if (!enabled) return;
-    return registerHandler(id, {
-      options,
-      onMatch: (matchedId) => onMatchRef.current(matchedId),
-    });
-  }, [id, options, enabled, registerHandler]);
 }
