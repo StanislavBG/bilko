@@ -1,23 +1,27 @@
 /**
- * Landing Page — Split-panel agentic experience.
+ * Landing Page — Flow-driven split-panel experience.
  *
- * Left panel:  Conversation LOG — text record of the dialogue
- *              between Bilko and the user. No interactive cards here.
+ * This is the bilko-main flow (registered in flow-inspector/registry).
+ * The flow drives the entire landing experience:
  *
- * Right panel:  Agent DELIVERY SURFACE — where Bilko delivers
- *               interactive content (mode selection, experiences,
- *               quizzes, flows). The agent controls both panels but
- *               all deliveries to the user happen in the main area.
+ * Left panel:  FlowChat — messages only (NO options, NO interactive cards).
+ *              Populated by flow steps pushing (speaker, text) or user voice/typing.
+ *              TTS triggers only for bilko/agent messages.
+ *
+ * Right panel:  Agent DELIVERY SURFACE — mode selection grid, sub-flow experiences.
+ *               All interactive content lives here, not in the chat.
+ *
+ * Flow steps:
+ * 1. greeting (llm) → push Bilko's greeting to chat with TTS
+ * 2. mode-selection (user-input) → options shown in right panel, user choice pushed to chat
+ * 3. agent-handoff (transform) → handoff messages pushed to chat
+ * 4. run-subflow (display) → sub-flow renders in right panel
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { GlobalHeader } from "@/components/global-header";
-import {
-  ConversationCanvas,
-  type ConversationTurn,
-  type OptionChoice,
-} from "@/components/conversation-canvas";
+import { FlowChat } from "@/components/flow-chat";
 import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
 import {
   AiConsultationFlow,
@@ -27,10 +31,9 @@ import {
 import { LinkedInStrategistFlow } from "@/components/linkedin-strategist-flow";
 import { WorkWithMeFlow } from "@/components/work-with-me-flow";
 import { bilkoSays } from "@/lib/bilko-persona";
-import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
-import { chat } from "@/lib/flow-engine";
+import { chat, useFlowExecution, FlowChatProvider, useFlowChat } from "@/lib/flow-engine";
 import { Button } from "@/components/ui/button";
 import {
   Play,
@@ -46,14 +49,9 @@ import {
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
-import {
-  ConversationProvider,
-  useConversation,
-} from "@/contexts/conversation-context";
 import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
 import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
-import { VoiceStatusBar } from "@/components/voice-status-bar";
 import { useVoice } from "@/contexts/voice-context";
 import { useSidebarSafe } from "@/components/ui/sidebar";
 
@@ -117,12 +115,6 @@ const GREETING_FALLBACK =
   "Welcome to the AI School. I'm Bilko — your AI training partner. What would you like to work on today?";
 
 // ── Bilko's patience ────────────────────────────────────
-// Bilko doesn't jump in after every utterance. He gives the user
-// space to find the right words — like a good coach.
-//
-// - First few unmatched utterances: just log them, keep listening
-// - After PATIENCE_THRESHOLD misses: Bilko offers gentle guidance
-// - If a mode matches at any point: act immediately, reset patience
 const PATIENCE_THRESHOLD = 3;
 
 const GUIDANCE_MESSAGES = [
@@ -155,78 +147,75 @@ function ExperienceBack({ onBack }: { onBack: () => void }) {
   );
 }
 
-// ── Main component ───────────────────────────────────────
+// ── Main component (flow-driven) ─────────────────────────
 
 export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean }) {
-  const {
-    messages,
-    selectedMode,
-    isRestored,
-    addMessage,
-    selectMode,
-    clearMode,
-    reset: resetConversation,
-  } = useConversation();
+  const { pushMessage, clearMessages } = useFlowChat();
+  const { trackStep, resolveUserInput } = useFlowExecution("bilko-main");
   const [, navigate] = useLocation();
   const { startListening, isListening } = useVoice();
   const sidebarCtx = useSidebarSafe();
 
+  const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
   const [greetingLoading, setGreetingLoading] = useState(false);
 
-  // Generate Bilko's opening via LLM on first visit
+  // ── Flow Step 1: Greeting — Bilko speaks first (C1) ──
   const didInit = useRef(false);
   useEffect(() => {
-    if (didInit.current || messages.length > 0) return;
+    if (didInit.current) return;
     didInit.current = true;
 
     if (skipWelcome) {
-      // Authenticated users — shorter opening
-      addMessage({
-        role: "bilko",
-        text: "What do you want to train today?",
-        speech: "What do you want to train today?",
-        meta: { type: "greeting" },
+      // Authenticated users — shorter opening, tracked as flow step
+      trackStep("greeting", { skipWelcome: true }, async () => {
+        const text = "What do you want to train today?";
+        pushMessage({
+          speaker: "bilko",
+          text,
+          speech: text,
+        });
+        return { greeting: text };
       });
       return;
     }
 
-    // LLM-generated greeting — Bilko opens the conversation dynamically
+    // LLM-generated greeting — tracked as the greeting flow step
     setGreetingLoading(true);
-    chat(
-      [
-        { role: "system", content: GREETING_SYSTEM_PROMPT },
-        { role: "user", content: "A new visitor just arrived at the AI School." },
-      ],
-      { temperature: 0.9 },
-    )
-      .then((result) => {
+    trackStep("greeting", { visitor: "new" }, async () => {
+      try {
+        const result = await chat(
+          [
+            { role: "system", content: GREETING_SYSTEM_PROMPT },
+            { role: "user", content: "A new visitor just arrived at the AI School." },
+          ],
+          { temperature: 0.9 },
+        );
         const text = result.data.trim();
-        addMessage({
-          role: "bilko",
+        pushMessage({
+          speaker: "bilko",
           text,
           speech: text,
-          meta: { type: "greeting" },
         });
-      })
-      .catch(() => {
-        // Fallback if LLM is unavailable
-        addMessage({
-          role: "bilko",
+        return { greeting: text };
+      } catch {
+        pushMessage({
+          speaker: "bilko",
           text: GREETING_FALLBACK,
           speech: GREETING_FALLBACK,
-          meta: { type: "greeting" },
         });
-      })
-      .finally(() => setGreetingLoading(false));
+        return { greeting: GREETING_FALLBACK };
+      }
+    }).finally(() => setGreetingLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Track completed activity summaries for Bilko's context-aware returns
   const activityLogRef = useRef<Array<{ modeId: string; modeLabel: string; summary: string }>>([]);
 
+  // ── Flow Step 2: Mode Selection — user picks from right panel ──
   const handleChoice = useCallback(
     (choiceId: string) => {
-      // "Explore the Site" — open sidebar (auth) or redirect to login (unauth)
+      // "Explore the Site" — open sidebar or redirect
       if (choiceId === "explore") {
         if (sidebarCtx) {
           sidebarCtx.setOpen(true);
@@ -240,220 +229,113 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       const modeLabel = LEARNING_MODES.find((m) => m.id === mode)?.label;
       const agent = getFlowAgent(mode);
 
-      // Auto-start mic on first interaction (user gesture present)
+      // Auto-start mic on first interaction
       if (!isListening) {
         startListening();
       }
 
-      // Record user's choice
-      addMessage({
-        role: "user",
+      // Track as user-input flow step
+      resolveUserInput("mode-selection", { selectedMode: mode, modeLabel });
+
+      // Push user's choice to chat (speaker: user)
+      pushMessage({
+        speaker: "user",
         text: modeLabel ?? choiceId,
-        meta: { type: "choice", modeId: mode, modeLabel },
       });
 
-      // Bilko hands off to the specialist agent
+      // ── Flow Step 3: Agent Handoff ──
+      // Bilko acknowledges the choice
       const handoff = bilkoSays({ event: "choice-made", topic: modeLabel });
-      addMessage({
-        role: "bilko",
+      pushMessage({
+        speaker: "bilko",
         text: agent
           ? `${handoff.text} I'm handing you over to ${agent.name}.`
           : handoff.text,
         speech: agent
           ? `${handoff.speech} I'm handing you over to ${agent.name}.`
           : handoff.speech,
-        meta: { type: "agent-handoff", modeId: mode },
       });
 
-      // System handoff message (centered divider with arrow)
+      // System handoff message
       if (agent) {
-        addMessage({
-          role: "system",
+        pushMessage({
+          speaker: "system",
           text: `Bilko \u2192 ${agent.name}`,
           handoff: {
             fromName: "Bilko",
             toName: agent.name,
             toChatName: agent.chatName,
           },
-          meta: { type: "system-handoff", modeId: mode },
         });
       }
 
-      // The specialist agent greets the user
+      // Specialist agent greets the user
       if (agent) {
-        addMessage({
-          role: "agent",
+        pushMessage({
+          speaker: "agent",
           text: agent.greeting,
           speech: agent.greetingSpeech,
           agentName: agent.chatName,
           agentDisplayName: agent.name,
           agentAccent: agent.accentColor,
-          meta: { type: "agent-greeting", modeId: mode },
         });
       }
 
-      selectMode(mode);
+      // Track handoff as transform step
+      resolveUserInput("agent-handoff", { agent, modeLabel });
+
+      // Activate the sub-flow
+      setSelectedMode(mode);
     },
-    [addMessage, selectMode, isListening, startListening, sidebarCtx],
+    [pushMessage, resolveUserInput, isListening, startListening, sidebarCtx],
   );
 
   const handleBack = useCallback(() => {
-    addMessage({
-      role: "user",
+    // Push user's back request to chat
+    pushMessage({
+      speaker: "user",
       text: "Show me what else you've got",
-      meta: { type: "back" },
     });
 
     // System return message
-    addMessage({
-      role: "system",
+    pushMessage({
+      speaker: "system",
       text: "Returning to Bilko",
-      meta: { type: "system-return" },
     });
 
     // Bilko returns — context-aware based on past activities
     const activities = activityLogRef.current;
     const lastActivity = activities[activities.length - 1];
     let returnText: string;
-    let returnSpeech: string;
 
     if (lastActivity) {
       returnText = `Good session with ${lastActivity.modeLabel}. I'm back. What do you want to try next?`;
-      returnSpeech = `Good session with ${lastActivity.modeLabel}. I'm back. What do you want to try next?`;
     } else {
       returnText = "I'm back. What else are you interested in?";
-      returnSpeech = "I'm back. What else are you interested in?";
     }
 
-    addMessage({
-      role: "bilko",
+    pushMessage({
+      speaker: "bilko",
       text: returnText,
-      speech: returnSpeech,
-      meta: { type: "bilko-return" },
+      speech: returnText,
     });
 
-    clearMode();
-  }, [addMessage, clearMode]);
-
-  // ── Build inline choice options for conversation canvas ──
-  const inlineChoiceOptions = useMemo<OptionChoice[]>(() => [
-    ...MODE_OPTIONS.map((opt) => {
-      const mode = LEARNING_MODES.find((m) => m.id === opt.id);
-      return {
-        id: opt.id,
-        label: opt.label,
-        description: opt.description,
-        icon: opt.icon,
-        voiceTriggers: mode?.voiceTriggers ? [...mode.voiceTriggers] : [],
-        badge: constructionBadge,
-      };
-    }),
-    {
-      id: EXPLORE_OPTION.id,
-      label: EXPLORE_OPTION.label,
-      description: EXPLORE_OPTION.description,
-      icon: EXPLORE_OPTION.icon,
-      voiceTriggers: ["explore", "browse", "navigate", "site", "menu"],
-    },
-  ],
-    [],
-  );
-
-  // ── Derive conversation turns from actual messages (single source of truth) ──
-  const conversationTurns = useMemo<ConversationTurn[]>(() => {
-    // While LLM is generating the greeting, show typing indicator
-    if (greetingLoading || messages.length === 0) {
-      return [
-        {
-          type: "content" as const,
-          render: () => (
-            <div className="flex items-center gap-1.5 py-4">
-              <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse" />
-              <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse [animation-delay:200ms]" />
-              <span className="w-2 h-2 rounded-full bg-primary/50 animate-pulse [animation-delay:400ms]" />
-            </div>
-          ),
-        },
-      ];
-    }
-
-    const turns: ConversationTurn[] = messages.map((msg, i) => {
-      // Bilko messages → typewriter turns
-      if (msg.role === "bilko") {
-        return {
-          type: "bilko" as const,
-          text: msg.text,
-          speech: msg.speech,
-          delay: i === 0 ? ENTRANCE_DELAY_MS : 200,
-        };
-      }
-
-      // Agent messages → attributed agent turns
-      if (msg.role === "agent") {
-        return {
-          type: "agent" as const,
-          text: msg.text,
-          speech: msg.speech,
-          agentName: msg.agentName ?? "Agent",
-          agentDisplayName: msg.agentDisplayName ?? "Specialist",
-          accentColor: msg.agentAccent,
-          delay: 200,
-        };
-      }
-
-      // System messages → centered divider-style
-      if (msg.role === "system") {
-        return {
-          type: "system" as const,
-          text: msg.text,
-          handoff: msg.handoff,
-        };
-      }
-
-      // All user messages → right-aligned bubble
-      return {
-        type: "user" as const,
-        text: msg.text,
-      };
-    });
-
-    // After Bilko's greeting/question, show inline choice cards if no mode selected
-    if (!selectedMode) {
-      const lastMsg = messages[messages.length - 1];
-      if (
-        lastMsg?.role === "bilko" &&
-        (lastMsg.meta?.type === "greeting" ||
-          lastMsg.meta?.type === "question" ||
-          lastMsg.meta?.type === "guidance" ||
-          lastMsg.meta?.type === "bilko-return")
-      ) {
-        turns.push({
-          type: "user-choice" as const,
-          options: inlineChoiceOptions,
-        });
-      }
-    }
-
-    return turns;
-  }, [messages, greetingLoading, selectedMode, inlineChoiceOptions]);
+    setSelectedMode(null);
+  }, [pushMessage]);
 
   // ── Conversation design: voice turn-taking ──
   const { onUserUtterance, screenOptions } = useConversationDesign();
 
-  // ── Bilko's patience: voice → option matching with breathing room ──
-  // The user gets a few tries before Bilko jumps in. If a mode is matched
-  // at any point, act immediately. Otherwise accumulate misses and only
-  // offer guidance after PATIENCE_THRESHOLD.
+  // ── Bilko's patience: voice → option matching ──
   const unmatchedCountRef = useRef(0);
   const guidanceRoundRef = useRef(0);
 
   useEffect(() => {
     const unsub = onUserUtterance((text: string) => {
-      // Always log what the user said
-      addMessage({ role: "user", text, meta: { type: "voice" } });
+      // Push what the user said to the chat
+      pushMessage({ speaker: "user", text });
 
-      // 1. Try to match against dynamic screen options (whatever's visible on screen)
-      //    This catches topic cards, video cards, mode cards — anything registered
+      // 1. Try to match against dynamic screen options
       const screenMatch = matchScreenOption(text, screenOptions);
       if (screenMatch) {
         unmatchedCountRef.current = 0;
@@ -461,10 +343,10 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         return;
       }
 
-      // If a mode is already selected, the subflow owns the screen — just log
+      // If a mode is already selected, the subflow owns the screen
       if (selectedMode) return;
 
-      // 2. Fall back to static learning mode matching (for when nothing is registered)
+      // 2. Fall back to static learning mode matching
       const lower = text.toLowerCase();
       const matched = LEARNING_MODES.find((m) => {
         const label = m.label.toLowerCase();
@@ -479,102 +361,80 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       });
 
       if (matched) {
-        // Match found — act immediately, reset patience
         unmatchedCountRef.current = 0;
         handleChoice(matched.id);
         return;
       }
 
-      // No match — increment patience counter
+      // No match — patience counter
       unmatchedCountRef.current += 1;
 
       if (unmatchedCountRef.current >= PATIENCE_THRESHOLD) {
-        // Patience expired — Bilko offers guidance (rotating messages)
         const msg = GUIDANCE_MESSAGES[guidanceRoundRef.current % GUIDANCE_MESSAGES.length];
-        addMessage({
-          role: "bilko",
+        pushMessage({
+          speaker: "bilko",
           text: msg.text,
           speech: msg.speech,
-          meta: { type: "guidance" },
         });
         unmatchedCountRef.current = 0;
         guidanceRoundRef.current += 1;
       }
-      // Otherwise: just keep listening, user is still finding their words
     });
     return unsub;
-  }, [onUserUtterance, selectedMode, handleChoice, addMessage, screenOptions]);
+  }, [onUserUtterance, selectedMode, handleChoice, pushMessage, screenOptions]);
 
   // Subscribe to FlowBus messages addressed to "main" conversation
   const { subscribe } = useFlowBus();
   useEffect(() => {
     const unsub = subscribe("main", (msg) => {
       if (msg.type === "summary" && typeof msg.payload.summary === "string") {
-        // Find the agent that produced this summary
         const fromAgent = getFlowAgent(msg.from);
         const modeLabel = LEARNING_MODES.find((m) => m.id === msg.from)?.label ?? msg.from;
 
-        // Log to activity history for Bilko's future context
         activityLogRef.current.push({
           modeId: msg.from,
           modeLabel,
           summary: msg.payload.summary,
         });
 
-        // Agent delivers the summary (attributed to the specialist, not Bilko)
         if (fromAgent) {
-          addMessage({
-            role: "agent",
+          pushMessage({
+            speaker: "agent",
             text: msg.payload.summary,
             speech: msg.payload.summary,
             agentName: fromAgent.chatName,
             agentDisplayName: fromAgent.name,
             agentAccent: fromAgent.accentColor,
-            meta: { type: "subflow-summary", fromFlow: msg.from },
           });
         } else {
-          addMessage({
-            role: "bilko",
+          pushMessage({
+            speaker: "bilko",
             text: msg.payload.summary,
             speech: msg.payload.summary,
-            meta: { type: "subflow-summary", fromFlow: msg.from },
           });
         }
       }
     });
     return unsub;
-  }, [subscribe, addMessage]);
+  }, [subscribe, pushMessage]);
 
-  // Reset: clear conversation state and navigate to the root
-  // (which renders landing for unauth, home for auth)
+  // Reset
   const handleReset = useCallback(() => {
-    resetConversation();
+    clearMessages();
     navigate("/", { replace: true });
-    // Force a full remount by reloading — ensures greeting re-fires
     window.location.reload();
-  }, [resetConversation, navigate]);
-
-  // On restored session, skip animations for all existing turns
-  const initialSettledCount = isRestored ? conversationTurns.length : 0;
+  }, [clearMessages, navigate]);
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      {/* Left panel: Conversation log + flow indicator pinned to bottom */}
+      {/* Left panel: Flow Chat — messages only, no options */}
       <div className="w-full lg:w-[420px] xl:w-[480px] shrink-0 lg:border-r border-border flex flex-col bg-background">
-        <div className="flex-1 overflow-auto">
-          <ConversationCanvas
-            turns={conversationTurns}
-            onChoice={handleChoice}
-            initialSettledCount={initialSettledCount}
-          />
-        </div>
-        {/* Voice status bar — shows mic state and live transcript */}
-        <VoiceStatusBar />
+        <FlowChat />
         {/* Flow status pinned to bottom of chat panel */}
         <FlowStatusIndicator onReset={handleReset} />
       </div>
 
-      {/* Right panel: Agent delivery surface — interactive content goes here */}
+      {/* Right panel: Agent delivery surface — interactive content */}
       <div className="hidden lg:flex flex-1 overflow-auto">
         {selectedMode ? (
           <div className="flex-1 max-w-4xl mx-auto px-6 py-6 w-full">
@@ -589,10 +449,9 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   );
 }
 
-// ── Mode selection grid (main area delivery) ─────────────
+// ── Mode selection grid (right panel) ─────────────────────
 
 function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
-  // Register mode cards + explore as screen options for voice matching
   const allScreenOptions = useMemo<ScreenOption[]>(() => [
     ...MODE_OPTIONS.map((opt) => ({
       id: opt.id,
@@ -641,7 +500,7 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
               </div>
             </button>
           ))}
-          {/* Explore the Site — distinct tile */}
+          {/* Explore the Site */}
           <button
             onClick={() => onSelect(EXPLORE_OPTION.id)}
             className="group text-left rounded-xl border-2 border-dashed border-primary/40 p-7 transition-all duration-300
@@ -669,8 +528,6 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
 }
 
 // ── Right panel: subflow experience rendering ────────────
-// Each mode is a subflow of the main conversation. The left panel
-// continues logging independently while the subflow runs here.
 
 function RightPanelContent({ mode }: { mode: LearningModeId }) {
   return (
@@ -689,14 +546,14 @@ function RightPanelContent({ mode }: { mode: LearningModeId }) {
 export default function Landing() {
   return (
     <FlowBusProvider>
-      <ConversationProvider>
+      <FlowChatProvider voiceDefaultOn>
         <div className="h-screen flex flex-col bg-background overflow-hidden">
           <GlobalHeader variant="landing" />
           <main className="flex-1 flex overflow-hidden pt-14">
             <LandingContent />
           </main>
         </div>
-      </ConversationProvider>
+      </FlowChatProvider>
     </FlowBusProvider>
   );
 }
