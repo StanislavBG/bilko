@@ -13,8 +13,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
 import Landing, { LandingContent } from "@/pages/landing";
-import { ConversationProvider } from "@/contexts/conversation-context";
 import { FlowBusProvider } from "@/contexts/flow-bus-context";
+import { FlowChatProvider } from "@/lib/flow-engine";
 import Projects from "@/pages/projects";
 import AgenticWorkflows from "@/pages/agentic-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
@@ -64,9 +64,9 @@ function AuthenticatedApp() {
                         <Switch>
                           <Route path="/">
                             <FlowBusProvider>
-                              <ConversationProvider>
+                              <FlowChatProvider voiceDefaultOn>
                                 <LandingContent skipWelcome />
-                              </ConversationProvider>
+                              </FlowChatProvider>
                             </FlowBusProvider>
                           </Route>
                           <Route path="/academy" component={Academy} />
