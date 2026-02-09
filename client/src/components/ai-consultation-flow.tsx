@@ -41,7 +41,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { chatJSON, jsonPrompt, useFlowExecution } from "@/lib/flow-engine";
+import { chatJSON, jsonPrompt, useFlowExecution, useFlowDefinition } from "@/lib/flow-engine";
 import { useVoice } from "@/contexts/voice-context";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
@@ -652,6 +652,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { trackStep, resolveUserInput } = useFlowExecution(c.flowId);
+  const { definition: flowDef } = useFlowDefinition(c.flowId);
   const { isListening, isSupported, transcript, speak, onUtteranceEnd } = useVoice();
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(c.flowId, c.title);
 

@@ -34,7 +34,13 @@ const allFlows: FlowDefinition[] = [
         type: "user-input",
         description:
           "User describes their goal in natural language (e.g. 'Register a business in Washington State'). Free-text input with example suggestions.",
-        inputSchema: [],
+        inputSchema: [
+          {
+            name: "exampleSuggestions",
+            type: "array",
+            description: "Pre-defined example objectives shown as clickable suggestions",
+          },
+        ],
         outputSchema: [
           {
             name: "objective",
@@ -661,7 +667,13 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         name: "LinkedIn URL & Profile Input",
         type: "user-input",
         description: "User provides their LinkedIn profile URL (validated format) and pastes their Experience section text. URL is required — without real LinkedIn data the flow cannot produce grounded results.",
-        inputSchema: [],
+        inputSchema: [
+          {
+            name: "urlFormat",
+            type: "string",
+            description: "Expected URL format: linkedin.com/in/<username> — validated before submission",
+          },
+        ],
         outputSchema: [
           { name: "linkedinUrl", type: "string", description: "Validated linkedin.com/in/ URL" },
           { name: "profileText", type: "string", description: "Pasted Experience section text" },
