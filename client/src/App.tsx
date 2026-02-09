@@ -44,8 +44,8 @@ function AuthenticatedApp() {
   }
 
   // Landing page IS the Home App — same layout for both auth and unauth.
-  // Unauth: sidebar starts closed, full greeting.
-  // Auth: sidebar starts open, skipWelcome greeting.
+  // Both: sidebar starts closed, user clicks "Explore site" to open it.
+  // Unauth: full greeting. Auth: skipWelcome greeting.
   return (
     <Switch>
       <Route>
@@ -78,7 +78,7 @@ function AuthenticatedApp() {
 
           return (
             <ViewModeProvider>
-              <SidebarProvider>
+              <SidebarProvider defaultOpen={false}>
                 <NavigationProvider>
                   <div className="flex flex-col h-screen w-full">
                     <GlobalHeader />
