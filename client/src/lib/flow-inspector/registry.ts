@@ -104,9 +104,14 @@ const allFlows: FlowDefinition[] = [
         ],
         outputSchema: [
           {
-            name: "selectedFlowId",
+            name: "selectedMode",
             type: "string",
-            description: "The flow ID or special tile ID the user selected",
+            description: "Short mode ID the user selected (e.g. 'video', 'chat')",
+          },
+          {
+            name: "modeLabel",
+            type: "string",
+            description: "Human-readable label of the selected flow (e.g. 'Video Recommendation')",
           },
         ],
         dependsOn: ["greeting-chat"],
@@ -377,7 +382,13 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
             description: "The chosen video with embedId, title, creator, etc.",
           },
         ],
-        outputSchema: [],
+        outputSchema: [
+          {
+            name: "exitSummary",
+            type: "string",
+            description: "Summary of what the user watched, passed back to bilko-main via onComplete(summary)",
+          },
+        ],
         dependsOn: ["select-video"],
       },
     ],

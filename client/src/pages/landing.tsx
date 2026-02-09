@@ -241,7 +241,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       const fallback = isReturn ? GREETING_RETURN_FALLBACK : GREETING_FALLBACK;
 
       try {
-        await trackStep(
+        // Step 1: greeting (LLM) — generate the text
+        const { data: greetingResult } = await trackStep(
           stepId,
           { context: context ?? { visitor: "new" }, isReturn },
           async () => {
@@ -259,14 +260,22 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
               text = fallback;
             }
 
-            // CHAT step: greeting-chat — push to the FlowChat panel
+            return { greeting: text };
+          },
+        );
+
+        // Step 2: greeting-chat (chat) — publish to FlowChat panel
+        const greetingText = greetingResult.data.greeting;
+        await trackStep(
+          isReturn ? `greeting-chat-return-${Date.now()}` : "greeting-chat",
+          { greeting: greetingText },
+          async () => {
             pushMessage(OWNER_ID, {
               speaker: "bilko",
-              text,
-              speech: text,
+              text: greetingText,
+              speech: greetingText,
             });
-
-            return { greeting: text };
+            return {};
           },
         );
       } finally {
@@ -284,15 +293,19 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 
     if (skipWelcome) {
       // Authenticated users — shorter opening
+      const greetingText = "What do you want to train today?";
       trackStep("greeting", { skipWelcome: true }, async () => {
-        const text = "What do you want to train today?";
-        // CHAT step: push greeting to chat
-        pushMessage(OWNER_ID, {
-          speaker: "bilko",
-          text,
-          speech: text,
+        return { greeting: greetingText };
+      }).then(() => {
+        // greeting-chat: publish to FlowChat
+        trackStep("greeting-chat", { greeting: greetingText }, async () => {
+          pushMessage(OWNER_ID, {
+            speaker: "bilko",
+            text: greetingText,
+            speech: greetingText,
+          });
+          return {};
         });
-        return { greeting: text };
       });
       return;
     }
@@ -355,10 +368,18 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       const subflowOwnerId = MODE_TO_OWNER[mode] ?? mode;
       claimChat(subflowOwnerId);
 
-      // Activate the sub-flow (renders in right panel)
-      setSelectedMode(mode);
+      // Track run-subflow step start (display step — stays running until onComplete)
+      trackStep(
+        `run-subflow-${Date.now()}`,
+        { selectedMode: mode },
+        async () => {
+          // Activate the sub-flow (renders in right panel)
+          setSelectedMode(mode);
+          return { status: "running", subflowOwner: subflowOwnerId };
+        },
+      );
     },
-    [pushMessage, resolveUserInput, isListening, startListening, sidebarCtx, claimChat],
+    [pushMessage, resolveUserInput, isListening, startListening, sidebarCtx, claimChat, trackStep],
   );
 
   // ── Sub-flow exit — summarize-and-recycle step ──
