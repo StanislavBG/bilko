@@ -216,6 +216,10 @@ function validateStepTypeContract(
     case "display":
       // display steps: inputSchema is SHOULD (not MUST), no hard failure
       break;
+
+    case "chat":
+      // chat steps: push a message to the chat panel. No hard schema requirements.
+      break;
   }
 }
 
