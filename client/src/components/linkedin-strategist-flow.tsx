@@ -38,11 +38,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { chatJSON, jsonPrompt, useFlowExecution, useFlowDefinition } from "@/lib/flow-engine";
+import { chatJSON, jsonPrompt, useFlowExecution, useFlowDefinition, useFlowChat } from "@/lib/flow-engine";
 import { useVoice } from "@/contexts/voice-context";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { VoiceStatusBar } from "@/components/voice-status-bar";
+import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
 // ── Types ────────────────────────────────────────────────
 
@@ -230,6 +231,29 @@ export function LinkedInStrategistFlow() {
     "linkedin-strategist",
     "LinkedIn Strategist",
   );
+  const { pushMessage } = useFlowChat();
+
+  const agent = getFlowAgent("linkedin");
+  const pushAgentMessage = useCallback((text: string, speech?: string) => {
+    pushMessage("linkedin-strategist", {
+      speaker: "agent",
+      text,
+      speech: speech ?? text,
+      agentName: agent?.chatName,
+      agentDisplayName: agent?.name,
+      agentAccent: agent?.accentColor,
+    });
+  }, [pushMessage, agent]);
+
+  // Push greeting on mount
+  const didGreet = useRef(false);
+  useEffect(() => {
+    if (didGreet.current) return;
+    didGreet.current = true;
+    if (agent) {
+      pushAgentMessage(agent.greeting, agent.greetingSpeech);
+    }
+  }, [agent, pushAgentMessage]);
 
   // Sync phase to flow bus
   useEffect(() => {
@@ -588,14 +612,14 @@ export function LinkedInStrategistFlow() {
     setUpdatedRoles(results);
     setPhase("results");
     setIsThinking(false);
-    busSend("main", "summary", {
-      summary: `I've crafted updated LinkedIn descriptions for ${results.length} of your roles. Each one is grounded in the real details you shared.`,
-    });
+    const summaryText = `I've crafted updated LinkedIn descriptions for ${results.length} of your roles. Each one is grounded in the real details you shared.`;
+    pushAgentMessage(summaryText);
+    busSend("main", "summary", { summary: summaryText });
     await speak(
       `Done. I've written updated descriptions for ${results.length} roles. Each one pulls from the specific details you shared in the interview. Take a look and copy what you like.`,
       "Charon",
     );
-  }, [selectedRoles, interviewQAs, linkedinUrl, trackStep, busSend, speak]);
+  }, [selectedRoles, interviewQAs, linkedinUrl, trackStep, busSend, speak, pushAgentMessage]);
 
   // ── Copy to clipboard ──────────────────────────────────
 

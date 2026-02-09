@@ -11,11 +11,17 @@
  * Right panel:  Agent DELIVERY SURFACE — mode selection grid, sub-flow experiences.
  *               All interactive content lives here, not in the chat.
  *
+ * Chat ownership:
+ * - "bilko-main" owns the chat during greeting and mode selection
+ * - On handoff, ownership transfers to the subflow (e.g. "video-discovery")
+ * - Subflows push their own messages to the chat directly
+ * - On back, ownership returns to "bilko-main"
+ *
  * Flow steps:
  * 1. greeting (llm) → push Bilko's greeting to chat with TTS
  * 2. mode-selection (user-input) → options shown in right panel, user choice pushed to chat
- * 3. agent-handoff (transform) → handoff messages pushed to chat
- * 4. run-subflow (display) → sub-flow renders in right panel
+ * 3. agent-handoff (transform) → handoff messages pushed to chat, ownership transferred
+ * 4. run-subflow (display) → sub-flow renders in right panel, owns the chat
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -55,6 +61,9 @@ import { useConversationDesign, matchScreenOption, useScreenOptions, type Screen
 import { useVoice } from "@/contexts/voice-context";
 import { useSidebarSafe } from "@/components/ui/sidebar";
 
+// ── Owner ID for this flow ────────────────────────────────
+const OWNER_ID = "bilko-main";
+
 // ── Mode definitions for the delivery surface ────────────
 
 interface ModeOption {
@@ -93,6 +102,18 @@ const constructionBadge = (
     In Dev
   </span>
 );
+
+// ── Subflow ID mapping ──────────────────────────────────
+
+/** Maps learning mode IDs to their chat owner IDs (used for claimChat) */
+const MODE_TO_OWNER: Record<string, string> = {
+  video: "video-discovery",
+  chat: "ai-consultation",
+  interviewer: "recursive-interviewer",
+  linkedin: "linkedin-strategist",
+  socratic: "socratic-architect",
+  "work-with-me": "work-with-me",
+};
 
 // ── LLM greeting prompt ──────────────────────────────────
 
@@ -150,7 +171,7 @@ function ExperienceBack({ onBack }: { onBack: () => void }) {
 // ── Main component (flow-driven) ─────────────────────────
 
 export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean }) {
-  const { pushMessage, clearMessages } = useFlowChat();
+  const { pushMessage, clearMessages, claimChat, releaseChat } = useFlowChat();
   const { trackStep, resolveUserInput } = useFlowExecution("bilko-main");
   const [, navigate] = useLocation();
   const { startListening, isListening } = useVoice();
@@ -169,7 +190,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       // Authenticated users — shorter opening, tracked as flow step
       trackStep("greeting", { skipWelcome: true }, async () => {
         const text = "What do you want to train today?";
-        pushMessage({
+        pushMessage(OWNER_ID, {
           speaker: "bilko",
           text,
           speech: text,
@@ -191,14 +212,14 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
           { temperature: 0.9 },
         );
         const text = result.data.trim();
-        pushMessage({
+        pushMessage(OWNER_ID, {
           speaker: "bilko",
           text,
           speech: text,
         });
         return { greeting: text };
       } catch {
-        pushMessage({
+        pushMessage(OWNER_ID, {
           speaker: "bilko",
           text: GREETING_FALLBACK,
           speech: GREETING_FALLBACK,
@@ -237,8 +258,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       // Track as user-input flow step
       resolveUserInput("mode-selection", { selectedMode: mode, modeLabel });
 
-      // Push user's choice to chat (speaker: user)
-      pushMessage({
+      // Push user's choice to chat (speaker: user — always accepted)
+      pushMessage(OWNER_ID, {
         speaker: "user",
         text: modeLabel ?? choiceId,
       });
@@ -246,7 +267,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       // ── Flow Step 3: Agent Handoff ──
       // Bilko acknowledges the choice
       const handoff = bilkoSays({ event: "choice-made", topic: modeLabel });
-      pushMessage({
+      pushMessage(OWNER_ID, {
         speaker: "bilko",
         text: agent
           ? `${handoff.text} I'm handing you over to ${agent.name}.`
@@ -256,9 +277,9 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
           : handoff.speech,
       });
 
-      // System handoff message
+      // System handoff message (always accepted)
       if (agent) {
-        pushMessage({
+        pushMessage(OWNER_ID, {
           speaker: "system",
           text: `Bilko \u2192 ${agent.name}`,
           handoff: {
@@ -269,36 +290,32 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         });
       }
 
-      // Specialist agent greets the user
-      if (agent) {
-        pushMessage({
-          speaker: "agent",
-          text: agent.greeting,
-          speech: agent.greetingSpeech,
-          agentName: agent.chatName,
-          agentDisplayName: agent.name,
-          agentAccent: agent.accentColor,
-        });
-      }
-
       // Track handoff as transform step
       resolveUserInput("agent-handoff", { agent, modeLabel });
 
-      // Activate the sub-flow
+      // Transfer chat ownership to the subflow BEFORE it mounts.
+      // The subflow will push its own greeting as the new owner.
+      const subflowOwnerId = MODE_TO_OWNER[mode] ?? mode;
+      claimChat(subflowOwnerId);
+
+      // Activate the sub-flow (renders in right panel)
       setSelectedMode(mode);
     },
-    [pushMessage, resolveUserInput, isListening, startListening, sidebarCtx],
+    [pushMessage, resolveUserInput, isListening, startListening, sidebarCtx, claimChat],
   );
 
   const handleBack = useCallback(() => {
+    // Return ownership to bilko-main FIRST
+    releaseChat();
+
     // Push user's back request to chat
-    pushMessage({
+    pushMessage(OWNER_ID, {
       speaker: "user",
       text: "Show me what else you've got",
     });
 
     // System return message
-    pushMessage({
+    pushMessage(OWNER_ID, {
       speaker: "system",
       text: "Returning to Bilko",
     });
@@ -314,14 +331,14 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       returnText = "I'm back. What else are you interested in?";
     }
 
-    pushMessage({
+    pushMessage(OWNER_ID, {
       speaker: "bilko",
       text: returnText,
       speech: returnText,
     });
 
     setSelectedMode(null);
-  }, [pushMessage]);
+  }, [pushMessage, releaseChat]);
 
   // ── Conversation design: voice turn-taking ──
   const { onUserUtterance, screenOptions } = useConversationDesign();
@@ -332,8 +349,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 
   useEffect(() => {
     const unsub = onUserUtterance((text: string) => {
-      // Push what the user said to the chat
-      pushMessage({ speaker: "user", text });
+      // Push what the user said to the chat (user messages always accepted)
+      pushMessage(OWNER_ID, { speaker: "user", text });
 
       // 1. Try to match against dynamic screen options
       const screenMatch = matchScreenOption(text, screenOptions);
@@ -366,12 +383,12 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         return;
       }
 
-      // No match — patience counter
+      // No match — patience counter (only when bilko-main owns the chat)
       unmatchedCountRef.current += 1;
 
       if (unmatchedCountRef.current >= PATIENCE_THRESHOLD) {
         const msg = GUIDANCE_MESSAGES[guidanceRoundRef.current % GUIDANCE_MESSAGES.length];
-        pushMessage({
+        pushMessage(OWNER_ID, {
           speaker: "bilko",
           text: msg.text,
           speech: msg.speech,
@@ -383,12 +400,12 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     return unsub;
   }, [onUserUtterance, selectedMode, handleChoice, pushMessage, screenOptions]);
 
-  // Subscribe to FlowBus messages addressed to "main" conversation
+  // Subscribe to FlowBus messages addressed to "main" — for ACTIVITY LOGGING only.
+  // Subflows push their own chat messages directly. The bus is for metadata.
   const { subscribe } = useFlowBus();
   useEffect(() => {
     const unsub = subscribe("main", (msg) => {
       if (msg.type === "summary" && typeof msg.payload.summary === "string") {
-        const fromAgent = getFlowAgent(msg.from);
         const modeLabel = LEARNING_MODES.find((m) => m.id === msg.from)?.label ?? msg.from;
 
         activityLogRef.current.push({
@@ -396,34 +413,18 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
           modeLabel,
           summary: msg.payload.summary,
         });
-
-        if (fromAgent) {
-          pushMessage({
-            speaker: "agent",
-            text: msg.payload.summary,
-            speech: msg.payload.summary,
-            agentName: fromAgent.chatName,
-            agentDisplayName: fromAgent.name,
-            agentAccent: fromAgent.accentColor,
-          });
-        } else {
-          pushMessage({
-            speaker: "bilko",
-            text: msg.payload.summary,
-            speech: msg.payload.summary,
-          });
-        }
       }
     });
     return unsub;
-  }, [subscribe, pushMessage]);
+  }, [subscribe]);
 
   // Reset
   const handleReset = useCallback(() => {
+    releaseChat();
     clearMessages();
     navigate("/", { replace: true });
     window.location.reload();
-  }, [clearMessages, navigate]);
+  }, [clearMessages, navigate, releaseChat]);
 
   return (
     <div className="flex flex-1 overflow-hidden">
