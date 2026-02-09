@@ -141,7 +141,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   // ── TTS auto-unlock ──
   // Audio playback requires a user gesture (autoplay policy).
-  // First user interaction marks TTS as unlocked.
+  // First user interaction marks TTS as unlocked and warms up
+  // the AudioContext so subsequent audio.play() calls succeed
+  // even when invoked from async callbacks.
   useEffect(() => {
     if (ttsUnlockedRef.current) return;
 
@@ -154,6 +156,19 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     // Unlock on first user interaction
     const gestureUnlock = () => {
       if (ttsUnlockedRef.current) return;
+
+      // Warm up the AudioContext — this registers the page for autoplay
+      // in browsers that require a user gesture. Without this, audio.play()
+      // called from async callbacks (e.g. after TTS fetch) would be blocked.
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        ctx.resume().then(() => ctx.close()).catch(() => {});
+      } catch {
+        // AudioContext not available — fallback to silent audio
+        const silence = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=");
+        silence.play().catch(() => {});
+      }
+
       markUnlocked();
       // Flush the TTS queue (items accumulated before unlock)
       setTimeout(() => processQueueRef.current(), 100);

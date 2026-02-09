@@ -206,7 +206,7 @@ function ExperienceBack({ onBack }: { onBack: () => void }) {
 
 // ── Main component (flow-driven) ─────────────────────────
 
-export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean }) {
+export function LandingContent() {
   const { pushMessage, clearMessages, claimChat, releaseChat } = useFlowChat();
   const { trackStep, resolveUserInput } = useFlowExecution("bilko-main");
   const [, navigate] = useLocation();
@@ -242,20 +242,27 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 
       try {
         // Step 1: greeting (LLM) — generate the text
+        // Race the LLM call against a timeout so the greeting always appears
+        // even if the Gemini API is slow or unavailable.
         const { data: greetingResult } = await trackStep(
           stepId,
           { context: context ?? { visitor: "new" }, isReturn },
           async () => {
             let text: string;
             try {
-              const result = await chat(
-                [
-                  { role: "system", content: systemPrompt },
-                  { role: "user", content: userMessage },
-                ],
-                { temperature: 0.9 },
-              );
-              text = result.data.trim();
+              const result = await Promise.race([
+                chat(
+                  [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userMessage },
+                  ],
+                  { temperature: 0.9 },
+                ),
+                new Promise<never>((_, reject) =>
+                  setTimeout(() => reject(new Error("greeting timeout")), 5000),
+                ),
+              ]);
+              text = result.data.trim() || fallback;
             } catch {
               text = fallback;
             }
@@ -278,6 +285,13 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
             return {};
           },
         );
+      } catch {
+        // If the entire greeting flow fails, push the fallback directly
+        pushMessage(OWNER_ID, {
+          speaker: "bilko",
+          text: fallback,
+          speech: fallback,
+        });
       } finally {
         setGreetingLoading(false);
       }
@@ -290,25 +304,6 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   useEffect(() => {
     if (didInit.current) return;
     didInit.current = true;
-
-    if (skipWelcome) {
-      // Authenticated users — shorter opening
-      const greetingText = "What do you want to train today?";
-      trackStep("greeting", { skipWelcome: true }, async () => {
-        return { greeting: greetingText };
-      }).then(() => {
-        // greeting-chat: publish to FlowChat
-        trackStep("greeting-chat", { greeting: greetingText }, async () => {
-          pushMessage(OWNER_ID, {
-            speaker: "bilko",
-            text: greetingText,
-            speech: greetingText,
-          });
-          return {};
-        });
-      });
-      return;
-    }
 
     runGreeting();
     // eslint-disable-next-line react-hooks/exhaustive-deps

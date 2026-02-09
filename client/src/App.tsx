@@ -27,6 +27,17 @@ import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DebugProvider } from "@/contexts/debug-context";
 
+/** Landing content wrapped in flow providers — standalone, auth-agnostic */
+function MainFlow() {
+  return (
+    <FlowBusProvider>
+      <FlowChatProvider voiceDefaultOn>
+        <LandingContent />
+      </FlowChatProvider>
+    </FlowBusProvider>
+  );
+}
+
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
 
@@ -43,77 +54,42 @@ function AuthenticatedApp() {
     );
   }
 
-  // Landing page IS the Home App — same layout for both auth and unauth.
-  // Both: sidebar starts closed, user clicks "Explore site" to open it.
-  // Unauth: full greeting. Auth: skipWelcome greeting.
-  return (
-    <Switch>
-      <Route>
-        {() => {
-          if (!isAuthenticated || !user) {
-            // Unauth: Landing = Home App without nav initially.
-            // SidebarProvider(defaultOpen=false) so "Explore the Site" can open it.
-            return (
-              <ViewModeProvider>
-                <SidebarProvider defaultOpen={false}>
-                  <NavigationProvider>
-                    <div className="flex flex-col h-screen w-full">
-                      <GlobalHeader variant="landing" />
-                      <div className="flex flex-1 overflow-hidden pt-14">
-                        <AppSidebar />
-                        <main className="flex-1 flex overflow-hidden">
-                          <FlowBusProvider>
-                            <FlowChatProvider voiceDefaultOn>
-                              <LandingContent />
-                            </FlowChatProvider>
-                          </FlowBusProvider>
-                        </main>
-                      </div>
-                    </div>
-                  </NavigationProvider>
-                </SidebarProvider>
-              </ViewModeProvider>
-            );
-          }
+  const isAuth = isAuthenticated && !!user;
 
-          return (
-            <ViewModeProvider>
-              <SidebarProvider defaultOpen={false}>
-                <NavigationProvider>
-                  <div className="flex flex-col h-screen w-full">
-                    <GlobalHeader />
-                    <div className="flex flex-1 overflow-hidden">
-                      <AppSidebar />
-                      <main className="flex-1 flex overflow-hidden">
-                        <Switch>
-                          <Route path="/">
-                            <FlowBusProvider>
-                              <FlowChatProvider voiceDefaultOn>
-                                <LandingContent skipWelcome />
-                              </FlowChatProvider>
-                            </FlowBusProvider>
-                          </Route>
-                          <Route path="/academy" component={Academy} />
-                          <Route path="/academy/:levelId" component={Academy} />
-                          <Route path="/projects/:projectId?" component={Projects} />
-                          <Route path="/workflows" component={AgenticWorkflows} />
-                          <Route path="/memory" component={MemoryExplorer} />
-                          <Route path="/rules" component={RulesExplorer} />
-                          <Route path="/bilkos-way" component={BilkosWay} />
-                          <Route path="/flows/:flowId" component={FlowDetail} />
-                          <Route path="/flows" component={FlowExplorer} />
-                          <Route component={NotFound} />
-                        </Switch>
-                      </main>
-                    </div>
-                  </div>
-                </NavigationProvider>
-              </SidebarProvider>
-            </ViewModeProvider>
-          );
-        }}
-      </Route>
-    </Switch>
+  // Unified shell — auth only affects header variant and available routes.
+  // The chat/flow experience (MainFlow → LandingContent) is identical for all users.
+  return (
+    <ViewModeProvider>
+      <SidebarProvider defaultOpen={false}>
+        <NavigationProvider>
+          <div className="flex flex-col h-screen w-full">
+            <GlobalHeader variant={isAuth ? "authenticated" : "landing"} />
+            <div className={`flex flex-1 overflow-hidden${isAuth ? "" : " pt-14"}`}>
+              <AppSidebar />
+              <main className="flex-1 flex overflow-hidden">
+                {isAuth ? (
+                  <Switch>
+                    <Route path="/" component={MainFlow} />
+                    <Route path="/academy" component={Academy} />
+                    <Route path="/academy/:levelId" component={Academy} />
+                    <Route path="/projects/:projectId?" component={Projects} />
+                    <Route path="/workflows" component={AgenticWorkflows} />
+                    <Route path="/memory" component={MemoryExplorer} />
+                    <Route path="/rules" component={RulesExplorer} />
+                    <Route path="/bilkos-way" component={BilkosWay} />
+                    <Route path="/flows/:flowId" component={FlowDetail} />
+                    <Route path="/flows" component={FlowExplorer} />
+                    <Route component={NotFound} />
+                  </Switch>
+                ) : (
+                  <MainFlow />
+                )}
+              </main>
+            </div>
+          </div>
+        </NavigationProvider>
+      </SidebarProvider>
+    </ViewModeProvider>
   );
 }
 
