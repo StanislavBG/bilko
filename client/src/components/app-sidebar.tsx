@@ -236,7 +236,7 @@ export function AppSidebar() {
   );
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       {isMobile ? renderMobileLevel() : renderDesktopLevel()}
     </Sidebar>
   );
