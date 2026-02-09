@@ -81,11 +81,12 @@ bilko/
 ## Key Commands
 
 ```bash
-npm run dev          # Start dev server (client + server)
-npm run build        # Build for production
-npm run start        # Run production build
-npm run check        # TypeScript type check
-npm run db:push      # Push Drizzle schema to database
+npm run dev              # Start dev server (client + server)
+npm run build            # Build for production
+npm run start            # Run production build
+npm run check            # TypeScript type check
+npm run db:push          # Push Drizzle schema to database
+npm run rules:validate   # Validate rules integrity (AGT-002 automated checks)
 ```
 
 ## Architecture Principles
@@ -284,16 +285,61 @@ Optional:
 - **LLM**: Gemini 2.5 Flash via `chatJSON<T>()` with server-side response cleaning
 - **Focus**: Utility over polish
 
-## Task Completion Protocol
+## Rules Enforcement — MANDATORY
 
-Per ARCH-002 (Exit Protocol), every task completion MUST include:
+This section is non-negotiable. Every AI agent working in this codebase MUST follow these protocols. Skipping any step is a rules violation.
+
+### Before Writing ANY Code
+
+1. **Read `rules/manifest.json`** — identify which rules apply to your task
+2. **Read ALL applicable rules** — use the manifest's `triggers` and `routing.redFlags` to find them
+3. **Confirm understanding** — tell the user which rules you consulted and how they apply
+4. **Wait for confirmation** before proceeding (ARCH-002 D3)
+
+If you are modifying rules:
+- Re-read ALL rules in the affected partition first (ARCH-004 D1)
+- Propose changes and wait for human approval (ARCH-004 D6)
+- Run `npm run rules:validate` after changes
+
+### After Completing ANY Task
+
+Every completed task MUST include a Rules Context block (ARCH-002 Exit Protocol):
 
 ```
 ## Rules Context
 Primary: ARCH-000 (entry), ARCH-002 (exit)
 Applied:
 - [RULE-ID] [Directive]: "[Key guidance applied]"
+Validation: npm run rules:validate [PASS/FAIL]
 ```
+
+This is NOT optional. If you complete a task without this block, you have violated ARCH-002.
+
+### Automated Enforcement
+
+| Gate | What It Checks | How to Run |
+|------|---------------|------------|
+| **Pre-commit hook** | Manifest/file sync, structural integrity, dependency cycles | Automatic on `git commit` when rules/ files changed |
+| **npm run rules:validate** | Full AGT-002 automated checks (6 checks) | Manual — run before committing rule changes |
+| **AGT-001** (Code Audit) | Code implements rules correctly | Manual — "run a code audit" |
+| **AGT-002** (Rule Audit) | Rule structural integrity | Manual — "run a rule audit" |
+
+### Git Hooks
+
+A pre-commit hook validates rules integrity whenever `rules/` files are staged. Install with:
+
+```bash
+sh script/install-hooks.sh
+```
+
+The hook runs `script/validate-rules.ts` which checks:
+- Every manifest rule has a corresponding `.md` file
+- Every `.md` file is registered in the manifest
+- Dependencies and cross-references point to valid rule IDs
+- No dependency cycles exist
+- Rule files contain their own ID and have proper structure
+- Sub-manifests are complete and accurate
+- All partitions exist
 
 ## Remember
 
