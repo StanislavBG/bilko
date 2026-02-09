@@ -15,7 +15,6 @@ import { useState, useRef, useCallback, useEffect, type ReactNode } from "react"
 import {
   Send,
   Loader2,
-  Mic,
   Lightbulb,
   Sparkles,
   ArrowRight,
@@ -654,7 +653,7 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
 
   const { trackStep, resolveUserInput } = useFlowExecution(c.flowId);
   const { definition: flowDef } = useFlowDefinition(c.flowId);
-  const { isListening, isSupported, transcript, speak, onUtteranceEnd } = useVoice();
+  const { speak } = useVoice();
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(c.flowId, c.title);
   const { pushMessage } = useFlowChat();
 
@@ -710,24 +709,6 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [qaPairs, currentQuestion, phase]);
-
-  // Fill input from voice (live interim results)
-  useEffect(() => {
-    if (isListening && transcript && phase === "questioning") {
-      setUserInput(transcript);
-    }
-  }, [transcript, isListening, phase]);
-
-  // Auto-send when user finishes speaking (silence detection)
-  const submitAnswerRef = useRef<((overrideText?: string) => Promise<void>) | null>(null);
-  useEffect(() => {
-    if (!isListening || phase !== "questioning") return;
-    return onUtteranceEnd((text) => {
-      setUserInput(text);
-      // Pass text directly to avoid stale closure over userInput
-      submitAnswerRef.current?.(text);
-    });
-  }, [isListening, phase, onUtteranceEnd]);
 
   // ── Setup phase submit ──────────────────────────────────
 
@@ -872,9 +853,6 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
     }
   }, [userInput, isThinking, currentQuestion, currentContext, qaPairs, trackStep, resolveUserInput, speak]);
 
-  // Keep ref in sync for the utteranceEnd callback (avoids stale closure)
-  submitAnswerRef.current = submitAnswer;
-
   // ── Analysis ────────────────────────────────────────────
 
   const runAnalysis = useCallback(
@@ -1011,11 +989,6 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
                 </p>
               </div>
               <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                {isSupported && (
-                  <Badge variant="secondary" className="text-xs gap-1">
-                    <Mic className="h-3 w-3" /> Voice supported
-                  </Badge>
-                )}
                 {c.estimatedTime && (
                   <Badge variant="secondary" className="text-xs">
                     {c.estimatedTime}

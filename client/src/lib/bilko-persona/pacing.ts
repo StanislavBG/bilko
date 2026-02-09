@@ -38,5 +38,3 @@ export const TYPEWRITER_SPEED_MS = 70;
 /** Brief pause after TTS ends before unmuting mic (ms) */
 export const POST_TTS_BUFFER_MS = 300;
 
-/** Silence duration to detect end of user speech (ms) */
-export const SILENCE_TIMEOUT_MS = 1500;

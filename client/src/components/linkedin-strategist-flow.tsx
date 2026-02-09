@@ -20,7 +20,6 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Send,
   Loader2,
-  Mic,
   ArrowRight,
   RotateCcw,
   Briefcase,
@@ -285,7 +284,7 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
 
   const { trackStep, resolveUserInput } = useFlowExecution("linkedin-strategist");
   const { definition: flowDef } = useFlowDefinition("linkedin-strategist");
-  const { isListening, isSupported, transcript, speak, onUtteranceEnd } = useVoice();
+  const { speak } = useVoice();
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(
     "linkedin-strategist",
     "LinkedIn Strategist",
@@ -333,23 +332,6 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [conversationTurns, phase]);
-
-  // Voice → input sync
-  useEffect(() => {
-    if (isListening && transcript && phase === "conversation") {
-      setUserInput(transcript);
-    }
-  }, [transcript, isListening, phase]);
-
-  // Auto-send on voice end
-  const submitMessageRef = useRef<((overrideText?: string) => Promise<void>) | null>(null);
-  useEffect(() => {
-    if (!isListening || phase !== "conversation") return;
-    return onUtteranceEnd((text) => {
-      setUserInput(text);
-      submitMessageRef.current?.(text);
-    });
-  }, [isListening, phase, onUtteranceEnd]);
 
   // ── Handlers ───────────────────────────────────────────
 
@@ -497,9 +479,6 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
     },
     [userInput, isThinking, conversationTurns, discoveredRoles, trackStep, resolveUserInput, speak],
   );
-
-  // Keep ref in sync
-  submitMessageRef.current = submitMessage;
 
   // ── Generate results ──────────────────────────────────
 
@@ -749,13 +728,6 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-              {isSupported && (
-                <Badge variant="secondary" className="text-xs gap-1">
-                  <Mic className="h-3 w-3" /> Voice supported
-                </Badge>
-              )}
-            </div>
 
             <div className="text-center">
               <Button onClick={() => setPhase("goal-selection")} className="gap-2">
