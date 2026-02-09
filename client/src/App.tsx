@@ -22,6 +22,7 @@ import RulesExplorer from "@/pages/rules-explorer";
 import Academy from "@/pages/academy";
 import FlowExplorer from "@/pages/flow-explorer";
 import FlowDetail from "@/pages/flow-detail";
+import HomeDashboard from "@/pages/home-dashboard";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DebugProvider } from "@/contexts/debug-context";
@@ -69,6 +70,7 @@ function AuthenticatedApp() {
                               </ConversationProvider>
                             </FlowBusProvider>
                           </Route>
+                          <Route path="/dashboard" component={HomeDashboard} />
                           <Route path="/academy" component={Academy} />
                           <Route path="/academy/:levelId" component={Academy} />
                           <Route path="/projects/:projectId?" component={Projects} />

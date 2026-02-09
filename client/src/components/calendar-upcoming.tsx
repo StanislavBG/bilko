@@ -24,8 +24,8 @@ export function CalendarUpcoming({ events }: CalendarUpcomingProps) {
         Upcoming
       </span>
 
-      {/* Cards row — takes all vertical space, no header overhead */}
-      <div className="flex gap-3 overflow-x-auto px-3 py-3 scrollbar-thin">
+      {/* Cards row — horizontal scroll with snap on mobile (UI-006 D7) */}
+      <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scroll-smooth px-3 py-3 scrollbar-thin">
         {events.map((event) => (
           <EventCard key={event.id} event={event} />
         ))}
@@ -40,7 +40,7 @@ function EventCard({ event }: { event: CalendarEvent }) {
     : event.startDate;
 
   return (
-    <div className="flex min-w-[200px] max-w-[260px] shrink-0 flex-col gap-1.5 rounded-md border border-border/50 bg-muted/30 px-3 py-2.5">
+    <div className="flex min-w-[200px] max-w-[260px] shrink-0 snap-start flex-col gap-1.5 rounded-md border border-border/50 bg-muted/30 px-3 py-3">
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-medium leading-tight line-clamp-2">
           {event.title}
