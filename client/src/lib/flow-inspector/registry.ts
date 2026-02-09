@@ -31,15 +31,15 @@ const allFlows: FlowDefinition[] = [
     id: "bilko-main",
     name: "Bilko Main Flow",
     description:
-      "The main landing experience — Bilko greets users and routes them to Video Discovery or site exploration. This is the root flow that governs the entire conversational landing page.",
-    version: "2.0.0",
+      "The main landing experience — a recursive while-loop. Bilko greets, user picks a sub-flow, the sub-flow runs, its exit summary feeds back into the greeting node, and the loop repeats. This is the root flow that governs the entire conversational landing page.",
+    version: "3.0.0",
     location: "landing",
     componentPath: "client/src/pages/landing.tsx",
-    tags: ["landing", "main", "greeting", "routing", "root"],
+    tags: ["landing", "main", "greeting", "routing", "root", "recursive", "while-loop"],
     output: {
-      name: "selectedExperience",
+      name: "recycleContext",
       type: "object",
-      description: "The sub-flow the user chose and its execution result",
+      description: "The summary context fed back to the greeting node for the next iteration of the loop",
     },
     steps: [
       {
@@ -47,12 +47,18 @@ const allFlows: FlowDefinition[] = [
         name: "Greetings from Bilko",
         type: "llm",
         description:
-          "Bilko generates a warm, natural opening greeting for the user. This is always the first step — Bilko speaks first (C1).",
+          "HEAD of the while-loop. Bilko generates a context-aware greeting. On first run: fresh welcome. On recycle: personalized return referencing the previous sub-flow's summary. Bilko speaks first (C1).",
         prompt:
           "You are greeting a new visitor to the AI School. Generate a warm, natural opening. Welcome them, introduce yourself briefly as Bilko their AI training partner, and ask how they'd like to learn today. 2-3 sentences max. Plain text only.",
         userMessage: "A new visitor just arrived at the AI School.",
         model: "gemini-2.5-flash",
-        inputSchema: [],
+        inputSchema: [
+          {
+            name: "recycleContext",
+            type: "object",
+            description: "Optional context from the previous loop iteration — contains modeLabel and summary from the last sub-flow. Null on first run.",
+          },
+        ],
         outputSchema: [
           {
             name: "greeting",
@@ -110,7 +116,7 @@ const allFlows: FlowDefinition[] = [
         name: "Run Sub-Flow",
         type: "display",
         description:
-          "Starts the selected sub-flow by ID. The sub-flow is autonomous — it claims the chat, pushes its own agent greeting and messages, and manages its own persona identity. When the sub-flow calls onComplete(summary), ownership returns to bilko-main and the greeting node is recycled with the exit summary for recursive personalization.",
+          "Starts the selected sub-flow by ID. The sub-flow is autonomous — it claims the chat, pushes its own agent greeting and messages, and manages its own persona identity. When the sub-flow calls onComplete(summary), control passes to the summarize-and-recycle step.",
         inputSchema: [
           {
             name: "selectedMode",
@@ -118,7 +124,41 @@ const allFlows: FlowDefinition[] = [
             description: "Which sub-flow to render (maps to a sub-flow ID)",
           },
         ],
+        outputSchema: [
+          {
+            name: "exitSummary",
+            type: "string",
+            description: "The sub-flow's exit summary passed via onComplete(summary)",
+          },
+        ],
         dependsOn: ["mode-selection"],
+      },
+      {
+        id: "summarize-and-recycle",
+        name: "Summarize & Recycle to Head",
+        type: "transform",
+        description:
+          "TAIL of the while-loop. Captures the sub-flow's exit summary, releases chat ownership back to bilko-main, logs the activity, and produces the recycleContext that feeds back into the greeting node for the next iteration. This step closes the loop: run-subflow → summarize-and-recycle → greeting (recycled).",
+        inputSchema: [
+          {
+            name: "exitSummary",
+            type: "string",
+            description: "The summary string from the completed sub-flow",
+          },
+          {
+            name: "modeLabel",
+            type: "string",
+            description: "Human-readable label of the sub-flow that just completed",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "recycleContext",
+            type: "object",
+            description: "Context object { modeLabel, summary } passed to the greeting node on the next loop iteration",
+          },
+        ],
+        dependsOn: ["run-subflow"],
       },
     ],
   },
