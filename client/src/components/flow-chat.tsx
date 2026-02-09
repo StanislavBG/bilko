@@ -1,6 +1,17 @@
 /**
  * FlowChat — Voice-aware chat for flow-driven conversations.
  *
+ * Chat ownership:
+ * - The chat has an activeOwner (from FlowChatContext)
+ * - Only the owner can push bilko/agent messages
+ * - User and system messages are always accepted
+ * - This component shows the owner badge and direction toggle
+ *
+ * Message direction (configurable):
+ * - "top-down" (default): messages start at the top and grow downward
+ * - "bottom-up": messages gravity-stick to the bottom (iMessage style)
+ * - Stored in localStorage, toggled via the direction button
+ *
  * Rules:
  * - ONLY messages render here (NO options, NO interactive cards)
  * - Messages come from flow steps (speaker + text) or user speaking/typing
@@ -13,7 +24,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, Volume2, User, ArrowRight } from "lucide-react";
+import { Mic, MicOff, Volume2, User, ArrowRight, ArrowDown, ArrowUp } from "lucide-react";
 import { BilkoMessage } from "@/components/bilko-message";
 import { AgentBadge, getAgentColors } from "@/components/speaker-identity";
 import { useFlowChat, type FlowChatMessage } from "@/lib/flow-engine/flow-chat";
@@ -24,11 +35,13 @@ import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
 // ── Main FlowChat component ─────────────────────────────
 
 export function FlowChat() {
-  const { messages } = useFlowChat();
+  const { messages, activeOwner, messageDirection, setMessageDirection } = useFlowChat();
   const { isListening, isSpeaking, isMuted, transcript, toggleListening } = useVoice();
   const { floor } = useConversationDesign();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [settledIds, setSettledIds] = useState<Set<string>>(new Set());
+
+  const isBottomUp = messageDirection === "bottom-up";
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -37,6 +50,10 @@ export function FlowChat() {
 
   const handleSettled = (msgId: string) => {
     setSettledIds((prev) => new Set(prev).add(msgId));
+  };
+
+  const toggleDirection = () => {
+    setMessageDirection(isBottomUp ? "top-down" : "bottom-up");
   };
 
   return (
@@ -49,11 +66,14 @@ export function FlowChat() {
         isMuted={isMuted}
         transcript={transcript}
         onToggleMic={toggleListening}
+        activeOwner={activeOwner}
+        messageDirection={messageDirection}
+        onToggleDirection={toggleDirection}
       />
 
       {/* Message list — only messages, no options */}
       <div className="flex-1 overflow-auto">
-        <div className="flex flex-col justify-end min-h-full">
+        <div className={`flex flex-col min-h-full ${isBottomUp ? "justify-end" : ""}`}>
           <div
             role="log"
             aria-label="Conversation with Bilko"
@@ -112,6 +132,9 @@ function SpeakerIndicator({
   isMuted,
   transcript,
   onToggleMic,
+  activeOwner,
+  messageDirection,
+  onToggleDirection,
 }: {
   floor: string;
   isListening: boolean;
@@ -119,6 +142,9 @@ function SpeakerIndicator({
   isMuted: boolean;
   transcript: string;
   onToggleMic: () => void;
+  activeOwner: string;
+  messageDirection: "top-down" | "bottom-up";
+  onToggleDirection: () => void;
 }) {
   const micActive = isListening && !isMuted;
 
@@ -180,6 +206,19 @@ function SpeakerIndicator({
             VOICE ON
           </span>
         )}
+
+        {/* Message direction toggle */}
+        <button
+          onClick={onToggleDirection}
+          className="p-1 rounded hover:bg-foreground/10 transition-colors"
+          title={messageDirection === "top-down" ? "Switch to bottom-up messages" : "Switch to top-down messages"}
+        >
+          {messageDirection === "top-down" ? (
+            <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+          ) : (
+            <ArrowUp className="h-3.5 w-3.5 text-muted-foreground/50" />
+          )}
+        </button>
       </div>
     </div>
   );

@@ -1,6 +1,10 @@
 /**
  * Video Discovery Flow - Agentic workflow for finding learning videos
  *
+ * Chat ownership: This flow owns the chat (claimed by landing.tsx on handoff).
+ * It pushes its own agent messages to the chat directly via useFlowChat().
+ * The FlowBus is used only for metadata (activity logging).
+ *
  * UI Design Principles:
  *   - Thin StepTracker bar at top (3 lines: steps, activity, last result)
  *   - Only ONE active step visible at a time — content fills the space
@@ -20,6 +24,7 @@
  * - chatJSON<T>()        for all LLM calls
  * - searchYouTube()      for YouTube Data API search
  * - useFlowExecution()   for execution tracing
+ * - useFlowChat()        for pushing messages to the chat
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
@@ -44,6 +49,7 @@ import {
   searchYouTube,
   useFlowExecution,
   useFlowDefinition,
+  useFlowChat,
 } from "@/lib/flow-engine";
 import type { VideoCandidate } from "@/lib/flow-engine";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
@@ -51,6 +57,10 @@ import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
 import { useVoice } from "@/contexts/voice-context";
 import { VideoRenderer } from "@/components/content-blocks";
+import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
+
+// ── Owner ID — must match what landing.tsx uses for claimChat ──
+const OWNER_ID = "video-discovery";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -151,7 +161,7 @@ const SEARCH_STATUS_MESSAGES = [
 
 // ── Component ────────────────────────────────────────────────────────
 
-export function VideoDiscoveryFlow() {
+export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
   const [flowState, setFlowState] = useState<FlowState>("generating-topics");
   const [topics, setTopics] = useState<TopicSuggestion[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string>("");
@@ -169,7 +179,34 @@ export function VideoDiscoveryFlow() {
   const { trackStep, resolveUserInput } = useFlowExecution("video-discovery");
   const { definition: flowDef } = useFlowDefinition("video-discovery");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("video-discovery", "Video Discovery");
+  const { pushMessage } = useFlowChat();
   const { speak } = useVoice();
+
+  // Get our agent identity for chat messages
+  const agent = getFlowAgent("video");
+
+  // ── Push agent message to chat ──────────────────────────
+  const pushAgentMessage = useCallback((text: string, speech?: string) => {
+    pushMessage(OWNER_ID, {
+      speaker: "agent",
+      text,
+      speech: speech ?? text,
+      agentName: agent?.chatName ?? "YoutubeExpert",
+      agentDisplayName: agent?.name ?? "YouTube Librarian",
+      agentAccent: agent?.accentColor ?? "text-red-500",
+    });
+  }, [pushMessage, agent]);
+
+  // ── Push greeting on mount ─────────────────────────────
+  const didGreet = useRef(false);
+  useEffect(() => {
+    if (didGreet.current) return;
+    didGreet.current = true;
+    // Push the agent's greeting to the chat (we own it now)
+    if (agent) {
+      pushAgentMessage(agent.greeting, agent.greetingSpeech);
+    }
+  }, [agent, pushAgentMessage]);
 
   // ── StepTracker state ──────────────────────────────────────────────
 
@@ -302,13 +339,17 @@ export function VideoDiscoveryFlow() {
       setTopics(fetched);
       setLastResult(`Found ${fetched.length} topics to explore`);
       setFlowState("select-topic");
-      speak(`I found ${fetched.length} topics. Pick one that interests you, or type your own.`, "Aoede");
+
+      // Push status to chat + speak
+      const statusText = `I found ${fetched.length} topics. Pick one that interests you, or type your own.`;
+      pushAgentMessage(statusText);
+      speak(statusText, "Aoede");
     } catch (err) {
       console.error("Topic generation error:", err);
       setError(err instanceof Error ? err.message : "Failed to generate topics.");
       setFlowState("error");
     }
-  }, [trackStep, speak]);
+  }, [trackStep, speak, pushAgentMessage]);
 
   // Auto-start on mount
   useEffect(() => {
@@ -353,13 +394,17 @@ export function VideoDiscoveryFlow() {
       setQuestions(fetched);
       setLastResult(`Topic: ${topic}`);
       setFlowState("select-question");
-      speak("If you had one question to be answered, what would it be?", "Aoede");
+
+      // Push status to chat + speak
+      const statusText = "If you had one question to be answered, what would it be?";
+      pushAgentMessage(statusText);
+      speak(statusText, "Aoede");
     } catch (err) {
       console.error("Question generation error:", err);
       setError(err instanceof Error ? err.message : "Failed to generate questions.");
       setFlowState("error");
     }
-  }, [trackStep, speak]);
+  }, [trackStep, speak, pushAgentMessage]);
 
   // ── Step 4: Handle question selection ──────────────────────────────
 
@@ -424,22 +469,31 @@ export function VideoDiscoveryFlow() {
       setVideos(foundVideos.data);
       setLastResult(`Found ${foundVideos.data.length} videos`);
       setFlowState("select-video");
-      speak(`Found ${foundVideos.data.length} videos. Pick one to watch.`, "Aoede");
+
+      // Push status to chat + speak
+      const statusText = `Found ${foundVideos.data.length} videos. Pick one to watch.`;
+      pushAgentMessage(statusText);
+      speak(statusText, "Aoede");
     } catch (err) {
       console.error("Video search error:", err);
       setError(err instanceof Error ? err.message : "Failed to search for videos.");
       setFlowState("error");
     }
-  }, [trackStep, speak]);
+  }, [trackStep, speak, pushAgentMessage]);
 
   // ── Step 6: Handle video selection ─────────────────────────────────
 
   const handleVideoSelect = (video: VideoCandidate) => {
     setSelectedVideo(video);
     resolveUserInput("select-video", { selectedVideo: video });
-    busSend("main", "summary", {
-      summary: `Discovered "${video.title}" by ${video.creator} on the topic of ${selectedTopic}.`,
-    });
+
+    // Push summary to chat directly (we own it)
+    const summaryText = `Discovered "${video.title}" by ${video.creator} on the topic of ${selectedTopic}.`;
+    pushAgentMessage(summaryText);
+
+    // Also send to FlowBus for activity logging
+    busSend("main", "summary", { summary: summaryText });
+
     setLastResult(`${selectedTopic} → ${video.title}`);
     setFlowState("watching");
     speak(`Loading ${video.title} by ${video.creator}.`, "Aoede");
@@ -449,6 +503,7 @@ export function VideoDiscoveryFlow() {
 
   const reset = () => {
     hasStarted.current = false;
+    didGreet.current = false;
     setTopics([]);
     setSelectedTopic("");
     setQuestions([]);
@@ -461,6 +516,7 @@ export function VideoDiscoveryFlow() {
     setShowCustomInput(false);
     setTimeout(() => {
       hasStarted.current = true;
+      didGreet.current = true;
       generateTopics();
     }, 0);
   };
@@ -856,6 +912,16 @@ export function VideoDiscoveryFlow() {
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
               Start Over
             </Button>
+            {onComplete && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onComplete(`Watched "${selectedVideo.title}" by ${selectedVideo.creator} about ${selectedTopic}.`)}
+                data-testid="button-done"
+              >
+                Done
+              </Button>
+            )}
           </div>
         </div>
       )}

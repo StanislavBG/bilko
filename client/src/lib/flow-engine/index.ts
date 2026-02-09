@@ -24,4 +24,5 @@ export type {
   FlowChatMessage,
   PushMessageParams,
   PushMessageFn,
+  MessageDirection,
 } from "./flow-chat";
