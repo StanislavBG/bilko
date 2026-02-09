@@ -41,6 +41,8 @@ import {
   Briefcase,
   GraduationCap,
   Handshake,
+  Compass,
+  Construction,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
@@ -53,6 +55,7 @@ import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
 import { VoiceStatusBar } from "@/components/voice-status-bar";
 import { useVoice } from "@/contexts/voice-context";
+import { useSidebarSafe } from "@/components/ui/sidebar";
 
 // ── Mode definitions for the delivery surface ────────────
 
@@ -78,6 +81,20 @@ const MODE_OPTIONS: ModeOption[] = LEARNING_MODES.map((mode) => ({
   description: mode.description,
   icon: iconMap[mode.icon] ?? <Sparkles className="h-5 w-5" />,
 }));
+
+const EXPLORE_OPTION: ModeOption = {
+  id: "explore",
+  label: "Explore the Site",
+  description: "Browse everything Bilko's AI School has to offer",
+  icon: <Compass className="h-6 w-6" />,
+};
+
+const constructionBadge = (
+  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-wider bg-amber-400/90 text-amber-950 border border-amber-500/50">
+    <Construction className="h-2.5 w-2.5" />
+    In Dev
+  </span>
+);
 
 // ── LLM greeting prompt ──────────────────────────────────
 
@@ -152,6 +169,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   } = useConversation();
   const [, navigate] = useLocation();
   const { startListening, isListening } = useVoice();
+  const sidebarCtx = useSidebarSafe();
 
   const [greetingLoading, setGreetingLoading] = useState(false);
 
@@ -208,6 +226,16 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 
   const handleChoice = useCallback(
     (choiceId: string) => {
+      // "Explore the Site" — open sidebar (auth) or redirect to login (unauth)
+      if (choiceId === "explore") {
+        if (sidebarCtx) {
+          sidebarCtx.setOpen(true);
+        } else {
+          window.location.href = "/api/auth/login";
+        }
+        return;
+      }
+
       const mode = choiceId as LearningModeId;
       const modeLabel = LEARNING_MODES.find((m) => m.id === mode)?.label;
       const agent = getFlowAgent(mode);
@@ -252,7 +280,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 
       selectMode(mode);
     },
-    [addMessage, selectMode, isListening, startListening],
+    [addMessage, selectMode, isListening, startListening, sidebarCtx],
   );
 
   const handleBack = useCallback(() => {
@@ -287,8 +315,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   }, [addMessage, clearMode]);
 
   // ── Build inline choice options for conversation canvas ──
-  const inlineChoiceOptions = useMemo<OptionChoice[]>(() =>
-    MODE_OPTIONS.map((opt) => {
+  const inlineChoiceOptions = useMemo<OptionChoice[]>(() => [
+    ...MODE_OPTIONS.map((opt) => {
       const mode = LEARNING_MODES.find((m) => m.id === opt.id);
       return {
         id: opt.id,
@@ -296,8 +324,17 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         description: opt.description,
         icon: opt.icon,
         voiceTriggers: mode?.voiceTriggers ? [...mode.voiceTriggers] : [],
+        badge: constructionBadge,
       };
     }),
+    {
+      id: EXPLORE_OPTION.id,
+      label: EXPLORE_OPTION.label,
+      description: EXPLORE_OPTION.description,
+      icon: EXPLORE_OPTION.icon,
+      voiceTriggers: ["explore", "browse", "navigate", "site", "menu"],
+    },
+  ],
     [],
   );
 
@@ -525,17 +562,24 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 // ── Mode selection grid (main area delivery) ─────────────
 
 function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
-  // Register mode cards as screen options for voice matching
-  const modeScreenOptions = useMemo<ScreenOption[]>(() =>
-    MODE_OPTIONS.map((opt) => ({
+  // Register mode cards + explore as screen options for voice matching
+  const allScreenOptions = useMemo<ScreenOption[]>(() => [
+    ...MODE_OPTIONS.map((opt) => ({
       id: opt.id,
       label: opt.label,
       keywords: opt.description.split(/\s+/).filter((w) => w.length > 4),
       action: () => onSelect(opt.id),
     })),
+    {
+      id: EXPLORE_OPTION.id,
+      label: EXPLORE_OPTION.label,
+      keywords: ["explore", "browse", "navigate", "site", "menu"],
+      action: () => onSelect(EXPLORE_OPTION.id),
+    },
+  ],
     [onSelect],
   );
-  useScreenOptions(modeScreenOptions);
+  useScreenOptions(allScreenOptions);
 
   return (
     <div className="flex-1 flex items-center justify-center p-8">
@@ -545,11 +589,14 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
             <button
               key={option.id}
               onClick={() => onSelect(option.id)}
-              className="group text-left rounded-xl border-2 border-border p-7 transition-all duration-300
+              className="group relative text-left rounded-xl border-2 border-border p-7 transition-all duration-300
                 hover:border-primary/50 hover:bg-muted/50 hover:shadow-lg hover:scale-[1.03]
                 animate-in fade-in slide-in-from-bottom-4 duration-500"
               style={{ animationDelay: `${i * 60}ms` }}
             >
+              <div className="absolute top-3 right-3">
+                {constructionBadge}
+              </div>
               <div className="flex flex-col gap-4">
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
                   bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
@@ -564,6 +611,27 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
               </div>
             </button>
           ))}
+          {/* Explore the Site — distinct tile */}
+          <button
+            onClick={() => onSelect(EXPLORE_OPTION.id)}
+            className="group text-left rounded-xl border-2 border-dashed border-primary/40 p-7 transition-all duration-300
+              hover:border-primary hover:bg-primary/5 hover:shadow-lg hover:scale-[1.03]
+              animate-in fade-in slide-in-from-bottom-4 duration-500"
+            style={{ animationDelay: `${MODE_OPTIONS.length * 60}ms` }}
+          >
+            <div className="flex flex-col gap-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
+                bg-primary/10 text-primary group-hover:bg-primary/20">
+                {EXPLORE_OPTION.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base">{EXPLORE_OPTION.label}</h3>
+                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  {EXPLORE_OPTION.description}
+                </p>
+              </div>
+            </div>
+          </button>
         </div>
       </div>
     </div>
