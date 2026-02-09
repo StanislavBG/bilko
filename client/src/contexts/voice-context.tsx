@@ -26,6 +26,13 @@ import {
 
 const VOICE_STORAGE_KEY = "bilko-voice-enabled";
 
+/** A single TTS utterance waiting in the queue. */
+interface TtsQueueItem {
+  text: string;
+  voice?: string;
+  resolve: () => void;
+}
+
 interface VoiceHandler {
   options: readonly VoiceTriggerOption[];
   onMatch: (matchedId: string) => void;
@@ -94,14 +101,17 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const autoStartedRef = useRef(false);
   const ttsUnlockedRef = useRef(false);
   const ttsSupportedRef = useRef(false);
-  const pendingSpeakRef = useRef<string | null>(null);
-  const pendingSpeakVoiceRef = useRef<string | undefined>(undefined);
-  const pendingSpeakResolveRef = useRef<(() => void) | null>(null);
 
   // Gemini TTS refs
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const doSpeakRef = useRef<(text: string, voice?: string) => Promise<void>>(async () => {});
   const startListeningRef = useRef<() => Promise<void>>(async () => {});
+
+  // TTS queue — messages are played sequentially, FIFO order.
+  // Pre-unlock items accumulate; on unlock, the entire queue flushes in order.
+  const ttsQueueRef = useRef<TtsQueueItem[]>([]);
+  const processingQueueRef = useRef(false);
+  const processQueueRef = useRef<() => void>(() => {});
 
   // End-of-speech detection
   const utteranceEndCallbacksRef = useRef<Set<(text: string) => void>>(new Set());
@@ -141,25 +151,12 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       setTtsUnlocked(true);
     };
 
-    const flushPending = () => {
-      if (pendingSpeakRef.current !== null) {
-        const text = pendingSpeakRef.current;
-        const voice = pendingSpeakVoiceRef.current;
-        const resolve = pendingSpeakResolveRef.current;
-        pendingSpeakRef.current = null;
-        pendingSpeakVoiceRef.current = undefined;
-        pendingSpeakResolveRef.current = null;
-        setTimeout(() => {
-          doSpeakRef.current(text, voice).then(() => resolve?.());
-        }, 100);
-      }
-    };
-
     // Unlock on first user interaction
     const gestureUnlock = () => {
       if (ttsUnlockedRef.current) return;
       markUnlocked();
-      flushPending();
+      // Flush the TTS queue (items accumulated before unlock)
+      setTimeout(() => processQueueRef.current(), 100);
 
       // Auto-start mic on first user gesture if not already listening
       // and user hasn't explicitly disabled voice
@@ -333,25 +330,15 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Mic permission granted — unlock TTS and flush any pending welcome speech.
+    // Mic permission granted — unlock TTS and flush any queued speech.
     // The user just interacted with a permission dialog, so the browser may now
     // allow audio playback. This ensures Bilko's welcome message is heard.
     if (!ttsUnlockedRef.current) {
       ttsUnlockedRef.current = true;
       setTtsUnlocked(true);
 
-      // Flush pending speak (e.g. Bilko's welcome message queued before unlock)
-      if (pendingSpeakRef.current !== null) {
-        const text = pendingSpeakRef.current;
-        const voice = pendingSpeakVoiceRef.current;
-        const resolve = pendingSpeakResolveRef.current;
-        pendingSpeakRef.current = null;
-        pendingSpeakVoiceRef.current = undefined;
-        pendingSpeakResolveRef.current = null;
-        setTimeout(() => {
-          doSpeakRef.current(text, voice).then(() => resolve?.());
-        }, 100);
-      }
+      // Flush the TTS queue (e.g. Bilko's welcome message queued before unlock)
+      setTimeout(() => processQueueRef.current(), 100);
     }
 
     try {
@@ -385,72 +372,88 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, [isListening, startListening, stopListening]);
 
   // ── Gemini TTS: fetch audio from server and play via Audio element ──
+  // This is the raw playback function. It does NOT manage isSpeaking/isMuted —
+  // the queue processor owns that state to avoid flickering between queue items.
   const doSpeak = useCallback(async (text: string, voice?: string): Promise<void> => {
     const preview = text.length > 60 ? text.slice(0, 60) + "..." : text;
     const selectedVoice = voice || "Kore";
     console.info(`[TTS:Gemini] Speaking (${selectedVoice}): "${preview}" (${text.split(/\s+/).length} words)`);
 
+    const response = await fetch("/api/tts/speak", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, voice: selectedVoice }),
+    });
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      throw new Error(errBody.error || `TTS request failed: ${response.status}`);
+    }
+
+    const contentType = response.headers.get("Content-Type") || "audio/wav";
+    const arrayBuffer = await response.arrayBuffer();
+    console.info(`[TTS:Gemini] Received ${arrayBuffer.byteLength} bytes (${contentType})`);
+
+    if (arrayBuffer.byteLength === 0) {
+      throw new Error("Received empty audio response");
+    }
+
+    // Play via Audio element — more robust format support than Web Audio decodeAudioData
+    const blob = new Blob([arrayBuffer], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    currentAudioRef.current = audio;
+
+    return new Promise<void>((resolve, reject) => {
+      const cleanup = (ok: boolean) => {
+        URL.revokeObjectURL(url);
+        if (currentAudioRef.current === audio) {
+          currentAudioRef.current = null;
+        }
+        ok ? resolve() : reject(new Error("Audio playback failed"));
+      };
+
+      audio.onended = () => {
+        console.info("[TTS:Gemini] Playback complete");
+        cleanup(true);
+      };
+
+      audio.onerror = () => {
+        console.error("[TTS:Gemini] Audio element playback error");
+        cleanup(false);
+      };
+
+      audio.play().catch((playError) => {
+        console.error("[TTS:Gemini] play() rejected:", playError);
+        cleanup(false);
+      });
+    });
+  }, []);
+
+  // ── Queue processor — drains items sequentially ──
+  // Owns isSpeaking/isMuted to prevent flickering between queue items.
+  const processQueue = useCallback(async () => {
+    if (processingQueueRef.current) return;          // already draining
+    if (!ttsUnlockedRef.current) return;             // wait for unlock
+    processingQueueRef.current = true;
+
     setIsMuted(true);
     setIsSpeaking(true);
 
-    try {
-      const response = await fetch("/api/tts/speak", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, voice: selectedVoice }),
-      });
-
-      if (!response.ok) {
-        const errBody = await response.json().catch(() => ({}));
-        throw new Error(errBody.error || `TTS request failed: ${response.status}`);
+    while (ttsQueueRef.current.length > 0) {
+      const item = ttsQueueRef.current.shift()!;
+      try {
+        await doSpeak(item.text, item.voice);
+      } catch {
+        // doSpeak handles its own errors — just keep draining
       }
-
-      const contentType = response.headers.get("Content-Type") || "audio/wav";
-      const arrayBuffer = await response.arrayBuffer();
-      console.info(`[TTS:Gemini] Received ${arrayBuffer.byteLength} bytes (${contentType})`);
-
-      if (arrayBuffer.byteLength === 0) {
-        throw new Error("Received empty audio response");
-      }
-
-      // Play via Audio element — more robust format support than Web Audio decodeAudioData
-      const blob = new Blob([arrayBuffer], { type: contentType });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      currentAudioRef.current = audio;
-
-      return new Promise<void>((resolve) => {
-        const cleanup = () => {
-          URL.revokeObjectURL(url);
-          if (currentAudioRef.current === audio) {
-            currentAudioRef.current = null;
-          }
-          setIsSpeaking(false);
-          setTimeout(() => setIsMuted(false), POST_TTS_BUFFER_MS);
-          resolve();
-        };
-
-        audio.onended = () => {
-          console.info("[TTS:Gemini] Playback complete");
-          cleanup();
-        };
-
-        audio.onerror = () => {
-          console.error("[TTS:Gemini] Audio element playback error");
-          cleanup();
-        };
-
-        audio.play().catch((playError) => {
-          console.error("[TTS:Gemini] play() rejected:", playError);
-          cleanup();
-        });
-      });
-    } catch (error) {
-      console.error("[TTS:Gemini] Error:", error);
-      setIsSpeaking(false);
-      setIsMuted(false);
+      item.resolve();
     }
-  }, []);
+
+    processingQueueRef.current = false;
+    setIsSpeaking(false);
+    setTimeout(() => setIsMuted(false), POST_TTS_BUFFER_MS);
+  }, [doSpeak]);
 
   // Keep refs in sync so gesture handlers can call these without circular deps
   useEffect(() => {
@@ -460,40 +463,40 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     startListeningRef.current = startListening;
   }, [startListening]);
 
-  // ── Public speak: gates on TTS unlock, queues if needed ──
-  // If TTS hasn't been unlocked by a user gesture yet, we queue the
-  // request and play it as soon as the user clicks/taps anything.
-  // Latest speak always wins — if a newer message calls speak() before
-  // the previous one played, the previous one is discarded.
-  const speak = useCallback(async (text: string, voice?: string) => {
-    // Clear any previous pending speak — newer message takes priority
-    if (pendingSpeakRef.current !== null) {
-      const prevResolve = pendingSpeakResolveRef.current;
-      pendingSpeakRef.current = null;
-      pendingSpeakVoiceRef.current = undefined;
-      pendingSpeakResolveRef.current = null;
-      prevResolve?.();
-    }
+  // Keep processQueueRef in sync
+  useEffect(() => {
+    processQueueRef.current = processQueue;
+  }, [processQueue]);
 
+  // ── Public speak: pushes to the FIFO queue ──
+  // If TTS is unlocked, starts draining immediately.
+  // If locked, items accumulate and flush on first user gesture.
+  const speak = useCallback(async (text: string, voice?: string) => {
     if (!ttsSupportedRef.current) {
       console.info("[TTS] speak() called but Gemini TTS not available");
       return;
     }
 
-    if (ttsUnlockedRef.current) {
-      return doSpeak(text, voice);
+    if (!ttsUnlockedRef.current) {
+      console.info("[TTS] speak() called before unlock — queuing");
     }
 
-    console.info("[TTS] speak() called before unlock — queuing");
     return new Promise<void>((resolve) => {
-      pendingSpeakRef.current = text;
-      pendingSpeakVoiceRef.current = voice;
-      pendingSpeakResolveRef.current = resolve;
+      ttsQueueRef.current.push({ text, voice, resolve });
+      // Kick the processor — no-ops if already running or still locked
+      processQueueRef.current();
     });
-  }, [doSpeak]);
+  }, []);
 
   const stopSpeaking = useCallback(() => {
-    // Stop Gemini TTS audio if playing
+    // Drain the queue — resolve all pending items so callers aren't stuck
+    for (const item of ttsQueueRef.current) {
+      item.resolve();
+    }
+    ttsQueueRef.current = [];
+    processingQueueRef.current = false;
+
+    // Stop current audio if playing
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
