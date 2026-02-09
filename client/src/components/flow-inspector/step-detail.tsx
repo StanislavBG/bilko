@@ -12,10 +12,6 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Brain,
-  MousePointerClick,
-  ArrowRightLeft,
-  ShieldCheck,
-  Monitor,
   Clock,
   Zap,
   FileJson,
@@ -32,51 +28,8 @@ import type {
   FlowStep,
   FlowDefinition,
   StepExecution,
-  StepType,
 } from "@/lib/flow-inspector/types";
-
-// ── Step type styling ────────────────────────────────────
-
-const TYPE_CONFIG: Record<
-  StepType,
-  { icon: typeof Brain; label: string; color: string; bg: string; accent: string }
-> = {
-  llm: {
-    icon: Brain,
-    label: "LLM Call",
-    color: "text-purple-500",
-    bg: "bg-purple-500/10",
-    accent: "border-purple-500/30",
-  },
-  "user-input": {
-    icon: MousePointerClick,
-    label: "User Input",
-    color: "text-blue-500",
-    bg: "bg-blue-500/10",
-    accent: "border-blue-500/30",
-  },
-  transform: {
-    icon: ArrowRightLeft,
-    label: "Transform",
-    color: "text-orange-500",
-    bg: "bg-orange-500/10",
-    accent: "border-orange-500/30",
-  },
-  validate: {
-    icon: ShieldCheck,
-    label: "Validate",
-    color: "text-green-500",
-    bg: "bg-green-500/10",
-    accent: "border-green-500/30",
-  },
-  display: {
-    icon: Monitor,
-    label: "Display",
-    color: "text-cyan-500",
-    bg: "bg-cyan-500/10",
-    accent: "border-cyan-500/30",
-  },
-};
+import { STEP_TYPE_CONFIG } from "@/lib/flow-inspector/step-type-config";
 
 // ── Props ────────────────────────────────────────────────
 
@@ -89,7 +42,7 @@ interface StepDetailProps {
 // ── Component ────────────────────────────────────────────
 
 export function StepDetail({ step, flow, execution }: StepDetailProps) {
-  const config = TYPE_CONFIG[step.type];
+  const config = STEP_TYPE_CONFIG[step.type];
   const Icon = config.icon;
 
   // Derive dependency context from the flow graph
@@ -224,7 +177,7 @@ export function StepDetail({ step, flow, execution }: StepDetailProps) {
           </h4>
           <div className="flex gap-2 flex-wrap">
             {deps.upstream.map((dep) => {
-              const depConfig = TYPE_CONFIG[dep.type];
+              const depConfig = STEP_TYPE_CONFIG[dep.type];
               const DepIcon = depConfig.icon;
               return (
                 <div
@@ -243,7 +196,7 @@ export function StepDetail({ step, flow, execution }: StepDetailProps) {
               </div>
             )}
             {deps.downstream.map((dep) => {
-              const depConfig = TYPE_CONFIG[dep.type];
+              const depConfig = STEP_TYPE_CONFIG[dep.type];
               const DepIcon = depConfig.icon;
               return (
                 <div

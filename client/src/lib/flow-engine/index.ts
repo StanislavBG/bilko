@@ -15,3 +15,6 @@ export {
   createBlankStep,
 } from "./flow-mutations";
 export type { FlowMutation, MutationResult } from "./flow-mutations";
+
+export { useFlowDefinition } from "./use-flow-definition";
+export type { FlowDefinitionBridge } from "./use-flow-definition";

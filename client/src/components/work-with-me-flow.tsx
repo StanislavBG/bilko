@@ -51,6 +51,7 @@ import {
   jsonPrompt,
   apiPost,
   useFlowExecution,
+  useFlowDefinition,
 } from "@/lib/flow-engine";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
@@ -298,6 +299,7 @@ export function WorkWithMeFlow() {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   const { trackStep, resolveUserInput } = useFlowExecution("work-with-me");
+  const { definition: flowDef } = useFlowDefinition("work-with-me");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(
     "work-with-me",
     "Work With Me",
