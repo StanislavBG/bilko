@@ -1,7 +1,7 @@
 import { useViewMode } from "@/contexts/view-mode-context";
+import { useAuth } from "@/hooks/use-auth";
 import { PageContent } from "@/components/page-content";
 import { CalendarUpcoming, type CalendarEvent } from "@/components/calendar-upcoming";
-import type { User } from "@shared/models/auth";
 
 // Sample data — replace with real data source when available
 const upcomingEvents: CalendarEvent[] = [
@@ -11,31 +11,28 @@ const upcomingEvents: CalendarEvent[] = [
   { id: "4", title: "Informatica Conference - Las Vegas", startDate: "May 19", endDate: "May 21", people: ["Stani"], isShared: true },
 ];
 
-interface HomeDashboardProps {
-  user: User;
-}
-
-export default function HomeDashboard({ user }: HomeDashboardProps) {
+export default function HomeDashboard() {
   const { effectiveIsAdmin } = useViewMode();
-  const firstName = user.firstName || "there";
+  const { user } = useAuth();
+  const firstName = user?.firstName || "there";
 
   if (effectiveIsAdmin) {
     return (
       <PageContent>
-        <div className="p-6">
-          <div className="flex flex-col gap-6 max-w-4xl">
+        <div className="flex-1 overflow-auto p-4 md:p-6">
+          <div className="flex flex-col gap-4 md:gap-6 max-w-4xl">
             <div className="flex flex-col gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-welcome">
+              <h1 className="text-xl md:text-2xl font-semibold tracking-tight" data-testid="text-welcome">
                 Welcome, {firstName}
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Admin Dashboard - Your command center.
               </p>
             </div>
 
             <CalendarUpcoming events={upcomingEvents} />
 
-            <div className="rounded-lg border bg-card p-6">
+            <div className="rounded-lg border bg-card p-4 md:p-6">
               <div className="flex flex-col gap-4">
                 <h2 className="font-medium">Dashboard Overview</h2>
                 <p className="text-sm text-muted-foreground">
@@ -59,21 +56,21 @@ export default function HomeDashboard({ user }: HomeDashboardProps) {
 
   return (
     <PageContent>
-      <div className="p-6">
-        <div className="flex flex-col gap-6 max-w-4xl">
+      <div className="flex-1 overflow-auto p-4 md:p-6">
+        <div className="flex flex-col gap-4 md:gap-6 max-w-4xl">
           <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-welcome">
+            <h1 className="text-xl md:text-2xl font-semibold tracking-tight" data-testid="text-welcome">
               Welcome, {firstName}!
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               We're building something great.
             </p>
           </div>
 
-          <div className="rounded-lg border bg-card p-6">
-            <div className="flex flex-col gap-4 text-center py-8">
-              <div className="text-4xl">
-                <span className="inline-block h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto">
+          <div className="rounded-lg border bg-card p-4 md:p-6">
+            <div className="flex flex-col gap-4 text-center py-6 md:py-8">
+              <div>
+                <span className="inline-flex h-16 w-16 rounded-full bg-muted items-center justify-center mx-auto">
                   <span className="text-foreground text-2xl font-bold">B</span>
                 </span>
               </div>
@@ -81,7 +78,7 @@ export default function HomeDashboard({ user }: HomeDashboardProps) {
                 Exciting things are coming
               </h2>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Your applications will appear here once they're ready. 
+                Your applications will appear here once they're ready.
                 Check back soon for updates.
               </p>
             </div>
