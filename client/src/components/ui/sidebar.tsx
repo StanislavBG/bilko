@@ -53,6 +53,11 @@ function useSidebar() {
   return context
 }
 
+/** Safe version that returns null when outside SidebarProvider */
+function useSidebarSafe() {
+  return React.useContext(SidebarContext)
+}
+
 function SidebarProvider({
   defaultOpen = true,
   open: openProp,
@@ -724,4 +729,5 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
+  useSidebarSafe,
 }
