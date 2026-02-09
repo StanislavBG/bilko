@@ -1,5 +1,5 @@
 /**
- * FlowChat — Voice-aware chat for flow-driven conversations.
+ * FlowChat — Chat for flow-driven conversations.
  *
  * Chat ownership:
  * - The chat has an activeOwner (from FlowChatContext)
@@ -14,17 +14,13 @@
  *
  * Rules:
  * - ONLY messages render here (NO options, NO interactive cards)
- * - Messages come from flow steps (speaker + text) or user speaking/typing
+ * - Messages come from flow steps (speaker + text) or user typing
  * - TTS triggers only for bilko/agent messages (not user, not system)
- * - Prominent speaker/listener indicators
- * - Voice defaults to ON
- *
- * This is the chat half of the landing page. The main app area handles
- * options, sub-flows, and interactive content separately.
+ * - STT (mic/listening) has been removed
  */
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, Volume2, User, ArrowRight, ArrowDown, ArrowUp } from "lucide-react";
+import { Volume2, User, ArrowRight, ArrowDown, ArrowUp } from "lucide-react";
 import { BilkoMessage } from "@/components/bilko-message";
 import { AgentBadge, getAgentColors } from "@/components/speaker-identity";
 import { useFlowChat, type FlowChatMessage } from "@/lib/flow-engine/flow-chat";
@@ -36,7 +32,7 @@ import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
 
 export function FlowChat() {
   const { messages, activeOwner, messageDirection, setMessageDirection } = useFlowChat();
-  const { isListening, isSpeaking, isMuted, transcript, toggleListening } = useVoice();
+  const { isSpeaking } = useVoice();
   const { floor } = useConversationDesign();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [settledIds, setSettledIds] = useState<Set<string>>(new Set());
@@ -58,18 +54,30 @@ export function FlowChat() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Speaker/Listener indicator — prominent bar at top */}
-      <SpeakerIndicator
-        floor={floor}
-        isListening={isListening}
-        isSpeaking={isSpeaking}
-        isMuted={isMuted}
-        transcript={transcript}
-        onToggleMic={toggleListening}
-        activeOwner={activeOwner}
-        messageDirection={messageDirection}
-        onToggleDirection={toggleDirection}
-      />
+      {/* Header bar with TTS indicator and direction toggle */}
+      <div className="border-b border-border bg-background/95 backdrop-blur-sm">
+        <div className="px-4 py-1.5 flex items-center justify-between">
+          {isSpeaking ? (
+            <div className="flex items-center gap-2">
+              <Volume2 className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
+              <span className="text-xs text-amber-400 font-medium">Bilko is speaking</span>
+            </div>
+          ) : (
+            <div />
+          )}
+          <button
+            onClick={toggleDirection}
+            className="p-1 rounded hover:bg-foreground/10 transition-colors"
+            title={messageDirection === "top-down" ? "Switch to bottom-up messages" : "Switch to top-down messages"}
+          >
+            {messageDirection === "top-down" ? (
+              <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+            ) : (
+              <ArrowUp className="h-3.5 w-3.5 text-muted-foreground/50" />
+            )}
+          </button>
+        </div>
+      </div>
 
       {/* Message list — only messages, no options */}
       <div className="flex-1 overflow-auto">
@@ -97,214 +105,9 @@ export function FlowChat() {
               );
             })}
 
-            {/* Live transcript preview while user is speaking */}
-            {isListening && transcript && !isMuted && (
-              <div className="flex justify-end animate-in fade-in duration-200">
-                <div className="max-w-[80%] rounded-2xl rounded-br-sm px-4 py-2 bg-primary/20 text-primary-foreground/70 text-base italic border border-primary/30">
-                  {transcript}
-                  <span className="inline-block w-[3px] h-[1em] bg-primary/50 ml-1 align-text-bottom animate-pulse" />
-                </div>
-              </div>
-            )}
-
             <div ref={bottomRef} />
           </div>
         </div>
-      </div>
-
-      {/* Bottom mic bar — compact toggle */}
-      <BottomMicBar
-        isListening={isListening}
-        isMuted={isMuted}
-        isSpeaking={isSpeaking}
-        onToggle={toggleListening}
-      />
-    </div>
-  );
-}
-
-// ── Speaker/Listener Indicator ────────────────────────────
-// Only renders the prominent bar when voice is ON.
-// When voice is OFF, shows just the direction toggle — minimal chrome.
-
-function SpeakerIndicator({
-  floor,
-  isListening,
-  isSpeaking,
-  isMuted,
-  transcript,
-  onToggleMic,
-  activeOwner,
-  messageDirection,
-  onToggleDirection,
-}: {
-  floor: string;
-  isListening: boolean;
-  isSpeaking: boolean;
-  isMuted: boolean;
-  transcript: string;
-  onToggleMic: () => void;
-  activeOwner: string;
-  messageDirection: "top-down" | "bottom-up";
-  onToggleDirection: () => void;
-}) {
-  const micActive = isListening && !isMuted;
-
-  // When voice is OFF, show minimal bar with just the direction toggle
-  if (!isListening) {
-    return (
-      <div className="border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="px-4 py-1.5 flex items-center justify-end">
-          <button
-            onClick={onToggleDirection}
-            className="p-1 rounded hover:bg-foreground/10 transition-colors"
-            title={messageDirection === "top-down" ? "Switch to bottom-up messages" : "Switch to top-down messages"}
-          >
-            {messageDirection === "top-down" ? (
-              <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/50" />
-            ) : (
-              <ArrowUp className="h-3.5 w-3.5 text-muted-foreground/50" />
-            )}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Voice is ON — show the full indicator
-  let stateLabel: string;
-  let stateColor: string;
-  let bgColor: string;
-  let icon: React.ReactNode;
-
-  if (isSpeaking || (isMuted && isListening)) {
-    stateLabel = "Bilko is speaking";
-    stateColor = "text-amber-400";
-    bgColor = "bg-amber-500/10 border-amber-500/20";
-    icon = <Volume2 className="h-4 w-4 text-amber-400 animate-pulse" />;
-  } else if (micActive && floor === "user") {
-    stateLabel = "Your turn — listening";
-    stateColor = "text-green-400";
-    bgColor = "bg-green-500/10 border-green-500/20";
-    icon = <Mic className="h-4 w-4 text-green-400" />;
-  } else {
-    stateLabel = "Listening";
-    stateColor = "text-green-400/70";
-    bgColor = "bg-green-500/5 border-green-500/10";
-    icon = <Mic className="h-4 w-4 text-green-400/70" />;
-  }
-
-  return (
-    <div className={`border-b ${bgColor} transition-colors duration-300`}>
-      <div className="px-4 py-2.5 flex items-center gap-3">
-        {/* Mic toggle */}
-        <button
-          onClick={onToggleMic}
-          className="p-1.5 rounded-full hover:bg-foreground/10 transition-colors"
-          title="Turn off microphone"
-        >
-          {icon}
-        </button>
-
-        {/* State label */}
-        <span className={`text-sm font-medium ${stateColor} flex-1`}>
-          {stateLabel}
-        </span>
-
-        {/* Live transcript snippet */}
-        {micActive && transcript && (
-          <span className="text-xs text-foreground/60 truncate max-w-[200px]">
-            "{transcript}"
-          </span>
-        )}
-
-        {/* Voice mode badge */}
-        <span className="text-[10px] font-mono font-bold text-green-500/70 bg-green-500/10 px-1.5 py-0.5 rounded">
-          VOICE ON
-        </span>
-
-        {/* Message direction toggle */}
-        <button
-          onClick={onToggleDirection}
-          className="p-1 rounded hover:bg-foreground/10 transition-colors"
-          title={messageDirection === "top-down" ? "Switch to bottom-up messages" : "Switch to top-down messages"}
-        >
-          {messageDirection === "top-down" ? (
-            <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/50" />
-          ) : (
-            <ArrowUp className="h-3.5 w-3.5 text-muted-foreground/50" />
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── Bottom mic bar ───────────────────────────────────────
-// When voice is OFF: compact toggle button inviting the user to opt in.
-// When voice is ON: shows listening state and active indicator.
-
-function BottomMicBar({
-  isListening,
-  isMuted,
-  isSpeaking,
-  onToggle,
-}: {
-  isListening: boolean;
-  isMuted: boolean;
-  isSpeaking: boolean;
-  onToggle: () => void;
-}) {
-  const micActive = isListening && !isMuted;
-
-  // Voice is OFF — show compact opt-in toggle
-  if (!isListening) {
-    return (
-      <div className="border-t border-border bg-background/95 backdrop-blur-sm px-4 py-2">
-        <button
-          onClick={onToggle}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full
-            text-muted-foreground/60 hover:text-foreground
-            bg-muted/40 hover:bg-muted
-            transition-all duration-200"
-          title="Enable voice — talk to Bilko"
-        >
-          <MicOff className="h-3.5 w-3.5" />
-          <span className="text-xs font-medium">Enable voice</span>
-        </button>
-      </div>
-    );
-  }
-
-  // Voice is ON — show active state
-  return (
-    <div className="border-t border-border bg-background/95 backdrop-blur-sm px-4 py-2 flex items-center gap-2">
-      <button
-        onClick={onToggle}
-        className={`p-2 rounded-full transition-all ${
-          micActive
-            ? "bg-green-500/20 text-green-500 ring-2 ring-green-500/30"
-            : "bg-amber-500/10 text-amber-500"
-        }`}
-        title={isMuted ? "Mic paused — Bilko is speaking" : "Mic on — click to turn off"}
-      >
-        <Mic className="h-4 w-4" />
-      </button>
-
-      <div className="flex-1 min-w-0">
-        {isSpeaking ? (
-          <p className="text-xs text-amber-500/80 font-medium">
-            Bilko is speaking...
-          </p>
-        ) : micActive ? (
-          <p className="text-xs text-green-500/70 font-medium">
-            Listening — speak or type
-          </p>
-        ) : (
-          <p className="text-xs text-amber-500/60 font-medium">
-            Mic paused
-          </p>
-        )}
       </div>
     </div>
   );
