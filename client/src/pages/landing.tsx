@@ -265,6 +265,20 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         meta: { type: "agent-handoff", modeId: mode },
       });
 
+      // System handoff message (centered divider with arrow)
+      if (agent) {
+        addMessage({
+          role: "system",
+          text: `Bilko \u2192 ${agent.name}`,
+          handoff: {
+            fromName: "Bilko",
+            toName: agent.name,
+            toChatName: agent.chatName,
+          },
+          meta: { type: "system-handoff", modeId: mode },
+        });
+      }
+
       // The specialist agent greets the user
       if (agent) {
         addMessage({
@@ -288,6 +302,13 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       role: "user",
       text: "Show me what else you've got",
       meta: { type: "back" },
+    });
+
+    // System return message
+    addMessage({
+      role: "system",
+      text: "Returning to Bilko",
+      meta: { type: "system-return" },
     });
 
     // Bilko returns — context-aware based on past activities
@@ -377,6 +398,15 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
           agentDisplayName: msg.agentDisplayName ?? "Specialist",
           accentColor: msg.agentAccent,
           delay: 200,
+        };
+      }
+
+      // System messages → centered divider-style
+      if (msg.role === "system") {
+        return {
+          type: "system" as const,
+          text: msg.text,
+          handoff: msg.handoff,
         };
       }
 
