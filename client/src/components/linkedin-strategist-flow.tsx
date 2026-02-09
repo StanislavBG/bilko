@@ -202,7 +202,7 @@ Rules:
 
 // ── Component ────────────────────────────────────────────
 
-export function LinkedInStrategistFlow() {
+export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
   const [phase, setPhase] = useState<Phase>("intro");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [profileText, setProfileText] = useState("");
@@ -698,10 +698,22 @@ export function LinkedInStrategistFlow() {
               </Badge>
             )}
             {phase === "results" && (
-              <Button variant="ghost" size="sm" onClick={reset} className="h-7 gap-1">
-                <RotateCcw className="h-3 w-3" />
-                Start Over
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={reset} className="h-7 gap-1">
+                  <RotateCcw className="h-3 w-3" />
+                  Start Over
+                </Button>
+                {onComplete && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7"
+                    onClick={() => onComplete(`Optimized ${updatedRoles.length} LinkedIn role descriptions.`)}
+                  >
+                    Done
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </div>
