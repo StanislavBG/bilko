@@ -10,7 +10,8 @@
     "check": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "rules:validate": "npx tsx script/validate-rules.ts"
   },
   "dependencies": {
     "@google/genai": "^1.40.0",

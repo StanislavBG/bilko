@@ -1,10 +1,10 @@
 # n8n Self-Hosting Setup Guide
 
-Rule ID: INT-004
+Rule ID: ENV-004
 Priority: HIGH
-Version: 1.1.0
-Partition: integration
-Migrated From: SHARED-004 (v1.0.1)
+Version: 2.0.0
+Partition: env
+Migrated From: INT-004 (v1.1.0)
 
 ## Context
 This rule provides the complete setup guide for self-hosting n8n on Replit as part of the Bilko Bibitkov system.
