@@ -36,6 +36,8 @@ export interface OptionChoice {
   description: string;
   icon: ReactNode;
   voiceTriggers: readonly string[];
+  /** Optional badge rendered at top-right of the tile */
+  badge?: ReactNode;
 }
 
 export interface UserChoiceTurn {
@@ -532,6 +534,9 @@ function UserChoiceView({
             `}
             style={{ animationDelay: `${i * 80}ms` }}
           >
+            {option.badge && (
+              <div className="absolute top-2 right-2">{option.badge}</div>
+            )}
             <div className="flex items-start gap-3">
               <div className={`
                 w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-colors
