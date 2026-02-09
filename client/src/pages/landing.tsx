@@ -29,6 +29,7 @@ import { WorkWithMeFlow } from "@/components/work-with-me-flow";
 import { bilkoSays } from "@/lib/bilko-persona";
 import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
+import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 import { chat } from "@/lib/flow-engine";
 import { Button } from "@/components/ui/button";
 import {
@@ -202,10 +203,14 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Track completed activity summaries for Bilko's context-aware returns
+  const activityLogRef = useRef<Array<{ modeId: string; modeLabel: string; summary: string }>>([]);
+
   const handleChoice = useCallback(
     (choiceId: string) => {
       const mode = choiceId as LearningModeId;
       const modeLabel = LEARNING_MODES.find((m) => m.id === mode)?.label;
+      const agent = getFlowAgent(mode);
 
       // Auto-start mic on first interaction (user gesture present)
       if (!isListening) {
@@ -219,17 +224,31 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         meta: { type: "choice", modeId: mode, modeLabel },
       });
 
-      // Bilko acknowledges the choice
-      const speech = bilkoSays({
-        event: "choice-made",
-        topic: modeLabel,
-      });
+      // Bilko hands off to the specialist agent
+      const handoff = bilkoSays({ event: "choice-made", topic: modeLabel });
       addMessage({
         role: "bilko",
-        text: speech.text,
-        speech: speech.speech,
-        meta: { type: "acknowledgment", modeId: mode },
+        text: agent
+          ? `${handoff.text} I'm handing you over to ${agent.name}.`
+          : handoff.text,
+        speech: agent
+          ? `${handoff.speech} I'm handing you over to ${agent.name}.`
+          : handoff.speech,
+        meta: { type: "agent-handoff", modeId: mode },
       });
+
+      // The specialist agent greets the user
+      if (agent) {
+        addMessage({
+          role: "agent",
+          text: agent.greeting,
+          speech: agent.greetingSpeech,
+          agentName: agent.chatName,
+          agentDisplayName: agent.name,
+          agentAccent: agent.accentColor,
+          meta: { type: "agent-greeting", modeId: mode },
+        });
+      }
 
       selectMode(mode);
     },
@@ -243,11 +262,25 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       meta: { type: "back" },
     });
 
+    // Bilko returns — context-aware based on past activities
+    const activities = activityLogRef.current;
+    const lastActivity = activities[activities.length - 1];
+    let returnText: string;
+    let returnSpeech: string;
+
+    if (lastActivity) {
+      returnText = `Good session with ${lastActivity.modeLabel}. I'm back. What do you want to try next?`;
+      returnSpeech = `Good session with ${lastActivity.modeLabel}. I'm back. What do you want to try next?`;
+    } else {
+      returnText = "I'm back. What else are you interested in?";
+      returnSpeech = "I'm back. What else are you interested in?";
+    }
+
     addMessage({
       role: "bilko",
-      text: "What else are you interested in?",
-      speech: "What else are you interested in?",
-      meta: { type: "question" },
+      text: returnText,
+      speech: returnSpeech,
+      meta: { type: "bilko-return" },
     });
 
     clearMode();
@@ -297,6 +330,19 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         };
       }
 
+      // Agent messages → attributed agent turns
+      if (msg.role === "agent") {
+        return {
+          type: "agent" as const,
+          text: msg.text,
+          speech: msg.speech,
+          agentName: msg.agentName ?? "Agent",
+          agentDisplayName: msg.agentDisplayName ?? "Specialist",
+          accentColor: msg.agentAccent,
+          delay: 200,
+        };
+      }
+
       // All user messages → right-aligned bubble
       return {
         type: "user" as const,
@@ -311,7 +357,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         lastMsg?.role === "bilko" &&
         (lastMsg.meta?.type === "greeting" ||
           lastMsg.meta?.type === "question" ||
-          lastMsg.meta?.type === "guidance")
+          lastMsg.meta?.type === "guidance" ||
+          lastMsg.meta?.type === "bilko-return")
       ) {
         turns.push({
           type: "user-choice" as const,
@@ -396,12 +443,36 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   useEffect(() => {
     const unsub = subscribe("main", (msg) => {
       if (msg.type === "summary" && typeof msg.payload.summary === "string") {
-        addMessage({
-          role: "bilko",
-          text: msg.payload.summary,
-          speech: msg.payload.summary,
-          meta: { type: "subflow-summary", fromFlow: msg.from },
+        // Find the agent that produced this summary
+        const fromAgent = getFlowAgent(msg.from);
+        const modeLabel = LEARNING_MODES.find((m) => m.id === msg.from)?.label ?? msg.from;
+
+        // Log to activity history for Bilko's future context
+        activityLogRef.current.push({
+          modeId: msg.from,
+          modeLabel,
+          summary: msg.payload.summary,
         });
+
+        // Agent delivers the summary (attributed to the specialist, not Bilko)
+        if (fromAgent) {
+          addMessage({
+            role: "agent",
+            text: msg.payload.summary,
+            speech: msg.payload.summary,
+            agentName: fromAgent.chatName,
+            agentDisplayName: fromAgent.name,
+            agentAccent: fromAgent.accentColor,
+            meta: { type: "subflow-summary", fromFlow: msg.from },
+          });
+        } else {
+          addMessage({
+            role: "bilko",
+            text: msg.payload.summary,
+            speech: msg.payload.summary,
+            meta: { type: "subflow-summary", fromFlow: msg.from },
+          });
+        }
       }
     });
     return unsub;

@@ -24,13 +24,19 @@ import type { LearningModeId } from "@/lib/workflow";
 
 export interface ConversationMessage {
   id: string;
-  role: "bilko" | "user";
+  role: "bilko" | "user" | "agent";
   text: string;
   speech?: string;
   timestamp: number;
+  /** Agent name when role is "agent" (e.g. "YoutubeExpert") */
+  agentName?: string;
+  /** Agent display name when role is "agent" (e.g. "YouTube Librarian") */
+  agentDisplayName?: string;
+  /** Agent accent color class when role is "agent" */
+  agentAccent?: string;
   meta?: {
     /** What kind of message this is */
-    type?: "greeting" | "question" | "acknowledgment" | "choice" | "back" | "voice" | "guidance" | "subflow-summary";
+    type?: "greeting" | "question" | "acknowledgment" | "choice" | "back" | "voice" | "guidance" | "subflow-summary" | "agent-greeting" | "agent-handoff" | "bilko-return";
     /** If user chose a mode */
     modeId?: string;
     modeLabel?: string;
