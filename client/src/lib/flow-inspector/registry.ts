@@ -6,19 +6,33 @@
  *
  * Validated at import time by ARCH-005 steel frame validator.
  * Invalid flows are logged and excluded.
+ *
+ * ═══════════════════════════════════════════════════════════
+ * ACTIVE FLOWS:  bilko-main, video-discovery
+ * STANDBY FLOWS: work-with-me, ai-consultation,
+ *                recursive-interviewer, linkedin-strategist,
+ *                socratic-architect
+ *
+ * DO NOT MODIFY standby flows — they are frozen until
+ * explicitly moved back to active status.
+ * ═══════════════════════════════════════════════════════════
  */
 
 import type { FlowDefinition } from "./types";
 import { validateRegistry } from "./validate";
 
 const allFlows: FlowDefinition[] = [
-  // ── Bilko Main — The landing page experience as a flow ────
+  // ── ACTIVE — Bilko Main Flow ──────────────────────────────
+  // This is the root flow that governs the landing page.
+  // It greets the user (chat node), shows two options
+  // (Video Recommendation + Explore the Site), and runs the
+  // selected sub-flow.
   {
     id: "bilko-main",
     name: "Bilko Main Flow",
     description:
-      "The main landing experience — Bilko greets users and routes them to specialist sub-flows. This is the root flow that governs the entire conversational landing page.",
-    version: "1.0.0",
+      "The main landing experience — Bilko greets users and routes them to Video Discovery or site exploration. This is the root flow that governs the entire conversational landing page.",
+    version: "2.0.0",
     location: "landing",
     componentPath: "client/src/pages/landing.tsx",
     tags: ["landing", "main", "greeting", "routing", "root"],
@@ -33,7 +47,7 @@ const allFlows: FlowDefinition[] = [
         name: "Greetings from Bilko",
         type: "llm",
         description:
-          "Bilko generates a warm, natural opening greeting for the user. The greeting is pushed to the chat with TTS. This is always the first step — Bilko speaks first (C1).",
+          "Bilko generates a warm, natural opening greeting for the user. This is always the first step — Bilko speaks first (C1).",
         prompt:
           "You are greeting a new visitor to the AI School. Generate a warm, natural opening. Welcome them, introduce yourself briefly as Bilko their AI training partner, and ask how they'd like to learn today. 2-3 sentences max. Plain text only.",
         userMessage: "A new visitor just arrived at the AI School.",
@@ -49,22 +63,37 @@ const allFlows: FlowDefinition[] = [
         dependsOn: [],
       },
       {
+        id: "greeting-chat",
+        name: "Push Greeting to Chat",
+        type: "chat",
+        description:
+          "Pushes the generated greeting text to the FlowChat panel with TTS. This is the explicit chat-publish step — the greeting LLM output is only visible to the user after this step runs.",
+        inputSchema: [
+          {
+            name: "greeting",
+            type: "string",
+            description: "The greeting text from the LLM step",
+          },
+        ],
+        dependsOn: ["greeting"],
+      },
+      {
         id: "mode-selection",
         name: "User Selects Experience",
         type: "user-input",
         subtype: "menu",
         description:
-          "A menu-style input that dynamically presents all available Bilko-Flows from the flow registry (landing-location flows, excluding the root bilko-main flow) plus special navigation tiles (e.g., Explore the Site). Each menu item shows the flow's name, description, and icon. Supports click and voice selection.",
+          "A menu with two options: 'Video Recommendation' (launches the video-discovery sub-flow) and 'Explore the Site' (opens the sidebar navigation). Supports click and voice selection.",
         inputSchema: [
           {
             name: "availableFlows",
             type: "array",
-            description: "Bilko-Flow entries from the flow registry (id, name, description, icon, voiceTriggers), filtered by location",
+            description: "Active sub-flows available for selection (currently only video-discovery)",
           },
           {
             name: "specialTiles",
             type: "array",
-            description: "Additional navigation tiles beyond flows (e.g., Explore the Site)",
+            description: "Navigation tiles (Explore the Site)",
           },
         ],
         outputSchema: [
@@ -74,7 +103,7 @@ const allFlows: FlowDefinition[] = [
             description: "The flow ID or special tile ID the user selected",
           },
         ],
-        dependsOn: ["greeting"],
+        dependsOn: ["greeting-chat"],
       },
       {
         id: "run-subflow",
@@ -94,204 +123,11 @@ const allFlows: FlowDefinition[] = [
     ],
   },
 
-  // ── Work With Me — Guided web task assistant ─────────────
-  {
-    id: "work-with-me",
-    name: "Work With Me",
-    description:
-      "Tell the agent your objective (e.g. 'register a business in WA') and it finds every step, then wireframes each website inside the app so the agent can see through your eyes and guide you with element-level overlays — every recommendation justified.",
-    version: "1.0.0",
-    location: "landing",
-    componentPath: "client/src/components/work-with-me-flow.tsx",
-    tags: ["landing", "guidance", "web", "assistant", "wireframe", "gemini"],
-    icon: "Handshake",
-    voiceTriggers: ["work with me", "guide", "help me", "walk me through", "assist", "task"],
-    output: {
-      name: "completedSteps",
-      type: "object",
-      description: "The steps the user completed with guidance from the agent",
-    },
-    steps: [
-      {
-        id: "objective-input",
-        name: "User Enters Objective",
-        type: "user-input",
-        description:
-          "User describes their goal in natural language (e.g. 'Register a business in Washington State'). Free-text input with example suggestions.",
-        inputSchema: [
-          {
-            name: "exampleSuggestions",
-            type: "array",
-            description: "Pre-defined example objectives shown as clickable suggestions",
-          },
-        ],
-        outputSchema: [
-          {
-            name: "objective",
-            type: "string",
-            description: "The user's goal in natural language",
-          },
-        ],
-        dependsOn: [],
-      },
-      {
-        id: "research-steps",
-        name: "Research Step-by-Step Plan",
-        type: "llm",
-        description:
-          "Agent analyzes the objective and finds 3-7 concrete steps with real, actionable URLs from official sources. Each step includes a title, description, URL, estimated time, and justification.",
-        prompt:
-          "Given a user objective, find the exact step-by-step process with real URLs from official websites.",
-        userMessage: 'Find the step-by-step process for: "{objective}"',
-        model: "gemini-2.5-flash",
-        inputSchema: [
-          {
-            name: "objective",
-            type: "string",
-            description: "The user's goal",
-          },
-        ],
-        outputSchema: [
-          {
-            name: "taskTitle",
-            type: "string",
-            description: "Short title for the task",
-          },
-          {
-            name: "overview",
-            type: "string",
-            description: "1-2 sentence overview",
-          },
-          {
-            name: "steps",
-            type: "array",
-            description:
-              "Array of steps with stepNumber, title, description, url, estimatedTime, whyThisStep",
-          },
-        ],
-        dependsOn: ["objective-input"],
-      },
-      {
-        id: "select-step",
-        name: "User Picks Step",
-        type: "user-input",
-        description:
-          "Displays the step-by-step plan as cards. User picks which step to work on. Completed steps are shown with a green checkmark.",
-        inputSchema: [
-          {
-            name: "steps",
-            type: "array",
-            description: "The researched steps",
-          },
-        ],
-        outputSchema: [
-          {
-            name: "selectedStep",
-            type: "object",
-            description: "The step the user chose to work on",
-          },
-        ],
-        dependsOn: ["research-steps"],
-      },
-      {
-        id: "fetch-page",
-        name: "Fetch & Parse Website",
-        type: "transform",
-        description:
-          "Server-side proxy fetches the selected URL, parses the HTML with jsdom, and extracts a structured representation of the page: headings, links, buttons, form fields, paragraphs, lists, and images.",
-        inputSchema: [
-          {
-            name: "url",
-            type: "string",
-            description: "The URL to fetch",
-          },
-        ],
-        outputSchema: [
-          {
-            name: "pageStructure",
-            type: "object",
-            description:
-              "Structured page with url, title, description, and elements array",
-          },
-        ],
-        dependsOn: ["select-step"],
-      },
-      {
-        id: "analyze-page",
-        name: "Generate Visual Guidance",
-        type: "llm",
-        description:
-          "Agent reads the page structure and generates element-level guidance: which elements to click, fill, or read — each with a justification explaining why that action matters for the user's goal.",
-        prompt:
-          "Analyze the page structure and generate element-level guidance with justifications for achieving the user's objective.",
-        userMessage:
-          "Guide the user through this page to help them achieve their goal.",
-        model: "gemini-2.5-flash",
-        inputSchema: [
-          {
-            name: "objective",
-            type: "string",
-            description: "The user's original goal",
-          },
-          {
-            name: "stepContext",
-            type: "object",
-            description: "The current step being worked on",
-          },
-          {
-            name: "pageStructure",
-            type: "object",
-            description: "The structured page representation",
-          },
-        ],
-        outputSchema: [
-          {
-            name: "pageSummary",
-            type: "string",
-            description: "What this page is about",
-          },
-          {
-            name: "guidanceItems",
-            type: "array",
-            description:
-              "Element-level guidance with elementId, action, instruction, justification, order, priority",
-          },
-          {
-            name: "nextAction",
-            type: "string",
-            description: "What happens after following the guidance",
-          },
-        ],
-        dependsOn: ["fetch-page"],
-      },
-      {
-        id: "guided-view",
-        name: "Interactive Wireframe",
-        type: "display",
-        description:
-          "Renders the website as a wireframe with guidance overlays. Highlighted elements have colored borders and inline tooltips. Links are clickable and navigate to the next page (which gets fetched and analyzed in turn). User can mark steps complete and move to the next one.",
-        inputSchema: [
-          {
-            name: "pageStructure",
-            type: "object",
-            description: "The structured page to wireframe",
-          },
-          {
-            name: "guidance",
-            type: "object",
-            description: "The agent's element-level guidance",
-          },
-        ],
-        outputSchema: [],
-        dependsOn: ["analyze-page"],
-      },
-    ],
-  },
-
-
+  // ── ACTIVE — Video Discovery ──────────────────────────────
+  // The primary learning flow. Topic → question → YouTube search → play.
   {
     id: "video-discovery",
-    name: "Video Discovery",
+    name: "Video Recommendation",
     description:
       "Pick a topic, ask a question, and discover real YouTube videos — powered by YouTube Data API search, not AI-hallucinated links.",
     version: "3.0.0",
@@ -299,7 +135,7 @@ const allFlows: FlowDefinition[] = [
     componentPath: "client/src/components/video-discovery-flow.tsx",
     tags: ["landing", "learning", "video", "youtube", "gemini"],
     icon: "Play",
-    voiceTriggers: ["video", "watch", "tutorial", "show me"],
+    voiceTriggers: ["video", "watch", "tutorial", "show me", "recommend"],
     output: {
       name: "selectedVideo",
       type: "object",
@@ -507,7 +343,207 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     ],
   },
 
-  // ── AI Leverage Consultation ──────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // STANDBY FLOWS — DO NOT MODIFY
+  // These flows are frozen. Do not edit, refactor, or extend
+  // them until they are explicitly moved back to active status.
+  // ═══════════════════════════════════════════════════════════
+
+  // ── STANDBY — DO NOT MODIFY — Work With Me ────────────────
+  {
+    id: "work-with-me",
+    name: "Work With Me",
+    description:
+      "Tell the agent your objective (e.g. 'register a business in WA') and it finds every step, then wireframes each website inside the app so the agent can see through your eyes and guide you with element-level overlays — every recommendation justified.",
+    version: "1.0.0",
+    location: "landing",
+    componentPath: "client/src/components/work-with-me-flow.tsx",
+    tags: ["landing", "guidance", "web", "assistant", "wireframe", "gemini", "standby"],
+    icon: "Handshake",
+    voiceTriggers: ["work with me", "guide", "help me", "walk me through", "assist", "task"],
+    output: {
+      name: "completedSteps",
+      type: "object",
+      description: "The steps the user completed with guidance from the agent",
+    },
+    steps: [
+      {
+        id: "objective-input",
+        name: "User Enters Objective",
+        type: "user-input",
+        description:
+          "User describes their goal in natural language (e.g. 'Register a business in Washington State'). Free-text input with example suggestions.",
+        inputSchema: [
+          {
+            name: "exampleSuggestions",
+            type: "array",
+            description: "Pre-defined example objectives shown as clickable suggestions",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "objective",
+            type: "string",
+            description: "The user's goal in natural language",
+          },
+        ],
+        dependsOn: [],
+      },
+      {
+        id: "research-steps",
+        name: "Research Step-by-Step Plan",
+        type: "llm",
+        description:
+          "Agent analyzes the objective and finds 3-7 concrete steps with real, actionable URLs from official sources. Each step includes a title, description, URL, estimated time, and justification.",
+        prompt:
+          "Given a user objective, find the exact step-by-step process with real URLs from official websites.",
+        userMessage: 'Find the step-by-step process for: "{objective}"',
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "objective",
+            type: "string",
+            description: "The user's goal",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "taskTitle",
+            type: "string",
+            description: "Short title for the task",
+          },
+          {
+            name: "overview",
+            type: "string",
+            description: "1-2 sentence overview",
+          },
+          {
+            name: "steps",
+            type: "array",
+            description:
+              "Array of steps with stepNumber, title, description, url, estimatedTime, whyThisStep",
+          },
+        ],
+        dependsOn: ["objective-input"],
+      },
+      {
+        id: "select-step",
+        name: "User Picks Step",
+        type: "user-input",
+        description:
+          "Displays the step-by-step plan as cards. User picks which step to work on. Completed steps are shown with a green checkmark.",
+        inputSchema: [
+          {
+            name: "steps",
+            type: "array",
+            description: "The researched steps",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "selectedStep",
+            type: "object",
+            description: "The step the user chose to work on",
+          },
+        ],
+        dependsOn: ["research-steps"],
+      },
+      {
+        id: "fetch-page",
+        name: "Fetch & Parse Website",
+        type: "transform",
+        description:
+          "Server-side proxy fetches the selected URL, parses the HTML with jsdom, and extracts a structured representation of the page: headings, links, buttons, form fields, paragraphs, lists, and images.",
+        inputSchema: [
+          {
+            name: "url",
+            type: "string",
+            description: "The URL to fetch",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "pageStructure",
+            type: "object",
+            description:
+              "Structured page with url, title, description, and elements array",
+          },
+        ],
+        dependsOn: ["select-step"],
+      },
+      {
+        id: "analyze-page",
+        name: "Generate Visual Guidance",
+        type: "llm",
+        description:
+          "Agent reads the page structure and generates element-level guidance: which elements to click, fill, or read — each with a justification explaining why that action matters for the user's goal.",
+        prompt:
+          "Analyze the page structure and generate element-level guidance with justifications for achieving the user's objective.",
+        userMessage:
+          "Guide the user through this page to help them achieve their goal.",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "objective",
+            type: "string",
+            description: "The user's original goal",
+          },
+          {
+            name: "stepContext",
+            type: "object",
+            description: "The current step being worked on",
+          },
+          {
+            name: "pageStructure",
+            type: "object",
+            description: "The structured page representation",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "pageSummary",
+            type: "string",
+            description: "What this page is about",
+          },
+          {
+            name: "guidanceItems",
+            type: "array",
+            description:
+              "Element-level guidance with elementId, action, instruction, justification, order, priority",
+          },
+          {
+            name: "nextAction",
+            type: "string",
+            description: "What happens after following the guidance",
+          },
+        ],
+        dependsOn: ["fetch-page"],
+      },
+      {
+        id: "guided-view",
+        name: "Interactive Wireframe",
+        type: "display",
+        description:
+          "Renders the website as a wireframe with guidance overlays. Highlighted elements have colored borders and inline tooltips. Links are clickable and navigate to the next page (which gets fetched and analyzed in turn). User can mark steps complete and move to the next one.",
+        inputSchema: [
+          {
+            name: "pageStructure",
+            type: "object",
+            description: "The structured page to wireframe",
+          },
+          {
+            name: "guidance",
+            type: "object",
+            description: "The agent's element-level guidance",
+          },
+        ],
+        outputSchema: [],
+        dependsOn: ["analyze-page"],
+      },
+    ],
+  },
+
+  // ── STANDBY — DO NOT MODIFY — AI Leverage Consultation ────
   {
     id: "ai-consultation",
     name: "AI Leverage Consultation",
@@ -516,7 +552,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
-    tags: ["landing", "ai", "consultation", "recommendations", "gemini"],
+    tags: ["landing", "ai", "consultation", "recommendations", "gemini", "standby"],
     icon: "MessageCircle",
     voiceTriggers: ["chat", "talk", "consult", "leverage", "consultation", "advice"],
     output: {
@@ -661,7 +697,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     ],
   },
 
-  // ── Recursive Interviewer ─────────────────────────────────
+  // ── STANDBY — DO NOT MODIFY — Recursive Interviewer ───────
   {
     id: "recursive-interviewer",
     name: "The Recursive Interviewer",
@@ -670,7 +706,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
-    tags: ["landing", "ai", "strategy", "recursive", "framework", "gemini"],
+    tags: ["landing", "ai", "strategy", "recursive", "framework", "gemini", "standby"],
     icon: "Lightbulb",
     voiceTriggers: ["interviewer", "recursive", "deep dive", "strategy"],
     output: {
@@ -736,7 +772,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     ],
   },
 
-  // ── LinkedIn Strategist — LinkedIn-grounded profile optimizer ─
+  // ── STANDBY — DO NOT MODIFY — LinkedIn Strategist ─────────
   {
     id: "linkedin-strategist",
     name: "LinkedIn Profile Optimizer",
@@ -745,7 +781,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     version: "2.0.0",
     location: "landing",
     componentPath: "client/src/components/linkedin-strategist-flow.tsx",
-    tags: ["landing", "career", "linkedin", "profile", "optimization", "gemini"],
+    tags: ["landing", "career", "linkedin", "profile", "optimization", "gemini", "standby"],
     icon: "Briefcase",
     voiceTriggers: ["linkedin", "career", "resume", "profile", "dossier"],
     output: {
@@ -869,7 +905,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     ],
   },
 
-  // ── Socratic Architect ────────────────────────────────────
+  // ── STANDBY — DO NOT MODIFY — Socratic Architect ──────────
   {
     id: "socratic-architect",
     name: "The Socratic Architect",
@@ -878,7 +914,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
-    tags: ["landing", "socratic", "configurable", "template", "interview", "gemini"],
+    tags: ["landing", "socratic", "configurable", "template", "interview", "gemini", "standby"],
     icon: "GraduationCap",
     voiceTriggers: ["socratic", "architect", "custom", "configure", "expert"],
     output: {
@@ -964,6 +1000,9 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
 
 /** Validated registry — only flows passing ARCH-005 invariants */
 export const flowRegistry: FlowDefinition[] = validateRegistry(allFlows);
+
+/** Get only the active (non-standby) flows for the landing page */
+export const activeFlowIds = new Set(["bilko-main", "video-discovery"]);
 
 export function getFlowById(id: string): FlowDefinition | undefined {
   return flowRegistry.find((f) => f.id === id);
