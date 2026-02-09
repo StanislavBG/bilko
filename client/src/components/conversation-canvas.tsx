@@ -45,6 +45,20 @@ export interface UserChoiceTurn {
   selectedId?: string;
 }
 
+export interface AgentTurn {
+  type: "agent";
+  text: string;
+  speech?: string;
+  /** Agent chat name (e.g. "YoutubeExpert") */
+  agentName: string;
+  /** Agent display name (e.g. "YouTube Librarian") */
+  agentDisplayName: string;
+  /** Accent color class */
+  accentColor?: string;
+  /** Delay before showing (ms) */
+  delay?: number;
+}
+
 export interface UserTurn {
   type: "user";
   text: string;
@@ -70,6 +84,7 @@ export interface ContentBlocksTurn {
 
 export type ConversationTurn =
   | BilkoTurn
+  | AgentTurn
   | UserTurn
   | UserChoiceTurn
   | ContentTurn
@@ -261,6 +276,17 @@ function TurnRenderer({
     );
   }
 
+  if (turn.type === "agent") {
+    return (
+      <AgentTurnView
+        turn={turn}
+        isSettled={isSettled}
+        onSettled={onSettled}
+        compact={compact}
+      />
+    );
+  }
+
   if (turn.type === "user") {
     return <UserTurnView turn={turn} onSettled={onSettled} compact={compact} />;
   }
@@ -326,6 +352,54 @@ function BilkoTurnView({
       onComplete={onSettled}
       className={textClass}
     />
+  );
+}
+
+// ── Agent turn (subflow specialist, attributed message) ──
+
+function AgentTurnView({
+  turn,
+  isSettled,
+  onSettled,
+  compact,
+}: {
+  turn: AgentTurn;
+  isSettled: boolean;
+  onSettled: () => void;
+  compact?: boolean;
+}) {
+  const textClass = compact
+    ? "text-base md:text-lg font-semibold tracking-tight leading-tight text-foreground"
+    : "text-2xl md:text-3xl lg:text-4xl font-semibold tracking-tight leading-tight text-foreground";
+
+  const labelClass = turn.accentColor ?? "text-primary";
+
+  if (isSettled) {
+    return (
+      <div className="animate-in fade-in duration-300">
+        <span className={`text-xs font-medium uppercase tracking-wider ${labelClass} mb-1 block`}>
+          {turn.agentDisplayName}
+        </span>
+        <p className={textClass}>{turn.text}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <span className={`text-xs font-medium uppercase tracking-wider ${labelClass} mb-1 block animate-in fade-in duration-200`}>
+        {turn.agentDisplayName}
+      </span>
+      <BilkoMessage
+        text={turn.text}
+        speech={turn.speech}
+        speakAloud
+        delay={turn.delay ?? 200}
+        speed={70}
+        onComplete={onSettled}
+        className={textClass}
+      />
+    </div>
   );
 }
 

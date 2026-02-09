@@ -15,11 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
-  Brain,
-  MousePointerClick,
-  ArrowRightLeft,
-  ShieldCheck,
-  Monitor,
   ArrowDown,
   ArrowUp,
   FileCode2,
@@ -28,51 +23,11 @@ import {
   ChevronRight,
   Loader2,
   Blocks,
+  ShieldCheck,
 } from "lucide-react";
 import type { ComponentDefinition } from "@shared/component-definitions";
-
-// ── Step type styling (matches step-detail.tsx pattern) ──────
-
-const TYPE_STYLE: Record<
-  string,
-  { icon: typeof Brain; color: string; bg: string; accent: string; categoryLabel: string }
-> = {
-  llm: {
-    icon: Brain,
-    color: "text-purple-500",
-    bg: "bg-purple-500/10",
-    accent: "border-purple-500/30",
-    categoryLabel: "AI",
-  },
-  "user-input": {
-    icon: MousePointerClick,
-    color: "text-blue-500",
-    bg: "bg-blue-500/10",
-    accent: "border-blue-500/30",
-    categoryLabel: "Interaction",
-  },
-  transform: {
-    icon: ArrowRightLeft,
-    color: "text-orange-500",
-    bg: "bg-orange-500/10",
-    accent: "border-orange-500/30",
-    categoryLabel: "Data",
-  },
-  validate: {
-    icon: ShieldCheck,
-    color: "text-green-500",
-    bg: "bg-green-500/10",
-    accent: "border-green-500/30",
-    categoryLabel: "Quality",
-  },
-  display: {
-    icon: Monitor,
-    color: "text-cyan-500",
-    bg: "bg-cyan-500/10",
-    accent: "border-cyan-500/30",
-    categoryLabel: "Presentation",
-  },
-};
+import { STEP_TYPE_CONFIG } from "@/lib/flow-inspector/step-type-config";
+import type { StepType } from "@/lib/flow-inspector/types";
 
 // ── Main Component ──────────────────────────────────────────
 
@@ -120,7 +75,7 @@ export function ComponentCatalog() {
         </button>
         <Separator className="my-2" />
         {components.map((comp) => {
-          const style = TYPE_STYLE[comp.type];
+          const style = STEP_TYPE_CONFIG[comp.type as StepType];
           const Icon = style?.icon ?? Blocks;
           const isActive = selectedType === comp.type;
           return (
@@ -173,7 +128,7 @@ function ComponentHome({
       </div>
       <div className="grid gap-3">
         {components.map((comp) => {
-          const style = TYPE_STYLE[comp.type];
+          const style = STEP_TYPE_CONFIG[comp.type as StepType];
           const Icon = style?.icon ?? Blocks;
           return (
             <Card
@@ -227,7 +182,7 @@ function ComponentHome({
 // ── Component Detail ────────────────────────────────────────
 
 function ComponentDetail({ component }: { component: ComponentDefinition }) {
-  const style = TYPE_STYLE[component.type];
+  const style = STEP_TYPE_CONFIG[component.type as StepType];
   const Icon = style?.icon ?? Blocks;
 
   return (

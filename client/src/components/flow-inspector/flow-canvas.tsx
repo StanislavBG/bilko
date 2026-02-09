@@ -24,11 +24,6 @@ import {
   Maximize2,
   Search,
   X,
-  Brain,
-  MousePointerClick,
-  ArrowRightLeft,
-  ShieldCheck,
-  Monitor,
   CheckCircle2,
   Circle,
   Loader2,
@@ -36,17 +31,9 @@ import {
   SkipForward,
   Keyboard,
 } from "lucide-react";
-import type { FlowDefinition, StepExecution, StepStatus, StepType, FlowStep } from "@/lib/flow-inspector/types";
-import { computeLayout, NODE_W, NODE_H, PADDING, type DAGLayout } from "@/lib/flow-inspector/layout";
-
-// ── Step type visuals ─────────────────────────────────────
-const TYPE_CONFIG: Record<StepType, { icon: typeof Brain; label: string; color: string; border: string }> = {
-  llm:          { icon: Brain,             label: "LLM",        color: "text-purple-500", border: "border-purple-500/40" },
-  "user-input": { icon: MousePointerClick, label: "Input",      color: "text-blue-500",   border: "border-blue-500/40" },
-  transform:    { icon: ArrowRightLeft,    label: "Transform",  color: "text-orange-500", border: "border-orange-500/40" },
-  validate:     { icon: ShieldCheck,       label: "Validate",   color: "text-green-500",  border: "border-green-500/40" },
-  display:      { icon: Monitor,           label: "Display",    color: "text-cyan-500",   border: "border-cyan-500/40" },
-};
+import type { FlowDefinition, StepExecution, StepStatus, FlowStep } from "@/lib/flow-inspector/types";
+import { computeLayout, NODE_W, NODE_H, PADDING } from "@/lib/flow-inspector/layout";
+import { STEP_TYPE_CONFIG } from "@/lib/flow-inspector/step-type-config";
 
 const STATUS_ICON: Record<StepStatus, typeof Circle> = {
   idle: Circle, running: Loader2, success: CheckCircle2, error: XCircle, skipped: SkipForward,
@@ -518,7 +505,7 @@ interface CanvasNodeProps {
 }
 
 const CanvasNode = memo(function CanvasNode({ step, x, y, status, isSelected, isHighlighted, isMultiSelected, dimmed, onClick }: CanvasNodeProps) {
-  const config = TYPE_CONFIG[step.type];
+  const config = STEP_TYPE_CONFIG[step.type];
   const TypeIcon = config.icon;
   const StatusIcon = STATUS_ICON[status];
 

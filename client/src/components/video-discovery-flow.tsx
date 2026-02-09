@@ -43,6 +43,7 @@ import {
   jsonPrompt,
   searchYouTube,
   useFlowExecution,
+  useFlowDefinition,
 } from "@/lib/flow-engine";
 import type { VideoCandidate } from "@/lib/flow-engine";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
@@ -166,6 +167,7 @@ export function VideoDiscoveryFlow() {
   const hasStarted = useRef(false);
 
   const { trackStep, resolveUserInput } = useFlowExecution("video-discovery");
+  const { definition: flowDef } = useFlowDefinition("video-discovery");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("video-discovery", "Video Discovery");
   const { speak } = useVoice();
 
