@@ -79,9 +79,20 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
   },
 };
 
+/** Maps flow registry IDs to their corresponding agent key */
+const FLOW_ID_ALIASES: Record<string, string> = {
+  "video-discovery": "video",
+  "ai-consultation": "chat",
+  "recursive-interviewer": "interviewer",
+  "linkedin-strategist": "linkedin",
+  "socratic-architect": "socratic",
+  "work-with-me": "work-with-me",
+};
+
 /**
- * Get the agent for a learning mode. Returns undefined if no agent is configured.
+ * Get the agent for a learning mode or flow registry ID.
+ * Accepts both short mode IDs ("video") and full flow IDs ("video-discovery").
  */
-export function getFlowAgent(modeId: string): FlowAgent | undefined {
-  return FLOW_AGENTS[modeId];
+export function getFlowAgent(id: string): FlowAgent | undefined {
+  return FLOW_AGENTS[id] ?? FLOW_AGENTS[FLOW_ID_ALIASES[id]];
 }

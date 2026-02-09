@@ -421,7 +421,13 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         throw new Error(errBody.error || `TTS request failed: ${response.status}`);
       }
 
+      const contentType = response.headers.get("Content-Type") || "unknown";
       const arrayBuffer = await response.arrayBuffer();
+      console.info(`[TTS:Gemini] Received ${arrayBuffer.byteLength} bytes (${contentType})`);
+
+      if (arrayBuffer.byteLength === 0) {
+        throw new Error("Received empty audio response");
+      }
 
       // Create/resume AudioContext
       if (!audioContextRef.current) {
@@ -432,7 +438,22 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         await ctx.resume();
       }
 
-      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      let audioBuffer: AudioBuffer;
+      try {
+        audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+      } catch (decodeError) {
+        // Log diagnostic info for decode failures
+        const header = new Uint8Array(arrayBuffer.slice(0, 16));
+        const headerHex = Array.from(header).map(b => b.toString(16).padStart(2, "0")).join(" ");
+        console.error(
+          `[TTS:Gemini] decodeAudioData failed — ` +
+          `size=${arrayBuffer.byteLength}, type="${contentType}", ` +
+          `header=[${headerHex}]`,
+          decodeError
+        );
+        throw new Error("Unable to decode audio data");
+      }
+
       const source = ctx.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(ctx.destination);

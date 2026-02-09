@@ -47,33 +47,21 @@ export function registerRulesRoutes(app: Express): void {
   app.get("/api/rules", (req, res) => {
     try {
       const rulesService = getRulesService();
-      
+
       if (!rulesService.isInitialized()) {
-        return res.status(503).json({ 
-          error: "Rules service not initialized" 
+        return res.status(503).json({
+          error: "Rules service not initialized"
         });
       }
 
+      // Reload manifest from disk so rule changes reflect without restart
+      rulesService.reload();
+
       const allRules = rulesService.getAllRules();
       const primaryDirective = rulesService.getPrimaryDirective();
+      const partitionConfigs = rulesService.getPartitionConfigs();
 
       const partitionMap = new Map<string, RuleMetadata[]>();
-      const partitionOrder: Record<string, number> = {
-        architecture: 0,
-        hub: 1,
-        ui: 2,
-        data: 3,
-        apps: 4,
-        integration: 5
-      };
-      const partitionDescriptions: Record<string, string> = {
-        architecture: "System-wide architectural rules, principles, and cross-project coordination",
-        hub: "Application Hub shell and access control",
-        ui: "User interface patterns and components",
-        data: "Data model and persistence rules",
-        apps: "Per-application specific rules",
-        integration: "External service integration and cross-project contracts"
-      };
 
       for (const rule of allRules) {
         const metadata: RuleMetadata = {
@@ -97,11 +85,12 @@ export function registerRulesRoutes(app: Express): void {
       const partitions: PartitionInfo[] = [];
       for (const [partitionId, rules] of Array.from(partitionMap.entries())) {
         rules.sort((a: RuleMetadata, b: RuleMetadata) => a.id.localeCompare(b.id));
-        
+
+        const config = partitionConfigs[partitionId];
         partitions.push({
           id: partitionId,
-          description: partitionDescriptions[partitionId] || "",
-          readOrder: partitionOrder[partitionId] ?? 99,
+          description: config?.description || "",
+          readOrder: config?.readOrder ?? 99,
           rules
         });
       }
@@ -117,8 +106,8 @@ export function registerRulesRoutes(app: Express): void {
       return res.json(response);
     } catch (error) {
       log.error("Error fetching rules catalog", error);
-      return res.status(500).json({ 
-        error: "Failed to fetch rules catalog" 
+      return res.status(500).json({
+        error: "Failed to fetch rules catalog"
       });
     }
   });
@@ -126,12 +115,15 @@ export function registerRulesRoutes(app: Express): void {
   app.get("/api/rules/:ruleId", (req, res) => {
     try {
       const rulesService = getRulesService();
-      
+
       if (!rulesService.isInitialized()) {
-        return res.status(503).json({ 
-          error: "Rules service not initialized" 
+        return res.status(503).json({
+          error: "Rules service not initialized"
         });
       }
+
+      // Reload so edits to rule files are reflected without restart
+      rulesService.reload();
 
       const { ruleId } = req.params;
       const rule = rulesService.getRule(ruleId);
