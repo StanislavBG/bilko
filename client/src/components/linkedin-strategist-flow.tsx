@@ -38,7 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { chatJSON, jsonPrompt, useFlowExecution } from "@/lib/flow-engine";
+import { chatJSON, jsonPrompt, useFlowExecution, useFlowDefinition } from "@/lib/flow-engine";
 import { useVoice } from "@/contexts/voice-context";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
@@ -224,6 +224,7 @@ export function LinkedInStrategistFlow() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { trackStep, resolveUserInput } = useFlowExecution("linkedin-strategist");
+  const { definition: flowDef } = useFlowDefinition("linkedin-strategist");
   const { isListening, isSupported, transcript, speak, onUtteranceEnd } = useVoice();
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(
     "linkedin-strategist",
