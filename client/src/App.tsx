@@ -67,23 +67,19 @@ function AuthenticatedApp() {
             <div className={`flex flex-1 overflow-hidden${isAuth ? "" : " pt-14"}`}>
               <AppSidebar />
               <main className="flex-1 flex overflow-hidden">
-                {isAuth ? (
-                  <Switch>
-                    <Route path="/" component={MainFlow} />
-                    <Route path="/academy" component={Academy} />
-                    <Route path="/academy/:levelId" component={Academy} />
-                    <Route path="/projects/:projectId?" component={Projects} />
-                    <Route path="/workflows" component={AgenticWorkflows} />
-                    <Route path="/memory" component={MemoryExplorer} />
-                    <Route path="/rules" component={RulesExplorer} />
-                    <Route path="/bilkos-way" component={BilkosWay} />
-                    <Route path="/flows/:flowId" component={FlowDetail} />
-                    <Route path="/flows" component={FlowExplorer} />
-                    <Route component={NotFound} />
-                  </Switch>
-                ) : (
-                  <MainFlow />
-                )}
+                <Switch>
+                  <Route path="/" component={MainFlow} />
+                  <Route path="/academy" component={Academy} />
+                  <Route path="/academy/:levelId" component={Academy} />
+                  <Route path="/projects/:projectId?" component={Projects} />
+                  <Route path="/bilkos-way" component={BilkosWay} />
+                  {isAuth && <Route path="/workflows" component={AgenticWorkflows} />}
+                  {isAuth && <Route path="/memory" component={MemoryExplorer} />}
+                  {isAuth && <Route path="/rules" component={RulesExplorer} />}
+                  {isAuth && <Route path="/flows/:flowId" component={FlowDetail} />}
+                  {isAuth && <Route path="/flows" component={FlowExplorer} />}
+                  <Route component={NotFound} />
+                </Switch>
               </main>
             </div>
           </div>
