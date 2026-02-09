@@ -95,6 +95,29 @@ export async function validateVideos(
 }
 
 /**
+ * Search YouTube via Data API v3.
+ * Takes an array of search queries, returns real videos with stats.
+ */
+export async function searchYouTube(
+  queries: string[],
+  options?: { signal?: AbortSignal },
+): Promise<VideoCandidate[]> {
+  if (queries.length === 0) return [];
+
+  try {
+    const result = await apiPost<{ videos: VideoCandidate[] }>(
+      "/api/llm/youtube-search",
+      { queries },
+      options,
+    );
+    return result.videos ?? [];
+  } catch (err) {
+    console.warn("[searchYouTube] Search failed:", err instanceof Error ? err.message : err);
+    return [];
+  }
+}
+
+/**
  * API-specific error with status and endpoint.
  */
 export class APIError extends Error {
