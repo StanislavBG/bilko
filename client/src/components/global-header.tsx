@@ -1,4 +1,4 @@
-import { LogOut, Eye, EyeOff, Wrench, Volume2, VolumeX, RotateCcw } from "lucide-react";
+import { LogOut, Eye, EyeOff, Wrench, Volume2, VolumeX, RotateCcw, PanelLeft } from "lucide-react";
 import { Link } from "wouter";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { useVoice } from "@/contexts/voice-context";
@@ -6,7 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { useSidebar } from "@/components/ui/sidebar";
 import { DebugButton } from "@/components/debug-panel";
 import { queryClient } from "@/lib/queryClient";
 
@@ -17,26 +17,47 @@ interface GlobalHeaderProps {
 export function GlobalHeader({ variant = "authenticated" }: GlobalHeaderProps) {
   // Landing page header (for non-authenticated users)
   if (variant === "landing") {
-    return (
-      <header className="h-14 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center gap-3 px-4 fixed top-0 left-0 right-0 z-50">
-        <span className="font-bold text-lg shrink-0">
-          Bilko's AI School
-        </span>
-        <div className="flex-1" />
-        <div className="flex items-center gap-2">
-          <ToolsMenu />
-          <DebugButton />
-          <ThemeToggle />
-          <Button variant="ghost" size="sm" asChild>
-            <a href="/api/auth/login">Sign In</a>
-          </Button>
-        </div>
-      </header>
-    );
+    return <LandingHeader />;
   }
 
   // Authenticated user header - needs ViewMode and Sidebar context
   return <AuthenticatedHeader />;
+}
+
+function LandingHeader() {
+  const { toggleSidebar, state } = useSidebar();
+  const isOpen = state === "expanded";
+
+  return (
+    <header className="h-14 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center gap-3 px-4 fixed top-0 left-0 right-0 z-50">
+      <span className="font-bold text-lg shrink-0">
+        Bilko's AI School
+      </span>
+      <div className="flex-1" />
+      <div className="flex items-center gap-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              data-testid="button-explore-site"
+            >
+              <PanelLeft className="h-4 w-4" />
+              <span className="sr-only">{isOpen ? "Hide navigation" : "Explore site"}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{isOpen ? "Hide navigation" : "Explore site"}</TooltipContent>
+        </Tooltip>
+        <ToolsMenu />
+        <DebugButton />
+        <ThemeToggle />
+        <Button variant="ghost" size="sm" asChild>
+          <a href="/api/auth/login">Sign In</a>
+        </Button>
+      </div>
+    </header>
+  );
 }
 
 const TTS_TEST_PHRASE = "Hello! This is Bilko's Mental Gym testing text-to-speech. Can you hear me?";
@@ -130,19 +151,30 @@ function ToolsMenu() {
 
 function AuthenticatedHeader() {
   const { isViewingAsUser, toggleViewMode, canToggleViewMode } = useViewMode();
-  const { state } = useSidebar();
+  const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
 
   return (
     <header className="h-11 shrink-0 border-b bg-sidebar flex items-center gap-2 px-2" data-testid="global-header">
-      <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
-      {!isCollapsed && (
-        <Link href="/academy" className="font-semibold text-sm shrink-0 hover:opacity-80 transition-opacity cursor-pointer" data-testid="logo-text">
-          AI School
-        </Link>
-      )}
+      <Link href="/" className="font-semibold text-sm shrink-0 hover:opacity-80 transition-opacity cursor-pointer" data-testid="logo-text">
+        AI School
+      </Link>
       <div className="flex-1" />
       <div className="flex items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              data-testid="button-sidebar-toggle"
+            >
+              <PanelLeft className="h-4 w-4" />
+              <span className="sr-only">{isCollapsed ? "Explore site" : "Hide navigation"}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{isCollapsed ? "Explore site" : "Hide navigation"}</TooltipContent>
+        </Tooltip>
         {canToggleViewMode && (
           <Tooltip>
             <TooltipTrigger asChild>
