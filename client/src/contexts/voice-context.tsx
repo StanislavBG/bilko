@@ -5,7 +5,7 @@
  * Manages a single SpeechRecognition instance, persists mic preference,
  * and lets any page register/unregister voice command handlers.
  *
- * TTS: OpenAI TTS exclusively via /api/tts/speak (no browser fallback).
+ * TTS: Gemini TTS exclusively via /api/tts/speak (no browser fallback).
  * STT: Web Speech API (SpeechRecognition).
  */
 
@@ -52,7 +52,7 @@ interface VoiceContextType {
   toggleListening: () => Promise<void>;
   startListening: () => Promise<void>;
   stopListening: () => void;
-  /** Bilko speaks — uses OpenAI TTS exclusively */
+  /** Bilko speaks — uses Gemini TTS exclusively */
   speak: (text: string) => Promise<void>;
   stopSpeaking: () => void;
   registerHandler: (id: string, handler: VoiceHandler) => () => void;
@@ -97,7 +97,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const pendingSpeakRef = useRef<string | null>(null);
   const pendingSpeakResolveRef = useRef<(() => void) | null>(null);
 
-  // OpenAI TTS refs
+  // Gemini TTS refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const doSpeakRef = useRef<(text: string) => Promise<void>>(async () => {});
@@ -117,11 +117,11 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       .then((r) => r.json())
       .then((data) => {
         if (data.available) {
-          console.info("[TTS] OpenAI TTS available — using server-side TTS");
+          console.info("[TTS] Gemini TTS available — using server-side TTS");
           ttsSupportedRef.current = true;
           setTtsSupported(true);
         } else {
-          console.warn("[TTS] OpenAI TTS unavailable — OPENAI_API_KEY not configured");
+          console.warn("[TTS] Gemini TTS unavailable — GEMINI_API_KEY not configured");
         }
       })
       .catch(() => {
@@ -140,7 +140,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       ttsUnlockedRef.current = true;
       setTtsUnlocked(true);
 
-      // Ensure AudioContext is created/resumed for OpenAI TTS playback
+      // Ensure AudioContext is created/resumed for Gemini TTS playback
       if (!audioContextRef.current) {
         audioContextRef.current = new AudioContext();
       }
@@ -395,10 +395,10 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [isListening, startListening, stopListening]);
 
-  // ── OpenAI TTS: fetch audio from server and play via Web Audio API ──
+  // ── Gemini TTS: fetch audio from server and play via Web Audio API ──
   const doSpeak = useCallback(async (text: string): Promise<void> => {
     const preview = text.length > 60 ? text.slice(0, 60) + "..." : text;
-    console.info(`[TTS:OpenAI] Speaking: "${preview}" (${text.split(/\s+/).length} words)`);
+    console.info(`[TTS:Gemini] Speaking: "${preview}" (${text.split(/\s+/).length} words)`);
 
     setIsMuted(true);
     setIsSpeaking(true);
@@ -407,7 +407,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       const response = await fetch("/api/tts/speak", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, voice: "onyx" }),
+        body: JSON.stringify({ text, voice: "Kore" }),
       });
 
       if (!response.ok) {
@@ -434,7 +434,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
       return new Promise<void>((resolve) => {
         source.onended = () => {
-          console.info("[TTS:OpenAI] Playback complete");
+          console.info("[TTS:Gemini] Playback complete");
           currentAudioSourceRef.current = null;
           setIsSpeaking(false);
           setTimeout(() => setIsMuted(false), POST_TTS_BUFFER_MS);
@@ -443,7 +443,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         source.start(0);
       });
     } catch (error) {
-      console.error("[TTS:OpenAI] Error:", error);
+      console.error("[TTS:Gemini] Error:", error);
       setIsSpeaking(false);
       setIsMuted(false);
     }
@@ -472,7 +472,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
 
     if (!ttsSupportedRef.current) {
-      console.info("[TTS] speak() called but OpenAI TTS not available");
+      console.info("[TTS] speak() called but Gemini TTS not available");
       return;
     }
 
@@ -490,7 +490,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, [doSpeak]);
 
   const stopSpeaking = useCallback(() => {
-    // Stop OpenAI TTS audio if playing
+    // Stop Gemini TTS audio if playing
     if (currentAudioSourceRef.current) {
       try {
         currentAudioSourceRef.current.stop();
