@@ -52,10 +52,12 @@ import {
   apiPost,
   useFlowExecution,
   useFlowDefinition,
+  useFlowChat,
 } from "@/lib/flow-engine";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { useVoice } from "@/contexts/voice-context";
+import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -286,7 +288,7 @@ function getActionLabel(action: GuidanceItem["action"]): string {
 
 // ── Component ──────────────────────────────────────────────
 
-export function WorkWithMeFlow() {
+export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
   const [phase, setPhase] = useState<FlowPhase>("objective-input");
   const [objective, setObjective] = useState("");
   const [research, setResearch] = useState<ResearchResponse | null>(null);
@@ -305,6 +307,29 @@ export function WorkWithMeFlow() {
     "Work With Me",
   );
   const { speak } = useVoice();
+  const { pushMessage } = useFlowChat();
+
+  const agent = getFlowAgent("work-with-me");
+  const pushAgentMessage = useCallback((text: string, speech?: string) => {
+    pushMessage("work-with-me", {
+      speaker: "agent",
+      text,
+      speech: speech ?? text,
+      agentName: agent?.chatName,
+      agentDisplayName: agent?.name,
+      agentAccent: agent?.accentColor,
+    });
+  }, [pushMessage, agent]);
+
+  // Push greeting on mount
+  const didGreet = useRef(false);
+  useEffect(() => {
+    if (didGreet.current) return;
+    didGreet.current = true;
+    if (agent) {
+      pushAgentMessage(agent.greeting, agent.greetingSpeech);
+    }
+  }, [agent, pushAgentMessage]);
 
   const [steps, setSteps] = useState<WorkflowStep[]>([
     { id: "objective", name: "Set Your Goal", status: "active" },
@@ -519,11 +544,11 @@ export function WorkWithMeFlow() {
     updateStep("guide", "active", "Pick your next step");
 
     if (selectedStep) {
-      busSend("main", "summary", {
-        summary: `Completed step ${selectedStep.stepNumber}: ${selectedStep.title}`,
-      });
+      const summaryText = `Completed step ${selectedStep.stepNumber}: ${selectedStep.title}`;
+      pushAgentMessage(summaryText);
+      busSend("main", "summary", { summary: summaryText });
     }
-  }, [selectedStep, busSend]);
+  }, [selectedStep, busSend, pushAgentMessage]);
 
   // ── Full reset ───────────────────────────────────────────
 
@@ -802,11 +827,20 @@ export function WorkWithMeFlow() {
             })}
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-3">
             <Button variant="outline" size="sm" onClick={handleReset}>
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
               Start over with a new goal
             </Button>
+            {onComplete && completedSteps.size > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onComplete(`Completed ${completedSteps.size} steps for: ${research?.taskTitle ?? objective}.`)}
+              >
+                Done
+              </Button>
+            )}
           </div>
         </div>
       )}

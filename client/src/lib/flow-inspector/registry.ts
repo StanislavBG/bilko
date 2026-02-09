@@ -77,51 +77,19 @@ const allFlows: FlowDefinition[] = [
         dependsOn: ["greeting"],
       },
       {
-        id: "agent-handoff",
-        name: "Hand Off to Specialist Agent",
-        type: "transform",
+        id: "run-subflow",
+        name: "Run Sub-Flow",
+        type: "display",
         description:
-          "Maps the selected mode to its specialist agent identity (name, chat handle, greeting, accent color). Pushes handoff messages to the chat: Bilko acknowledges, system shows handoff, and the specialist agent greets the user.",
+          "Starts the selected sub-flow by ID. The sub-flow is autonomous — it claims the chat, pushes its own agent greeting and messages, and manages its own persona identity. When the sub-flow calls onComplete(summary), ownership returns to bilko-main and the greeting node is recycled with the exit summary for recursive personalization.",
         inputSchema: [
           {
             name: "selectedMode",
             type: "string",
-            description: "The chosen learning mode ID",
-          },
-        ],
-        outputSchema: [
-          {
-            name: "agent",
-            type: "object",
-            description: "The specialist agent identity (name, chatName, greeting, accentColor)",
-          },
-          {
-            name: "modeLabel",
-            type: "string",
-            description: "Human-readable mode label",
+            description: "Which sub-flow to render (maps to a sub-flow ID)",
           },
         ],
         dependsOn: ["mode-selection"],
-      },
-      {
-        id: "run-subflow",
-        name: "Execute Sub-Flow",
-        type: "display",
-        description:
-          "The selected sub-flow (video-discovery, ai-consultation, etc.) runs in the delivery surface. The sub-flow can push messages to the chat via the FlowChat channel. When the sub-flow completes, a summary is pushed to the chat.",
-        inputSchema: [
-          {
-            name: "selectedMode",
-            type: "string",
-            description: "Which sub-flow to render",
-          },
-          {
-            name: "agent",
-            type: "object",
-            description: "The specialist agent running the sub-flow",
-          },
-        ],
-        dependsOn: ["agent-handoff"],
       },
     ],
   },

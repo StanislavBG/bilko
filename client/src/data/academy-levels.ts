@@ -1439,7 +1439,7 @@ Coming soon.`,
 // ============================================
 // BILKO'S WAY TRACK - Meta-Knowledge
 // ============================================
-const bilkosWayLevels: AcademyLevel[] = [
+export const bilkosWayLevels: AcademyLevel[] = [
   // ── Guide 1: Environment Setup ─────────────────────────
   {
     id: "bilkos-way-level-0",
@@ -2168,42 +2168,6 @@ export const academyTracks: Track[] = [
       },
     ],
     levels: architectLevels,
-  },
-  {
-    id: "bilkos-way",
-    name: "Bilko's Way",
-    tagline: "Understanding the Machine",
-    description:
-      "A meta-knowledge track about the tools, concepts, and AI evolution behind Bilko's AI School. Three guides—Environment Setup, What is an Agent, and the AI Capability Spectrum—each explained at three depth levels: Expert, Intermediate, and Novice.",
-    difficulty: "intermediate",
-    color: "amber",
-    journey: [
-      {
-        id: "bilkos-way-toolkit",
-        name: "Your Toolkit",
-        levelRange: "0-30",
-        description:
-          "Understand Replit, Git, and Claude Code—the three tools that built this project—at your comfort level.",
-        icon: "seedling",
-      },
-      {
-        id: "bilkos-way-agents",
-        name: "Understanding Agents",
-        levelRange: "31-60",
-        description:
-          "What is an AI agent? Explore agents as DAGs, workflows, and sequences of helpers through Bilko's Flow Engine.",
-        icon: "zap",
-      },
-      {
-        id: "bilkos-way-spectrum",
-        name: "The AI Spectrum",
-        levelRange: "61-90",
-        description:
-          "From simple prompts to proactive AI—the four stages of AI capability and where we are today.",
-        icon: "sparkles",
-      },
-    ],
-    levels: bilkosWayLevels,
   },
 ];
 
