@@ -58,6 +58,19 @@ function hasWavHeader(buffer: Buffer): boolean {
     buffer.toString("ascii", 8, 12) === "WAVE";
 }
 
+/**
+ * Swap byte order for 16-bit PCM samples (big-endian ↔ little-endian).
+ * audio/L16 per RFC 3551 is big-endian, but WAV requires little-endian.
+ */
+function swapEndian16(buffer: Buffer): Buffer {
+  const swapped = Buffer.alloc(buffer.length);
+  for (let i = 0; i < buffer.length - 1; i += 2) {
+    swapped[i] = buffer[i + 1];
+    swapped[i + 1] = buffer[i];
+  }
+  return swapped;
+}
+
 function pcmToWav(pcmBuffer: Buffer, sampleRate = 24000, numChannels = 1, bitsPerSample = 16): Buffer {
   const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
   const blockAlign = numChannels * (bitsPerSample / 8);
@@ -157,10 +170,18 @@ router.post("/speak", async (req: Request, res: Response) => {
       audioBuffer = rawBuffer;
       contentType = "audio/wav";
     } else if (isRawPcm(mimeType)) {
-      // Raw PCM (L16) — wrap in WAV header
+      // Raw PCM (L16/pcm) — swap endianness and wrap in WAV header.
+      // audio/L16 per RFC 3551 is big-endian; WAV requires little-endian.
       const sampleRate = parseSampleRate(mimeType);
-      console.info(`[TTS] Raw PCM detected — wrapping in WAV (rate=${sampleRate})`);
-      audioBuffer = pcmToWav(rawBuffer, sampleRate);
+      const isL16 = mimeType.toLowerCase().startsWith("audio/l16");
+      let pcmData = rawBuffer;
+      if (isL16) {
+        console.info(`[TTS] L16 (big-endian) detected — byte-swapping to little-endian, wrapping in WAV (rate=${sampleRate})`);
+        pcmData = swapEndian16(rawBuffer);
+      } else {
+        console.info(`[TTS] Raw PCM detected — wrapping in WAV (rate=${sampleRate})`);
+      }
+      audioBuffer = pcmToWav(pcmData, sampleRate);
       contentType = "audio/wav";
     } else if (mimeType.includes("wav")) {
       // mimeType says WAV but no RIFF header detected — wrap as PCM
@@ -185,6 +206,16 @@ router.post("/speak", async (req: Request, res: Response) => {
         audioBuffer = pcmToWav(rawBuffer, sampleRate);
         contentType = "audio/wav";
       }
+    }
+
+    // Log WAV header diagnostics for debugging
+    if (contentType === "audio/wav" && audioBuffer.length >= 44) {
+      const fmt = audioBuffer.readUInt16LE(20);
+      const ch = audioBuffer.readUInt16LE(22);
+      const rate = audioBuffer.readUInt32LE(24);
+      const bits = audioBuffer.readUInt16LE(32);
+      const dataSize = audioBuffer.readUInt32LE(40);
+      console.info(`[TTS] WAV: fmt=${fmt} ch=${ch} rate=${rate} bits=${bits} dataSize=${dataSize} totalSize=${audioBuffer.length}`);
     }
 
     res.set({

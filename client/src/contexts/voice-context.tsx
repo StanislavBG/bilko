@@ -104,6 +104,8 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   // Gemini TTS refs
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const doSpeakRef = useRef<(text: string, voice?: string) => Promise<void>>(async () => {});
   const startListeningRef = useRef<() => Promise<void>>(async () => {});
 
@@ -386,7 +388,17 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [isListening, startListening, stopListening]);
 
-  // ── Gemini TTS: fetch audio from server and play via Audio element ──
+  // ── Get or create a shared AudioContext for Web Audio API playback ──
+  const getAudioContext = useCallback((): AudioContext => {
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      return audioContextRef.current;
+    }
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    audioContextRef.current = ctx;
+    return ctx;
+  }, []);
+
+  // ── Gemini TTS: fetch audio from server and play via Web Audio API ──
   // This is the raw playback function. It does NOT manage isSpeaking/isMuted —
   // the queue processor owns that state to avoid flickering between queue items.
   const doSpeak = useCallback(async (text: string, voice?: string): Promise<void> => {
@@ -413,37 +425,83 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       throw new Error("Received empty audio response");
     }
 
-    // Play via Audio element — more robust format support than Web Audio decodeAudioData
-    const blob = new Blob([arrayBuffer], { type: contentType });
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    currentAudioRef.current = audio;
+    // Try Web Audio API first (more reliable for programmatic playback),
+    // fall back to HTML Audio element if decoding fails.
+    try {
+      await this_playViaWebAudio(arrayBuffer);
+      return;
+    } catch (webAudioErr) {
+      console.warn("[TTS:Gemini] Web Audio API failed, trying Audio element fallback:", webAudioErr);
+    }
 
-    return new Promise<void>((resolve, reject) => {
-      const cleanup = (ok: boolean) => {
-        URL.revokeObjectURL(url);
-        if (currentAudioRef.current === audio) {
-          currentAudioRef.current = null;
+    // Fallback: HTML Audio element with blob URL
+    await this_playViaAudioElement(arrayBuffer, contentType);
+
+    async function this_playViaWebAudio(data: ArrayBuffer): Promise<void> {
+      const ctx = getAudioContext();
+      // Resume context if suspended (autoplay policy)
+      if (ctx.state === "suspended") {
+        await ctx.resume();
+      }
+
+      const audioBuffer = await ctx.decodeAudioData(data.slice(0));
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      currentSourceRef.current = source;
+
+      return new Promise<void>((resolve, reject) => {
+        source.onended = () => {
+          console.info("[TTS:Gemini] Playback complete (Web Audio)");
+          if (currentSourceRef.current === source) {
+            currentSourceRef.current = null;
+          }
+          resolve();
+        };
+
+        try {
+          source.start(0);
+        } catch (startErr) {
+          if (currentSourceRef.current === source) {
+            currentSourceRef.current = null;
+          }
+          reject(startErr);
         }
-        ok ? resolve() : reject(new Error("Audio playback failed"));
-      };
-
-      audio.onended = () => {
-        console.info("[TTS:Gemini] Playback complete");
-        cleanup(true);
-      };
-
-      audio.onerror = () => {
-        console.error("[TTS:Gemini] Audio element playback error");
-        cleanup(false);
-      };
-
-      audio.play().catch((playError) => {
-        console.error("[TTS:Gemini] play() rejected:", playError);
-        cleanup(false);
       });
-    });
-  }, []);
+    }
+
+    async function this_playViaAudioElement(data: ArrayBuffer, mime: string): Promise<void> {
+      const blob = new Blob([data], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      currentAudioRef.current = audio;
+
+      return new Promise<void>((resolve, reject) => {
+        const cleanup = (ok: boolean) => {
+          URL.revokeObjectURL(url);
+          if (currentAudioRef.current === audio) {
+            currentAudioRef.current = null;
+          }
+          ok ? resolve() : reject(new Error("Audio playback failed"));
+        };
+
+        audio.onended = () => {
+          console.info("[TTS:Gemini] Playback complete (Audio element)");
+          cleanup(true);
+        };
+
+        audio.onerror = () => {
+          console.error("[TTS:Gemini] Audio element playback error");
+          cleanup(false);
+        };
+
+        audio.play().catch((playError) => {
+          console.error("[TTS:Gemini] play() rejected:", playError);
+          cleanup(false);
+        });
+      });
+    }
+  }, [getAudioContext]);
 
   // ── Queue processor — drains items sequentially ──
   // Owns isSpeaking/isMuted to prevent flickering between queue items.
@@ -511,10 +569,19 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     ttsQueueRef.current = [];
     processingQueueRef.current = false;
 
-    // Stop current audio if playing
+    // Stop current audio if playing (Audio element fallback)
     if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current = null;
+    }
+    // Stop current Web Audio API source if playing
+    if (currentSourceRef.current) {
+      try {
+        currentSourceRef.current.stop();
+      } catch {
+        // Ignore — might already be stopped
+      }
+      currentSourceRef.current = null;
     }
     setIsSpeaking(false);
     setIsMuted(false);
