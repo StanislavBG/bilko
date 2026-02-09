@@ -33,9 +33,7 @@ import { BilkoMessage } from "@/components/bilko-message";
 import { AgentBadge, getAgentColors } from "@/components/speaker-identity";
 import { BlockSequence } from "@/components/content-blocks";
 import type { ContentBlock, AgentContentResult } from "@/components/content-blocks/types";
-import { useVoiceCommands } from "@/contexts/voice-context";
 import { useConversationDesign } from "@/contexts/conversation-design-context";
-import type { VoiceTriggerOption } from "@/hooks/use-voice-recognition";
 import { breathingPause } from "@/lib/bilko-persona/pacing";
 
 // ── Turn types ───────────────────────────────────────────
@@ -581,11 +579,6 @@ function UserChoiceView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const voiceOptions: VoiceTriggerOption[] = turn.options.map((o) => ({
-    id: o.id,
-    voiceTriggers: o.voiceTriggers,
-  }));
-
   const handlePick = useCallback(
     (id: string) => {
       if (pickedId) return;
@@ -599,13 +592,6 @@ function UserChoiceView({
       }, 600);
     },
     [pickedId, onChoice, onSettled],
-  );
-
-  useVoiceCommands(
-    `conv-choice-${turn.options[0]?.id}`,
-    voiceOptions,
-    handlePick,
-    isLatest && !isSettled,
   );
 
   if (isSettled && pickedId) {

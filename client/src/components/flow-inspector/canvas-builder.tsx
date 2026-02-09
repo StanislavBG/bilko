@@ -18,8 +18,6 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Mic,
-  MicOff,
   Send,
   Check,
   X,
@@ -28,7 +26,6 @@ import {
   Sparkles,
   Undo2,
 } from "lucide-react";
-import { useVoice } from "@/contexts/voice-context";
 import { chatJSON, jsonPrompt } from "@/lib/flow-engine";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import {
@@ -115,19 +112,10 @@ export function CanvasBuilder({
   const [pendingMutation, setPendingMutation] = useState<FlowMutation | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { isListening, toggleListening, transcript, isSupported: voiceSupported } = useVoice();
-
   // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  // When voice transcript updates, fill the input
-  useEffect(() => {
-    if (transcript && isListening) {
-      setInput(transcript);
-    }
-  }, [transcript, isListening]);
 
   // Update greeting when selection changes
   useEffect(() => {
@@ -327,20 +315,6 @@ export function CanvasBuilder({
       {/* Input area */}
       <div className="shrink-0 border-t p-2">
         <div className="flex items-center gap-2">
-          {voiceSupported && (
-            <Button
-              variant={isListening ? "destructive" : "ghost"}
-              size="icon"
-              className="h-8 w-8 shrink-0"
-              onClick={toggleListening}
-            >
-              {isListening ? (
-                <MicOff className="h-4 w-4" />
-              ) : (
-                <Mic className="h-4 w-4" />
-              )}
-            </Button>
-          )}
           <input
             ref={inputRef}
             type="text"
