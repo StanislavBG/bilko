@@ -302,7 +302,7 @@ export function VideoDiscoveryFlow() {
       setTopics(fetched);
       setLastResult(`Found ${fetched.length} topics to explore`);
       setFlowState("select-topic");
-      speak(`I found ${fetched.length} topics. Pick one that interests you, or type your own.`);
+      speak(`I found ${fetched.length} topics. Pick one that interests you, or type your own.`, "Aoede");
     } catch (err) {
       console.error("Topic generation error:", err);
       setError(err instanceof Error ? err.message : "Failed to generate topics.");
@@ -353,7 +353,7 @@ export function VideoDiscoveryFlow() {
       setQuestions(fetched);
       setLastResult(`Topic: ${topic}`);
       setFlowState("select-question");
-      speak("If you had one question to be answered, what would it be?");
+      speak("If you had one question to be answered, what would it be?", "Aoede");
     } catch (err) {
       console.error("Question generation error:", err);
       setError(err instanceof Error ? err.message : "Failed to generate questions.");
@@ -424,7 +424,7 @@ export function VideoDiscoveryFlow() {
       setVideos(foundVideos.data);
       setLastResult(`Found ${foundVideos.data.length} videos`);
       setFlowState("select-video");
-      speak(`Found ${foundVideos.data.length} videos. Pick one to watch.`);
+      speak(`Found ${foundVideos.data.length} videos. Pick one to watch.`, "Aoede");
     } catch (err) {
       console.error("Video search error:", err);
       setError(err instanceof Error ? err.message : "Failed to search for videos.");
@@ -442,7 +442,7 @@ export function VideoDiscoveryFlow() {
     });
     setLastResult(`${selectedTopic} → ${video.title}`);
     setFlowState("watching");
-    speak(`Loading ${video.title} by ${video.creator}.`);
+    speak(`Loading ${video.title} by ${video.creator}.`, "Aoede");
   };
 
   // ── Reset ──────────────────────────────────────────────────────────
