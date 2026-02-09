@@ -7,22 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   ChevronRight,
-  Brain,
-  MousePointerClick,
-  ShieldCheck,
-  Monitor,
-  ArrowRightLeft,
   Package,
 } from "lucide-react";
 import type { FlowDefinition, StepType } from "@/lib/flow-inspector/types";
-
-const TYPE_CONFIG: Record<StepType, { icon: typeof Brain; label: string }> = {
-  llm: { icon: Brain, label: "LLM" },
-  "user-input": { icon: MousePointerClick, label: "Input" },
-  transform: { icon: ArrowRightLeft, label: "Transform" },
-  validate: { icon: ShieldCheck, label: "Validate" },
-  display: { icon: Monitor, label: "Display" },
-};
+import { STEP_TYPE_CONFIG } from "@/lib/flow-inspector/step-type-config";
 
 interface FlowCardProps {
   flow: FlowDefinition;
@@ -56,13 +44,13 @@ export function FlowCard({ flow, onClick }: FlowCardProps) {
             {/* Step type breakdown */}
             <div className="flex items-center gap-3 mt-3">
               {Object.entries(typeCounts).map(([type, count]) => {
-                const cfg = TYPE_CONFIG[type as StepType];
+                const cfg = STEP_TYPE_CONFIG[type as StepType];
                 const Icon = cfg.icon;
                 return (
                   <span
                     key={type}
                     className="flex items-center gap-1 text-xs text-muted-foreground"
-                    title={`${count} ${cfg.label} step${count! > 1 ? "s" : ""}`}
+                    title={`${count} ${cfg.shortLabel} step${count! > 1 ? "s" : ""}`}
                   >
                     <Icon className="h-3 w-3" />
                     {count}

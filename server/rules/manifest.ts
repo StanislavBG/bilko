@@ -88,3 +88,8 @@ export function getAlwaysIncludeRules(): Rule[] {
     .map(id => manifest.rules[id])
     .filter((r): r is Rule => r !== undefined);
 }
+
+export function getAllPartitionConfigs(): Record<string, PartitionConfig> {
+  const manifest = loadManifest();
+  return manifest.partitions;
+}

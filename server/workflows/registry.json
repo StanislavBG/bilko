@@ -20,6 +20,16 @@
       "instructions": "Runs daily at 00:00 via n8n Schedule Trigger or on-demand via webhook. Uses Gemini 2.5 Flash for all AI steps with rate limiting between calls. Produces structured JSON output with video script, image prompts, and timing data.",
       "category": "content",
       "architecture": "Webhook/Schedule → News Hound (Gemini Search) → Deep Diver (Loop+Verify) → Journalist (Summarize) → Video Architect (Script) → Image Stylist (Prompts) → Callback"
+    },
+    {
+      "id": "fvp-troubleshoot",
+      "name": "[FVP-TS] Video Pipeline Troubleshoot",
+      "mode": "n8n",
+      "webhookPath": "fvp-troubleshoot",
+      "description": "Troubleshoot mode for the Football Video Pipeline. Runs only the first 5 steps (News Hound discovery + Deep Diver verification) with verbose callbacks after EVERY step. Designed for Claude.ai-driven debugging: trigger from Claude Code, inspect each step's output in Memory Explorer, validate data flow, and diagnose issues without running the full pipeline.",
+      "instructions": "Trigger via webhook only (no schedule). Sends callbacks after: Prepare News Hound, News Hound (raw Gemini response), Parse Topics, Prepare Deep Diver, Deep Diver (raw Gemini response), Parse Verified Topics, and a final-output summary. Each callback includes diagnostic metadata (timing, token usage hints, data shapes). Read results from Memory Explorer or GET /api/n8n/workflows/fvp-troubleshoot/output.",
+      "category": "troubleshoot",
+      "architecture": "Webhook → Prepare News Hound → Callback → News Hound (Gemini) → Callback → Parse Topics → Callback → Prepare Deep Diver → Callback → Deep Diver (Gemini) → Callback → Parse Verified Topics → Callback (final-output) → Respond"
     }
   ]
 }

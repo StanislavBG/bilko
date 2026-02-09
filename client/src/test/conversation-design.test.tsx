@@ -20,20 +20,8 @@ import {
 import { VoiceProvider } from "@/contexts/voice-context";
 import type { ReactNode } from "react";
 
-// Mock speechSynthesis and SpeechRecognition for jsdom
-const mockSpeechSynthesis = {
-  speak: vi.fn(),
-  cancel: vi.fn(),
-  getVoices: vi.fn(() => []),
-};
-
 beforeEach(() => {
   cleanup();
-  Object.defineProperty(window, "speechSynthesis", {
-    value: mockSpeechSynthesis,
-    writable: true,
-    configurable: true,
-  });
 });
 
 // ── Wrapper ─────────────────────────────────────────────

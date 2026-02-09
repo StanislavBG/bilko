@@ -1,5 +1,9 @@
 /**
- * Video Discovery Flow - Agentic workflow for finding AI learning videos
+ * Video Discovery Flow - Agentic workflow for finding learning videos
+ *
+ * Chat ownership: This flow owns the chat (claimed by landing.tsx on handoff).
+ * It pushes its own agent messages to the chat directly via useFlowChat().
+ * The FlowBus is used only for metadata (activity logging).
  *
  * UI Design Principles:
  *   - Thin StepTracker bar at top (3 lines: steps, activity, last result)
@@ -8,17 +12,19 @@
  *   - Final step uses the platform's default VideoRenderer
  *
  * Auto-starts immediately when rendered.
- * Step 1: Research 5 trending AI topics       (LLM → chatJSON)
- * Step 2: Pre-fetch videos for each topic     (LLM → chatJSON, parallel)
- * Step 3: Validate videos via oEmbed          (API → validateVideos)
- * Step 4: User picks a topic                  (user-input)
- * Step 5: User picks a video                  (user-input)
- * Step 6: Play the video                      (display)
+ * Step 1: Generate ~10 topic suggestions            (LLM → chatJSON)
+ * Step 2: User picks a topic or types custom         (user-input)
+ * Step 3: Generate ~5 question suggestions           (LLM → chatJSON)
+ * Step 4: User picks a question or types custom      (user-input)
+ * Step 5: Generate search terms → YouTube API search (LLM + API)
+ * Step 6: User picks a video                         (user-input)
+ * Step 7: Play the video                             (display)
  *
  * Uses flow-engine abstractions:
  * - chatJSON<T>()        for all LLM calls
- * - validateVideos()     for YouTube validation
+ * - searchYouTube()      for YouTube Data API search
  * - useFlowExecution()   for execution tracing
+ * - useFlowChat()        for pushing messages to the chat
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
@@ -26,22 +32,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StepTracker, type TrackerStep } from "@/components/ui/step-tracker";
 import {
-  Loader2,
   Play,
-  CheckCircle2,
   Brain,
-  TrendingUp,
+  Search,
+  HelpCircle,
+  Eye,
   ThumbsUp,
   MessageSquare,
-  Eye,
   RotateCcw,
   ArrowLeft,
+  Pencil,
 } from "lucide-react";
 import {
   chatJSON,
   jsonPrompt,
-  validateVideos,
+  searchYouTube,
   useFlowExecution,
+  useFlowDefinition,
+  useFlowChat,
 } from "@/lib/flow-engine";
 import type { VideoCandidate } from "@/lib/flow-engine";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
@@ -49,151 +57,207 @@ import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
 import { useVoice } from "@/contexts/voice-context";
 import { VideoRenderer } from "@/components/content-blocks";
+import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
+
+// ── Owner ID — must match what landing.tsx uses for claimChat ──
+const OWNER_ID = "video-discovery";
 
 // ── Types ────────────────────────────────────────────────────────────
 
 type FlowState =
-  | "researching-topics"
+  | "generating-topics"
   | "select-topic"
+  | "generating-questions"
+  | "select-question"
+  | "searching-videos"
   | "select-video"
   | "watching"
   | "error";
 
-interface AITopic {
-  rank: number;
+interface TopicSuggestion {
   title: string;
   description: string;
-  beginnerQuestion: string;
 }
 
 interface TopicsResponse {
-  topics: AITopic[];
+  topics: TopicSuggestion[];
 }
 
-interface VideosResponse {
-  videos: VideoCandidate[];
+interface QuestionSuggestion {
+  question: string;
 }
 
-// ── Prompts (single source of truth — matches registry) ──────────────
+interface QuestionsResponse {
+  questions: QuestionSuggestion[];
+}
 
-const TOPIC_SYSTEM_PROMPT = bilkoSystemPrompt(`Generate exactly 5 trending AI topics that would be interesting for beginners.
+interface SearchTermsResponse {
+  searchTerms: string[];
+}
 
-Return ONLY valid JSON. Keep descriptions VERY short (max 10 words each). Example:
-{"topics":[{"rank":1,"title":"AI Agents","description":"AI that acts on your behalf","beginnerQuestion":"How do AI agents work?"}]}
+// ── Prompts ──────────────────────────────────────────────────────────
 
-Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 words. No markdown, no explanation, ONLY the JSON object.`);
+const TOPICS_SYSTEM_PROMPT = bilkoSystemPrompt(`Generate exactly 10 interesting learning topics that someone curious would want to explore via YouTube videos.
 
-const TOPIC_USER_MESSAGE =
-  "What are the 5 most interesting AI topics trending in the last 6 months that a beginner should learn about?";
-
-function videoSystemPrompt(topicTitle: string): string {
-  return bilkoSystemPrompt(`Find 3 real YouTube videos about "${topicTitle}" for beginners.
+Cover a wide range — technology, science, history, psychology, business, health, creative skills, etc. Think "interesting things people search for to learn about."
 
 Return ONLY valid JSON. Example:
-{"videos":[{"title":"Video Title","creator":"Channel","description":"Short desc","url":"https://www.youtube.com/watch?v=dQw4w9WgXcQ","embedId":"dQw4w9WgXcQ","whyRecommended":"Why good for beginners","views":"1.2M","likes":"45K","comments":"2.3K"}]}
+{"topics":[{"title":"How Batteries Work","description":"The chemistry behind energy storage"}]}
 
-CRITICAL RULES:
-- You MUST use REAL YouTube video IDs that you are confident actually exist. Do NOT invent or guess video IDs.
-- The embedId MUST be the exact 11-character YouTube video ID from the URL (e.g. "dQw4w9WgXcQ" from youtube.com/watch?v=dQw4w9WgXcQ).
-- Only recommend videos you have high confidence are real and published by these channels: 3Blue1Brown, Fireship, Two Minute Papers, Andrej Karpathy, Computerphile, Yannic Kilcher, Lex Fridman, StatQuest, Sentdex, etc.
-- Prefer well-known, highly-viewed videos over obscure ones — popular videos are more likely to still be available.
-- If you are not confident a video ID is real, do NOT include it. It is better to return fewer videos than to hallucinate IDs.
-- Rank by engagement: views > likes > comments
-- Keep description under 15 words
-- Keep whyRecommended under 15 words
-- Return up to 3 videos, ordered best first
-- No markdown, ONLY the JSON object`);
+Rules: title max 6 words, description max 12 words. No markdown, ONLY the JSON object.`);
+
+const TOPICS_USER_MESSAGE =
+  "What are 10 interesting topics someone curious would enjoy learning about right now?";
+
+function questionsSystemPrompt(topic: string): string {
+  return bilkoSystemPrompt(`The user wants to learn about "${topic}". Generate exactly 5 questions they might want answered — ranging from beginner-friendly to thought-provoking.
+
+Return ONLY valid JSON. Example:
+{"questions":[{"question":"How does X actually work?"}]}
+
+Rules: each question max 15 words. No markdown, ONLY the JSON object.`);
 }
 
-function videoUserMessage(topic: AITopic): string {
-  return `Find 3 best YouTube videos for a beginner about: "${topic.title}" - ${topic.description}`;
+function questionsUserMessage(topic: string): string {
+  return `What are 5 interesting questions someone new to "${topic}" would want answered?`;
 }
 
-/** Retry prompt — used when first attempt produced zero validated videos */
-function videoRetrySystemPrompt(topicTitle: string, failedIds: string[]): string {
-  return bilkoSystemPrompt(`Your previous video recommendations for "${topicTitle}" all had INVALID YouTube video IDs that do not exist.
+function searchTermsSystemPrompt(topic: string, question: string): string {
+  return bilkoSystemPrompt(`Generate 3-4 YouTube search queries to find the best videos about "${topic}" that answer: "${question}"
 
-The following embed IDs FAILED validation — do NOT reuse them:
-${failedIds.map((id) => `- ${id}`).join("\n")}
+The search terms should be specific enough to surface high-quality educational content. Include a mix of:
+- A direct search for the question
+- A broader topic search
+- A "explained" or "for beginners" variant
 
-Try again with DIFFERENT videos. Use ONLY the most famous, viral, highly-viewed YouTube videos you are absolutely certain exist. Think of videos with millions of views from major channels.
+Return ONLY valid JSON. Example:
+{"searchTerms":["how neural networks learn explained","neural network backpropagation beginner tutorial","machine learning fundamentals"]}
 
-Return ONLY valid JSON. Same format:
-{"videos":[{"title":"Video Title","creator":"Channel","description":"Short desc","url":"https://www.youtube.com/watch?v=REAL_ID","embedId":"REAL_11_CHAR_ID","whyRecommended":"Why good for beginners","views":"1.2M","likes":"45K","comments":"2.3K"}]}
-
-RULES:
-- The embedId MUST be exactly 11 characters (letters, numbers, dash, underscore)
-- Only use video IDs you have VERY HIGH confidence are real
-- Return 1-3 videos — fewer is fine if you're more confident
-- No markdown, ONLY the JSON object`);
+Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSON object.`);
 }
 
-function videoRetryUserMessage(topic: AITopic): string {
-  return `Try again: find real YouTube videos about "${topic.title}". Only include videos you are absolutely certain exist on YouTube right now.`;
+function searchTermsUserMessage(topic: string, question: string): string {
+  return `Generate YouTube search queries for topic "${topic}", question: "${question}"`;
 }
 
 // ── Status messages ──────────────────────────────────────────────────
 
-const RESEARCH_STATUS_MESSAGES = [
-  "Scanning AI news from the last 6 months...",
-  "Analyzing trending topics across research papers...",
-  "Identifying beginner-friendly breakthroughs...",
-  "Ranking topics by relevance and accessibility...",
-  "Preparing your personalized topic list...",
+const TOPIC_STATUS_MESSAGES = [
+  "Finding interesting topics to explore...",
+  "Curating a diverse mix of subjects...",
+  "Picking topics that spark curiosity...",
+];
+
+const QUESTION_STATUS_MESSAGES = [
+  "Crafting questions you might want answered...",
+  "Thinking about what beginners want to know...",
+];
+
+const SEARCH_STATUS_MESSAGES = [
+  "Generating YouTube search terms...",
+  "Searching YouTube for real videos...",
+  "Finding the best matches...",
 ];
 
 // ── Component ────────────────────────────────────────────────────────
 
-export function VideoDiscoveryFlow() {
-  const [flowState, setFlowState] = useState<FlowState>("researching-topics");
-  const [topics, setTopics] = useState<AITopic[]>([]);
-  const [selectedTopic, setSelectedTopic] = useState<AITopic | null>(null);
+export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
+  const [flowState, setFlowState] = useState<FlowState>("generating-topics");
+  const [topics, setTopics] = useState<TopicSuggestion[]>([]);
+  const [selectedTopic, setSelectedTopic] = useState<string>("");
+  const [questions, setQuestions] = useState<QuestionSuggestion[]>([]);
+  const [selectedQuestion, setSelectedQuestion] = useState<string>("");
+  const [videos, setVideos] = useState<VideoCandidate[]>([]);
   const [selectedVideo, setSelectedVideo] = useState<VideoCandidate | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState(RESEARCH_STATUS_MESSAGES[0]);
+  const [statusMessage, setStatusMessage] = useState(TOPIC_STATUS_MESSAGES[0]);
   const [lastResult, setLastResult] = useState<string | undefined>(undefined);
+  const [customInput, setCustomInput] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
   const hasStarted = useRef(false);
-  const videoCache = useRef<Record<string, VideoCandidate[]>>({});
-  const videoCacheStatus = useRef<Record<string, "loading" | "done" | "error">>({});
-  const [, forceUpdate] = useState(0);
 
-  // Flow execution tracker — bridges to Flow Explorer inspector
   const { trackStep, resolveUserInput } = useFlowExecution("video-discovery");
+  const { definition: flowDef } = useFlowDefinition("video-discovery");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("video-discovery", "Video Discovery");
+  const { pushMessage } = useFlowChat();
   const { speak } = useVoice();
 
-  // ── StepTracker state (derived from flowState) ─────────────────────
+  // Get our agent identity for chat messages
+  const agent = getFlowAgent("video");
+
+  // ── Push agent message to chat ──────────────────────────
+  const pushAgentMessage = useCallback((text: string, speech?: string) => {
+    pushMessage(OWNER_ID, {
+      speaker: "agent",
+      text,
+      speech: speech ?? text,
+      agentName: agent?.chatName ?? "YoutubeExpert",
+      agentDisplayName: agent?.name ?? "YouTube Librarian",
+      agentAccent: agent?.accentColor ?? "text-red-500",
+    });
+  }, [pushMessage, agent]);
+
+  // ── Push greeting on mount ─────────────────────────────
+  const didGreet = useRef(false);
+  useEffect(() => {
+    if (didGreet.current) return;
+    didGreet.current = true;
+    // Push the agent's greeting to the chat (we own it now)
+    if (agent) {
+      pushAgentMessage(agent.greeting, agent.greetingSpeech);
+    }
+  }, [agent, pushAgentMessage]);
+
+  // ── StepTracker state ──────────────────────────────────────────────
 
   const trackerSteps = useMemo<TrackerStep[]>(() => {
     const stateToSteps: Record<FlowState, TrackerStep[]> = {
-      "researching-topics": [
-        { id: "research", label: "Research", status: "active" },
-        { id: "topic", label: "Topic", status: "pending" },
-        { id: "video", label: "Video", status: "pending" },
+      "generating-topics": [
+        { id: "topic", label: "Topic", status: "active" },
+        { id: "question", label: "Question", status: "pending" },
+        { id: "search", label: "Search", status: "pending" },
         { id: "watch", label: "Watch", status: "pending" },
       ],
       "select-topic": [
-        { id: "research", label: "Research", status: "complete" },
         { id: "topic", label: "Topic", status: "active" },
-        { id: "video", label: "Video", status: "pending" },
+        { id: "question", label: "Question", status: "pending" },
+        { id: "search", label: "Search", status: "pending" },
+        { id: "watch", label: "Watch", status: "pending" },
+      ],
+      "generating-questions": [
+        { id: "topic", label: "Topic", status: "complete" },
+        { id: "question", label: "Question", status: "active" },
+        { id: "search", label: "Search", status: "pending" },
+        { id: "watch", label: "Watch", status: "pending" },
+      ],
+      "select-question": [
+        { id: "topic", label: "Topic", status: "complete" },
+        { id: "question", label: "Question", status: "active" },
+        { id: "search", label: "Search", status: "pending" },
+        { id: "watch", label: "Watch", status: "pending" },
+      ],
+      "searching-videos": [
+        { id: "topic", label: "Topic", status: "complete" },
+        { id: "question", label: "Question", status: "complete" },
+        { id: "search", label: "Search", status: "active" },
         { id: "watch", label: "Watch", status: "pending" },
       ],
       "select-video": [
-        { id: "research", label: "Research", status: "complete" },
         { id: "topic", label: "Topic", status: "complete" },
-        { id: "video", label: "Video", status: "active" },
+        { id: "question", label: "Question", status: "complete" },
+        { id: "search", label: "Search", status: "complete" },
         { id: "watch", label: "Watch", status: "pending" },
       ],
       "watching": [
-        { id: "research", label: "Research", status: "complete" },
         { id: "topic", label: "Topic", status: "complete" },
-        { id: "video", label: "Video", status: "complete" },
+        { id: "question", label: "Question", status: "complete" },
+        { id: "search", label: "Search", status: "complete" },
         { id: "watch", label: "Watch", status: "active" },
       ],
       "error": [
-        { id: "research", label: "Research", status: "error" },
-        { id: "topic", label: "Topic", status: "pending" },
-        { id: "video", label: "Video", status: "pending" },
+        { id: "topic", label: "Topic", status: "error" },
+        { id: "question", label: "Question", status: "pending" },
+        { id: "search", label: "Search", status: "pending" },
         { id: "watch", label: "Watch", status: "pending" },
       ],
     };
@@ -202,12 +266,18 @@ export function VideoDiscoveryFlow() {
 
   const trackerActivity = useMemo<string | undefined>(() => {
     switch (flowState) {
-      case "researching-topics":
+      case "generating-topics":
         return statusMessage;
       case "select-topic":
-        return "Pick a topic that interests you";
+        return "Pick a topic or type your own";
+      case "generating-questions":
+        return statusMessage;
+      case "select-question":
+        return "What would you like to learn?";
+      case "searching-videos":
+        return statusMessage;
       case "select-video":
-        return `Pick a video about ${selectedTopic?.title ?? "your topic"}`;
+        return `Pick a video about ${selectedTopic}`;
       case "watching":
         return selectedVideo?.title;
       case "error":
@@ -217,11 +287,14 @@ export function VideoDiscoveryFlow() {
     }
   }, [flowState, statusMessage, selectedTopic, selectedVideo, error]);
 
-  // Sync flowState changes to the flow bus
+  // Sync flowState to flow bus
   useEffect(() => {
     const statusMap: Record<FlowState, "running" | "complete" | "error"> = {
-      "researching-topics": "running",
+      "generating-topics": "running",
       "select-topic": "running",
+      "generating-questions": "running",
+      "select-question": "running",
+      "searching-videos": "running",
       "select-video": "running",
       "watching": "complete",
       "error": "error",
@@ -229,247 +302,253 @@ export function VideoDiscoveryFlow() {
     setBusStatus(statusMap[flowState], flowState);
   }, [flowState, setBusStatus]);
 
-  // Rotate status messages during research
+  // Rotate status messages during loading states
   useEffect(() => {
-    if (flowState !== "researching-topics") return;
+    let messages: string[];
+    if (flowState === "generating-topics") messages = TOPIC_STATUS_MESSAGES;
+    else if (flowState === "generating-questions") messages = QUESTION_STATUS_MESSAGES;
+    else if (flowState === "searching-videos") messages = SEARCH_STATUS_MESSAGES;
+    else return;
+
     let index = 0;
     const interval = setInterval(() => {
-      index = (index + 1) % RESEARCH_STATUS_MESSAGES.length;
-      setStatusMessage(RESEARCH_STATUS_MESSAGES[index]);
+      index = (index + 1) % messages.length;
+      setStatusMessage(messages[index]);
     }, 3000);
     return () => clearInterval(interval);
   }, [flowState]);
 
-  // ── Step: Search videos for a single topic (parallel) ──────────────
+  // ── Step 1: Generate topics ────────────────────────────────────────
 
-  const searchVideosForTopic = useCallback(async (topic: AITopic) => {
-    const key = topic.title;
-    if (videoCacheStatus.current[key]) return;
-    videoCacheStatus.current[key] = "loading";
-    forceUpdate((n) => n + 1);
-
-    try {
-      // Attempt 1: standard prompt
-      const { data: videoData } = await chatJSON<VideosResponse>(
-        jsonPrompt(videoSystemPrompt(topic.title), videoUserMessage(topic)),
-      );
-
-      const candidates = videoData.videos ?? [];
-      const validated = await validateVideos(candidates);
-
-      if (validated.length > 0) {
-        videoCache.current[key] = validated;
-        videoCacheStatus.current[key] = "done";
-        forceUpdate((n) => n + 1);
-        return;
-      }
-
-      // Attempt 2: retry with stricter prompt + blacklisted IDs
-      console.warn(`[video-search] All ${candidates.length} videos failed validation for "${key}", retrying...`);
-      const failedIds = candidates.map((c) => c.embedId);
-
-      const { data: retryData } = await chatJSON<VideosResponse>(
-        jsonPrompt(
-          videoRetrySystemPrompt(topic.title, failedIds),
-          videoRetryUserMessage(topic),
-        ),
-      );
-
-      const retryCandidates = retryData.videos ?? [];
-      const retryValidated = await validateVideos(retryCandidates);
-
-      videoCache.current[key] = retryValidated;
-      videoCacheStatus.current[key] = "done";
-
-      if (retryValidated.length === 0) {
-        console.warn(`[video-search] Retry also failed for "${key}" — 0 validated videos after 2 attempts`);
-      }
-    } catch {
-      videoCacheStatus.current[key] = "error";
-      videoCache.current[key] = [];
-    }
-    forceUpdate((n) => n + 1);
-  }, []);
-
-  // ── Step: Research topics ──────────────────────────────────────────
-
-  const researchTopics = useCallback(async () => {
-    setFlowState("researching-topics");
+  const generateTopics = useCallback(async () => {
+    setFlowState("generating-topics");
     setError(null);
     setLastResult(undefined);
-    setStatusMessage(RESEARCH_STATUS_MESSAGES[0]);
+    setStatusMessage(TOPIC_STATUS_MESSAGES[0]);
 
     try {
       const { data: result } = await trackStep(
-        "research-topics",
-        { prompt: TOPIC_SYSTEM_PROMPT, userMessage: TOPIC_USER_MESSAGE },
+        "generate-topics",
+        { prompt: TOPICS_SYSTEM_PROMPT, userMessage: TOPICS_USER_MESSAGE },
         () => chatJSON<TopicsResponse>(
-          jsonPrompt(TOPIC_SYSTEM_PROMPT, TOPIC_USER_MESSAGE),
+          jsonPrompt(TOPICS_SYSTEM_PROMPT, TOPICS_USER_MESSAGE),
         ),
       );
 
-      const fetchedTopics = result.data.topics.slice(0, 5);
-      setTopics(fetchedTopics);
-      setLastResult(`Found ${fetchedTopics.length} trending topics`);
+      const fetched = result.data.topics.slice(0, 10);
+      setTopics(fetched);
+      setLastResult(`Found ${fetched.length} topics to explore`);
       setFlowState("select-topic");
 
-      speak(`Found ${fetchedTopics.length} trending topics. Pick one that interests you.`);
-
-      // Fire parallel video searches for all topics
-      fetchedTopics.forEach((t) => searchVideosForTopic(t));
+      // Push status to chat + speak
+      const statusText = `I found ${fetched.length} topics. Pick one that interests you, or type your own.`;
+      pushAgentMessage(statusText);
+      speak(statusText, "Aoede");
     } catch (err) {
-      console.error("Topic research error:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to research topics. Please try again."
-      );
+      console.error("Topic generation error:", err);
+      setError(err instanceof Error ? err.message : "Failed to generate topics.");
       setFlowState("error");
-      speak("Something went wrong. Let me try again.");
     }
-  }, [searchVideosForTopic, trackStep, speak]);
+  }, [trackStep, speak, pushAgentMessage]);
 
   // Auto-start on mount
   useEffect(() => {
     if (!hasStarted.current) {
       hasStarted.current = true;
-      researchTopics();
+      generateTopics();
     }
-  }, [researchTopics]);
+  }, [generateTopics]);
 
-  // ── Step: User picks topic ─────────────────────────────────────────
+  // ── Step 2: Handle topic selection ─────────────────────────────────
 
-  const pendingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (pendingInterval.current) clearInterval(pendingInterval.current);
-    };
-  }, []);
-
-  const handleTopicSelect = (topic: AITopic) => {
-    if (pendingInterval.current) {
-      clearInterval(pendingInterval.current);
-      pendingInterval.current = null;
-    }
+  const handleTopicSelect = useCallback((topic: string) => {
     setSelectedTopic(topic);
+    setShowCustomInput(false);
+    setCustomInput("");
     resolveUserInput("select-topic", { selectedTopic: topic });
+    generateQuestionsForTopic(topic);
+  }, [resolveUserInput]);
 
-    const cached = videoCache.current[topic.title];
-    const cacheStatus = videoCacheStatus.current[topic.title];
+  const handleCustomTopicSubmit = useCallback(() => {
+    const trimmed = customInput.trim();
+    if (!trimmed) return;
+    handleTopicSelect(trimmed);
+  }, [customInput, handleTopicSelect]);
 
-    if (cached && cached.length > 0) {
-      setLastResult(`Topic: ${topic.title}`);
-      setFlowState("select-video");
-    } else if (cacheStatus === "loading") {
-      // Show a temporary loading state, then transition
-      setLastResult(`Topic: ${topic.title} — loading videos...`);
-      pendingInterval.current = setInterval(() => {
-        const status = videoCacheStatus.current[topic.title];
-        if (status === "done") {
-          if (pendingInterval.current) clearInterval(pendingInterval.current);
-          pendingInterval.current = null;
-          const videos = videoCache.current[topic.title] || [];
-          if (videos.length > 0) {
-            setLastResult(`Topic: ${topic.title}`);
-            setFlowState("select-video");
-          } else {
-            setSelectedTopic(null);
-            setLastResult("No videos found — pick another topic");
-            setFlowState("select-topic");
-          }
-        } else if (status === "error") {
-          if (pendingInterval.current) clearInterval(pendingInterval.current);
-          pendingInterval.current = null;
-          setSelectedTopic(null);
-          setLastResult("Couldn't load videos — try another topic");
-          setFlowState("select-topic");
-        }
-      }, 500);
-    } else if (cacheStatus === "done" && (!cached || cached.length === 0)) {
-      setSelectedTopic(null);
-      setLastResult("No videos found — pick another topic");
-      setFlowState("select-topic");
-    } else {
-      // Retry the video search
-      setLastResult(`Topic: ${topic.title} — retrying video search...`);
-      videoCacheStatus.current[topic.title] = undefined as any;
-      searchVideosForTopic(topic);
-      pendingInterval.current = setInterval(() => {
-        const status = videoCacheStatus.current[topic.title];
-        if (status === "done") {
-          if (pendingInterval.current) clearInterval(pendingInterval.current);
-          pendingInterval.current = null;
-          const videos = videoCache.current[topic.title] || [];
-          if (videos.length > 0) {
-            setLastResult(`Topic: ${topic.title}`);
-            setFlowState("select-video");
-          } else {
-            setSelectedTopic(null);
-            setLastResult("No videos found — pick another topic");
-            setFlowState("select-topic");
-          }
-        } else if (status === "error") {
-          if (pendingInterval.current) clearInterval(pendingInterval.current);
-          pendingInterval.current = null;
-          setSelectedTopic(null);
-          setLastResult("Couldn't load videos — try another topic");
-          setFlowState("select-topic");
-        }
-      }, 500);
+  // ── Step 3: Generate questions ─────────────────────────────────────
+
+  const generateQuestionsForTopic = useCallback(async (topic: string) => {
+    setFlowState("generating-questions");
+    setStatusMessage(QUESTION_STATUS_MESSAGES[0]);
+
+    try {
+      const { data: result } = await trackStep(
+        "generate-questions",
+        { topic },
+        () => chatJSON<QuestionsResponse>(
+          jsonPrompt(questionsSystemPrompt(topic), questionsUserMessage(topic)),
+        ),
+      );
+
+      const fetched = result.data.questions.slice(0, 5);
+      setQuestions(fetched);
+      setLastResult(`Topic: ${topic}`);
+      setFlowState("select-question");
+
+      // Push status to chat + speak
+      const statusText = "If you had one question to be answered, what would it be?";
+      pushAgentMessage(statusText);
+      speak(statusText, "Aoede");
+    } catch (err) {
+      console.error("Question generation error:", err);
+      setError(err instanceof Error ? err.message : "Failed to generate questions.");
+      setFlowState("error");
     }
-  };
+  }, [trackStep, speak, pushAgentMessage]);
 
-  // ── Step: User picks video ─────────────────────────────────────────
+  // ── Step 4: Handle question selection ──────────────────────────────
+
+  const handleQuestionSelect = useCallback((question: string) => {
+    setSelectedQuestion(question);
+    setShowCustomInput(false);
+    setCustomInput("");
+    resolveUserInput("select-question", { selectedQuestion: question });
+    searchVideosForTopicAndQuestion(selectedTopic, question);
+  }, [resolveUserInput, selectedTopic]);
+
+  const handleCustomQuestionSubmit = useCallback(() => {
+    const trimmed = customInput.trim();
+    if (!trimmed) return;
+    handleQuestionSelect(trimmed);
+  }, [customInput, handleQuestionSelect]);
+
+  // ── Step 5: Generate search terms → YouTube API search ─────────────
+
+  const searchVideosForTopicAndQuestion = useCallback(async (topic: string, question: string) => {
+    setFlowState("searching-videos");
+    setStatusMessage(SEARCH_STATUS_MESSAGES[0]);
+
+    try {
+      // Generate search terms via LLM
+      const { data: termsResult } = await trackStep(
+        "generate-search-terms",
+        { topic, question },
+        () => chatJSON<SearchTermsResponse>(
+          jsonPrompt(
+            searchTermsSystemPrompt(topic, question),
+            searchTermsUserMessage(topic, question),
+          ),
+        ),
+      );
+
+      const searchTerms = termsResult.data.searchTerms ?? [];
+      if (searchTerms.length === 0) {
+        setError("Couldn't generate search terms. Try a different topic or question.");
+        setFlowState("error");
+        return;
+      }
+
+      setStatusMessage("Searching YouTube for real videos...");
+
+      // Search YouTube API with the generated terms
+      const { data: foundVideos } = await trackStep(
+        "youtube-search",
+        { searchTerms },
+        async () => {
+          const results = await searchYouTube(searchTerms);
+          return { data: results, raw: JSON.stringify(results), model: "youtube-api", usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 } };
+        },
+      );
+
+      if (foundVideos.data.length === 0) {
+        setError("No videos found on YouTube. Try a different question.");
+        setFlowState("error");
+        return;
+      }
+
+      setVideos(foundVideos.data);
+      setLastResult(`Found ${foundVideos.data.length} videos`);
+      setFlowState("select-video");
+
+      // Push status to chat + speak
+      const statusText = `Found ${foundVideos.data.length} videos. Pick one to watch.`;
+      pushAgentMessage(statusText);
+      speak(statusText, "Aoede");
+    } catch (err) {
+      console.error("Video search error:", err);
+      setError(err instanceof Error ? err.message : "Failed to search for videos.");
+      setFlowState("error");
+    }
+  }, [trackStep, speak, pushAgentMessage]);
+
+  // ── Step 6: Handle video selection ─────────────────────────────────
 
   const handleVideoSelect = (video: VideoCandidate) => {
     setSelectedVideo(video);
     resolveUserInput("select-video", { selectedVideo: video });
-    busSend("main", "summary", {
-      summary: `Discovered "${video.title}" by ${video.creator} on the topic of ${selectedTopic?.title ?? "AI"}.`,
+
+    // Push summary to chat directly (we own it)
+    const summaryText = `Discovered "${video.title}" by ${video.creator} on the topic of ${selectedTopic}.`;
+    pushAgentMessage(summaryText);
+
+    // Also send to FlowBus for activity logging
+    busSend("main", "summary", { summary: summaryText });
+
+    // Track play-video step (display step — renders the embed)
+    trackStep("play-video", { selectedVideo: video }, async () => {
+      return { exitSummary: summaryText };
     });
-    setLastResult(`${selectedTopic?.title} → ${video.title}`);
+
+    setLastResult(`${selectedTopic} → ${video.title}`);
     setFlowState("watching");
-    speak(`Loading ${video.title} by ${video.creator}.`);
+    speak(`Loading ${video.title} by ${video.creator}.`, "Aoede");
   };
 
   // ── Reset ──────────────────────────────────────────────────────────
 
   const reset = () => {
-    if (pendingInterval.current) {
-      clearInterval(pendingInterval.current);
-      pendingInterval.current = null;
-    }
     hasStarted.current = false;
+    didGreet.current = false;
     setTopics([]);
-    setSelectedTopic(null);
+    setSelectedTopic("");
+    setQuestions([]);
+    setSelectedQuestion("");
+    setVideos([]);
     setSelectedVideo(null);
     setError(null);
     setLastResult(undefined);
-    videoCache.current = {};
-    videoCacheStatus.current = {};
+    setCustomInput("");
+    setShowCustomInput(false);
     setTimeout(() => {
       hasStarted.current = true;
-      researchTopics();
+      didGreet.current = true;
+      generateTopics();
     }, 0);
   };
-
-  const videosForSelected = selectedTopic ? (videoCache.current[selectedTopic.title] || []) : [];
 
   // ── Register screen options for voice matching ─────────────────────
 
   const screenOptions = useMemo<ScreenOption[]>(() => {
     if (flowState === "select-topic" && topics.length > 0) {
-      return topics.map((topic) => ({
-        id: `topic-${topic.rank}`,
+      return topics.map((topic, idx) => ({
+        id: `topic-${idx}`,
         label: topic.title,
         keywords: [topic.description],
-        action: () => handleTopicSelect(topic),
+        action: () => handleTopicSelect(topic.title),
       }));
     }
 
-    if (flowState === "select-video" && selectedTopic && videosForSelected.length > 0) {
-      return videosForSelected.map((video) => ({
+    if (flowState === "select-question" && questions.length > 0) {
+      return questions.map((q, idx) => ({
+        id: `question-${idx}`,
+        label: q.question,
+        keywords: [],
+        action: () => handleQuestionSelect(q.question),
+      }));
+    }
+
+    if (flowState === "select-video" && videos.length > 0) {
+      return videos.map((video) => ({
         id: `video-${video.embedId}`,
         label: video.title,
         keywords: [video.creator],
@@ -478,7 +557,7 @@ export function VideoDiscoveryFlow() {
     }
 
     return [];
-  }, [flowState, topics, selectedTopic, videosForSelected, busSend, resolveUserInput]);
+  }, [flowState, topics, questions, videos, handleTopicSelect, handleQuestionSelect]);
 
   useScreenOptions(screenOptions);
 
@@ -493,94 +572,246 @@ export function VideoDiscoveryFlow() {
         lastResult={lastResult}
       />
 
-      {/* ── STEP 1: Researching ──────────────────────────────────── */}
-      {flowState === "researching-topics" && (
+      {/* ── LOADING: Generating topics ─────────────────────────── */}
+      {flowState === "generating-topics" && (
         <div className="flex flex-col items-center justify-center py-16 px-4">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
             <Brain className="h-8 w-8 text-primary animate-pulse" />
           </div>
           <h2 className="text-xl font-semibold text-center mb-2">
-            Discovering AI Topics
+            Finding Topics to Explore
           </h2>
           <p className="text-muted-foreground text-center max-w-md mb-6">
             {statusMessage}
           </p>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
-            <TrendingUp className="h-3 w-3" />
-            <span>Analyzing trends from the past 6 months</span>
-          </div>
           <div className="w-48 bg-muted rounded-full h-1.5 overflow-hidden">
             <div className="bg-primary h-full rounded-full animate-pulse" style={{ width: "60%" }} />
           </div>
         </div>
       )}
 
-      {/* ── STEP 2: Select Topic ─────────────────────────────────── */}
+      {/* ── STEP 1: Select Topic ───────────────────────────────── */}
       {flowState === "select-topic" && topics.length > 0 && (
         <div className="space-y-4">
-          {/* Clear input prompt */}
           <div className="text-center py-2">
             <h2 className="text-xl font-semibold" data-testid="text-topic-heading">
-              What interests you?
+              What do you want to learn about?
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Tap a topic to explore videos
+              Pick a topic or type your own
             </p>
           </div>
 
-          {/* Topic cards — fill available space */}
+          {/* Topic grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {topics.map((topic) => {
-              const cacheStatus = videoCacheStatus.current[topic.title];
-              return (
-                <button
-                  key={topic.rank}
-                  data-testid={`card-topic-${topic.rank}`}
-                  className="group relative rounded-xl border border-border bg-card p-5 text-left transition-all hover:border-primary hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  onClick={() => handleTopicSelect(topic)}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <Badge variant="outline" className="text-xs shrink-0">#{topic.rank}</Badge>
-                    {cacheStatus === "loading" && (
-                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                    )}
-                    {cacheStatus === "done" && (
-                      <CheckCircle2 className="h-3 w-3 text-green-500" />
-                    )}
-                  </div>
-                  <h3 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
-                    {topic.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {topic.description}
-                  </p>
-                  <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground/60 group-hover:text-primary/60 transition-colors">
-                    <Play className="h-3.5 w-3.5" />
-                    <span>Explore videos</span>
-                  </div>
-                </button>
-              );
-            })}
+            {topics.map((topic, idx) => (
+              <button
+                key={idx}
+                data-testid={`card-topic-${idx}`}
+                className="group relative rounded-xl border border-border bg-card p-5 text-left transition-all hover:border-primary hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                onClick={() => handleTopicSelect(topic.title)}
+              >
+                <h3 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
+                  {topic.title}
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {topic.description}
+                </p>
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground/60 group-hover:text-primary/60 transition-colors">
+                  <Play className="h-3.5 w-3.5" />
+                  <span>Explore</span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Custom input toggle + field */}
+          {!showCustomInput ? (
+            <div className="flex justify-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCustomInput(true)}
+                data-testid="button-custom-topic"
+                className="text-muted-foreground"
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                Type your own topic
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2 max-w-md mx-auto">
+              <input
+                type="text"
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCustomTopicSubmit()}
+                placeholder="e.g. How black holes work..."
+                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                data-testid="input-custom-topic"
+                autoFocus
+              />
+              <Button
+                size="sm"
+                onClick={handleCustomTopicSubmit}
+                disabled={!customInput.trim()}
+                data-testid="button-submit-custom-topic"
+              >
+                Go
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── LOADING: Generating questions ──────────────────────── */}
+      {flowState === "generating-questions" && (
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+            <HelpCircle className="h-8 w-8 text-primary animate-pulse" />
+          </div>
+          <h2 className="text-xl font-semibold text-center mb-2">
+            {selectedTopic}
+          </h2>
+          <p className="text-muted-foreground text-center max-w-md mb-6">
+            {statusMessage}
+          </p>
+          <div className="w-48 bg-muted rounded-full h-1.5 overflow-hidden">
+            <div className="bg-primary h-full rounded-full animate-pulse" style={{ width: "60%" }} />
           </div>
         </div>
       )}
 
-      {/* ── STEP 3: Select Video ─────────────────────────────────── */}
-      {flowState === "select-video" && selectedTopic && videosForSelected.length > 0 && (
+      {/* ── STEP 2: Select Question ────────────────────────────── */}
+      {flowState === "select-question" && questions.length > 0 && (
         <div className="space-y-4">
-          {/* Clear input prompt with topic context */}
+          <div className="text-center py-2">
+            <h2 className="text-xl font-semibold" data-testid="text-question-heading">
+              If you had one question to be answered — what would it be?
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              About <span className="font-medium text-foreground">{selectedTopic}</span>
+            </p>
+          </div>
+
+          {/* Question cards */}
+          <div className="grid gap-3 max-w-xl mx-auto">
+            {questions.map((q, idx) => (
+              <button
+                key={idx}
+                data-testid={`card-question-${idx}`}
+                className="group rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-primary hover:shadow-md hover:shadow-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                onClick={() => handleQuestionSelect(q.question)}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                    <HelpCircle className="h-4 w-4 text-primary" />
+                  </div>
+                  <p className="text-sm font-medium group-hover:text-primary transition-colors">
+                    {q.question}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Custom input toggle + field */}
+          {!showCustomInput ? (
+            <div className="flex justify-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCustomInput(true)}
+                data-testid="button-custom-question"
+                className="text-muted-foreground"
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                Type your own question
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2 max-w-md mx-auto">
+              <input
+                type="text"
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCustomQuestionSubmit()}
+                placeholder="e.g. Why does time slow down near black holes?"
+                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                data-testid="input-custom-question"
+                autoFocus
+              />
+              <Button
+                size="sm"
+                onClick={handleCustomQuestionSubmit}
+                disabled={!customInput.trim()}
+                data-testid="button-submit-custom-question"
+              >
+                Go
+              </Button>
+            </div>
+          )}
+
+          {/* Back action */}
+          <div className="flex justify-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSelectedTopic("");
+                setQuestions([]);
+                setShowCustomInput(false);
+                setCustomInput("");
+                setLastResult(`Found ${topics.length} topics to explore`);
+                setFlowState("select-topic");
+              }}
+              data-testid="button-back-topics"
+              className="text-muted-foreground"
+            >
+              <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+              Back to Topics
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── LOADING: Searching YouTube ─────────────────────────── */}
+      {flowState === "searching-videos" && (
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-6">
+            <Search className="h-8 w-8 text-red-500 animate-pulse" />
+          </div>
+          <h2 className="text-xl font-semibold text-center mb-2">
+            Searching YouTube
+          </h2>
+          <p className="text-muted-foreground text-center max-w-md mb-4">
+            {statusMessage}
+          </p>
+          <div className="text-xs text-muted-foreground/60 text-center space-y-1">
+            <p className="font-medium">{selectedTopic}</p>
+            <p>{selectedQuestion}</p>
+          </div>
+          <div className="w-48 bg-muted rounded-full h-1.5 overflow-hidden mt-4">
+            <div className="bg-red-500 h-full rounded-full animate-pulse" style={{ width: "70%" }} />
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 3: Select Video ───────────────────────────────── */}
+      {flowState === "select-video" && videos.length > 0 && (
+        <div className="space-y-4">
           <div className="text-center py-2">
             <h2 className="text-xl font-semibold" data-testid="text-video-pick-heading">
               Pick a video
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              {videosForSelected.length} videos about <span className="font-medium text-foreground">{selectedTopic.title}</span>, ranked by engagement
+              {videos.length} videos about <span className="font-medium text-foreground">{selectedTopic}</span>, sorted by popularity
             </p>
           </div>
 
-          {/* Video cards — fill available space */}
+          {/* Video cards */}
           <div className="grid gap-3">
-            {videosForSelected.map((video, idx) => (
+            {videos.map((video, idx) => (
               <button
                 key={idx}
                 data-testid={`card-video-${idx}`}
@@ -601,7 +832,7 @@ export function VideoDiscoveryFlow() {
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">{video.creator}</p>
-                    <p className="text-sm text-muted-foreground mt-2">{video.whyRecommended}</p>
+                    <p className="text-sm text-muted-foreground mt-2">{video.description}</p>
                     <div className="flex items-center gap-4 mt-3 flex-wrap">
                       {video.views && (
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -631,21 +862,24 @@ export function VideoDiscoveryFlow() {
               variant="ghost"
               size="sm"
               onClick={() => {
-                setSelectedTopic(null);
-                setLastResult("Found " + topics.length + " trending topics");
-                setFlowState("select-topic");
+                setVideos([]);
+                setSelectedQuestion("");
+                setShowCustomInput(false);
+                setCustomInput("");
+                setLastResult(`Topic: ${selectedTopic}`);
+                setFlowState("select-question");
               }}
-              data-testid="button-back-topics"
+              data-testid="button-back-questions"
               className="text-muted-foreground"
             >
               <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-              Back to Topics
+              Back to Questions
             </Button>
           </div>
         </div>
       )}
 
-      {/* ── STEP 4: Watching — platform default VideoRenderer ────── */}
+      {/* ── STEP 4: Watching — platform default VideoRenderer ──── */}
       {flowState === "watching" && selectedVideo && (
         <div className="space-y-4">
           <VideoRenderer block={{
@@ -655,7 +889,7 @@ export function VideoDiscoveryFlow() {
             title: selectedVideo.title,
             creator: selectedVideo.creator,
             description: selectedVideo.description,
-            recommendation: selectedVideo.whyRecommended,
+            recommendation: `${selectedTopic} — ${selectedQuestion}`,
           }} />
 
           <div className="flex justify-center gap-3 flex-wrap">
@@ -664,7 +898,7 @@ export function VideoDiscoveryFlow() {
               size="sm"
               onClick={() => {
                 setSelectedVideo(null);
-                setLastResult(`Topic: ${selectedTopic?.title}`);
+                setLastResult(`${selectedTopic} → ${selectedQuestion}`);
                 setFlowState("select-video");
               }}
               data-testid="button-pick-another-video"
@@ -683,11 +917,21 @@ export function VideoDiscoveryFlow() {
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
               Start Over
             </Button>
+            {onComplete && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onComplete(`Watched "${selectedVideo.title}" by ${selectedVideo.creator} about ${selectedTopic}.`)}
+                data-testid="button-done"
+              >
+                Done
+              </Button>
+            )}
           </div>
         </div>
       )}
 
-      {/* ── Error state ──────────────────────────────────────────── */}
+      {/* ── Error state ────────────────────────────────────────── */}
       {flowState === "error" && (
         <div className="flex flex-col items-center justify-center py-16 px-4">
           <p className="text-red-500 mb-2 font-medium" data-testid="text-error-title">Something went wrong</p>

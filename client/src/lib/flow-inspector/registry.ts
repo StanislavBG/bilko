@@ -6,13 +6,401 @@
  *
  * Validated at import time by ARCH-005 steel frame validator.
  * Invalid flows are logged and excluded.
+ *
+ * ═══════════════════════════════════════════════════════════
+ * ACTIVE FLOWS:  bilko-main, video-discovery
+ * STANDBY FLOWS: work-with-me, ai-consultation,
+ *                recursive-interviewer, linkedin-strategist,
+ *                socratic-architect
+ *
+ * DO NOT MODIFY standby flows — they are frozen until
+ * explicitly moved back to active status.
+ * ═══════════════════════════════════════════════════════════
  */
 
 import type { FlowDefinition } from "./types";
 import { validateRegistry } from "./validate";
 
 const allFlows: FlowDefinition[] = [
-  // ── Work With Me — Guided web task assistant ─────────────
+  // ── ACTIVE — Bilko Main Flow ──────────────────────────────
+  // This is the root flow that governs the landing page.
+  // It greets the user (chat node), shows two options
+  // (Video Recommendation + Explore the Site), and runs the
+  // selected sub-flow.
+  {
+    id: "bilko-main",
+    name: "Bilko Main Flow",
+    description:
+      "The main landing experience — a recursive while-loop. Bilko greets, user picks a sub-flow, the sub-flow runs, its exit summary feeds back into the greeting node, and the loop repeats. This is the root flow that governs the entire conversational landing page.",
+    version: "3.0.0",
+    location: "landing",
+    componentPath: "client/src/pages/landing.tsx",
+    tags: ["landing", "main", "greeting", "routing", "root", "recursive", "while-loop"],
+    output: {
+      name: "recycleContext",
+      type: "object",
+      description: "The summary context fed back to the greeting node for the next iteration of the loop",
+    },
+    steps: [
+      {
+        id: "greeting",
+        name: "Greetings from Bilko",
+        type: "llm",
+        description:
+          "HEAD of the while-loop. Bilko generates a context-aware greeting. On first run: fresh welcome. On recycle: personalized return referencing the previous sub-flow's summary. Bilko speaks first (C1).",
+        prompt:
+          "You are greeting a new visitor to the AI School. Generate a warm, natural opening. Welcome them, introduce yourself briefly as Bilko their AI training partner, and ask how they'd like to learn today. 2-3 sentences max. Plain text only.",
+        userMessage: "A new visitor just arrived at the AI School.",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "recycleContext",
+            type: "object",
+            description: "Optional context from the previous loop iteration — contains modeLabel and summary from the last sub-flow. Null on first run.",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "greeting",
+            type: "string",
+            description: "Bilko's welcome message — 2-3 sentences, conversational",
+          },
+        ],
+        dependsOn: [],
+      },
+      {
+        id: "greeting-chat",
+        name: "Push Greeting to Chat",
+        type: "chat",
+        description:
+          "Pushes the generated greeting text to the FlowChat panel with TTS. This is the explicit chat-publish step — the greeting LLM output is only visible to the user after this step runs.",
+        inputSchema: [
+          {
+            name: "greeting",
+            type: "string",
+            description: "The greeting text from the LLM step",
+          },
+        ],
+        dependsOn: ["greeting"],
+      },
+      {
+        id: "mode-selection",
+        name: "User Selects Experience",
+        type: "user-input",
+        subtype: "menu",
+        description:
+          "A menu with two options: 'Video Recommendation' (launches the video-discovery sub-flow) and 'Explore the Site' (opens the sidebar navigation). Supports click and voice selection.",
+        inputSchema: [
+          {
+            name: "availableFlows",
+            type: "array",
+            description: "Active sub-flows available for selection (currently only video-discovery)",
+          },
+          {
+            name: "specialTiles",
+            type: "array",
+            description: "Navigation tiles (Explore the Site)",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "selectedMode",
+            type: "string",
+            description: "Short mode ID the user selected (e.g. 'video', 'chat')",
+          },
+          {
+            name: "modeLabel",
+            type: "string",
+            description: "Human-readable label of the selected flow (e.g. 'Video Recommendation')",
+          },
+        ],
+        dependsOn: ["greeting-chat"],
+      },
+      {
+        id: "run-subflow",
+        name: "Run Sub-Flow",
+        type: "display",
+        description:
+          "Starts the selected sub-flow by ID. The sub-flow is autonomous — it claims the chat, pushes its own agent greeting and messages, and manages its own persona identity. When the sub-flow calls onComplete(summary), control passes to the summarize-and-recycle step.",
+        inputSchema: [
+          {
+            name: "selectedMode",
+            type: "string",
+            description: "Which sub-flow to render (maps to a sub-flow ID)",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "exitSummary",
+            type: "string",
+            description: "The sub-flow's exit summary passed via onComplete(summary)",
+          },
+        ],
+        dependsOn: ["mode-selection"],
+      },
+      {
+        id: "summarize-and-recycle",
+        name: "Summarize & Recycle to Head",
+        type: "transform",
+        description:
+          "TAIL of the while-loop. Captures the sub-flow's exit summary, releases chat ownership back to bilko-main, logs the activity, and produces the recycleContext that feeds back into the greeting node for the next iteration. This step closes the loop: run-subflow → summarize-and-recycle → greeting (recycled).",
+        inputSchema: [
+          {
+            name: "exitSummary",
+            type: "string",
+            description: "The summary string from the completed sub-flow",
+          },
+          {
+            name: "modeLabel",
+            type: "string",
+            description: "Human-readable label of the sub-flow that just completed",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "recycleContext",
+            type: "object",
+            description: "Context object { modeLabel, summary } passed to the greeting node on the next loop iteration",
+          },
+        ],
+        dependsOn: ["run-subflow"],
+      },
+    ],
+  },
+
+  // ── ACTIVE — Video Discovery ──────────────────────────────
+  // The primary learning flow. Topic → question → YouTube search → play.
+  {
+    id: "video-discovery",
+    name: "Video Recommendation",
+    description:
+      "Pick a topic, ask a question, and discover real YouTube videos — powered by YouTube Data API search, not AI-hallucinated links.",
+    version: "3.0.0",
+    location: "landing",
+    componentPath: "client/src/components/video-discovery-flow.tsx",
+    tags: ["landing", "learning", "video", "youtube", "gemini"],
+    icon: "Play",
+    voiceTriggers: ["video", "watch", "tutorial", "show me", "recommend"],
+    output: {
+      name: "selectedVideo",
+      type: "object",
+      description: "The YouTube video the user chose to watch, with embed ID, metadata, and engagement stats",
+    },
+    steps: [
+      {
+        id: "generate-topics",
+        name: "Generate Topic Suggestions",
+        type: "llm",
+        description:
+          "Generates ~10 interesting learning topics across a wide range of subjects. User can pick one or type/voice their own.",
+        prompt: `Generate exactly 10 interesting learning topics that someone curious would want to explore via YouTube videos. Cover a wide range — technology, science, history, psychology, business, health, creative skills, etc.
+
+Return ONLY valid JSON. Example:
+{"topics":[{"title":"How Batteries Work","description":"The chemistry behind energy storage"}]}
+
+Rules: title max 6 words, description max 12 words. No markdown, ONLY the JSON object.`,
+        userMessage:
+          "What are 10 interesting topics someone curious would enjoy learning about right now?",
+        model: "gemini-2.5-flash",
+        inputSchema: [],
+        outputSchema: [
+          {
+            name: "topics",
+            type: "array",
+            description: "Array of ~10 learning topics with title and description",
+            example: '[{"title":"How Batteries Work","description":"The chemistry behind energy storage"}]',
+          },
+        ],
+        dependsOn: [],
+      },
+      {
+        id: "select-topic",
+        name: "User Picks Topic",
+        type: "user-input",
+        description:
+          "Displays ~10 topic cards in a grid. User clicks a suggestion or types/voices a custom topic.",
+        inputSchema: [
+          {
+            name: "topics",
+            type: "array",
+            description: "The generated topic suggestions",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "selectedTopic",
+            type: "string",
+            description: "The topic the user picked or typed",
+          },
+        ],
+        dependsOn: ["generate-topics"],
+      },
+      {
+        id: "generate-questions",
+        name: "Generate Question Suggestions",
+        type: "llm",
+        description:
+          "For the selected topic, generates 5 questions the user might want answered — from beginner-friendly to thought-provoking.",
+        prompt: `The user wants to learn about "{topic}". Generate exactly 5 questions they might want answered.
+
+Return ONLY valid JSON. Example:
+{"questions":[{"question":"How does X actually work?"}]}
+
+Rules: each question max 15 words. No markdown, ONLY the JSON object.`,
+        userMessage:
+          'What are 5 interesting questions someone new to "{topic}" would want answered?',
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "topic",
+            type: "string",
+            description: "The selected learning topic",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "questions",
+            type: "array",
+            description: "Array of 5 question suggestions",
+            example: '[{"question":"How does X actually work?"}]',
+          },
+        ],
+        dependsOn: ["select-topic"],
+      },
+      {
+        id: "select-question",
+        name: "User Picks Question",
+        type: "user-input",
+        description:
+          "Displays 5 question cards. 'If you had one question to be answered, what would it be?' User picks a suggestion or types/voices their own.",
+        inputSchema: [
+          {
+            name: "questions",
+            type: "array",
+            description: "The generated question suggestions",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "selectedQuestion",
+            type: "string",
+            description: "The question the user picked or typed",
+          },
+        ],
+        dependsOn: ["generate-questions"],
+      },
+      {
+        id: "generate-search-terms",
+        name: "Generate YouTube Search Terms",
+        type: "llm",
+        description:
+          "From topic + question, generates 3-4 targeted YouTube search queries to surface the best educational content.",
+        prompt: `Generate 3-4 YouTube search queries to find the best videos about "{topic}" that answer: "{question}"
+
+Return ONLY valid JSON. Example:
+{"searchTerms":["how neural networks learn explained","neural network tutorial beginner"]}
+
+Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSON object.`,
+        userMessage:
+          'Generate YouTube search queries for topic "{topic}", question: "{question}"',
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "topic",
+            type: "string",
+            description: "The selected topic",
+          },
+          {
+            name: "question",
+            type: "string",
+            description: "The user's question",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "searchTerms",
+            type: "array",
+            description: "3-4 YouTube search queries",
+          },
+        ],
+        dependsOn: ["select-question"],
+      },
+      {
+        id: "youtube-search",
+        name: "Search YouTube API",
+        type: "transform",
+        description:
+          "Searches YouTube Data API v3 with the generated search terms. Returns real videos with titles, channels, view counts, and embed IDs — no hallucination possible.",
+        inputSchema: [
+          {
+            name: "searchTerms",
+            type: "array",
+            description: "YouTube search queries to execute",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "videos",
+            type: "array",
+            description: "Real YouTube videos with metadata and stats, sorted by popularity",
+          },
+        ],
+        dependsOn: ["generate-search-terms"],
+      },
+      {
+        id: "select-video",
+        name: "User Picks Video",
+        type: "user-input",
+        description:
+          "Shows YouTube search results ranked by popularity. User clicks to watch. Includes views, likes, comments, and a 'Top Pick' badge for #1.",
+        inputSchema: [
+          {
+            name: "videos",
+            type: "array",
+            description: "Real YouTube videos from API search",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "selectedVideo",
+            type: "object",
+            description: "The video the user chose to watch",
+          },
+        ],
+        dependsOn: ["youtube-search"],
+      },
+      {
+        id: "play-video",
+        name: "Play Video",
+        type: "display",
+        description:
+          "Embeds the selected YouTube video. Shows creator badge, YouTube link, description, engagement stats, and the topic + question context.",
+        inputSchema: [
+          {
+            name: "selectedVideo",
+            type: "object",
+            description: "The chosen video with embedId, title, creator, etc.",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "exitSummary",
+            type: "string",
+            description: "Summary of what the user watched, passed back to bilko-main via onComplete(summary)",
+          },
+        ],
+        dependsOn: ["select-video"],
+      },
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════
+  // STANDBY FLOWS — DO NOT MODIFY
+  // These flows are frozen. Do not edit, refactor, or extend
+  // them until they are explicitly moved back to active status.
+  // ═══════════════════════════════════════════════════════════
+
+  // ── STANDBY — DO NOT MODIFY — Work With Me ────────────────
   {
     id: "work-with-me",
     name: "Work With Me",
@@ -21,7 +409,9 @@ const allFlows: FlowDefinition[] = [
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/work-with-me-flow.tsx",
-    tags: ["landing", "guidance", "web", "assistant", "wireframe", "gemini"],
+    tags: ["landing", "guidance", "web", "assistant", "wireframe", "gemini", "standby"],
+    icon: "Handshake",
+    voiceTriggers: ["work with me", "guide", "help me", "walk me through", "assist", "task"],
     output: {
       name: "completedSteps",
       type: "object",
@@ -34,7 +424,13 @@ const allFlows: FlowDefinition[] = [
         type: "user-input",
         description:
           "User describes their goal in natural language (e.g. 'Register a business in Washington State'). Free-text input with example suggestions.",
-        inputSchema: [],
+        inputSchema: [
+          {
+            name: "exampleSuggestions",
+            type: "array",
+            description: "Pre-defined example objectives shown as clickable suggestions",
+          },
+        ],
         outputSchema: [
           {
             name: "objective",
@@ -198,179 +594,7 @@ const allFlows: FlowDefinition[] = [
     ],
   },
 
-
-  {
-    id: "video-discovery",
-    name: "AI Video Discovery",
-    description:
-      "Researches trending AI topics, pre-fetches YouTube videos for each topic in parallel, and lets the user pick a video to watch.",
-    version: "2.0.0",
-    location: "landing",
-    componentPath: "client/src/components/video-discovery-flow.tsx",
-    tags: ["landing", "ai", "video", "youtube", "gemini"],
-    output: {
-      name: "selectedVideo",
-      type: "object",
-      description: "The YouTube video the user chose to watch, with embed ID, metadata, and engagement stats",
-    },
-    steps: [
-      {
-        id: "research-topics",
-        name: "Research AI Trends",
-        type: "llm",
-        description:
-          "Asks Gemini to generate 5 trending AI topics suitable for beginners. Returns structured JSON with rank, title, description, and a beginner question for each topic.",
-        prompt: `You are an AI education expert. Generate exactly 5 trending AI topics that would be interesting for beginners.
-
-Return ONLY valid JSON. Keep descriptions VERY short (max 10 words each). Example:
-{"topics":[{"rank":1,"title":"AI Agents","description":"AI that acts on your behalf","beginnerQuestion":"How do AI agents work?"}]}
-
-Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 words. No markdown, no explanation, ONLY the JSON object.`,
-        userMessage:
-          "What are the 5 most interesting AI topics trending in the last 6 months that a beginner should learn about?",
-        model: "gemini-2.5-flash",
-        inputSchema: [],
-        outputSchema: [
-          {
-            name: "topics",
-            type: "array",
-            description: "Array of 5 trending AI topics",
-            example: '[{"rank":1,"title":"AI Agents","description":"AI that acts on your behalf","beginnerQuestion":"How do AI agents work?"}]',
-          },
-        ],
-        dependsOn: [],
-      },
-      {
-        id: "prefetch-videos",
-        name: "Pre-fetch Videos (parallel)",
-        type: "llm",
-        description:
-          "For each of the 5 topics, fires a parallel LLM call to find 3 real YouTube videos. Results are cached by topic title. Runs concurrently for all topics.",
-        prompt: `You are a YouTube video researcher. Find 3 real YouTube videos about "{topic.title}" for beginners.
-
-Return ONLY valid JSON. Example:
-{"videos":[{"title":"Video Title","creator":"Channel","description":"Short desc","url":"https://www.youtube.com/watch?v=ID","embedId":"ID","whyRecommended":"Why good for beginners","views":"1.2M","likes":"45K","comments":"2.3K"}]}
-
-Rules:
-- Use REAL YouTube videos from known AI education channels (3Blue1Brown, Fireship, Two Minute Papers, Andrej Karpathy, Computerphile, Yannic Kilcher, etc.)
-- Rank by engagement: views > likes > comments
-- Keep description under 15 words
-- Keep whyRecommended under 15 words
-- Return exactly 3 videos, ordered best first
-- No markdown, ONLY the JSON object`,
-        userMessage:
-          'Find 3 best YouTube videos for a beginner about: "{topic.title}" - {topic.description}',
-        model: "gemini-2.5-flash",
-        inputSchema: [
-          {
-            name: "topic",
-            type: "object",
-            description: "The AI topic to search videos for",
-            example: '{"title":"AI Agents","description":"AI that acts on your behalf"}',
-          },
-        ],
-        outputSchema: [
-          {
-            name: "videos",
-            type: "array",
-            description: "Array of 3 YouTube video results",
-            example: '[{"title":"...","creator":"...","embedId":"...","views":"1.2M"}]',
-          },
-        ],
-        dependsOn: ["research-topics"],
-        parallel: true,
-      },
-      {
-        id: "validate-videos",
-        name: "Validate YouTube Videos",
-        type: "validate",
-        description:
-          "Checks each video's embed ID against YouTube's oEmbed endpoint to filter out hallucinated or unavailable videos. Server-side via POST /api/llm/validate-videos.",
-        inputSchema: [
-          {
-            name: "videos",
-            type: "array",
-            description: "Candidate videos to validate",
-          },
-        ],
-        outputSchema: [
-          {
-            name: "videos",
-            type: "array",
-            description: "Only videos confirmed available on YouTube",
-          },
-        ],
-        dependsOn: ["prefetch-videos"],
-      },
-      {
-        id: "select-topic",
-        name: "User Picks Topic",
-        type: "user-input",
-        description:
-          "Displays 5 topic cards in a horizontal grid. Each card shows a loading spinner or green check based on video pre-fetch status. User clicks to select.",
-        inputSchema: [
-          {
-            name: "topics",
-            type: "array",
-            description: "The 5 researched topics",
-          },
-          {
-            name: "videoCacheStatus",
-            type: "object",
-            description: "Loading status per topic: loading | done | error",
-          },
-        ],
-        outputSchema: [
-          {
-            name: "selectedTopic",
-            type: "object",
-            description: "The topic the user picked",
-          },
-        ],
-        dependsOn: ["research-topics"],
-      },
-      {
-        id: "select-video",
-        name: "User Picks Video",
-        type: "user-input",
-        description:
-          "Shows up to 3 validated videos ranked by engagement. User clicks to watch. Includes views, likes, comments, and a 'Top Pick' badge for #1.",
-        inputSchema: [
-          {
-            name: "videos",
-            type: "array",
-            description: "Pre-fetched and validated videos for the selected topic",
-          },
-        ],
-        outputSchema: [
-          {
-            name: "selectedVideo",
-            type: "object",
-            description: "The video the user chose to watch",
-          },
-        ],
-        dependsOn: ["select-topic", "validate-videos"],
-      },
-      {
-        id: "play-video",
-        name: "Play Video",
-        type: "display",
-        description:
-          "Embeds the selected YouTube video with autoplay. Shows creator badge, YouTube link, description, engagement stats, and recommendation rationale.",
-        inputSchema: [
-          {
-            name: "selectedVideo",
-            type: "object",
-            description: "The chosen video with embedId, title, creator, etc.",
-          },
-        ],
-        outputSchema: [],
-        dependsOn: ["select-video"],
-      },
-    ],
-  },
-
-  // ── AI Leverage Consultation ──────────────────────────────
+  // ── STANDBY — DO NOT MODIFY — AI Leverage Consultation ────
   {
     id: "ai-consultation",
     name: "AI Leverage Consultation",
@@ -379,7 +603,9 @@ Rules:
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
-    tags: ["landing", "ai", "consultation", "recommendations", "gemini"],
+    tags: ["landing", "ai", "consultation", "recommendations", "gemini", "standby"],
+    icon: "MessageCircle",
+    voiceTriggers: ["chat", "talk", "consult", "leverage", "consultation", "advice"],
     output: {
       name: "recommendations",
       type: "object",
@@ -522,7 +748,7 @@ Rules:
     ],
   },
 
-  // ── Recursive Interviewer ─────────────────────────────────
+  // ── STANDBY — DO NOT MODIFY — Recursive Interviewer ───────
   {
     id: "recursive-interviewer",
     name: "The Recursive Interviewer",
@@ -531,7 +757,9 @@ Rules:
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
-    tags: ["landing", "ai", "strategy", "recursive", "framework", "gemini"],
+    tags: ["landing", "ai", "strategy", "recursive", "framework", "gemini", "standby"],
+    icon: "Lightbulb",
+    voiceTriggers: ["interviewer", "recursive", "deep dive", "strategy"],
     output: {
       name: "insights",
       type: "object",
@@ -595,132 +823,118 @@ Rules:
     ],
   },
 
-  // ── LinkedIn Strategist — LinkedIn-grounded profile optimizer ─
+  // ── STANDBY — DO NOT MODIFY — LinkedIn Strategist ─────────
   {
     id: "linkedin-strategist",
-    name: "LinkedIn Profile Optimizer",
+    name: "LinkedIn Strategist",
     description:
-      "LinkedIn-grounded flow that requires a real profile URL, parses roles/experiences from pasted profile data, lets the user select which roles to improve, conducts targeted per-role interviews, and generates updated role descriptions in copyable panes.",
-    version: "2.0.0",
+      "Goal-driven LinkedIn flow: user picks a goal (Improve Profile or Interview Practice), provides their LinkedIn URL, and engages in a dynamic conversation. For Improve mode, generates multiple description options per role. For Interview mode, provides detailed feedback on how the user presents their experience.",
+    version: "3.0.0",
     location: "landing",
     componentPath: "client/src/components/linkedin-strategist-flow.tsx",
-    tags: ["landing", "career", "linkedin", "profile", "optimization", "gemini"],
+    tags: ["landing", "career", "linkedin", "profile", "optimization", "gemini", "standby"],
+    icon: "Briefcase",
+    voiceTriggers: ["linkedin", "career", "resume", "profile", "dossier"],
     output: {
-      name: "updatedRoleDescriptions",
+      name: "goalDrivenResults",
       type: "object",
-      description: "Updated LinkedIn role descriptions with key highlights, ready to copy",
+      description: "Either updated role descriptions with multiple options (improve) or interview feedback with strengths and insights (interview)",
     },
     steps: [
       {
-        id: "linkedin-input",
-        name: "LinkedIn URL & Profile Input",
+        id: "goal-selection",
+        name: "Pick Your Goal",
         type: "user-input",
-        description: "User provides their LinkedIn profile URL (validated format) and pastes their Experience section text. URL is required — without real LinkedIn data the flow cannot produce grounded results.",
+        description: "User selects their goal: 'Improve your LinkedIn' (exploratory questions → multiple description options per role) or 'Interview me based on my roles' (dynamic interview → feedback and insights).",
         inputSchema: [],
         outputSchema: [
-          { name: "linkedinUrl", type: "string", description: "Validated linkedin.com/in/ URL" },
-          { name: "profileText", type: "string", description: "Pasted Experience section text" },
+          { name: "goal", type: "string", description: "'improve' or 'interview'" },
         ],
         dependsOn: [],
       },
       {
-        id: "parse-roles",
-        name: "Parse LinkedIn Roles",
-        type: "llm",
-        description: "Extracts all professional roles from the pasted profile text. Returns structured data: title, company, duration, description, isCurrent for each role.",
-        prompt: "Parse LinkedIn profile text into structured roles with title, company, duration, description, and isCurrent flag.",
-        userMessage: "LinkedIn URL + pasted profile content",
-        model: "gemini-2.5-flash",
+        id: "linkedin-input",
+        name: "LinkedIn URL Input",
+        type: "user-input",
+        description: "User provides their LinkedIn profile URL (validated format). URL grounds the conversation in the user's real career data.",
         inputSchema: [
-          { name: "linkedinUrl", type: "string", description: "The user's LinkedIn URL" },
-          { name: "profileText", type: "string", description: "Pasted profile content" },
+          {
+            name: "urlFormat",
+            type: "string",
+            description: "Expected URL format: linkedin.com/in/<username> — validated before submission",
+          },
         ],
         outputSchema: [
-          { name: "roles", type: "array", description: "Array of structured role objects" },
-          { name: "profileSummary", type: "string", description: "Career trajectory summary" },
+          { name: "linkedinUrl", type: "string", description: "Validated linkedin.com/in/ URL" },
+        ],
+        dependsOn: ["goal-selection"],
+      },
+      {
+        id: "conversation",
+        name: "Dynamic Conversation",
+        type: "llm",
+        description: "Multi-turn conversation adapted to the selected goal. For 'improve': asks exploratory questions about roles and achievements, discovers roles, takes notes. For 'interview': conducts a dynamic professional interview based on the user's roles. The LLM tracks discovered roles and signals when conversation is complete.",
+        prompt: "Conduct a goal-adapted conversation: explore roles for improvement or conduct a professional interview.",
+        userMessage: "User's responses to conversational questions",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          { name: "goal", type: "string", description: "The user's selected goal" },
+          { name: "linkedinUrl", type: "string", description: "The user's LinkedIn URL" },
+        ],
+        outputSchema: [
+          { name: "message", type: "string", description: "LLM's question or response" },
+          { name: "done", type: "boolean", description: "Whether conversation is complete" },
+          { name: "rolesDiscovered", type: "array", description: "Cumulative list of discovered roles" },
         ],
         dependsOn: ["linkedin-input"],
       },
       {
-        id: "role-selection",
-        name: "User Selects Roles",
+        id: "user-responses",
+        name: "User Conversation Responses",
         type: "user-input",
-        description: "Displays all parsed roles with checkboxes. User selects which roles they want to improve. Shows existing description (or marks as empty).",
+        description: "User provides free-text or voice answers during the multi-turn conversation.",
         inputSchema: [
-          { name: "roles", type: "array", description: "All parsed roles from the profile" },
-        ],
-        outputSchema: [
-          { name: "selectedRoleIds", type: "array", description: "IDs of roles the user wants to work on" },
-        ],
-        dependsOn: ["parse-roles"],
-      },
-      {
-        id: "role-interview",
-        name: "Targeted Role Interview",
-        type: "llm",
-        description: "For each selected role, conducts a 2-3 question interview to uncover specific achievements, metrics, invisible responsibilities, and impact. Questions are tailored to the role context and career trajectory.",
-        prompt: "Interview the user about a specific LinkedIn role to extract impactful details for description rewriting.",
-        userMessage: "Role details + career context + user answers",
-        model: "gemini-2.5-flash",
-        inputSchema: [
-          { name: "role", type: "object", description: "The role being discussed" },
-          { name: "allRoles", type: "array", description: "Full career context" },
-          { name: "answers", type: "array", description: "Prior Q&A for this role" },
-        ],
-        outputSchema: [
-          { name: "nextQuestion", type: "string", description: "Next targeted question" },
-          { name: "done", type: "boolean", description: "Whether enough detail gathered for this role" },
-        ],
-        dependsOn: ["role-selection"],
-      },
-      {
-        id: "user-interview-answers",
-        name: "User Interview Responses",
-        type: "user-input",
-        description: "User provides free-text or voice answers to targeted role questions.",
-        inputSchema: [
-          { name: "question", type: "string", description: "The current interview question" },
-          { name: "roleContext", type: "object", description: "Which role is being discussed" },
+          { name: "message", type: "string", description: "The current question from the LLM" },
         ],
         outputSchema: [
           { name: "answer", type: "string", description: "User's response" },
         ],
-        dependsOn: ["role-interview"],
+        dependsOn: ["conversation"],
       },
       {
-        id: "generate-descriptions",
-        name: "Generate Updated Descriptions",
+        id: "generate-results",
+        name: "Generate Results",
         type: "llm",
-        description: "For each selected role, combines original LinkedIn data with interview insights to craft an updated description. Produces professional prose (not bullets) with metrics and impact statements, plus key highlights.",
-        prompt: "Using LinkedIn profile data and interview insights, generate an impactful updated role description.",
-        userMessage: "Role details + interview transcript + LinkedIn URL",
+        description: "For 'improve' goal: generates 2-3 description options per discovered role (impact-focused, leadership-focused, technical depth). For 'interview' goal: generates interview feedback with summary, strengths, areas to explore, and role-specific insights.",
+        prompt: "Generate goal-appropriate results from the conversation: description options (improve) or interview feedback (interview).",
+        userMessage: "Conversation transcript + discovered roles + goal",
         model: "gemini-2.5-flash",
         inputSchema: [
-          { name: "role", type: "object", description: "The role to rewrite" },
-          { name: "interviews", type: "array", description: "All Q&A for this role" },
-          { name: "linkedinUrl", type: "string", description: "Profile URL for reference" },
+          { name: "goal", type: "string", description: "The user's selected goal" },
+          { name: "conversationTranscript", type: "string", description: "Full conversation history" },
+          { name: "rolesDiscovered", type: "array", description: "All discovered roles with notes" },
         ],
         outputSchema: [
-          { name: "updatedDescription", type: "string", description: "Rewritten LinkedIn description" },
-          { name: "keyHighlights", type: "array", description: "3-5 key achievement one-liners" },
+          { name: "roles", type: "array", description: "Role recommendations with options (improve mode)" },
+          { name: "interviewFeedback", type: "object", description: "Interview summary and insights (interview mode)" },
         ],
-        dependsOn: ["role-interview", "user-interview-answers"],
+        dependsOn: ["conversation", "user-responses"],
       },
       {
         id: "display-results",
-        name: "Display Updated Descriptions",
+        name: "Display Results",
         type: "display",
-        description: "Renders each updated role description in a separate styled pane with a one-click copy button. Includes role header (title, company, duration), the rewritten description, key highlights, and a copy-all option.",
+        description: "For 'improve': renders role cards with selectable description options, copy buttons, and key highlights. For 'interview': renders feedback summary, strengths, areas to explore, and role-specific insights with a copy-all button.",
         inputSchema: [
-          { name: "updatedRoles", type: "array", description: "Array of updated role descriptions with highlights" },
+          { name: "results", type: "object", description: "Goal-appropriate results to display" },
         ],
         outputSchema: [],
-        dependsOn: ["generate-descriptions"],
+        dependsOn: ["generate-results"],
       },
     ],
   },
 
-  // ── Socratic Architect ────────────────────────────────────
+  // ── STANDBY — DO NOT MODIFY — Socratic Architect ──────────
   {
     id: "socratic-architect",
     name: "The Socratic Architect",
@@ -729,7 +943,9 @@ Rules:
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
-    tags: ["landing", "socratic", "configurable", "template", "interview", "gemini"],
+    tags: ["landing", "socratic", "configurable", "template", "interview", "gemini", "standby"],
+    icon: "GraduationCap",
+    voiceTriggers: ["socratic", "architect", "custom", "configure", "expert"],
     output: {
       name: "findings",
       type: "object",
@@ -813,6 +1029,9 @@ Rules:
 
 /** Validated registry — only flows passing ARCH-005 invariants */
 export const flowRegistry: FlowDefinition[] = validateRegistry(allFlows);
+
+/** Get only the active (non-standby) flows for the landing page */
+export const activeFlowIds = new Set(["bilko-main", "video-discovery"]);
 
 export function getFlowById(id: string): FlowDefinition | undefined {
   return flowRegistry.find((f) => f.id === id);

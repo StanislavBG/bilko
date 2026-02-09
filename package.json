@@ -10,9 +10,11 @@
     "check": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "rules:validate": "npx tsx script/validate-rules.ts"
   },
   "dependencies": {
+    "@google/genai": "^1.40.0",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@radix-ui/react-accordion": "^1.2.4",

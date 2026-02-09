@@ -32,7 +32,7 @@ const STATUS_LABEL: Record<FlowStatus, string> = {
 const PHASE_SEQUENCES: Record<string, string[]> = {
   "ai-consultation":       ["intro", "setup", "questioning", "analyzing", "complete"],
   "recursive-interviewer":  ["intro", "setup", "questioning", "analyzing", "complete"],
-  "linkedin-strategist":    ["intro", "setup", "questioning", "analyzing", "complete"],
+  "linkedin-strategist":    ["intro", "goal", "setup", "conversation", "analyzing", "complete"],
   "socratic-architect":     ["intro", "setup", "questioning", "analyzing", "complete"],
   "video-discovery":        ["researching-topics", "select-topic", "ready"],
 };

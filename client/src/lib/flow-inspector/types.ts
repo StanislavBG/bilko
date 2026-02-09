@@ -6,7 +6,7 @@
  * so the inspector can visualize and replay them.
  */
 
-export type StepType = "llm" | "user-input" | "transform" | "validate" | "display";
+export type StepType = "llm" | "user-input" | "transform" | "validate" | "display" | "chat";
 export type StepStatus = "idle" | "running" | "success" | "error" | "skipped";
 
 /** A single step in a flow */
@@ -14,6 +14,8 @@ export interface FlowStep {
   id: string;
   name: string;
   type: StepType;
+  /** Optional subtype refining the step's type (e.g. "menu", "text", "form" for user-input) */
+  subtype?: string;
   description: string;
   /** The system prompt (for LLM steps) */
   prompt?: string;
@@ -61,6 +63,10 @@ export interface FlowDefinition {
   tags: string[];
   /** The single logical output of the flow (can be complex) */
   output?: FlowOutput;
+  /** Lucide icon name for menu rendering (e.g. "Play", "MessageCircle") */
+  icon?: string;
+  /** Voice trigger keywords for voice-based selection */
+  voiceTriggers?: string[];
 }
 
 /** Runtime execution data captured from a step */

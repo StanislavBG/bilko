@@ -24,11 +24,6 @@ import {
   Maximize2,
   Search,
   X,
-  Brain,
-  MousePointerClick,
-  ArrowRightLeft,
-  ShieldCheck,
-  Monitor,
   CheckCircle2,
   Circle,
   Loader2,
@@ -36,17 +31,9 @@ import {
   SkipForward,
   Keyboard,
 } from "lucide-react";
-import type { FlowDefinition, StepExecution, StepStatus, StepType, FlowStep } from "@/lib/flow-inspector/types";
-import { computeLayout, NODE_W, NODE_H, PADDING, type DAGLayout } from "@/lib/flow-inspector/layout";
-
-// ── Step type visuals ─────────────────────────────────────
-const TYPE_CONFIG: Record<StepType, { icon: typeof Brain; label: string; color: string; border: string }> = {
-  llm:          { icon: Brain,             label: "LLM",        color: "text-purple-500", border: "border-purple-500/40" },
-  "user-input": { icon: MousePointerClick, label: "Input",      color: "text-blue-500",   border: "border-blue-500/40" },
-  transform:    { icon: ArrowRightLeft,    label: "Transform",  color: "text-orange-500", border: "border-orange-500/40" },
-  validate:     { icon: ShieldCheck,       label: "Validate",   color: "text-green-500",  border: "border-green-500/40" },
-  display:      { icon: Monitor,           label: "Display",    color: "text-cyan-500",   border: "border-cyan-500/40" },
-};
+import type { FlowDefinition, StepExecution, StepStatus, FlowStep } from "@/lib/flow-inspector/types";
+import { computeLayout, NODE_W, NODE_H, PADDING } from "@/lib/flow-inspector/layout";
+import { STEP_TYPE_CONFIG } from "@/lib/flow-inspector/step-type-config";
 
 const STATUS_ICON: Record<StepStatus, typeof Circle> = {
   idle: Circle, running: Loader2, success: CheckCircle2, error: XCircle, skipped: SkipForward,
@@ -518,9 +505,13 @@ interface CanvasNodeProps {
 }
 
 const CanvasNode = memo(function CanvasNode({ step, x, y, status, isSelected, isHighlighted, isMultiSelected, dimmed, onClick }: CanvasNodeProps) {
-  const config = TYPE_CONFIG[step.type];
+  const config = STEP_TYPE_CONFIG[step.type];
   const TypeIcon = config.icon;
   const StatusIcon = STATUS_ICON[status];
+
+  const inputs = step.inputSchema ?? [];
+  const outputs = step.outputSchema ?? [];
+  const hasIO = inputs.length > 0 || outputs.length > 0;
 
   return (
     <button
@@ -561,6 +552,20 @@ const CanvasNode = memo(function CanvasNode({ step, x, y, status, isSelected, is
         <p className="text-[10px] text-muted-foreground truncate mt-0.5 pl-[18px]">
           {step.description}
         </p>
+        {hasIO && (
+          <div className="flex items-center gap-1.5 mt-1 pl-[18px] overflow-hidden">
+            {inputs.length > 0 && (
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-mono text-muted-foreground/70 bg-muted rounded px-1 py-0.5 truncate max-w-[45%]" title={inputs.map(f => f.name).join(", ")}>
+                <span className="text-blue-400">↓</span>{inputs.length === 1 ? inputs[0].name : `${inputs.length}`}
+              </span>
+            )}
+            {outputs.length > 0 && (
+              <span className="inline-flex items-center gap-0.5 text-[9px] font-mono text-muted-foreground/70 bg-muted rounded px-1 py-0.5 truncate max-w-[45%]" title={outputs.map(f => f.name).join(", ")}>
+                <span className="text-emerald-400">↑</span>{outputs.length === 1 ? outputs[0].name : `${outputs.length}`}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </button>
   );

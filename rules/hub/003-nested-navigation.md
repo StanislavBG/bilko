@@ -2,7 +2,7 @@
 
 Rule ID: HUB-003
 Priority: HIGH
-Version: 2.1.0
+Version: 3.0.0
 
 ## Context
 Complex applications may require navigation beyond the main hub sidebar. This rule defines the optional nested navigation pattern supporting up to 3 levels, including collapsible behavior.
@@ -286,6 +286,11 @@ This pattern balances navigation depth with usability. Three levels allow comple
 
 ## Changelog
 
+### v3.0.0 (2026-02-09)
+- Merged UI-003 (Secondary Navigation Pattern) into this rule
+- Added Secondary Navigation Patterns section (Tabs, Sidebar, Master-Detail)
+- UI-003 deleted — HUB-003 is now the single navigation rule
+
 ### v2.1.0 (2026-02-01)
 - Merged UI-004 (Left-Nav Collapsible Behavior) into this rule
 - Added Collapsible Behavior section with implementation patterns
@@ -295,8 +300,22 @@ This pattern balances navigation depth with usability. Three levels allow comple
 - Added GlobalHeader at App.tsx level
 - Added nav column height specifications
 
+## Secondary Navigation Patterns (Merged from UI-003)
+
+When deciding how to add secondary navigation within an app, use these patterns:
+
+### Option A: Tabs (Horizontal)
+Use when: 2-5 sections, frequent switching, peer sections (no hierarchy implied).
+
+### Option B: Secondary Sidebar (Vertical)
+Use when: 5+ sections, hierarchical groups, persistent visibility needed.
+
+### Option C: Two-Column Master-Detail
+Use when: List/tree on left, detail on right, browse + detail simultaneously.
+
+All secondary nav uses the same collapsible column patterns and header/footer conventions defined in D7-D10 above.
+
 ## Cross-References
 
 - HUB-001: Hub Layout (primary sidebar)
-- UI-003: Secondary Navigation Pattern
 - UI-006: Mobile Layout (user-controlled collapse on mobile)
