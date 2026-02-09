@@ -25,8 +25,10 @@ export function GlobalHeader({ variant = "authenticated" }: GlobalHeaderProps) {
 }
 
 function LandingHeader() {
-  const { toggleSidebar, state } = useSidebar();
-  const isOpen = state === "expanded";
+  const { toggleSidebar, toggleHidden, hidden, isMobile } = useSidebar();
+  // Desktop: toggle hide (completely hides nav system); Mobile: toggle sidebar sheet
+  const handleNavToggle = isMobile ? toggleSidebar : toggleHidden;
+  const navLabel = hidden ? "Show navigation" : "Hide navigation";
 
   return (
     <header className="h-14 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center gap-3 px-4 fixed top-0 left-0 right-0 z-50">
@@ -40,14 +42,14 @@ function LandingHeader() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={toggleSidebar}
+              onClick={handleNavToggle}
               data-testid="button-explore-site"
             >
               <PanelLeft className="h-4 w-4" />
-              <span className="sr-only">{isOpen ? "Hide navigation" : "Explore site"}</span>
+              <span className="sr-only">{navLabel}</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{isOpen ? "Hide navigation" : "Explore site"}</TooltipContent>
+          <TooltipContent>{navLabel}</TooltipContent>
         </Tooltip>
         <ToolsMenu />
         <DebugButton />
@@ -151,8 +153,10 @@ function ToolsMenu() {
 
 function AuthenticatedHeader() {
   const { isViewingAsUser, toggleViewMode, canToggleViewMode } = useViewMode();
-  const { state, toggleSidebar } = useSidebar();
-  const isCollapsed = state === "collapsed";
+  const { toggleSidebar, toggleHidden, hidden, isMobile } = useSidebar();
+  // Desktop: toggle hide (completely hides nav system); Mobile: toggle sidebar sheet
+  const handleNavToggle = isMobile ? toggleSidebar : toggleHidden;
+  const navLabel = hidden ? "Show navigation" : "Hide navigation";
 
   return (
     <header className="h-11 shrink-0 border-b bg-sidebar flex items-center gap-2 px-2" data-testid="global-header">
@@ -166,14 +170,14 @@ function AuthenticatedHeader() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={toggleSidebar}
+              onClick={handleNavToggle}
               data-testid="button-sidebar-toggle"
             >
               <PanelLeft className="h-4 w-4" />
-              <span className="sr-only">{isCollapsed ? "Explore site" : "Hide navigation"}</span>
+              <span className="sr-only">{navLabel}</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{isCollapsed ? "Explore site" : "Hide navigation"}</TooltipContent>
+          <TooltipContent>{navLabel}</TooltipContent>
         </Tooltip>
         {canToggleViewMode && (
           <Tooltip>

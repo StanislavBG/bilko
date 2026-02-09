@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/tooltip"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
+const SIDEBAR_HIDDEN_COOKIE = "sidebar_hidden"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
@@ -40,6 +41,9 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  hidden: boolean
+  setHidden: (hidden: boolean) => void
+  toggleHidden: () => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -73,6 +77,26 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+
+  // Hidden state — completely hides the nav system (separate from collapse)
+  const [_hidden, _setHidden] = React.useState(() => {
+    if (typeof document === "undefined") return false
+    const match = document.cookie.match(new RegExp(`(^| )${SIDEBAR_HIDDEN_COOKIE}=([^;]+)`))
+    return match ? match[2] === "true" : false
+  })
+
+  const setHidden = React.useCallback((value: boolean) => {
+    _setHidden(value)
+    document.cookie = `${SIDEBAR_HIDDEN_COOKIE}=${value}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+  }, [])
+
+  const toggleHidden = React.useCallback(() => {
+    _setHidden((prev) => {
+      const next = !prev
+      document.cookie = `${SIDEBAR_HIDDEN_COOKIE}=${next}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
+      return next
+    })
+  }, [])
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -127,8 +151,11 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      hidden: _hidden,
+      setHidden,
+      toggleHidden,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, _hidden, setHidden, toggleHidden]
   )
 
   return (
@@ -168,7 +195,7 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, state, openMobile, setOpenMobile, hidden } = useSidebar()
 
   if (collapsible === "none") {
     return (
@@ -215,6 +242,7 @@ function Sidebar({
       className="group peer text-sidebar-foreground hidden md:block"
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
+      data-hidden={hidden || undefined}
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
@@ -226,6 +254,7 @@ function Sidebar({
           "relative w-[var(--sidebar-width)] bg-transparent transition-[width] duration-200 ease-linear",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
+          "group-data-[hidden]:!w-0",
           variant === "floating" || variant === "inset"
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+var(--spacing-4))]"
             : "group-data-[collapsible=icon]:w-[var(--sidebar-width-icon)]"
@@ -234,10 +263,10 @@ function Sidebar({
       <div
         data-slot="sidebar-container"
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-[var(--sidebar-width)] transition-[left,right,width] duration-200 ease-linear md:flex",
+          "fixed inset-y-0 z-10 hidden h-svh w-[var(--sidebar-width)] transition-[left,right,width,transform] duration-200 ease-linear md:flex",
           side === "left"
-            ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
-            : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
+            ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] group-data-[hidden]:-translate-x-full"
+            : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] group-data-[hidden]:translate-x-full",
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+var(--spacing-4)+2px)]"
