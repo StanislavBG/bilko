@@ -1,6 +1,6 @@
 {
   "$schema": "./manifest.schema.json",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "lastUpdated": "2026-02-09T00:00:00Z",
   "bootstrap": {
     "_instruction": "AI developers: READ ALL RULES in the /rules/ directory. This manifest indexes them for routing, but you must read the actual .md files.",
@@ -22,21 +22,6 @@
     }
   },
   "primaryDirective": "ARCH-000",
-  "subManifests": {
-    "_description": "Sub-manifests and index files provide domain-specific rule groupings. Load these first when working in their domain.",
-    "_usage": "Before working in a domain (e.g., n8n), load its index.md first to get current context and cross-references.",
-    "_auditCheck": "AGT-002 CHECK 7 validates all subManifests exist and are properly referenced.",
-    "entries": [
-      {
-        "id": "INT-N8N-INDEX",
-        "domain": "n8n",
-        "path": "rules/integration/n8n/index.md",
-        "description": "Entry point for all n8n integration rules. Provides dynamic loading protocol and lists INT-001, INT-002, INT-004.",
-        "relatedRules": ["INT-001", "INT-002", "INT-004"],
-        "relatedPersonas": ["PER-001"]
-      }
-    ]
-  },
   "rules": {
     "ARCH-000": {
       "id": "ARCH-000",
@@ -146,7 +131,7 @@
       ],
       "crossReferences": [
         "DATA-002",
-        "INT-001",
+        "INT-002",
         "INT-003"
       ],
       "description": "System architecture including orchestration layer, agent coordination, and system boundaries."
@@ -182,7 +167,7 @@
       "path": "rules/architecture/005-flow-steel-frame.md",
       "partition": "architecture",
       "priority": "CRITICAL",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "triggers": [
         "flow",
         "steel frame",
@@ -194,8 +179,7 @@
         "flow registry",
         "flow definition",
         "step contract",
-        "execution contract",
-        "canvas contract"
+        "execution contract"
       ],
       "dependencies": [
         "ARCH-000",
@@ -203,9 +187,10 @@
       ],
       "crossReferences": [
         "PER-002",
-        "APP-LANDING-001"
+        "APP-LANDING-001",
+        "APP-CHAT-001"
       ],
-      "description": "Non-negotiable structural invariants for all in-platform flows. Defines DAG rules, step type contracts, execution contracts, and conversational canvas contracts."
+      "description": "Non-negotiable structural invariants for all in-platform flows. Defines DAG rules, step type contracts, execution contracts, voice builder contract, and registration contract."
     },
     "ARCH-006": {
       "id": "ARCH-006",
@@ -239,54 +224,6 @@
       ],
       "description": "Content block vocabulary and Bilko persona system. Defines 15 typed block types agents produce and the canvas renders, plus context-aware educator voice."
     },
-    "INT-003": {
-      "id": "INT-003",
-      "title": "Orchestrator Communication Contract",
-      "path": "rules/integration/003-orchestrator-contract.md",
-      "partition": "integration",
-      "priority": "HIGH",
-      "version": "2.1.0",
-      "triggers": [
-        "contract",
-        "webhook",
-        "request",
-        "response",
-        "payload",
-        "format"
-      ],
-      "dependencies": [
-        "ARCH-001",
-        "ARCH-003"
-      ],
-      "crossReferences": [
-        "ARCH-003",
-        "INT-001",
-        "ENV-001"
-      ],
-      "description": "Technical contract for orchestrator communication."
-    },
-    "INT-004": {
-      "id": "INT-004",
-      "title": "n8n Self-Hosting Setup Guide",
-      "path": "rules/integration/n8n/004-setup.md",
-      "partition": "integration",
-      "priority": "HIGH",
-      "version": "1.1.0",
-      "triggers": [
-        "self-host",
-        "n8n setup",
-        "n8n project",
-        "deploy n8n"
-      ],
-      "dependencies": [
-        "ARCH-001"
-      ],
-      "crossReferences": [
-        "INT-003",
-        "INT-N8N-INDEX"
-      ],
-      "description": "Complete setup guide for self-hosting n8n on Replit."
-    },
     "HUB-001": {
       "id": "HUB-001",
       "title": "Hub Layout",
@@ -317,7 +254,7 @@
       "path": "rules/hub/002-access-control.md",
       "partition": "hub",
       "priority": "HIGH",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "triggers": [
         "access",
         "control",
@@ -339,7 +276,7 @@
       "path": "rules/hub/003-nested-navigation.md",
       "partition": "hub",
       "priority": "HIGH",
-      "version": "2.1.0",
+      "version": "3.0.0",
       "triggers": [
         "nested nav",
         "secondary nav",
@@ -348,17 +285,20 @@
         "navigation levels",
         "collapse",
         "collapsible",
-        "left nav"
+        "left nav",
+        "tabs",
+        "master detail",
+        "two column",
+        "secondary sidebar"
       ],
       "dependencies": [
         "HUB-001",
         "UI-001"
       ],
       "crossReferences": [
-        "UI-003",
         "UI-006"
       ],
-      "description": "Defines optional 2nd and 3rd level navigation within applications (max 3 levels). Includes header pinning, collapsible behavior, and mobile collapse. Merged UI-004."
+      "description": "Defines optional 2nd and 3rd level navigation within applications (max 3 levels). Includes header pinning, collapsible behavior, mobile collapse, and secondary navigation patterns (merged from UI-003)."
     },
     "HUB-004": {
       "id": "HUB-004",
@@ -385,136 +325,6 @@
         "HUB-003"
       ],
       "description": "Unified recursive NavItem interface for N-level navigation. Data-driven approach with stack-based mobile drill-down."
-    },
-    "APP-LANDING-001": {
-      "id": "APP-LANDING-001",
-      "title": "Landing Page — Agentic Discovery Experience",
-      "path": "rules/apps/landing/001-overview.md",
-      "partition": "apps",
-      "priority": "HIGH",
-      "version": "2.0.0",
-      "triggers": [
-        "landing",
-        "public",
-        "sign in",
-        "login page",
-        "unauthenticated",
-        "video discovery",
-        "voice command",
-        "learning mode",
-        "agentic flow",
-        "welcome experience"
-      ],
-      "dependencies": [
-        "ARCH-001"
-      ],
-      "crossReferences": [
-        "PER-002"
-      ],
-      "description": "The public entry point with AI-powered, voice-enabled discovery experience. 6 learning modes, auto-starting AI flows, and voice navigation."
-    },
-    "APP-MEMORY-001": {
-      "id": "APP-MEMORY-001",
-      "title": "Memory Explorer",
-      "path": "rules/apps/memory-explorer/001-overview.md",
-      "partition": "apps",
-      "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": [
-        "memory",
-        "trace",
-        "explorer",
-        "communication history"
-      ],
-      "dependencies": [
-        "DATA-002",
-        "UI-001"
-      ],
-      "crossReferences": [
-        "DATA-002"
-      ],
-      "description": "UI for viewing and inspecting communication traces."
-    },
-    "APP-WORKFLOWS-001": {
-      "id": "APP-WORKFLOWS-001",
-      "title": "Agentic Workflows Page",
-      "path": "rules/apps/agentic-workflows/001-overview.md",
-      "partition": "apps",
-      "priority": "HIGH",
-      "version": "1.1.0",
-      "triggers": [
-        "workflow",
-        "agentic",
-        "n8n",
-        "execution",
-        "carousel",
-        "drill-down",
-        "nav stack"
-      ],
-      "dependencies": [
-        "HUB-001",
-        "UI-006",
-        "DATA-002",
-        "INT-005"
-      ],
-      "crossReferences": [
-        "UI-006",
-        "INT-005",
-        "DATA-002",
-        "HUB-003"
-      ],
-      "description": "Agentic Workflows page with stack-based category/workflow navigation, execution history, and mobile carousel."
-    },
-    "DATA-001": {
-      "id": "DATA-001",
-      "title": "Data Principles",
-      "path": "rules/data/001-data-principles.md",
-      "partition": "data",
-      "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": [
-        "data",
-        "database",
-        "schema",
-        "model",
-        "drizzle",
-        "postgres",
-        "table"
-      ],
-      "dependencies": [
-        "ARCH-001"
-      ],
-      "crossReferences": [],
-      "description": "Rules for data models, schemas, and persistence."
-    },
-    "DATA-002": {
-      "id": "DATA-002",
-      "title": "Communication Trace Storage",
-      "path": "rules/data/002-communication-traces.md",
-      "partition": "data",
-      "priority": "HIGH",
-      "version": "1.2.0",
-      "triggers": [
-        "trace",
-        "communication",
-        "log",
-        "request",
-        "response",
-        "storage",
-        "execution",
-        "userId",
-        "error"
-      ],
-      "dependencies": [
-        "DATA-001",
-        "ARCH-003"
-      ],
-      "crossReferences": [
-        "ARCH-003",
-        "APP-MEMORY-001",
-        "INT-005"
-      ],
-      "description": "Schema and practices for storing communication traces with execution linkage and error tracking."
     },
     "UI-001": {
       "id": "UI-001",
@@ -560,30 +370,6 @@
       ],
       "crossReferences": [],
       "description": "Pattern for displaying API endpoint metadata via info icons in UI sections."
-    },
-    "UI-003": {
-      "id": "UI-003",
-      "title": "Secondary Navigation Pattern",
-      "path": "rules/ui/003-secondary-navigation.md",
-      "partition": "ui",
-      "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": [
-        "secondary nav",
-        "tabs",
-        "master detail",
-        "two column",
-        "secondary sidebar",
-        "complex layout"
-      ],
-      "dependencies": [
-        "UI-001",
-        "HUB-001"
-      ],
-      "crossReferences": [
-        "HUB-001"
-      ],
-      "description": "Defines when and how to implement secondary navigation within applications."
     },
     "UI-005": {
       "id": "UI-005",
@@ -664,51 +450,101 @@
       ],
       "description": "Consistent pattern for application-level actions separate from navigation."
     },
-    "INT-N8N-INDEX": {
-      "id": "INT-N8N-INDEX",
-      "title": "n8n Integration Rules Index",
-      "path": "rules/integration/n8n/index.md",
-      "partition": "integration",
+    "DATA-001": {
+      "id": "DATA-001",
+      "title": "Data Principles",
+      "path": "rules/data/001-data-principles.md",
+      "partition": "data",
       "priority": "HIGH",
       "version": "1.0.0",
       "triggers": [
-        "n8n",
-        "n8n index",
-        "n8n rules",
-        "load n8n"
-      ],
-      "dependencies": [],
-      "crossReferences": [
-        "INT-001",
-        "INT-002",
-        "INT-004",
-        "PER-001"
-      ],
-      "description": "Entry point for all n8n rules. Load this first for dynamic context loading."
-    },
-    "INT-001": {
-      "id": "INT-001",
-      "title": "n8n Integration Rules (Overview)",
-      "path": "rules/integration/n8n/001-overview.md",
-      "partition": "integration",
-      "priority": "HIGH",
-      "version": "2.2.0",
-      "triggers": [
-        "orchestrate",
-        "orchestrator"
+        "data",
+        "database",
+        "schema",
+        "model",
+        "drizzle",
+        "postgres",
+        "table"
       ],
       "dependencies": [
-        "ARCH-003",
-        "INT-003"
+        "ARCH-001"
+      ],
+      "crossReferences": [],
+      "description": "Rules for data models, schemas, and persistence."
+    },
+    "DATA-002": {
+      "id": "DATA-002",
+      "title": "Communication Trace Storage",
+      "path": "rules/data/002-communication-traces.md",
+      "partition": "data",
+      "priority": "HIGH",
+      "version": "1.2.0",
+      "triggers": [
+        "trace",
+        "communication",
+        "log",
+        "request",
+        "response",
+        "storage",
+        "execution",
+        "userId",
+        "error"
+      ],
+      "dependencies": [
+        "DATA-001",
+        "ARCH-003"
       ],
       "crossReferences": [
         "ARCH-003",
-        "INT-003",
-        "INT-002",
-        "INT-004",
-        "INT-N8N-INDEX"
+        "APP-MEMORY-001",
+        "DATA-004"
       ],
-      "description": "Brief overview of n8n integration. See INT-002 for comprehensive practices."
+      "description": "Schema and practices for storing communication traces with execution linkage and error tracking."
+    },
+    "DATA-003": {
+      "id": "DATA-003",
+      "title": "Rule Audit Storage",
+      "path": "rules/data/003-rule-audits.md",
+      "partition": "data",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": [
+        "rule audit",
+        "audit storage",
+        "audit table",
+        "audit schema"
+      ],
+      "dependencies": [
+        "DATA-001"
+      ],
+      "crossReferences": [
+        "APP-RULES-001"
+      ],
+      "description": "Schema and practices for storing rule audit reports."
+    },
+    "DATA-004": {
+      "id": "DATA-004",
+      "title": "Callback Persistence Contract",
+      "path": "rules/data/004-callback-persistence.md",
+      "partition": "data",
+      "priority": "HIGH",
+      "version": "2.0.0",
+      "triggers": [
+        "callback",
+        "persistence",
+        "final output",
+        "execution result",
+        "workflow callback"
+      ],
+      "dependencies": [
+        "INT-003",
+        "DATA-002"
+      ],
+      "crossReferences": [
+        "DATA-002",
+        "ENV-001"
+      ],
+      "description": "Defines how n8n workflow callbacks persist execution results for distribution workflows. Migrated from INT-005."
     },
     "INT-002": {
       "id": "INT-002",
@@ -729,19 +565,164 @@
         "headless",
         "webhook path",
         "single source of truth",
-        "integration"
+        "integration",
+        "orchestrate",
+        "orchestrator"
       ],
       "dependencies": [
         "ARCH-003"
       ],
       "crossReferences": [
         "ARCH-003",
-        "INT-001",
         "INT-003",
-        "INT-004",
-        "INT-N8N-INDEX"
+        "ENV-004"
       ],
-      "description": "PRIMARY n8n integration reference. Includes recency protocol, known issues registry, all directives D1-D14. INT-001 provides overview."
+      "description": "PRIMARY n8n integration reference. Includes recency protocol, known issues registry, and all directives D1-D14."
+    },
+    "INT-003": {
+      "id": "INT-003",
+      "title": "Orchestrator Communication Contract",
+      "path": "rules/integration/003-orchestrator-contract.md",
+      "partition": "integration",
+      "priority": "HIGH",
+      "version": "2.1.0",
+      "triggers": [
+        "contract",
+        "webhook",
+        "request",
+        "response",
+        "payload",
+        "format"
+      ],
+      "dependencies": [
+        "ARCH-001",
+        "ARCH-003"
+      ],
+      "crossReferences": [
+        "ARCH-003",
+        "INT-002",
+        "ENV-001"
+      ],
+      "description": "Technical contract for orchestrator communication."
+    },
+    "APP-LANDING-001": {
+      "id": "APP-LANDING-001",
+      "title": "Landing Page — Agentic Discovery Experience",
+      "path": "rules/apps/landing/001-overview.md",
+      "partition": "apps",
+      "priority": "HIGH",
+      "version": "2.0.0",
+      "triggers": [
+        "landing",
+        "public",
+        "sign in",
+        "login page",
+        "unauthenticated",
+        "video discovery",
+        "voice command",
+        "learning mode",
+        "agentic flow",
+        "welcome experience"
+      ],
+      "dependencies": [
+        "ARCH-001"
+      ],
+      "crossReferences": [
+        "PER-002"
+      ],
+      "description": "The public entry point with AI-powered, voice-enabled discovery experience. 6 learning modes, auto-starting AI flows, and voice navigation."
+    },
+    "APP-CHAT-001": {
+      "id": "APP-CHAT-001",
+      "title": "Conversation Experience — Multi-Agent Chat Canvas",
+      "path": "rules/apps/chat/001-conversation-experience.md",
+      "partition": "apps",
+      "priority": "HIGH",
+      "version": "2.0.0",
+      "triggers": [
+        "chat",
+        "conversation",
+        "bilko message",
+        "agent voice",
+        "speaker",
+        "who is talking",
+        "microphone",
+        "mic",
+        "voice settings",
+        "tts voice",
+        "agent handoff",
+        "flow step",
+        "chat widget",
+        "conversation canvas",
+        "multi-agent",
+        "speaker label",
+        "canvas contract"
+      ],
+      "dependencies": [
+        "ARCH-005",
+        "ARCH-006",
+        "APP-LANDING-001"
+      ],
+      "crossReferences": [
+        "ARCH-005",
+        "ARCH-006",
+        "APP-LANDING-001",
+        "PER-002",
+        "UI-005"
+      ],
+      "description": "Multi-agent conversation canvas contract. Speaker attribution, per-agent voices, mic-on default, no inline widgets, small text, flow step visibility, voice settings, and canvas interaction rules (merged from ARCH-005 C1-C4)."
+    },
+    "APP-MEMORY-001": {
+      "id": "APP-MEMORY-001",
+      "title": "Memory Explorer",
+      "path": "rules/apps/memory-explorer/001-overview.md",
+      "partition": "apps",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": [
+        "memory",
+        "trace",
+        "explorer",
+        "communication history"
+      ],
+      "dependencies": [
+        "DATA-002",
+        "UI-001"
+      ],
+      "crossReferences": [
+        "DATA-002"
+      ],
+      "description": "UI for viewing and inspecting communication traces."
+    },
+    "APP-WORKFLOWS-001": {
+      "id": "APP-WORKFLOWS-001",
+      "title": "Agentic Workflows Page",
+      "path": "rules/apps/agentic-workflows/001-overview.md",
+      "partition": "apps",
+      "priority": "HIGH",
+      "version": "1.1.0",
+      "triggers": [
+        "workflow",
+        "agentic",
+        "n8n",
+        "execution",
+        "carousel",
+        "drill-down",
+        "nav stack"
+      ],
+      "dependencies": [
+        "HUB-001",
+        "UI-006",
+        "DATA-002",
+        "DATA-004"
+      ],
+      "crossReferences": [
+        "UI-006",
+        "DATA-004",
+        "DATA-002",
+        "HUB-003"
+      ],
+      "description": "Agentic Workflows page with stack-based category/workflow navigation, execution history, and mobile carousel."
     },
     "APP-RULES-001": {
       "id": "APP-RULES-001",
@@ -765,90 +746,6 @@
         "DATA-003"
       ],
       "description": "Admin-only app for browsing, reading, and auditing the rule system."
-    },
-    "APP-CHAT-001": {
-      "id": "APP-CHAT-001",
-      "title": "Conversation Experience — Multi-Agent Chat Canvas",
-      "path": "rules/apps/chat/001-conversation-experience.md",
-      "partition": "apps",
-      "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": [
-        "chat",
-        "conversation",
-        "bilko message",
-        "agent voice",
-        "speaker",
-        "who is talking",
-        "microphone",
-        "mic",
-        "voice settings",
-        "tts voice",
-        "agent handoff",
-        "flow step",
-        "chat widget",
-        "conversation canvas",
-        "multi-agent",
-        "speaker label"
-      ],
-      "dependencies": [
-        "ARCH-005",
-        "ARCH-006",
-        "APP-LANDING-001"
-      ],
-      "crossReferences": [
-        "ARCH-005",
-        "ARCH-006",
-        "APP-LANDING-001",
-        "PER-002",
-        "UI-005"
-      ],
-      "description": "Multi-agent conversation canvas contract. Speaker attribution, per-agent voices, mic-on default, no inline widgets, small text, flow step visibility, and voice settings."
-    },
-    "DATA-003": {
-      "id": "DATA-003",
-      "title": "Rule Audit Storage",
-      "path": "rules/data/003-rule-audits.md",
-      "partition": "data",
-      "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": [
-        "rule audit",
-        "audit storage",
-        "audit table",
-        "audit schema"
-      ],
-      "dependencies": [
-        "DATA-001"
-      ],
-      "crossReferences": [
-        "APP-RULES-001"
-      ],
-      "description": "Schema and practices for storing rule audit reports."
-    },
-    "INT-005": {
-      "id": "INT-005",
-      "title": "Callback Persistence Contract",
-      "path": "rules/integration/005-callback-persistence.md",
-      "partition": "integration",
-      "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": [
-        "callback",
-        "persistence",
-        "final output",
-        "execution result",
-        "workflow callback"
-      ],
-      "dependencies": [
-        "INT-003",
-        "DATA-002"
-      ],
-      "crossReferences": [
-        "DATA-002",
-        "ENV-001"
-      ],
-      "description": "Defines how n8n workflow callbacks persist execution results for distribution workflows."
     },
     "ENV-001": {
       "id": "ENV-001",
@@ -895,27 +792,27 @@
       ],
       "description": "Central registry of all n8n workflows with artifact paths."
     },
-    "ENV-003": {
-      "id": "ENV-003",
-      "title": "Channels",
-      "path": "rules/env/003-channels.md",
+    "ENV-004": {
+      "id": "ENV-004",
+      "title": "n8n Self-Hosting Setup Guide",
+      "path": "rules/env/004-n8n-setup.md",
       "partition": "env",
       "priority": "HIGH",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "triggers": [
-        "channel",
-        "facebook page",
-        "social media",
-        "distribution",
-        "public interface"
+        "self-host",
+        "n8n setup",
+        "n8n project",
+        "deploy n8n"
       ],
       "dependencies": [
-        "ENV-001"
+        "ARCH-001"
       ],
       "crossReferences": [
-        "ENV-002"
+        "INT-003",
+        "INT-002"
       ],
-      "description": "Registry of all public-facing channels and distribution endpoints."
+      "description": "Complete setup guide for self-hosting n8n on Replit. Migrated from INT-004."
     }
   },
   "partitions": {
@@ -1002,7 +899,7 @@
         ]
       },
       {
-        "pattern": "chat|conversation|microphone|mic|speaker|agent voice|who is talking|handoff|tts voice|voice settings",
+        "pattern": "chat|conversation|microphone|mic|speaker|agent voice|who is talking|handoff|tts voice|voice settings|canvas contract",
         "partitions": [
           "apps"
         ]
@@ -1027,7 +924,7 @@
         ]
       },
       {
-        "pattern": "environment|dev url|prod url|callback url|workflow artifact|channel|facebook page",
+        "pattern": "environment|dev url|prod url|callback url|workflow artifact",
         "partitions": [
           "env"
         ]

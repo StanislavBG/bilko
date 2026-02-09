@@ -1,9 +1,10 @@
 # Callback Persistence Contract
 
-Rule ID: INT-005
+Rule ID: DATA-004
 Priority: HIGH
-Version: 1.0.0
-Partition: integration
+Version: 2.0.0
+Partition: data
+Migrated From: INT-005 (v1.0.0)
 Dependencies: INT-003, DATA-002
 
 ## Purpose

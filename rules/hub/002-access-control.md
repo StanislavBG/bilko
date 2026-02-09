@@ -2,7 +2,7 @@
 
 Rule ID: HUB-002
 Priority: HIGH
-Version: 1.0.0
+Version: 1.1.0
 
 ## Context
 These rules define how users are granted access to applications within the Hub.
@@ -16,7 +16,7 @@ These rules define how users are granted access to applications within the Hub.
 
 ### User
 - Access granted per-application
-- Default: access to Home Dashboard only
+- Default: access to Landing page and public flows only
 - Future: admin grants access to specific apps
 
 ## Directives
@@ -67,13 +67,13 @@ Admins can temporarily view the application as a regular user for testing access
 
 ## Access Patterns
 
-### Home Dashboard
-- **Admin**: Sees dashboard with summaries from all apps
-- **User**: Sees friendly "Coming soon" message
+### Landing Page
+- **All users**: Access to the conversational canvas (APP-CHAT-001)
+- **Admin**: Full access to all hub applications
 
-### Future Applications
+### Admin Applications (Memory, Workflows, Rules)
 - **Admin**: Full access
-- **User**: Access granted individually (future feature)
+- **User**: Gated — "Access required" message (D4)
 
 ## Rationale
 Centralized role management with app-level rendering keeps the Hub simple while allowing each app to implement its own access patterns.
