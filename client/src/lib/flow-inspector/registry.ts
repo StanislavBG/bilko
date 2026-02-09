@@ -50,22 +50,28 @@ const allFlows: FlowDefinition[] = [
       },
       {
         id: "mode-selection",
-        name: "User Selects Training Mode",
+        name: "User Selects Experience",
         type: "user-input",
+        subtype: "menu",
         description:
-          "User picks a learning mode from options shown in the main app area (NOT in the chat). Options include Video Discovery, AI Consultation, Recursive Interviewer, LinkedIn Strategist, Socratic Architect, and Work With Me. Each option has voice triggers for voice selection.",
+          "A menu-style input that dynamically presents all available Bilko-Flows from the flow registry (landing-location flows, excluding the root bilko-main flow) plus special navigation tiles (e.g., Explore the Site). Each menu item shows the flow's name, description, and icon. Supports click and voice selection.",
         inputSchema: [
           {
-            name: "modes",
+            name: "availableFlows",
             type: "array",
-            description: "Available learning modes with labels, descriptions, and voice triggers",
+            description: "Bilko-Flow entries from the flow registry (id, name, description, icon, voiceTriggers), filtered by location",
+          },
+          {
+            name: "specialTiles",
+            type: "array",
+            description: "Additional navigation tiles beyond flows (e.g., Explore the Site)",
           },
         ],
         outputSchema: [
           {
-            name: "selectedMode",
+            name: "selectedFlowId",
             type: "string",
-            description: "The learning mode ID the user selected",
+            description: "The flow ID or special tile ID the user selected",
           },
         ],
         dependsOn: ["greeting"],
@@ -98,6 +104,8 @@ const allFlows: FlowDefinition[] = [
     location: "landing",
     componentPath: "client/src/components/work-with-me-flow.tsx",
     tags: ["landing", "guidance", "web", "assistant", "wireframe", "gemini"],
+    icon: "Handshake",
+    voiceTriggers: ["work with me", "guide", "help me", "walk me through", "assist", "task"],
     output: {
       name: "completedSteps",
       type: "object",
@@ -290,6 +298,8 @@ const allFlows: FlowDefinition[] = [
     location: "landing",
     componentPath: "client/src/components/video-discovery-flow.tsx",
     tags: ["landing", "learning", "video", "youtube", "gemini"],
+    icon: "Play",
+    voiceTriggers: ["video", "watch", "tutorial", "show me"],
     output: {
       name: "selectedVideo",
       type: "object",
@@ -507,6 +517,8 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
     tags: ["landing", "ai", "consultation", "recommendations", "gemini"],
+    icon: "MessageCircle",
+    voiceTriggers: ["chat", "talk", "consult", "leverage", "consultation", "advice"],
     output: {
       name: "recommendations",
       type: "object",
@@ -659,6 +671,8 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
     tags: ["landing", "ai", "strategy", "recursive", "framework", "gemini"],
+    icon: "Lightbulb",
+    voiceTriggers: ["interviewer", "recursive", "deep dive", "strategy"],
     output: {
       name: "insights",
       type: "object",
@@ -732,6 +746,8 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     location: "landing",
     componentPath: "client/src/components/linkedin-strategist-flow.tsx",
     tags: ["landing", "career", "linkedin", "profile", "optimization", "gemini"],
+    icon: "Briefcase",
+    voiceTriggers: ["linkedin", "career", "resume", "profile", "dossier"],
     output: {
       name: "updatedRoleDescriptions",
       type: "object",
@@ -863,6 +879,8 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
     tags: ["landing", "socratic", "configurable", "template", "interview", "gemini"],
+    icon: "GraduationCap",
+    voiceTriggers: ["socratic", "architect", "custom", "configure", "expert"],
     output: {
       name: "findings",
       type: "object",
