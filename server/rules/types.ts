@@ -1,13 +1,14 @@
 export type Priority = "ABSOLUTE" | "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
-export type Partition = 
-  | "shared" 
-  | "architecture" 
-  | "hub" 
-  | "apps" 
-  | "data" 
-  | "ui" 
-  | "integration";
+export type Partition =
+  | "shared"
+  | "architecture"
+  | "hub"
+  | "apps"
+  | "data"
+  | "ui"
+  | "integration"
+  | "env";
 
 export interface Rule {
   id: string;
