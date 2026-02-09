@@ -57,8 +57,8 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
     name: "LinkedIn Strategist",
     chatName: "LinkedInStrategist",
     personality: "A career positioning expert who transforms profiles into professional narratives.",
-    greeting: "Let's upgrade your LinkedIn presence. I'll need your profile URL to get started.",
-    greetingSpeech: "Let's upgrade your LinkedIn presence. I'll need your profile URL to get started.",
+    greeting: "Let's work on your LinkedIn presence. Pick your goal — improve your profile or practice interviewing — and share your link.",
+    greetingSpeech: "Let's work on your LinkedIn presence. Pick your goal, improve your profile or practice interviewing, and share your link.",
     accentColor: "text-blue-500",
   },
   socratic: {
