@@ -272,6 +272,9 @@ export function buildWorkflowNodes(
   if (definition.id === "football-video-pipeline") {
     return buildFootballVideoPipelineNodes(definition.webhookPath || "football-video-pipeline");
   }
+  if (definition.id === "fvp-troubleshoot") {
+    return buildFvpTroubleshootNodes(definition.webhookPath || "fvp-troubleshoot");
+  }
 
   return { nodes: [], connections: {} };
 }
@@ -1395,6 +1398,556 @@ return [{ json: output }];`
       main: [[{ node: "Callback Final", type: "main", index: 0 }]]
     },
     "Callback Final": {
+      main: [[{ node: "Respond to Webhook", type: "main", index: 0 }]]
+    }
+  };
+
+  return { nodes, connections };
+}
+
+/**
+ * FVP Troubleshoot — first 5 logical steps of the Football Video Pipeline
+ * with verbose callbacks after EVERY step for Claude.ai-driven debugging.
+ *
+ * Steps: Webhook → Prepare News Hound → CB → News Hound (Gemini) → CB →
+ *        Parse Topics → CB → Prepare Deep Diver → CB → Deep Diver (Gemini) → CB →
+ *        Parse Verified Topics → CB (final-output) → Respond
+ *
+ * Each callback sends full step output + diagnostic metadata to Memory Explorer.
+ */
+function buildFvpTroubleshootNodes(webhookPath: string): {
+  nodes: N8nNode[];
+  connections: Record<string, unknown>;
+} {
+  const callbackUrl = getCallbackUrl();
+  const geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+  const geminiHeaders = {
+    parameters: [
+      { name: "Content-Type", value: "application/json" },
+      { name: "User-Agent", value: "Mozilla/5.0 (compatible; BilkoBibitkov/1.0; +https://bilkobibitkov.replit.app)" }
+    ]
+  };
+
+  const nodes: N8nNode[] = [
+    // ── Trigger (webhook only, no schedule for troubleshoot) ──
+    {
+      name: "Webhook",
+      type: "n8n-nodes-base.webhook",
+      typeVersion: 1,
+      position: [0, 0],
+      parameters: {
+        path: webhookPath,
+        httpMethod: "POST",
+        responseMode: "responseNode"
+      }
+    },
+
+    // ── Phase 1: News Hound ──
+    {
+      name: "Prepare News Hound Request",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [250, 0],
+      parameters: {
+        jsCode: `const webhookData = $('Webhook').first().json;
+const geminiApiKey = webhookData?.body?.geminiApiKey || webhookData?.geminiApiKey || $env?.GEMINI_API_KEY || '';
+const recentTopics = webhookData?.body?.recentTopics || webhookData?.recentTopics || [];
+
+const recentList = recentTopics.map(t => t.headline).join('; ');
+const exclusion = recentList
+  ? '\\nDo NOT repeat any of these recently covered topics: ' + recentList
+  : '';
+
+const prompt = 'Perform a deep web search for European football news from the last 24 hours. ' +
+  'Focus on data-heavy stories: match scores, confirmed transfers, contract details (salary/years), ' +
+  'and advanced statistics. Identify the 3 most viral topics based on engagement and volume of coverage. ' +
+  'Output ONLY a JSON object with this exact structure: ' +
+  '{"topics": [{"title": "...", "category": "scores|transfers|stats", "keyDataPoints": ["..."], "estimatedEngagement": "high|medium"}]}' +
+  exclusion;
+
+const requestBody = {
+  contents: [{ parts: [{ text: prompt }] }],
+  generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
+};
+
+return [{ json: {
+  geminiApiKey,
+  geminiRequestBody: requestBody,
+  recentTopics,
+  _ts: {
+    step: 'prepare-news-hound',
+    promptLength: prompt.length,
+    hasApiKey: !!geminiApiKey,
+    recentTopicCount: recentTopics.length,
+    timestamp: new Date().toISOString()
+  }
+} }];`
+      }
+    },
+
+    // CB1: After preparing news hound request
+    {
+      name: "CB Prepare News Hound",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
+      position: [500, 150],
+      parameters: {
+        url: callbackUrl,
+        method: "POST",
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: `={
+  "workflowId": "fvp-troubleshoot",
+  "step": "ts-prepare-news-hound",
+  "stepIndex": 1,
+  "traceId": "{{ $('Webhook').first().json.body?.traceId || $('Webhook').first().json.traceId || 'trace_' + $execution.id }}",
+  "output": {
+    "hasApiKey": {{ !!$json.geminiApiKey }},
+    "promptLength": {{ $json._ts?.promptLength || 0 }},
+    "recentTopicCount": {{ $json._ts?.recentTopicCount || 0 }},
+    "requestBodyKeys": {{ JSON.stringify(Object.keys($json.geminiRequestBody || {})) }}
+  },
+  "executionId": "{{ $execution.id }}",
+  "status": "in_progress",
+  "details": { "mode": "troubleshoot", "pipeline": "fvp", "stepName": "ts-prepare-news-hound" }
+}`
+      }
+    },
+
+    {
+      name: "News Hound",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
+      position: [500, 0],
+      parameters: {
+        url: geminiUrl,
+        method: "POST",
+        sendHeaders: true,
+        headerParameters: {
+          parameters: [
+            ...geminiHeaders.parameters,
+            { name: "x-goog-api-key", value: "={{ $json.geminiApiKey }}" }
+          ]
+        },
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: "={{ JSON.stringify($json.geminiRequestBody) }}",
+        options: {
+          batching: { batch: { batchSize: 1, batchInterval: 15000 } }
+        }
+      }
+    },
+
+    // CB2: After News Hound raw Gemini response
+    {
+      name: "CB News Hound Raw",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
+      position: [750, 150],
+      parameters: {
+        url: callbackUrl,
+        method: "POST",
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: `={
+  "workflowId": "fvp-troubleshoot",
+  "step": "ts-news-hound-raw",
+  "stepIndex": 2,
+  "traceId": "{{ $('Webhook').first().json.body?.traceId || $('Webhook').first().json.traceId || 'trace_' + $execution.id }}",
+  "output": {
+    "hasCandidates": {{ !!($json.candidates && $json.candidates.length > 0) }},
+    "candidateCount": {{ ($json.candidates || []).length }},
+    "finishReason": "{{ $json.candidates?.[0]?.finishReason || 'unknown' }}",
+    "textPreview": "{{ ($json.candidates?.[0]?.content?.parts?.[0]?.text || '').substring(0, 200) }}",
+    "usageMetadata": {{ JSON.stringify($json.usageMetadata || {}) }}
+  },
+  "executionId": "{{ $execution.id }}",
+  "status": "in_progress",
+  "details": { "mode": "troubleshoot", "pipeline": "fvp", "stepName": "ts-news-hound-raw" }
+}`
+      }
+    },
+
+    {
+      name: "Parse Topics",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [750, 0],
+      parameters: {
+        jsCode: `const geminiApiKey = $('Prepare News Hound Request').first().json.geminiApiKey;
+const response = $input.first().json;
+let text = response?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+const rawText = text;
+text = text.trim().replace(/^\\\`\\\`\\\`[a-zA-Z]*\\n?/, '').replace(/\\n?\\\`\\\`\\\`\\s*$/, '');
+const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);
+let parsed = { topics: [] };
+let parseError = null;
+if (jsonMatch) {
+  try { parsed = JSON.parse(jsonMatch[0]); } catch (e) { parseError = e.message; }
+}
+const topics = (parsed.topics || []).slice(0, 3);
+return [{ json: {
+  topics,
+  geminiApiKey,
+  _ts: {
+    step: 'parse-topics',
+    rawTextLength: rawText.length,
+    jsonExtracted: !!jsonMatch,
+    parseError,
+    topicCount: topics.length,
+    topicTitles: topics.map(t => t.title),
+    timestamp: new Date().toISOString()
+  }
+} }];`
+      }
+    },
+
+    // CB3: After Parse Topics
+    {
+      name: "CB Parse Topics",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
+      position: [1000, 150],
+      parameters: {
+        url: callbackUrl,
+        method: "POST",
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: `={
+  "workflowId": "fvp-troubleshoot",
+  "step": "ts-parse-topics",
+  "stepIndex": 3,
+  "traceId": "{{ $('Webhook').first().json.body?.traceId || $('Webhook').first().json.traceId || 'trace_' + $execution.id }}",
+  "output": {
+    "topicCount": {{ $json.topics?.length || 0 }},
+    "topics": {{ JSON.stringify($json.topics || []) }},
+    "parseError": {{ JSON.stringify($json._ts?.parseError || null) }},
+    "jsonExtracted": {{ $json._ts?.jsonExtracted || false }},
+    "rawTextLength": {{ $json._ts?.rawTextLength || 0 }}
+  },
+  "executionId": "{{ $execution.id }}",
+  "status": "in_progress",
+  "details": { "mode": "troubleshoot", "pipeline": "fvp", "stepName": "ts-parse-topics" }
+}`
+      }
+    },
+
+    // ── Phase 2: Deep Diver ──
+    {
+      name: "Prepare Deep Diver Request",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [1000, 0],
+      parameters: {
+        jsCode: `const input = $input.first().json;
+const geminiApiKey = input.geminiApiKey;
+const topics = input.topics || [];
+
+const topicList = topics.map((t, i) => (i+1) + '. ' + t.title).join('\\n');
+
+function sanitizeForJSON(str) {
+  if (!str) return '';
+  return String(str).replace(/[\\x00-\\x1F\\x7F]/g, ' ').replace(/\\\\/g, '\\\\\\\\').replace(/"/g, '\\\\"').replace(/\\n/g, ' ').replace(/\\r/g, ' ').substring(0, 10000);
+}
+
+const prompt = 'For each of these 3 European football topics, find 3-5 additional high-authority sources ' +
+  '(e.g., Sky Sports, Fabrizio Romano, The Athletic, BBC Sport, ESPN) to verify the data points. ' +
+  'Topics:\\n' + sanitizeForJSON(topicList) +
+  '\\n\\nFor each topic, list the verified data points and sources. ' +
+  'Output as JSON: {"verifiedTopics": [{"title": "...", "sources": [{"name": "...", "url": "...", "keyFact": "..."}], "verifiedDataPoints": ["..."]}]}';
+
+const requestBody = {
+  contents: [{ parts: [{ text: prompt }] }],
+  generationConfig: { temperature: 0.2, maxOutputTokens: 4096 }
+};
+
+return [{ json: {
+  geminiApiKey,
+  geminiRequestBody: requestBody,
+  originalTopics: topics,
+  _ts: {
+    step: 'prepare-deep-diver',
+    promptLength: prompt.length,
+    inputTopicCount: topics.length,
+    timestamp: new Date().toISOString()
+  }
+} }];`
+      }
+    },
+
+    // CB4: After preparing deep diver
+    {
+      name: "CB Prepare Deep Diver",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
+      position: [1250, 150],
+      parameters: {
+        url: callbackUrl,
+        method: "POST",
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: `={
+  "workflowId": "fvp-troubleshoot",
+  "step": "ts-prepare-deep-diver",
+  "stepIndex": 4,
+  "traceId": "{{ $('Webhook').first().json.body?.traceId || $('Webhook').first().json.traceId || 'trace_' + $execution.id }}",
+  "output": {
+    "inputTopicCount": {{ $json._ts?.inputTopicCount || 0 }},
+    "promptLength": {{ $json._ts?.promptLength || 0 }},
+    "topicTitles": {{ JSON.stringify(($json.originalTopics || []).map(t => t.title)) }}
+  },
+  "executionId": "{{ $execution.id }}",
+  "status": "in_progress",
+  "details": { "mode": "troubleshoot", "pipeline": "fvp", "stepName": "ts-prepare-deep-diver" }
+}`
+      }
+    },
+
+    // Wait before Deep Diver to respect rate limits
+    {
+      name: "Wait Before Deep Diver",
+      type: "n8n-nodes-base.wait",
+      typeVersion: 1,
+      position: [1250, 0],
+      parameters: {
+        amount: 15,
+        unit: "seconds"
+      }
+    },
+
+    {
+      name: "Deep Diver",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
+      position: [1500, 0],
+      parameters: {
+        url: geminiUrl,
+        method: "POST",
+        sendHeaders: true,
+        headerParameters: {
+          parameters: [
+            ...geminiHeaders.parameters,
+            { name: "x-goog-api-key", value: "={{ $json.geminiApiKey }}" }
+          ]
+        },
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: "={{ JSON.stringify($json.geminiRequestBody) }}",
+        options: {
+          batching: { batch: { batchSize: 1, batchInterval: 15000 } }
+        }
+      }
+    },
+
+    // CB5: After Deep Diver raw response
+    {
+      name: "CB Deep Diver Raw",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
+      position: [1750, 150],
+      parameters: {
+        url: callbackUrl,
+        method: "POST",
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: `={
+  "workflowId": "fvp-troubleshoot",
+  "step": "ts-deep-diver-raw",
+  "stepIndex": 5,
+  "traceId": "{{ $('Webhook').first().json.body?.traceId || $('Webhook').first().json.traceId || 'trace_' + $execution.id }}",
+  "output": {
+    "hasCandidates": {{ !!($json.candidates && $json.candidates.length > 0) }},
+    "finishReason": "{{ $json.candidates?.[0]?.finishReason || 'unknown' }}",
+    "textPreview": "{{ ($json.candidates?.[0]?.content?.parts?.[0]?.text || '').substring(0, 200) }}",
+    "usageMetadata": {{ JSON.stringify($json.usageMetadata || {}) }}
+  },
+  "executionId": "{{ $execution.id }}",
+  "status": "in_progress",
+  "details": { "mode": "troubleshoot", "pipeline": "fvp", "stepName": "ts-deep-diver-raw" }
+}`
+      }
+    },
+
+    {
+      name: "Parse Verified Topics",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [1750, 0],
+      parameters: {
+        jsCode: `const geminiApiKey = $('Prepare Deep Diver Request').first().json.geminiApiKey;
+const originalTopics = $('Prepare Deep Diver Request').first().json.originalTopics;
+const response = $input.first().json;
+let text = response?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+const rawText = text;
+text = text.trim().replace(/^\\\`\\\`\\\`[a-zA-Z]*\\n?/, '').replace(/\\n?\\\`\\\`\\\`\\s*$/, '');
+const jsonMatch = text.match(/\\{[\\s\\S]*\\}/);
+let parsed = { verifiedTopics: [] };
+let parseError = null;
+if (jsonMatch) {
+  try { parsed = JSON.parse(jsonMatch[0]); } catch (e) { parseError = e.message; }
+}
+const verifiedTopics = parsed.verifiedTopics || [];
+
+const summary = {
+  originalTopicCount: (originalTopics || []).length,
+  verifiedTopicCount: verifiedTopics.length,
+  totalSources: verifiedTopics.reduce((acc, t) => acc + (t.sources || []).length, 0),
+  totalDataPoints: verifiedTopics.reduce((acc, t) => acc + (t.verifiedDataPoints || []).length, 0),
+  topicTitles: verifiedTopics.map(t => t.title),
+  sourceBreakdown: verifiedTopics.map(t => ({
+    title: t.title,
+    sourceCount: (t.sources || []).length,
+    dataPointCount: (t.verifiedDataPoints || []).length
+  }))
+};
+
+return [{ json: {
+  verifiedTopics,
+  originalTopics,
+  geminiApiKey,
+  _ts: {
+    step: 'parse-verified-topics',
+    rawTextLength: rawText.length,
+    jsonExtracted: !!jsonMatch,
+    parseError,
+    summary,
+    timestamp: new Date().toISOString()
+  }
+} }];`
+      }
+    },
+
+    // CB6: Final callback
+    {
+      name: "CB Final",
+      type: "n8n-nodes-base.httpRequest",
+      typeVersion: 4,
+      position: [2000, 150],
+      parameters: {
+        url: callbackUrl,
+        method: "POST",
+        sendBody: true,
+        specifyBody: "json",
+        jsonBody: `={
+  "workflowId": "fvp-troubleshoot",
+  "step": "final-output",
+  "stepIndex": 6,
+  "traceId": "{{ $('Webhook').first().json.body?.traceId || $('Webhook').first().json.traceId || 'trace_' + $execution.id }}",
+  "output": {
+    "success": true,
+    "mode": "troubleshoot",
+    "pipeline": "fvp",
+    "stepsCompleted": 6,
+    "data": {
+      "verifiedTopics": {{ JSON.stringify($json.verifiedTopics || []) }},
+      "diagnostics": {{ JSON.stringify($json._ts || {}) }},
+      "sourceHeadline": "{{ ($json.verifiedTopics?.[0]?.title || 'FVP Troubleshoot Run').substring(0, 100) }}"
+    }
+  },
+  "executionId": "{{ $execution.id }}",
+  "status": "success",
+  "details": {
+    "mode": "troubleshoot",
+    "pipeline": "fvp",
+    "stepName": "final-output",
+    "completedAt": "{{ new Date().toISOString() }}"
+  }
+}`
+      }
+    },
+
+    // ── Build Webhook Response ──
+    {
+      name: "Build Response",
+      type: "n8n-nodes-base.code",
+      typeVersion: 2,
+      position: [2000, 0],
+      parameters: {
+        jsCode: `const input = $input.first().json;
+const verifiedTopics = input.verifiedTopics || [];
+const originalTopics = input.originalTopics || [];
+const ts = input._ts || {};
+
+return [{ json: {
+  success: true,
+  mode: "troubleshoot",
+  pipeline: "fvp",
+  message: "Troubleshoot complete: " + verifiedTopics.length + " topics verified from " + originalTopics.length + " discovered",
+  data: {
+    discoveredTopics: originalTopics,
+    verifiedTopics: verifiedTopics,
+    diagnostics: ts
+  },
+  metadata: {
+    workflowId: "fvp-troubleshoot",
+    executedAt: new Date().toISOString()
+  }
+} }];`
+      }
+    },
+
+    {
+      name: "Respond to Webhook",
+      type: "n8n-nodes-base.respondToWebhook",
+      typeVersion: 1,
+      position: [2250, 0],
+      parameters: {
+        respondWith: "json",
+        responseBody: "={{ $json }}"
+      }
+    }
+  ];
+
+  const connections: Record<string, unknown> = {
+    "Webhook": {
+      main: [[{ node: "Prepare News Hound Request", type: "main", index: 0 }]]
+    },
+    "Prepare News Hound Request": {
+      main: [
+        [{ node: "News Hound", type: "main", index: 0 }],
+        [{ node: "CB Prepare News Hound", type: "main", index: 0 }]
+      ]
+    },
+    "CB Prepare News Hound": { main: [] },
+    "News Hound": {
+      main: [
+        [{ node: "Parse Topics", type: "main", index: 0 }],
+        [{ node: "CB News Hound Raw", type: "main", index: 0 }]
+      ]
+    },
+    "CB News Hound Raw": { main: [] },
+    "Parse Topics": {
+      main: [
+        [{ node: "Prepare Deep Diver Request", type: "main", index: 0 }],
+        [{ node: "CB Parse Topics", type: "main", index: 0 }]
+      ]
+    },
+    "CB Parse Topics": { main: [] },
+    "Prepare Deep Diver Request": {
+      main: [
+        [{ node: "Wait Before Deep Diver", type: "main", index: 0 }],
+        [{ node: "CB Prepare Deep Diver", type: "main", index: 0 }]
+      ]
+    },
+    "CB Prepare Deep Diver": { main: [] },
+    "Wait Before Deep Diver": {
+      main: [[{ node: "Deep Diver", type: "main", index: 0 }]]
+    },
+    "Deep Diver": {
+      main: [
+        [{ node: "Parse Verified Topics", type: "main", index: 0 }],
+        [{ node: "CB Deep Diver Raw", type: "main", index: 0 }]
+      ]
+    },
+    "CB Deep Diver Raw": { main: [] },
+    "Parse Verified Topics": {
+      main: [
+        [{ node: "Build Response", type: "main", index: 0 }],
+        [{ node: "CB Final", type: "main", index: 0 }]
+      ]
+    },
+    "CB Final": { main: [] },
+    "Build Response": {
       main: [[{ node: "Respond to Webhook", type: "main", index: 0 }]]
     }
   };
