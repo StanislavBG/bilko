@@ -175,9 +175,8 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       // Flush the TTS queue (items accumulated before unlock)
       setTimeout(() => processQueueRef.current(), 100);
 
-      // Auto-start mic on first user gesture if not already listening
-      // and user hasn't explicitly disabled voice
-      if (!isListeningRef.current && localStorage.getItem(VOICE_STORAGE_KEY) !== "false") {
+      // Auto-start mic on first user gesture only if user explicitly enabled voice
+      if (!isListeningRef.current && localStorage.getItem(VOICE_STORAGE_KEY) === "true") {
         setTimeout(() => startListeningRef.current(), 300);
       }
 
@@ -617,9 +616,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Auto-start on mount — voice is on by default unless user explicitly disabled it
+  // Auto-start on mount — voice is OFF by default; only start if user explicitly enabled it
   useEffect(() => {
-    if (!autoStartedRef.current && isSupported && localStorage.getItem(VOICE_STORAGE_KEY) !== "false") {
+    if (!autoStartedRef.current && isSupported && localStorage.getItem(VOICE_STORAGE_KEY) === "true") {
       autoStartedRef.current = true;
       startListening();
     }
