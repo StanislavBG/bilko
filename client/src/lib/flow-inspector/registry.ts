@@ -201,13 +201,13 @@ const allFlows: FlowDefinition[] = [
 
   {
     id: "video-discovery",
-    name: "AI Video Discovery",
+    name: "Video Discovery",
     description:
-      "Researches trending AI topics, pre-fetches YouTube videos for each topic in parallel, and lets the user pick a video to watch.",
-    version: "2.0.0",
+      "Pick a topic, ask a question, and discover real YouTube videos — powered by YouTube Data API search, not AI-hallucinated links.",
+    version: "3.0.0",
     location: "landing",
     componentPath: "client/src/components/video-discovery-flow.tsx",
-    tags: ["landing", "ai", "video", "youtube", "gemini"],
+    tags: ["landing", "learning", "video", "youtube", "gemini"],
     output: {
       name: "selectedVideo",
       type: "object",
@@ -215,131 +215,176 @@ const allFlows: FlowDefinition[] = [
     },
     steps: [
       {
-        id: "research-topics",
-        name: "Research AI Trends",
+        id: "generate-topics",
+        name: "Generate Topic Suggestions",
         type: "llm",
         description:
-          "Asks Gemini to generate 5 trending AI topics suitable for beginners. Returns structured JSON with rank, title, description, and a beginner question for each topic.",
-        prompt: `You are an AI education expert. Generate exactly 5 trending AI topics that would be interesting for beginners.
+          "Generates ~10 interesting learning topics across a wide range of subjects. User can pick one or type/voice their own.",
+        prompt: `Generate exactly 10 interesting learning topics that someone curious would want to explore via YouTube videos. Cover a wide range — technology, science, history, psychology, business, health, creative skills, etc.
 
-Return ONLY valid JSON. Keep descriptions VERY short (max 10 words each). Example:
-{"topics":[{"rank":1,"title":"AI Agents","description":"AI that acts on your behalf","beginnerQuestion":"How do AI agents work?"}]}
+Return ONLY valid JSON. Example:
+{"topics":[{"title":"How Batteries Work","description":"The chemistry behind energy storage"}]}
 
-Rules: title max 5 words, description max 10 words, beginnerQuestion max 12 words. No markdown, no explanation, ONLY the JSON object.`,
+Rules: title max 6 words, description max 12 words. No markdown, ONLY the JSON object.`,
         userMessage:
-          "What are the 5 most interesting AI topics trending in the last 6 months that a beginner should learn about?",
+          "What are 10 interesting topics someone curious would enjoy learning about right now?",
         model: "gemini-2.5-flash",
         inputSchema: [],
         outputSchema: [
           {
             name: "topics",
             type: "array",
-            description: "Array of 5 trending AI topics",
-            example: '[{"rank":1,"title":"AI Agents","description":"AI that acts on your behalf","beginnerQuestion":"How do AI agents work?"}]',
+            description: "Array of ~10 learning topics with title and description",
+            example: '[{"title":"How Batteries Work","description":"The chemistry behind energy storage"}]',
           },
         ],
         dependsOn: [],
-      },
-      {
-        id: "prefetch-videos",
-        name: "Pre-fetch Videos (parallel)",
-        type: "llm",
-        description:
-          "For each of the 5 topics, fires a parallel LLM call to find 3 real YouTube videos. Results are cached by topic title. Runs concurrently for all topics.",
-        prompt: `You are a YouTube video researcher. Find 3 real YouTube videos about "{topic.title}" for beginners.
-
-Return ONLY valid JSON. Example:
-{"videos":[{"title":"Video Title","creator":"Channel","description":"Short desc","url":"https://www.youtube.com/watch?v=ID","embedId":"ID","whyRecommended":"Why good for beginners","views":"1.2M","likes":"45K","comments":"2.3K"}]}
-
-Rules:
-- Use REAL YouTube videos from known AI education channels (3Blue1Brown, Fireship, Two Minute Papers, Andrej Karpathy, Computerphile, Yannic Kilcher, etc.)
-- Rank by engagement: views > likes > comments
-- Keep description under 15 words
-- Keep whyRecommended under 15 words
-- Return exactly 3 videos, ordered best first
-- No markdown, ONLY the JSON object`,
-        userMessage:
-          'Find 3 best YouTube videos for a beginner about: "{topic.title}" - {topic.description}',
-        model: "gemini-2.5-flash",
-        inputSchema: [
-          {
-            name: "topic",
-            type: "object",
-            description: "The AI topic to search videos for",
-            example: '{"title":"AI Agents","description":"AI that acts on your behalf"}',
-          },
-        ],
-        outputSchema: [
-          {
-            name: "videos",
-            type: "array",
-            description: "Array of 3 YouTube video results",
-            example: '[{"title":"...","creator":"...","embedId":"...","views":"1.2M"}]',
-          },
-        ],
-        dependsOn: ["research-topics"],
-        parallel: true,
-      },
-      {
-        id: "validate-videos",
-        name: "Validate YouTube Videos",
-        type: "validate",
-        description:
-          "Checks each video's embed ID against YouTube's oEmbed endpoint to filter out hallucinated or unavailable videos. Server-side via POST /api/llm/validate-videos.",
-        inputSchema: [
-          {
-            name: "videos",
-            type: "array",
-            description: "Candidate videos to validate",
-          },
-        ],
-        outputSchema: [
-          {
-            name: "videos",
-            type: "array",
-            description: "Only videos confirmed available on YouTube",
-          },
-        ],
-        dependsOn: ["prefetch-videos"],
       },
       {
         id: "select-topic",
         name: "User Picks Topic",
         type: "user-input",
         description:
-          "Displays 5 topic cards in a horizontal grid. Each card shows a loading spinner or green check based on video pre-fetch status. User clicks to select.",
+          "Displays ~10 topic cards in a grid. User clicks a suggestion or types/voices a custom topic.",
         inputSchema: [
           {
             name: "topics",
             type: "array",
-            description: "The 5 researched topics",
-          },
-          {
-            name: "videoCacheStatus",
-            type: "object",
-            description: "Loading status per topic: loading | done | error",
+            description: "The generated topic suggestions",
           },
         ],
         outputSchema: [
           {
             name: "selectedTopic",
-            type: "object",
-            description: "The topic the user picked",
+            type: "string",
+            description: "The topic the user picked or typed",
           },
         ],
-        dependsOn: ["research-topics"],
+        dependsOn: ["generate-topics"],
+      },
+      {
+        id: "generate-questions",
+        name: "Generate Question Suggestions",
+        type: "llm",
+        description:
+          "For the selected topic, generates 5 questions the user might want answered — from beginner-friendly to thought-provoking.",
+        prompt: `The user wants to learn about "{topic}". Generate exactly 5 questions they might want answered.
+
+Return ONLY valid JSON. Example:
+{"questions":[{"question":"How does X actually work?"}]}
+
+Rules: each question max 15 words. No markdown, ONLY the JSON object.`,
+        userMessage:
+          'What are 5 interesting questions someone new to "{topic}" would want answered?',
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "topic",
+            type: "string",
+            description: "The selected learning topic",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "questions",
+            type: "array",
+            description: "Array of 5 question suggestions",
+            example: '[{"question":"How does X actually work?"}]',
+          },
+        ],
+        dependsOn: ["select-topic"],
+      },
+      {
+        id: "select-question",
+        name: "User Picks Question",
+        type: "user-input",
+        description:
+          "Displays 5 question cards. 'If you had one question to be answered, what would it be?' User picks a suggestion or types/voices their own.",
+        inputSchema: [
+          {
+            name: "questions",
+            type: "array",
+            description: "The generated question suggestions",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "selectedQuestion",
+            type: "string",
+            description: "The question the user picked or typed",
+          },
+        ],
+        dependsOn: ["generate-questions"],
+      },
+      {
+        id: "generate-search-terms",
+        name: "Generate YouTube Search Terms",
+        type: "llm",
+        description:
+          "From topic + question, generates 3-4 targeted YouTube search queries to surface the best educational content.",
+        prompt: `Generate 3-4 YouTube search queries to find the best videos about "{topic}" that answer: "{question}"
+
+Return ONLY valid JSON. Example:
+{"searchTerms":["how neural networks learn explained","neural network tutorial beginner"]}
+
+Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSON object.`,
+        userMessage:
+          'Generate YouTube search queries for topic "{topic}", question: "{question}"',
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "topic",
+            type: "string",
+            description: "The selected topic",
+          },
+          {
+            name: "question",
+            type: "string",
+            description: "The user's question",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "searchTerms",
+            type: "array",
+            description: "3-4 YouTube search queries",
+          },
+        ],
+        dependsOn: ["select-question"],
+      },
+      {
+        id: "youtube-search",
+        name: "Search YouTube API",
+        type: "transform",
+        description:
+          "Searches YouTube Data API v3 with the generated search terms. Returns real videos with titles, channels, view counts, and embed IDs — no hallucination possible.",
+        inputSchema: [
+          {
+            name: "searchTerms",
+            type: "array",
+            description: "YouTube search queries to execute",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "videos",
+            type: "array",
+            description: "Real YouTube videos with metadata and stats, sorted by popularity",
+          },
+        ],
+        dependsOn: ["generate-search-terms"],
       },
       {
         id: "select-video",
         name: "User Picks Video",
         type: "user-input",
         description:
-          "Shows up to 3 validated videos ranked by engagement. User clicks to watch. Includes views, likes, comments, and a 'Top Pick' badge for #1.",
+          "Shows YouTube search results ranked by popularity. User clicks to watch. Includes views, likes, comments, and a 'Top Pick' badge for #1.",
         inputSchema: [
           {
             name: "videos",
             type: "array",
-            description: "Pre-fetched and validated videos for the selected topic",
+            description: "Real YouTube videos from API search",
           },
         ],
         outputSchema: [
@@ -349,14 +394,14 @@ Rules:
             description: "The video the user chose to watch",
           },
         ],
-        dependsOn: ["select-topic", "validate-videos"],
+        dependsOn: ["youtube-search"],
       },
       {
         id: "play-video",
         name: "Play Video",
         type: "display",
         description:
-          "Embeds the selected YouTube video with autoplay. Shows creator badge, YouTube link, description, engagement stats, and recommendation rationale.",
+          "Embeds the selected YouTube video. Shows creator badge, YouTube link, description, engagement stats, and the topic + question context.",
         inputSchema: [
           {
             name: "selectedVideo",
