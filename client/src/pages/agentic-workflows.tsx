@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useCopyToClipboard, copyImageToClipboard, downloadImage } from "@/hooks/use-clipboard";
+import { useExecutionPolling } from "@/hooks/use-execution-polling";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDuration, formatTimestamp } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -46,15 +47,6 @@ interface ExecutionResult {
     executionId?: string;
     executedAt: string;
     durationMs: number;
-  };
-}
-
-interface ExecutionStatus {
-  execution: {
-    id: string;
-    workflowId: string;
-    status: "running" | "completed" | "failed";
-    completedAt?: string;
   };
 }
 
@@ -752,103 +744,14 @@ interface SelectedExecution {
 export default function AgenticWorkflows() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { isRunning, startTracking } = useExecutionPolling();
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowDefinition | null>(null);
   const [selectedExecution, setSelectedExecution] = useState<SelectedExecution | null>(null);
   const [isActionPanelCollapsed, setIsActionPanelCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<"latest" | "history">("latest");
   const [isDescriptionOpen, setIsDescriptionOpen] = useState(false);
-  
-  // Track running workflow executions for polling (scoped by workflow ID)
-  const [runningExecutions, setRunningExecutions] = useState<Record<string, { executionId: string; startedAt: number }>>({}); 
-  
-  // Get running execution for current workflow (for UI display)
-  const currentWorkflowRunning = selectedWorkflow ? runningExecutions[selectedWorkflow.id] : null;
-  const isWorkflowRunning = !!currentWorkflowRunning;
-  
-  // Get all running execution IDs for polling
-  const allRunningExecutionIds = Object.values(runningExecutions).map(r => r.executionId);
-  
-  // Poll ALL running executions (not just selected one)
-  useEffect(() => {
-    if (allRunningExecutionIds.length === 0) return;
-    
-    const pollInterval = setInterval(async () => {
-      for (const executionId of allRunningExecutionIds) {
-        try {
-          const res = await fetch(`/api/n8n/executions/${executionId}`, { credentials: "include" });
-          if (!res.ok) continue;
-          
-          const data: ExecutionStatus = await res.json();
-          const { status, workflowId: execWorkflowId } = data.execution;
-          
-          if (status === "completed") {
-            setRunningExecutions(prev => {
-              const updated = { ...prev };
-              delete updated[execWorkflowId];
-              return updated;
-            });
-            toast({
-              title: "Workflow completed",
-              description: "Processing finished successfully. Refreshing output...",
-            });
-            queryClient.invalidateQueries({ queryKey: ["/api/n8n/traces"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/n8n/workflows", execWorkflowId, "output"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/n8n/workflows", execWorkflowId, "executions"] });
-          } else if (status === "failed") {
-            setRunningExecutions(prev => {
-              const updated = { ...prev };
-              delete updated[execWorkflowId];
-              return updated;
-            });
-            toast({
-              title: "Workflow failed",
-              description: "Processing encountered an error",
-              variant: "destructive",
-            });
-            queryClient.invalidateQueries({ queryKey: ["/api/n8n/traces"] });
-            queryClient.invalidateQueries({ queryKey: ["/api/n8n/workflows", execWorkflowId, "executions"] });
-          }
-        } catch {
-          // Ignore polling errors
-        }
-      }
-    }, 3000); // Poll every 3 seconds
-    
-    return () => clearInterval(pollInterval);
-  }, [allRunningExecutionIds.join(","), toast]);
-  
-  // Timeout check - clear stuck executions after 10 minutes with notification
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const TEN_MINUTES = 10 * 60 * 1000;
-      const timedOutWorkflows: string[] = [];
-      
-      setRunningExecutions(prev => {
-        const updated = { ...prev };
-        let hasChanges = false;
-        for (const [wfId, data] of Object.entries(updated)) {
-          if (now - data.startedAt > TEN_MINUTES) {
-            timedOutWorkflows.push(wfId);
-            delete updated[wfId];
-            hasChanges = true;
-          }
-        }
-        return hasChanges ? updated : prev;
-      });
-      
-      // Show timeout toast for each timed-out workflow
-      timedOutWorkflows.forEach(wfId => {
-        toast({
-          title: "Workflow timed out",
-          description: `${wfId} did not complete within 10 minutes. Check the execution history for details.`,
-          variant: "destructive",
-        });
-        queryClient.invalidateQueries({ queryKey: ["/api/n8n/workflows", wfId, "executions"] });
-      });
-    }, 30000); // Check every 30 seconds
-    return () => clearInterval(interval);
-  }, [toast]);
+
+  const isWorkflowRunning = selectedWorkflow ? isRunning(selectedWorkflow.id) : false;
   
   // Fetch workflows data
   const { data, isLoading } = useQuery<WorkflowsResponse>({
@@ -873,14 +776,7 @@ export default function AgenticWorkflows() {
       if (result.success) {
         // Check if this is a "running" response (n8n workflows)
         if (result.data?.status === "running" && result.metadata.executionId) {
-          const workflowId = result.metadata.workflowId;
-          setRunningExecutions(prev => ({
-            ...prev,
-            [workflowId]: {
-              executionId: result.metadata.executionId!,
-              startedAt: Date.now(),
-            },
-          }));
+          startTracking(result.metadata.workflowId, result.metadata.executionId);
           toast({
             title: "Workflow started",
             description: result.data.message || "Processing in background...",
