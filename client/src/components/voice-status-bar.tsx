@@ -19,9 +19,9 @@ import { useConversationDesign } from "@/contexts/conversation-design-context";
 /**
  * Compact voice status bar with mic toggle + conversational state.
  *
- * The mic button is the ONE control for voice everywhere. When it's on,
- * Bilko's full conversational awareness kicks in — auto-resume, mute
- * during TTS, floor tracking. All instances share the same VoiceContext.
+ * Voice is OFF by default. This bar provides an opt-in toggle.
+ * When voice is on, shows full conversational awareness — auto-resume,
+ * mute during TTS, floor tracking. All instances share the same VoiceContext.
  */
 export function VoiceStatusBar() {
   const { isListening, isMuted, isSpeaking, transcript, toggleListening } =
@@ -31,10 +31,31 @@ export function VoiceStatusBar() {
   const micActive = isListening && !isMuted;
   const micMuted = isListening && isMuted;
 
+  // Voice OFF — compact opt-in toggle
+  if (!isListening) {
+    return (
+      <div className="border-t border-border bg-background/95 backdrop-blur-sm">
+        <div className="px-4 py-2">
+          <button
+            onClick={toggleListening}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full
+              text-muted-foreground/60 hover:text-foreground
+              bg-muted/40 hover:bg-muted
+              transition-all duration-200"
+            title="Enable voice — talk to Bilko"
+          >
+            <MicOff className="h-3.5 w-3.5" />
+            <span className="text-xs font-medium">Enable voice</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Voice ON — full status bar
   return (
     <div className="border-t border-border bg-background/95 backdrop-blur-sm">
       <div className="px-4 py-2 flex items-center gap-2">
-        {/* Single mic toggle — the ONE control for voice */}
         <button
           onClick={toggleListening}
           className={`p-1.5 rounded-md transition-colors ${
@@ -45,53 +66,35 @@ export function VoiceStatusBar() {
               : "text-muted-foreground/50 hover:text-foreground hover:bg-muted"
           }`}
           title={
-            isListening
-              ? isMuted
-                ? "Mic paused \u2014 Bilko is speaking"
-                : "Mic on \u2014 click to turn off"
-              : "Mic off \u2014 click to start voice conversation"
+            isMuted
+              ? "Mic paused \u2014 Bilko is speaking"
+              : "Mic on \u2014 click to turn off"
           }
         >
-          {isListening ? (
-            <Mic className="h-3.5 w-3.5" />
-          ) : (
-            <MicOff className="h-3.5 w-3.5" />
-          )}
+          <Mic className="h-3.5 w-3.5" />
         </button>
 
-        {/* Conversational status — shows what's happening */}
         <div className="flex-1 min-w-0">
-          {isListening && isMuted && isSpeaking ? (
+          {isMuted && isSpeaking ? (
             <p className="text-xs text-amber-500/80">
               Bilko is speaking... mic will resume
             </p>
-          ) : isListening && transcript ? (
+          ) : transcript ? (
             <p className="text-xs text-foreground truncate animate-in fade-in duration-200">
               {transcript}
             </p>
-          ) : isListening && floor === "user" ? (
+          ) : floor === "user" ? (
             <p className="text-xs text-green-500/70">
               Your turn &mdash; listening...
             </p>
-          ) : isListening ? (
-            <p className="text-xs text-muted-foreground/60">Listening...</p>
-          ) : floor === "bilko" ? (
-            <p className="text-xs text-muted-foreground/60">
-              Bilko is speaking...
-            </p>
           ) : (
-            <p className="text-xs text-muted-foreground/40">
-              Tap mic to talk to Bilko
-            </p>
+            <p className="text-xs text-muted-foreground/60">Listening...</p>
           )}
         </div>
 
-        {/* Voice mode indicator */}
-        {isListening && (
-          <span className="text-[10px] font-mono text-green-500/60 shrink-0">
-            VOICE
-          </span>
-        )}
+        <span className="text-[10px] font-mono text-green-500/60 shrink-0">
+          VOICE
+        </span>
       </div>
     </div>
   );

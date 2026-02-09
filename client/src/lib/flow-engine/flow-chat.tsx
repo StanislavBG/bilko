@@ -128,13 +128,13 @@ function loadDirection(): MessageDirection {
 
 interface FlowChatProviderProps {
   children: ReactNode;
-  /** Whether voice should default to ON (default: true) */
+  /** Whether voice should default to ON (default: false — voice is opt-in) */
   voiceDefaultOn?: boolean;
 }
 
 export function FlowChatProvider({
   children,
-  voiceDefaultOn = true,
+  voiceDefaultOn = false,
 }: FlowChatProviderProps) {
   const [messages, setMessages] = useState<FlowChatMessage[]>([]);
   const [activeOwner, setActiveOwner] = useState<string>(DEFAULT_OWNER);
