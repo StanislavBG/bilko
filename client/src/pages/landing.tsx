@@ -6,15 +6,17 @@
  * Left panel:  FlowChat — messages only.
  * Right panel:  Delivery surface — mode grid or sub-flow experience.
  *
- * Flow architecture (recursive):
+ * Flow architecture (while-loop):
  *
- *   ┌──────────────────────────────────────────────────────┐
- *   │                                                      │
- *   ▼                                                      │
- *  [greeting] → [greeting-chat] → [mode-selection] → [run-subflow]
- *                                                │         │
- *                                       onComplete(summary)│
- *                                                └─────────┘
+ *   ┌──────────────────────────────────────────────────────────────────────┐
+ *   │                                                                      │
+ *   ▼                                                                      │
+ *  [greeting] → [greeting-chat] → [mode-selection] → [run-subflow]        │
+ *                                                         │                │
+ *                                                    onComplete(summary)   │
+ *                                                         ▼                │
+ *                                              [summarize-and-recycle] ────┘
+ *                                                   (recycleContext)
  *
  * The greeting node generates the text, the greeting-chat node
  * publishes it to the FlowChat panel. This separation makes it
@@ -239,7 +241,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       const fallback = isReturn ? GREETING_RETURN_FALLBACK : GREETING_FALLBACK;
 
       try {
-        await trackStep(
+        // Step 1: greeting (LLM) — generate the text
+        const { data: greetingResult } = await trackStep(
           stepId,
           { context: context ?? { visitor: "new" }, isReturn },
           async () => {
@@ -257,14 +260,22 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
               text = fallback;
             }
 
-            // CHAT step: greeting-chat — push to the FlowChat panel
+            return { greeting: text };
+          },
+        );
+
+        // Step 2: greeting-chat (chat) — publish to FlowChat panel
+        const greetingText = greetingResult.data.greeting;
+        await trackStep(
+          isReturn ? `greeting-chat-return-${Date.now()}` : "greeting-chat",
+          { greeting: greetingText },
+          async () => {
             pushMessage(OWNER_ID, {
               speaker: "bilko",
-              text,
-              speech: text,
+              text: greetingText,
+              speech: greetingText,
             });
-
-            return { greeting: text };
+            return {};
           },
         );
       } finally {
@@ -282,15 +293,19 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 
     if (skipWelcome) {
       // Authenticated users — shorter opening
+      const greetingText = "What do you want to train today?";
       trackStep("greeting", { skipWelcome: true }, async () => {
-        const text = "What do you want to train today?";
-        // CHAT step: push greeting to chat
-        pushMessage(OWNER_ID, {
-          speaker: "bilko",
-          text,
-          speech: text,
+        return { greeting: greetingText };
+      }).then(() => {
+        // greeting-chat: publish to FlowChat
+        trackStep("greeting-chat", { greeting: greetingText }, async () => {
+          pushMessage(OWNER_ID, {
+            speaker: "bilko",
+            text: greetingText,
+            speech: greetingText,
+          });
+          return {};
         });
-        return { greeting: text };
       });
       return;
     }
@@ -353,19 +368,34 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       const subflowOwnerId = MODE_TO_OWNER[mode] ?? mode;
       claimChat(subflowOwnerId);
 
-      // Activate the sub-flow (renders in right panel)
-      setSelectedMode(mode);
+      // Track run-subflow step start (display step — stays running until onComplete)
+      trackStep(
+        `run-subflow-${Date.now()}`,
+        { selectedMode: mode },
+        async () => {
+          // Activate the sub-flow (renders in right panel)
+          setSelectedMode(mode);
+          return { status: "running", subflowOwner: subflowOwnerId };
+        },
+      );
     },
-    [pushMessage, resolveUserInput, isListening, startListening, sidebarCtx, claimChat],
+    [pushMessage, resolveUserInput, isListening, startListening, sidebarCtx, claimChat, trackStep],
   );
 
-  // ── Sub-flow exit — recycle the greeting node ──
+  // ── Sub-flow exit — summarize-and-recycle step ──
   //
   // Called when:
   // 1. Sub-flow calls onComplete(summary) — natural completion
   // 2. User clicks "Ask me something else" — manual exit
   //
-  // In both cases: release chat → system divider → recycle greeting with summary
+  // This is the TAIL of the while-loop:
+  //   run-subflow → summarize-and-recycle → greeting (recycled)
+  //
+  // The summarize-and-recycle step:
+  // 1. Captures exit summary from sub-flow
+  // 2. Releases chat ownership back to bilko-main
+  // 3. Logs the activity
+  // 4. Produces recycleContext and feeds it back to the greeting node
 
   const handleSubflowExit = useCallback(
     (exitSummary?: string) => {
@@ -373,27 +403,39 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       const summary = exitSummary ?? lastActivity?.summary;
       const modeLabel = lastActivity?.modeLabel ?? "the session";
 
-      // Release chat ownership back to bilko-main
-      releaseChat();
+      // ── summarize-and-recycle step (tracked) ──
+      trackStep(
+        `summarize-and-recycle-${Date.now()}`,
+        { exitSummary, modeLabel },
+        async () => {
+          // Release chat ownership back to bilko-main
+          releaseChat();
 
-      // System return divider
-      pushMessage(OWNER_ID, {
-        speaker: "system",
-        text: "Returning to Bilko",
+          // System return divider
+          pushMessage(OWNER_ID, {
+            speaker: "system",
+            text: "Returning to Bilko",
+          });
+
+          // Clear the selected mode — show mode grid again
+          setSelectedMode(null);
+
+          const recycleContext = summary
+            ? { modeLabel, summary }
+            : null;
+
+          return { recycleContext };
+        },
+      ).then(() => {
+        // ── Recycle to HEAD: re-run greeting with summary context ──
+        if (summary) {
+          runGreeting({ modeLabel, summary });
+        } else {
+          runGreeting();
+        }
       });
-
-      // Clear the selected mode — show mode grid again
-      setSelectedMode(null);
-
-      // Recycle the greeting node with context from the sub-flow.
-      // This is the recursive learning loop: sub-flow summary → greeting context.
-      if (summary) {
-        runGreeting({ modeLabel, summary });
-      } else {
-        runGreeting();
-      }
     },
-    [pushMessage, releaseChat, runGreeting],
+    [pushMessage, releaseChat, runGreeting, trackStep],
   );
 
   // handleBack is just handleSubflowExit triggered by the back button
