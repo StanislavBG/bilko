@@ -89,7 +89,7 @@ export function StepNode({ step, status, isSelected, onClick, index, isLast }: S
           <h4 className="text-sm font-medium flex-1">{step.name}</h4>
           <Badge variant="outline" className={cn("text-xs gap-1", config.color, config.bg)}>
             <TypeIcon className="h-3 w-3" />
-            {config.label}
+            {step.subtype ? `${config.label} \u203A ${step.subtype.charAt(0).toUpperCase() + step.subtype.slice(1)}` : config.label}
           </Badge>
           {step.parallel && (
             <Badge variant="secondary" className="text-xs">
