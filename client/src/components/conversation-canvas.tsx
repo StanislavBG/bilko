@@ -411,8 +411,8 @@ function BilkoTurnView({
   compact?: boolean;
 }) {
   const textClass = compact
-    ? "text-lg md:text-xl font-bold tracking-tight leading-tight text-foreground"
-    : "text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight leading-tight text-foreground";
+    ? "text-base md:text-lg font-bold tracking-tight leading-tight text-foreground"
+    : "text-xl md:text-2xl font-bold tracking-tight leading-tight text-foreground";
 
   if (isSettled) {
     return (
@@ -459,8 +459,8 @@ function AgentTurnView({
   const colors = getAgentColors(turn.agentName);
 
   const textClass = compact
-    ? "text-base md:text-lg font-semibold tracking-tight leading-tight text-foreground"
-    : "text-2xl md:text-3xl lg:text-4xl font-semibold tracking-tight leading-tight text-foreground";
+    ? "text-sm md:text-base font-semibold tracking-tight leading-tight text-foreground"
+    : "text-lg md:text-xl font-semibold tracking-tight leading-tight text-foreground";
 
   // Outer frame: left-border accent + subtle surface tint
   // When grouped (consecutive same agent), tighten the spacing by overriding
