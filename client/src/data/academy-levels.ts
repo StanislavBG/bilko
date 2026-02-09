@@ -2055,6 +2055,326 @@ This is the most advanced level. Your assistant doesn't just respond to events�
     ],
     order: 8,
   },
+  // ── Guide 4: Collaboration ──────────────────────────────
+  {
+    id: "bilkos-way-level-9",
+    levelRange: "91-100",
+    rank: "The Architect",
+    coreSkill: "Collaboration (Expert)",
+    skillSummary: "Designing modular, service-oriented building blocks for multi-project AI-human development.",
+    lesson: `This guide addresses one of the hardest unsolved problems in AI-assisted development: **how do humans and AI agents collaborate on code without the codebase becoming unrecognizable?**
+
+The problem is real and measurable. When an AI agent like Claude Code works on a feature branch, the diff can be so radical that the original developer can't recognize their own project. A pull request that touches 40 files, restructures modules, and rewrites patterns isn't reviewable in the traditional sense. Git's merge model—designed for incremental human changes—breaks down when one collaborator operates at machine speed and scope.
+
+**The Merge Problem**
+
+Consider a concrete scenario: Developer A (the "Sensei") maintains a project. Developer B (Claude Code, the "Provocateur") is tasked with adding a feature. Claude doesn't just add the feature—it refactors adjacent code, normalizes patterns, extracts utilities, and optimizes paths it touched along the way. The resulting PR is technically correct but socially illegible. The Sensei can't review it because it doesn't look like their project anymore.
+
+This isn't a bug—it's a fundamental tension between machine-speed iteration and human-speed comprehension. Git was designed for pull requests where you can read every changed line and understand the intent. When the diff is 2,000 lines across 40 files, that model fails.
+
+**The Building Block Solution**
+
+The answer isn't to constrain the AI. It's to restructure what you're building. Instead of one monolithic project where everything is intertwined, you decompose capabilities into **independent, well-tested building blocks**—each living in its own project with its own contract.
+
+\`\`\`
+Architecture of Collaboration:
+
+┌─────────────────────────────────┐
+│         TOP-LAYER PROJECT       │
+│   (Bilko's AI School, App X)   │
+│                                 │
+│   Imports and orchestrates:     │
+│   ┌───────┐ ┌───────┐ ┌──────┐ │
+│   │ FLOW  │ │WRITER │ │PICTURE│ │
+│   │service│ │service│ │service│ │
+│   └───┬───┘ └───┬───┘ └──┬───┘ │
+└───────┼─────────┼────────┼──────┘
+        │         │        │
+   ┌────▼───┐ ┌──▼────┐ ┌─▼──────┐
+   │ FLOW   │ │WRITER │ │PICTURE │
+   │project │ │project│ │project │
+   │        │ │       │ │        │
+   │ Own    │ │ Own   │ │ Own    │
+   │ repo   │ │ repo  │ │ repo   │
+   │ Own    │ │ Own   │ │ Own    │
+   │ tests  │ │ tests │ │ tests  │
+   │ Own    │ │ Own   │ │ Own    │
+   │ API    │ │ API   │ │ API    │
+   └────────┘ └───────┘ └────────┘
+\`\`\`
+
+Each building block project has:
+- **Its own repository** — Claude can go wild here without disrupting the top-layer project
+- **Its own test suite** — Changes are validated by contract, not by human diff-reading
+- **A stable API surface** — The top-layer project depends on the interface, not the internals
+- **Independent deployment** — Upgrade one service without touching the others
+
+**Why This Works for AI Collaboration**
+
+When Claude restructures the FLOW-project's internals, nothing breaks upstream. The top-layer project calls \`flowService.execute(definition)\`—it doesn't care if Claude rewrote the entire implementation. The contract holds. The Sensei reviews the API surface changes (small, readable diffs) while trusting the building block's test suite for internal correctness.
+
+This is the same pattern that made microservices successful in distributed systems—but applied to the **development collaboration model** between humans and AI agents.
+
+**Validation Requires Multiple Projects**
+
+Here's the critical insight: you can't validate that a building block is truly reusable by using it in only one project. You need at least 2-3 top-layer projects consuming the same service. If the FLOW-project only serves Bilko's AI School, its API might be unconsciously shaped by Bilko's specific needs. Add a second consumer—say, a portfolio site that also uses flows—and you'll quickly discover which abstractions are genuine and which are leaky.
+
+This multi-project validation is what separates a "shared utility" from a proper "service." A utility has implicit coupling to its original context. A service has a contract that works for any consumer.
+
+**The Git Model That Emerges**
+
+With this architecture, Git flows change:
+- **Building block repos**: Claude has wide latitude. PRs can be large. Tests are the gatekeeper, not human diff review.
+- **Top-layer repos**: PRs are small. "Upgrade FLOW-service from v2.1 to v2.2." The Sensei can read and approve these in seconds.
+- **The interface layer**: Shared type definitions, API schemas, and contracts. These change infrequently and are always human-reviewed.
+
+This is what dev-to-dev collaboration of the future looks like. Not two humans committing to the same repo. Not a human reviewing 2,000-line AI diffs. But **humans owning the architecture and contracts** while **AI agents own the implementation within tested boundaries**.`,
+    keyPrinciples: [
+      "AI-generated diffs can be too radical for traditional human code review—this is a structural problem, not an AI problem",
+      "Decompose monolithic projects into independent building block services with their own repos, tests, and APIs",
+      "The top-layer project depends on interfaces, not internals—Claude can restructure freely within tested boundaries",
+      "Validate building blocks across 2-3 consumer projects to ensure genuine abstraction, not leaky coupling",
+      "Humans own architecture and contracts; AI agents own implementation—this is the collaboration model",
+    ],
+    quests: [
+      {
+        id: "bw-q9-1",
+        type: "build",
+        title: "Decompose a Monolith",
+        platform: "Conceptual",
+        description: "Take Bilko's current codebase and identify 3 capabilities that could be extracted into independent building block projects. For each, define: the service name, its API surface (2-3 key functions), what its test suite would validate, and which parts of the top-layer project would consume it.",
+      },
+      {
+        id: "bw-q9-2",
+        type: "quiz",
+        title: "The Merge Problem",
+        description: "Test your understanding of AI-human collaboration friction.",
+        tasks: [
+          "Why can a 2,000-line AI-generated PR be technically correct but socially illegible?",
+          "What breaks when Git's incremental-diff review model meets machine-speed refactoring?",
+          "How does a stable API contract solve the review problem for building block internals?",
+          "Why do you need 2-3 consumer projects to validate a building block's abstraction?",
+        ],
+      },
+      {
+        id: "bw-q9-3",
+        type: "prompt",
+        title: "Design the Contract",
+        platform: "Claude Code",
+        description: "Pick one building block (e.g., FLOW-service). Write a TypeScript interface that defines its public API. Then describe two different projects that would consume this interface—showing how the same contract serves different use cases.",
+      },
+      {
+        id: "bw-q9-4",
+        type: "build",
+        title: "Trace the Collaboration",
+        platform: "Git",
+        description: "Examine Bilko's Git history. Find a feature branch where Claude made extensive changes. Map which files changed, estimate reviewability, and propose how the change would look different if the modified code lived in an independent building block project.",
+      },
+    ],
+    subTopics: [
+      {
+        id: "bw-st9-merge-problem",
+        title: "The Merge Problem",
+        description: "Why traditional Git workflows break down when AI agents contribute at machine speed and scope.",
+        keyTechniques: [
+          "AI diffs are often holistic—touching dozens of files at once—while human review is sequential",
+          "Feature branches become full-project rewrites, making git diff useless for review",
+          "The Sensei/Provocateur dynamic: expertise owner vs. velocity contributor",
+          "Code review becomes approval theater when the reviewer can't follow the changes",
+        ],
+        platforms: ["Git", "GitHub", "Claude Code"],
+      },
+      {
+        id: "bw-st9-building-blocks",
+        title: "Service-Oriented Building Blocks",
+        description: "Decomposing capabilities into independent, testable projects that AI can iterate on freely.",
+        keyTechniques: [
+          "Each building block has its own repo, test suite, and versioned API surface",
+          "Top-layer projects depend on interfaces, not internal implementations",
+          "Multi-project consumption validates genuine abstraction vs. leaky coupling",
+          "Contract-first development: define the interface before building the implementation",
+        ],
+        platforms: ["TypeScript", "npm", "Monorepo Tools"],
+      },
+    ],
+    order: 9,
+  },
+  {
+    id: "bilkos-way-level-10",
+    levelRange: "101-110",
+    rank: "The Bridge Builder",
+    coreSkill: "Collaboration (Intermediate)",
+    skillSummary: "Understanding how modular projects make human-AI development practical and scalable.",
+    lesson: `Here's a problem you'll run into fast when working with AI coding tools: the AI doesn't make small changes. You ask it to add a feature, and it rewrites half your project. The code works—it's often better than what was there before—but you can't tell what changed or why. Reviewing the changes feels impossible.
+
+This isn't the AI being bad. It's actually the AI being thorough. When Claude Code adds a feature, it also notices inconsistencies nearby and fixes them. It spots a duplicated pattern and extracts a utility. It normalizes naming conventions across files it touched. Each individual change is an improvement. But the total diff is overwhelming.
+
+**Think of it like home renovation.** You ask a contractor to add a bathroom. A great contractor doesn't just plumb a toilet into the wall—they notice the electrical isn't up to code, the adjacent wall has water damage, and the flooring doesn't match. So they fix everything. You come home to a beautiful new bathroom, but also a new electrical panel, replaced drywall, and new flooring in the hallway. It's all better. But it's not what you asked for, and you can't tell what happened just by looking.
+
+**The building block approach solves this.**
+
+Instead of one big project where everything is connected, imagine breaking your work into separate mini-projects—each one doing one thing well:
+
+| Building Block | What It Does | Example |
+|----------------|-------------|---------|
+| **FLOW-project** | Handles step-by-step workflows | Define flows, validate them, run them |
+| **WRITER-project** | Handles text generation and formatting | Generate content, format it, export it |
+| **PICTURE-project** | Handles image processing | Resize, brand, optimize images |
+
+Each block lives in its own project with its own tests. Your main application (the "top layer") just calls them:
+
+\`\`\`
+Main App (Bilko's AI School)
+  → uses FLOW-project to run learning flows
+  → uses WRITER-project to generate lesson content
+  → uses PICTURE-project to process uploaded images
+\`\`\`
+
+**Why this changes everything for AI collaboration:**
+
+1. **AI can go deep without disruption.** When Claude rewrites the FLOW-project's internals, your main app doesn't notice. It calls the same functions and gets the same results. The tests prove it still works.
+
+2. **Reviews become manageable.** In the main app, a change looks like: "Updated FLOW-service from version 2 to version 3." That's a one-line review. You don't need to understand 40 changed files.
+
+3. **You can test the collaboration model.** Use the FLOW-project in two different apps. If it works for both without hacks or special cases, it's genuinely modular. If you need \`if (app === 'bilko')\` anywhere, the abstraction is leaking.
+
+4. **Different humans can own different blocks.** One developer owns the FLOW-project and knows it deeply. Another owns the WRITER-project. When Claude makes changes in your block, you can review them—because you understand that domain. You're not reviewing changes across the entire system.
+
+**The practical workflow looks like this:**
+
+1. Define what your building blocks are (start with 2-3)
+2. Give each one its own project, its own tests, and a clear API
+3. Have your main app import and use them through that API
+4. Let AI agents work freely inside each block—tests catch problems
+5. Human developers review API changes (small) and building block upgrades (versioned)
+
+**The key insight**: The future of dev-to-dev collaboration isn't everyone working in the same repo. It's everyone owning a piece of the puzzle, with clean interfaces between the pieces. AI agents become collaborators you can actually work with—not because they make smaller changes, but because the architecture limits the blast radius of their changes.`,
+    keyPrinciples: [
+      "AI makes thorough, wide-ranging changes—this is a feature, not a bug, but it overwhelms traditional review",
+      "Building blocks are independent projects that do one thing well, with their own tests and API",
+      "The main app calls building blocks through stable interfaces—internal changes don't ripple outward",
+      "Use a building block in 2+ projects to validate that it's genuinely modular",
+      "The collaboration model: humans own the architecture, AI owns the implementation within tested boundaries",
+    ],
+    quests: [
+      {
+        id: "bw-q10-1",
+        type: "prompt",
+        title: "Name Your Blocks",
+        platform: "Any",
+        description: "Think of a project you've worked on (or want to build). Identify 3 building blocks you could extract. For each, write: what it does in one sentence, the 2-3 main functions it exposes, and what another project could use it for.",
+      },
+      {
+        id: "bw-q10-2",
+        type: "quiz",
+        title: "Blast Radius Check",
+        description: "Test your understanding of modular collaboration.",
+        tasks: [
+          "Why is a 40-file AI diff hard to review even if every change is correct?",
+          "What does it mean for a building block to have a 'stable API'?",
+          "How do you know if a building block is genuinely reusable vs. coupled to one project?",
+          "Why would different developers owning different blocks make AI collaboration easier?",
+        ],
+      },
+      {
+        id: "bw-q10-3",
+        type: "build",
+        title: "The Renovation Analogy",
+        platform: "Conceptual",
+        description: "Take the home renovation analogy further. Your 'house' is a software project. List 3 'rooms' (building blocks) and for each: what the contractor (AI) might fix beyond what you asked, and how having that room as a separate structure would change the experience.",
+      },
+      {
+        id: "bw-q10-4",
+        type: "game",
+        title: "Spot the Leak",
+        description: "Which of these building block APIs are 'leaky' (tied to one specific project)? 1) generateBilkoLesson(topic) — why is 'Bilko' in a reusable service? 2) processImage(buffer, options) — generic and reusable. 3) runFlow(definition, context) — clean contract. 4) formatForAcademyPage(content) — 'Academy' is project-specific. Identify the leaky ones and propose fixes.",
+      },
+    ],
+    order: 10,
+  },
+  {
+    id: "bilkos-way-level-11",
+    levelRange: "111-120",
+    rank: "The Team Player",
+    coreSkill: "Collaboration (Novice)",
+    skillSummary: "How people and AI work together on projects without stepping on each other's toes.",
+    lesson: `Imagine you and a friend are building a LEGO city together. You're both really good builders, but there's a problem: your friend works 100 times faster than you. While you're carefully placing bricks on your house, your friend has rebuilt the entire shopping mall, changed the road layout, and moved the park. You look up and don't recognize the city anymore. The mall is amazing—better than what was there before—but you have no idea what happened.
+
+That's what it's like when a human developer and an AI work on the same project. The AI (like Claude Code) doesn't just do what you ask—it improves everything it touches. That's great! But it means you can't always follow along.
+
+**So how do we fix this?**
+
+The answer is surprisingly simple: **don't build one big thing together. Build separate pieces that connect.**
+
+Think of it like a cooking show. Instead of two chefs working on one giant dish (bumping elbows, changing each other's seasonings), each chef owns their own station:
+
+| Station | What Gets Made | Who's the Expert |
+|---------|---------------|-----------------|
+| 🍝 **Pasta Station** | All noodle dishes | Chef A |
+| 🥗 **Salad Station** | All salads and dressings | Chef B |
+| 🍰 **Dessert Station** | All sweets and pastries | AI Chef |
+
+Each station has its own workspace, its own ingredients, and its own recipes. The final meal combines dishes from all three stations. If the AI Chef completely reinvents the dessert recipe, that's fine—the pasta and salad are untouched. And the dessert still has to taste good (that's what testing is for).
+
+**In software, these stations are called "building blocks."**
+
+A building block is a mini-project that does one specific job:
+- A **FLOW-block** handles step-by-step processes (like a recipe with numbered steps)
+- A **WRITER-block** handles creating text (like generating lesson content)
+- A **PICTURE-block** handles images (like resizing photos or adding logos)
+
+Your main project (like Bilko's AI School) uses all three blocks but doesn't need to know how they work inside. It just says "hey FLOW-block, run this process" and gets a result. Like ordering pasta from the pasta station—you don't need to know the chef's technique.
+
+**Why does this matter?**
+
+1. **Nobody steps on anyone's toes.** The AI can completely redo the PICTURE-block's internals. Your main project doesn't feel a thing. Like renovating the kitchen without disturbing the living room.
+
+2. **You can understand what changed.** Instead of "the AI changed 40 files," you see "the PICTURE-block got upgraded from version 1 to version 2." That's something you can wrap your head around.
+
+3. **The blocks become Lego bricks.** The cool part: once you build a good FLOW-block, you can use it in a completely different project too. Build it once, use it everywhere. That's the magic of keeping things separate and well-defined.
+
+4. **You test before you trust.** Each block has tests—like taste-testing at each station. If the AI rewrites the dessert recipe, the taste test (the test suite) catches any problems before the dessert reaches the customer.
+
+**The big idea:** Working with AI isn't about the AI making smaller changes. It's about building your project so that big changes in one area don't mess up everything else. Separate stations. Clear boundaries. Tested results. That's how humans and AI build amazing things together.
+
+**A real example:** This very page you're reading is part of Bilko's AI School. One day, the WRITER-block might generate these lessons. The FLOW-block might handle the quest system. The PICTURE-block might create the diagrams. Each block does its job. The school combines them into what you see. And if any block gets completely rebuilt by AI tomorrow? The school still works, because the connections between them are stable.`,
+    keyPrinciples: [
+      "AI works 100x faster than humans and improves everything it touches—which can be overwhelming",
+      "The fix: don't build one big thing together—build separate pieces (building blocks) that connect",
+      "Each building block is like a cooking station: own workspace, own recipes, own taste tests",
+      "Your main project just calls the blocks—it doesn't need to know how they work inside",
+      "Build a block once, use it in many projects—like LEGO bricks that snap together",
+    ],
+    quests: [
+      {
+        id: "bw-q11-1",
+        type: "game",
+        title: "Build the Restaurant",
+        description: "You're opening a restaurant with an AI sous-chef. Design 4 'stations' (building blocks). For each: name the station, describe what it makes, and explain what happens if the AI completely redesigns that station's recipes—does it affect the other stations?",
+      },
+      {
+        id: "bw-q11-2",
+        type: "prompt",
+        title: "LEGO City Planning",
+        platform: "Any",
+        description: "Think of any app you use daily (Instagram, Spotify, a weather app). If you were building it with an AI helper, what 3 'LEGO blocks' would you create? Remember: each block does one thing, has its own 'box,' and can be rebuilt without breaking the others.",
+      },
+      {
+        id: "bw-q11-3",
+        type: "quiz",
+        title: "The Collaboration Quiz",
+        description: "Test your understanding of human-AI teamwork.",
+        tasks: [
+          "Why can't you just ask the AI to make smaller changes?",
+          "What's a 'building block' in simple terms?",
+          "How is a building block like a cooking station?",
+          "Why do you need tests for each block?",
+          "What makes a building block reusable in other projects?",
+        ],
+      },
+    ],
+    order: 11,
+  },
 ];
 
 // ============================================
@@ -2168,6 +2488,50 @@ export const academyTracks: Track[] = [
       },
     ],
     levels: architectLevels,
+  },
+  {
+    id: "bilkos-way",
+    name: "Bilko's Way",
+    tagline: "Understanding the Machine",
+    description:
+      "A meta-knowledge track about the tools, concepts, and AI evolution behind Bilko's AI School. Four guides—Environment Setup, What is an Agent, the AI Capability Spectrum, and Collaboration—each explained at three depth levels: Expert, Intermediate, and Novice.",
+    difficulty: "intermediate",
+    color: "amber",
+    journey: [
+      {
+        id: "bilkos-way-toolkit",
+        name: "Your Toolkit",
+        levelRange: "0-30",
+        description:
+          "Understand Replit, Git, and Claude Code—the three tools that built this project—at your comfort level.",
+        icon: "seedling",
+      },
+      {
+        id: "bilkos-way-agents",
+        name: "Understanding Agents",
+        levelRange: "31-60",
+        description:
+          "What is an AI agent? Explore agents as DAGs, workflows, and sequences of helpers through Bilko's Flow Engine.",
+        icon: "zap",
+      },
+      {
+        id: "bilkos-way-spectrum",
+        name: "The AI Spectrum",
+        levelRange: "61-90",
+        description:
+          "From simple prompts to proactive AI—the four stages of AI capability and where we are today.",
+        icon: "sparkles",
+      },
+      {
+        id: "bilkos-way-collaboration",
+        name: "Collaboration",
+        levelRange: "91-120",
+        description:
+          "Dev-to-dev collaboration of the future—modular building blocks, shared services, and how humans and AI build together without stepping on each other's toes.",
+        icon: "sparkles",
+      },
+    ],
+    levels: bilkosWayLevels,
   },
 ];
 
