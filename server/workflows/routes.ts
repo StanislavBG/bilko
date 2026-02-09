@@ -201,8 +201,12 @@ export function registerWorkflowRoutes(app: Express): void {
       const articlesOutput = workflowTraces.find(t => t.action === "extract-articles");
       // FVP-specific steps
       const researchOutput = workflowTraces.find(t => t.action === "research-complete");
+      // FVP-Troubleshoot steps (verbose callbacks)
+      const tsSteps = workflowTraces.filter(t =>
+        t.action && t.action.startsWith("ts-")
+      ).sort((a, b) => (a.attemptNumber || 0) - (b.attemptNumber || 0));
 
-      if (!finalOutput && !sentimentOutput && !articlesOutput && !researchOutput) {
+      if (!finalOutput && !sentimentOutput && !articlesOutput && !researchOutput && tsSteps.length === 0) {
         return res.json({
           hasOutput: false,
           message: "No workflow output found. Execute the workflow to see results.",
@@ -271,7 +275,15 @@ export function registerWorkflowRoutes(app: Express): void {
             traceId: researchOutput.traceId,
             timestamp: researchOutput.requestedAt,
             data: researchOutput.responsePayload
-          } : null
+          } : null,
+          // Troubleshoot mode: all verbose step callbacks
+          troubleshootSteps: tsSteps.length > 0 ? tsSteps.map((t: { traceId: string | null; action: string | null; attemptNumber: number; requestedAt: Date; responsePayload: unknown }) => ({
+            traceId: t.traceId,
+            step: t.action,
+            stepIndex: t.attemptNumber,
+            timestamp: t.requestedAt,
+            data: t.responsePayload
+          })) : null
         }
       });
     } catch (error) {
