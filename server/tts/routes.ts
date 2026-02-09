@@ -4,8 +4,8 @@
  * POST /api/tts/speak — Convert text to audio via OpenAI TTS.
  * GET  /api/tts/status — Check if TTS service is available (has API key).
  *
- * Falls back gracefully: if OPENAI_API_KEY is not set, status returns
- * available=false and the client falls back to Web Speech API.
+ * OpenAI TTS is the exclusive TTS provider. If OPENAI_API_KEY is not set,
+ * status returns available=false and TTS is disabled on the client.
  */
 
 import { Router, Request, Response } from "express";
