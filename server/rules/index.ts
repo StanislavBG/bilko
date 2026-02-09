@@ -1,5 +1,5 @@
 import type { Rule, ValidationResult, TaskRoutingResult } from "./types";
-import { loadManifest, reloadManifest, getRule, getAllRules, getPrimaryDirective } from "./manifest";
+import { loadManifest, reloadManifest, getRule, getAllRules, getPrimaryDirective, getAllPartitionConfigs } from "./manifest";
 import { routeTask, suggestRulesForKeywords } from "./router";
 import { createLogger } from "../logger";
 
@@ -60,6 +60,10 @@ export class RulesService {
 
   suggestRules(keywords: string[]): Rule[] {
     return suggestRulesForKeywords(keywords);
+  }
+
+  getPartitionConfigs(): Record<string, import("./types").PartitionConfig> {
+    return getAllPartitionConfigs();
   }
 
   getRuleCount(): number {

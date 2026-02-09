@@ -22,6 +22,7 @@ import RulesExplorer from "@/pages/rules-explorer";
 import Academy from "@/pages/academy";
 import FlowExplorer from "@/pages/flow-explorer";
 import FlowDetail from "@/pages/flow-detail";
+import BilkosWay from "@/pages/bilkos-way";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DebugProvider } from "@/contexts/debug-context";
@@ -75,6 +76,7 @@ function AuthenticatedApp() {
                           <Route path="/workflows" component={AgenticWorkflows} />
                           <Route path="/memory" component={MemoryExplorer} />
                           <Route path="/rules" component={RulesExplorer} />
+                          <Route path="/bilkos-way" component={BilkosWay} />
                           <Route path="/flows/:flowId" component={FlowDetail} />
                           <Route path="/flows" component={FlowExplorer} />
                           <Route component={NotFound} />
