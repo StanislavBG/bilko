@@ -494,6 +494,11 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
     // Also send to FlowBus for activity logging
     busSend("main", "summary", { summary: summaryText });
 
+    // Track play-video step (display step — renders the embed)
+    trackStep("play-video", { selectedVideo: video }, async () => {
+      return { exitSummary: summaryText };
+    });
+
     setLastResult(`${selectedTopic} → ${video.title}`);
     setFlowState("watching");
     speak(`Loading ${video.title} by ${video.creator}.`, "Aoede");
