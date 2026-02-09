@@ -265,7 +265,7 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         );
 
         // Step 2: greeting-chat (chat) — publish to FlowChat panel
-        const greetingText = greetingResult.data.greeting;
+        const greetingText = greetingResult.greeting;
         await trackStep(
           isReturn ? `greeting-chat-return-${Date.now()}` : "greeting-chat",
           { greeting: greetingText },
