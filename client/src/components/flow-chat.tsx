@@ -123,7 +123,9 @@ export function FlowChat() {
   );
 }
 
-// ── Speaker/Listener Indicator (prominent) ───────────────
+// ── Speaker/Listener Indicator ────────────────────────────
+// Only renders the prominent bar when voice is ON.
+// When voice is OFF, shows just the direction toggle — minimal chrome.
 
 function SpeakerIndicator({
   floor,
@@ -148,7 +150,28 @@ function SpeakerIndicator({
 }) {
   const micActive = isListening && !isMuted;
 
-  // Determine the state label and color
+  // When voice is OFF, show minimal bar with just the direction toggle
+  if (!isListening) {
+    return (
+      <div className="border-b border-border bg-background/95 backdrop-blur-sm">
+        <div className="px-4 py-1.5 flex items-center justify-end">
+          <button
+            onClick={onToggleDirection}
+            className="p-1 rounded hover:bg-foreground/10 transition-colors"
+            title={messageDirection === "top-down" ? "Switch to bottom-up messages" : "Switch to top-down messages"}
+          >
+            {messageDirection === "top-down" ? (
+              <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+            ) : (
+              <ArrowUp className="h-3.5 w-3.5 text-muted-foreground/50" />
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Voice is ON — show the full indicator
   let stateLabel: string;
   let stateColor: string;
   let bgColor: string;
@@ -164,16 +187,11 @@ function SpeakerIndicator({
     stateColor = "text-green-400";
     bgColor = "bg-green-500/10 border-green-500/20";
     icon = <Mic className="h-4 w-4 text-green-400" />;
-  } else if (micActive) {
+  } else {
     stateLabel = "Listening";
     stateColor = "text-green-400/70";
     bgColor = "bg-green-500/5 border-green-500/10";
     icon = <Mic className="h-4 w-4 text-green-400/70" />;
-  } else {
-    stateLabel = "Voice off — tap to enable";
-    stateColor = "text-muted-foreground/60";
-    bgColor = "bg-muted/50 border-border";
-    icon = <MicOff className="h-4 w-4 text-muted-foreground/40" />;
   }
 
   return (
@@ -183,7 +201,7 @@ function SpeakerIndicator({
         <button
           onClick={onToggleMic}
           className="p-1.5 rounded-full hover:bg-foreground/10 transition-colors"
-          title={isListening ? "Turn off microphone" : "Turn on microphone"}
+          title="Turn off microphone"
         >
           {icon}
         </button>
@@ -201,11 +219,9 @@ function SpeakerIndicator({
         )}
 
         {/* Voice mode badge */}
-        {isListening && (
-          <span className="text-[10px] font-mono font-bold text-green-500/70 bg-green-500/10 px-1.5 py-0.5 rounded">
-            VOICE ON
-          </span>
-        )}
+        <span className="text-[10px] font-mono font-bold text-green-500/70 bg-green-500/10 px-1.5 py-0.5 rounded">
+          VOICE ON
+        </span>
 
         {/* Message direction toggle */}
         <button
@@ -225,6 +241,8 @@ function SpeakerIndicator({
 }
 
 // ── Bottom mic bar ───────────────────────────────────────
+// When voice is OFF: compact toggle button inviting the user to opt in.
+// When voice is ON: shows listening state and active indicator.
 
 function BottomMicBar({
   isListening,
@@ -239,6 +257,26 @@ function BottomMicBar({
 }) {
   const micActive = isListening && !isMuted;
 
+  // Voice is OFF — show compact opt-in toggle
+  if (!isListening) {
+    return (
+      <div className="border-t border-border bg-background/95 backdrop-blur-sm px-4 py-2">
+        <button
+          onClick={onToggle}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full
+            text-muted-foreground/60 hover:text-foreground
+            bg-muted/40 hover:bg-muted
+            transition-all duration-200"
+          title="Enable voice — talk to Bilko"
+        >
+          <MicOff className="h-3.5 w-3.5" />
+          <span className="text-xs font-medium">Enable voice</span>
+        </button>
+      </div>
+    );
+  }
+
+  // Voice is ON — show active state
   return (
     <div className="border-t border-border bg-background/95 backdrop-blur-sm px-4 py-2 flex items-center gap-2">
       <button
@@ -246,23 +284,11 @@ function BottomMicBar({
         className={`p-2 rounded-full transition-all ${
           micActive
             ? "bg-green-500/20 text-green-500 ring-2 ring-green-500/30"
-            : isMuted
-              ? "bg-amber-500/10 text-amber-500"
-              : "text-muted-foreground/50 hover:text-foreground hover:bg-muted"
+            : "bg-amber-500/10 text-amber-500"
         }`}
-        title={
-          isListening
-            ? isMuted
-              ? "Mic paused — Bilko is speaking"
-              : "Mic on — click to turn off"
-            : "Mic off — click to start voice"
-        }
+        title={isMuted ? "Mic paused — Bilko is speaking" : "Mic on — click to turn off"}
       >
-        {isListening ? (
-          <Mic className="h-4 w-4" />
-        ) : (
-          <MicOff className="h-4 w-4" />
-        )}
+        <Mic className="h-4 w-4" />
       </button>
 
       <div className="flex-1 min-w-0">
@@ -275,8 +301,8 @@ function BottomMicBar({
             Listening — speak or type
           </p>
         ) : (
-          <p className="text-xs text-muted-foreground/40">
-            Tap mic to talk to Bilko
+          <p className="text-xs text-amber-500/60 font-medium">
+            Mic paused
           </p>
         )}
       </div>

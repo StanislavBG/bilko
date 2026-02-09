@@ -54,7 +54,6 @@ import { flowRegistry, activeFlowIds } from "@/lib/flow-inspector/registry";
 import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
 import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
-import { useVoice } from "@/contexts/voice-context";
 import { useSidebarSafe } from "@/components/ui/sidebar";
 
 // ── Owner ID for this flow ────────────────────────────────
@@ -210,7 +209,6 @@ export function LandingContent() {
   const { pushMessage, clearMessages, claimChat, releaseChat } = useFlowChat();
   const { trackStep, resolveUserInput } = useFlowExecution("bilko-main");
   const [, navigate] = useLocation();
-  const { startListening, isListening } = useVoice();
   const sidebarCtx = useSidebarSafe();
 
   const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
@@ -338,11 +336,6 @@ export function LandingContent() {
       const modeLabel = flowDef?.name ?? LEARNING_MODES.find((m) => m.id === mode)?.label;
       const _agent = getFlowAgent(choiceId);
 
-      // Auto-start mic on first interaction
-      if (!isListening) {
-        startListening();
-      }
-
       // Track as user-input flow step
       resolveUserInput("mode-selection", { selectedMode: mode, modeLabel });
 
@@ -374,7 +367,7 @@ export function LandingContent() {
         },
       );
     },
-    [pushMessage, resolveUserInput, isListening, startListening, sidebarCtx, claimChat, trackStep],
+    [pushMessage, resolveUserInput, sidebarCtx, claimChat, trackStep],
   );
 
   // ── Sub-flow exit — summarize-and-recycle step ──
@@ -675,7 +668,7 @@ function RightPanelContent({
 export default function Landing() {
   return (
     <FlowBusProvider>
-      <FlowChatProvider voiceDefaultOn>
+      <FlowChatProvider>
         <div className="h-screen flex flex-col bg-background overflow-hidden">
           <GlobalHeader variant="landing" />
           <main className="flex-1 flex overflow-hidden pt-14">
