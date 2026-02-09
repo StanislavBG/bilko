@@ -47,7 +47,8 @@ Provide a unified, authenticated web interface for AI-powered learning and workf
 | Auth | Replit Auth |
 | In-Platform LLM | Gemini 2.5 Flash via OpenAI-compatible endpoint |
 | Background Workflows | n8n (self-hosted on Replit) |
-| Voice | Web Speech API |
+| Voice (TTS) | OpenAI TTS (`tts-1`) |
+| Voice (STT) | Web Speech API |
 
 ---
 
@@ -112,7 +113,7 @@ All configuration MUST be performed programmatically via APIs.
 - D1 rewritten: replaced "no AI in Replit" with dual-layer (in-platform + n8n)
 - D3 updated: client-side state acceptable for agentic flows
 - D4 scoped to background services only (in-platform LLM calls don't use orchestrator)
-- Added Gemini 2.5 Flash and Web Speech API to tech stack
+- Added Gemini 2.5 Flash, OpenAI TTS, and Web Speech API (STT) to tech stack
 - Added PER-001 and PER-002 cross-references
 
 ### v1.0.0

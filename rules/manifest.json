@@ -413,25 +413,6 @@
       ],
       "description": "The public entry point with AI-powered, voice-enabled discovery experience. 6 learning modes, auto-starting AI flows, and voice navigation."
     },
-    "APP-HOME-001": {
-      "id": "APP-HOME-001",
-      "title": "Home Dashboard",
-      "path": "rules/apps/home-dashboard/001-overview.md",
-      "partition": "apps",
-      "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": [
-        "home",
-        "dashboard",
-        "overview"
-      ],
-      "dependencies": [
-        "HUB-001",
-        "HUB-002"
-      ],
-      "crossReferences": [],
-      "description": "The default application aggregating information from all apps."
-    },
     "APP-MEMORY-001": {
       "id": "APP-MEMORY-001",
       "title": "Memory Explorer",
