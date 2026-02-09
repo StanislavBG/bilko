@@ -99,8 +99,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const pendingSpeakResolveRef = useRef<(() => void) | null>(null);
 
   // Gemini TTS refs
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const doSpeakRef = useRef<(text: string, voice?: string) => Promise<void>>(async () => {});
   const startListeningRef = useRef<() => Promise<void>>(async () => {});
 
@@ -131,8 +130,8 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // ── TTS auto-unlock ──
-  // OpenAI TTS plays audio via AudioContext, which requires a user gesture.
-  // First user interaction creates/resumes the AudioContext.
+  // Audio playback requires a user gesture (autoplay policy).
+  // First user interaction marks TTS as unlocked.
   useEffect(() => {
     if (ttsUnlockedRef.current) return;
 
@@ -140,14 +139,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       if (ttsUnlockedRef.current) return;
       ttsUnlockedRef.current = true;
       setTtsUnlocked(true);
-
-      // Ensure AudioContext is created/resumed for Gemini TTS playback
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
-      if (audioContextRef.current.state === "suspended") {
-        audioContextRef.current.resume();
-      }
     };
 
     const flushPending = () => {
@@ -349,13 +340,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       ttsUnlockedRef.current = true;
       setTtsUnlocked(true);
 
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
-      if (audioContextRef.current.state === "suspended") {
-        audioContextRef.current.resume();
-      }
-
       // Flush pending speak (e.g. Bilko's welcome message queued before unlock)
       if (pendingSpeakRef.current !== null) {
         const text = pendingSpeakRef.current;
@@ -400,7 +384,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [isListening, startListening, stopListening]);
 
-  // ── Gemini TTS: fetch audio from server and play via Web Audio API ──
+  // ── Gemini TTS: fetch audio from server and play via Audio element ──
   const doSpeak = useCallback(async (text: string, voice?: string): Promise<void> => {
     const preview = text.length > 60 ? text.slice(0, 60) + "..." : text;
     const selectedVoice = voice || "Kore";
@@ -421,7 +405,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         throw new Error(errBody.error || `TTS request failed: ${response.status}`);
       }
 
-      const contentType = response.headers.get("Content-Type") || "unknown";
+      const contentType = response.headers.get("Content-Type") || "audio/wav";
       const arrayBuffer = await response.arrayBuffer();
       console.info(`[TTS:Gemini] Received ${arrayBuffer.byteLength} bytes (${contentType})`);
 
@@ -429,45 +413,37 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         throw new Error("Received empty audio response");
       }
 
-      // Create/resume AudioContext
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
-      const ctx = audioContextRef.current;
-      if (ctx.state === "suspended") {
-        await ctx.resume();
-      }
-
-      let audioBuffer: AudioBuffer;
-      try {
-        audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
-      } catch (decodeError) {
-        // Log diagnostic info for decode failures
-        const header = new Uint8Array(arrayBuffer.slice(0, 16));
-        const headerHex = Array.from(header).map(b => b.toString(16).padStart(2, "0")).join(" ");
-        console.error(
-          `[TTS:Gemini] decodeAudioData failed — ` +
-          `size=${arrayBuffer.byteLength}, type="${contentType}", ` +
-          `header=[${headerHex}]`,
-          decodeError
-        );
-        throw new Error("Unable to decode audio data");
-      }
-
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      currentAudioSourceRef.current = source;
+      // Play via Audio element — more robust format support than Web Audio decodeAudioData
+      const blob = new Blob([arrayBuffer], { type: contentType });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      currentAudioRef.current = audio;
 
       return new Promise<void>((resolve) => {
-        source.onended = () => {
-          console.info("[TTS:Gemini] Playback complete");
-          currentAudioSourceRef.current = null;
+        const cleanup = () => {
+          URL.revokeObjectURL(url);
+          if (currentAudioRef.current === audio) {
+            currentAudioRef.current = null;
+          }
           setIsSpeaking(false);
           setTimeout(() => setIsMuted(false), POST_TTS_BUFFER_MS);
           resolve();
         };
-        source.start(0);
+
+        audio.onended = () => {
+          console.info("[TTS:Gemini] Playback complete");
+          cleanup();
+        };
+
+        audio.onerror = () => {
+          console.error("[TTS:Gemini] Audio element playback error");
+          cleanup();
+        };
+
+        audio.play().catch((playError) => {
+          console.error("[TTS:Gemini] play() rejected:", playError);
+          cleanup();
+        });
       });
     } catch (error) {
       console.error("[TTS:Gemini] Error:", error);
@@ -518,13 +494,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
 
   const stopSpeaking = useCallback(() => {
     // Stop Gemini TTS audio if playing
-    if (currentAudioSourceRef.current) {
-      try {
-        currentAudioSourceRef.current.stop();
-      } catch (e) {
-        // Might already be stopped
-      }
-      currentAudioSourceRef.current = null;
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
     }
     setIsSpeaking(false);
     setIsMuted(false);
