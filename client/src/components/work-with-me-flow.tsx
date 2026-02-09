@@ -388,6 +388,7 @@ export function WorkWithMeFlow() {
       setPhase("select-step");
       speak(
         `Found ${result.data.steps.length} steps to ${result.data.taskTitle}. Pick one to get started.`,
+        "Fenrir",
       );
     } catch (err) {
       console.error("Research error:", err);
@@ -396,7 +397,7 @@ export function WorkWithMeFlow() {
       );
       updateStep("research", "error", "Something went wrong");
       setPhase("error");
-      speak("Something went wrong researching your task. Let me try again.");
+      speak("Something went wrong researching your task. Let me try again.", "Fenrir");
     }
   }, [objective, trackStep, resolveUserInput, speak]);
 
@@ -448,7 +449,7 @@ export function WorkWithMeFlow() {
         setGuidance(guidanceResult.data);
         setPhase("guided-view");
         updateStep("guide", "active", `Viewing: ${page.data.title}`);
-        speak(guidanceResult.data.pageSummary);
+        speak(guidanceResult.data.pageSummary, "Fenrir");
       } catch (err) {
         console.error("Page fetch/analyze error:", err);
         setError(
@@ -492,7 +493,7 @@ export function WorkWithMeFlow() {
         setGuidance(guidanceResult);
         setPhase("guided-view");
         updateStep("guide", "active", `Viewing: ${page.title}`);
-        speak(guidanceResult.pageSummary);
+        speak(guidanceResult.pageSummary, "Fenrir");
       } catch (err) {
         console.error("Navigation error:", err);
         setError(

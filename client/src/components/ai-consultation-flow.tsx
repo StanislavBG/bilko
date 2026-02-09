@@ -741,7 +741,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
         setCurrentQuestion(turn.nextQuestion);
         setCurrentContext(turn.questionContext || "");
         setQuestionsRemaining(turn.questionsRemaining ?? 5);
-        await speak(turn.nextQuestion);
+        await speak(turn.nextQuestion, "Puck");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start consultation");
@@ -828,7 +828,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
         setCurrentQuestion(nextTurn.nextQuestion);
         setCurrentContext(nextTurn.questionContext || "");
         setQuestionsRemaining(nextTurn.questionsRemaining ?? 1);
-        await speak(nextTurn.nextQuestion);
+        await speak(nextTurn.nextQuestion, "Puck");
         inputRef.current?.focus();
       }
     } catch (e) {
@@ -875,6 +875,7 @@ export function AiConsultationFlow({ config }: { config?: ConsultationConfig }) 
         busSend("main", "summary", { summary: analysis.summary });
         await speak(
           `I've analyzed your responses. ${analysis.summary}`,
+          "Puck",
         );
       } catch (e) {
         setError(e instanceof Error ? e.message : "Analysis failed");

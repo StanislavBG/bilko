@@ -398,7 +398,7 @@ export function LinkedInStrategistFlow() {
         );
         setCurrentQuestion(turn.nextQuestion);
         setCurrentContext(turn.questionContext || "");
-        await speak(turn.nextQuestion);
+        await speak(turn.nextQuestion, "Charon");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start the interview");
@@ -466,7 +466,7 @@ export function LinkedInStrategistFlow() {
             ];
 
             const bridgeMessage = `Now let's talk about your role as ${nextRole.title} at ${nextRole.company}.`;
-            await speak(bridgeMessage);
+            await speak(bridgeMessage, "Charon");
 
             const { data: nextResult } = await trackStep(
               `interview-role-${nextIndex}-first`,
@@ -498,7 +498,7 @@ export function LinkedInStrategistFlow() {
               );
               setCurrentQuestion(turn.nextQuestion);
               setCurrentContext(turn.questionContext || "");
-              await speak(turn.nextQuestion);
+              await speak(turn.nextQuestion, "Charon");
             }
           } else {
             // All roles interviewed — generate descriptions
@@ -507,7 +507,7 @@ export function LinkedInStrategistFlow() {
         } else if (nextTurn.nextQuestion) {
           setCurrentQuestion(nextTurn.nextQuestion);
           setCurrentContext(nextTurn.questionContext || "");
-          await speak(nextTurn.nextQuestion);
+          await speak(nextTurn.nextQuestion, "Charon");
           inputRef.current?.focus();
         }
       } catch (e) {
@@ -593,6 +593,7 @@ export function LinkedInStrategistFlow() {
     });
     await speak(
       `Done. I've written updated descriptions for ${results.length} roles. Each one pulls from the specific details you shared in the interview. Take a look and copy what you like.`,
+      "Charon",
     );
   }, [selectedRoles, interviewQAs, linkedinUrl, trackStep, busSend, speak]);
 
