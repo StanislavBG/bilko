@@ -1,7 +1,7 @@
 {
   "$schema": "./manifest.schema.json",
   "version": "2.0.0",
-  "lastUpdated": "2026-02-07T00:00:00Z",
+  "lastUpdated": "2026-02-09T00:00:00Z",
   "bootstrap": {
     "_instruction": "AI developers: READ ALL RULES in the /rules/ directory. This manifest indexes them for routing, but you must read the actual .md files.",
     "primaryDirective": "ARCH-000",
@@ -766,6 +766,45 @@
       ],
       "description": "Admin-only app for browsing, reading, and auditing the rule system."
     },
+    "APP-CHAT-001": {
+      "id": "APP-CHAT-001",
+      "title": "Conversation Experience — Multi-Agent Chat Canvas",
+      "path": "rules/apps/chat/001-conversation-experience.md",
+      "partition": "apps",
+      "priority": "HIGH",
+      "version": "1.0.0",
+      "triggers": [
+        "chat",
+        "conversation",
+        "bilko message",
+        "agent voice",
+        "speaker",
+        "who is talking",
+        "microphone",
+        "mic",
+        "voice settings",
+        "tts voice",
+        "agent handoff",
+        "flow step",
+        "chat widget",
+        "conversation canvas",
+        "multi-agent",
+        "speaker label"
+      ],
+      "dependencies": [
+        "ARCH-005",
+        "ARCH-006",
+        "APP-LANDING-001"
+      ],
+      "crossReferences": [
+        "ARCH-005",
+        "ARCH-006",
+        "APP-LANDING-001",
+        "PER-002",
+        "UI-005"
+      ],
+      "description": "Multi-agent conversation canvas contract. Speaker attribution, per-agent voices, mic-on default, no inline widgets, small text, flow step visibility, and voice settings."
+    },
     "DATA-003": {
       "id": "DATA-003",
       "title": "Rule Audit Storage",
@@ -960,6 +999,12 @@
         "partitions": [
           "apps",
           "architecture"
+        ]
+      },
+      {
+        "pattern": "chat|conversation|microphone|mic|speaker|agent voice|who is talking|handoff|tts voice|voice settings",
+        "partitions": [
+          "apps"
         ]
       },
       {
