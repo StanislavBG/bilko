@@ -5,7 +5,7 @@ Priority: HIGH
 Version: 1.2.0
 
 ## Context
-This rule defines the schema and practices for storing communication traces. The orchestration layer logs all requests and responses to enable agent learning and debugging. Traces can be linked to workflow executions for grouping (see INT-005).
+This rule defines the schema and practices for storing communication traces. The orchestration layer logs all requests and responses to enable agent learning and debugging. Traces can be linked to workflow executions for grouping (see DATA-004).
 
 ## Purpose
 
@@ -61,7 +61,7 @@ export type CommunicationTrace = typeof communicationTraces.$inferSelect;
 export type InsertCommunicationTrace = typeof communicationTraces.$inferInsert;
 ```
 
-**Note:** The `executionId` column links traces to workflow executions (see INT-005). This enables grouping all traces from a single workflow run.
+**Note:** The `executionId` column links traces to workflow executions (see DATA-004). This enables grouping all traces from a single workflow run.
 
 ## Indexes
 
@@ -174,5 +174,5 @@ Complete communication traces enable debugging, performance analysis, and future
 ## Cross-References
 
 - ARCH-003: Orchestration Layer (uses this schema)
-- INT-005: Callback Persistence Contract (execution-trace relationship)
+- DATA-004: Callback Persistence Contract (execution-trace relationship)
 - APP-MEMORY-001: Memory Explorer (UI for viewing traces)
