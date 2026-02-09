@@ -78,9 +78,16 @@ export function StepDetail({ step, flow, execution }: StepDetailProps) {
                 </Badge>
               )}
             </div>
-            <Badge variant="outline" className={`text-[10px] mt-1 ${config.color}`}>
-              {config.label}
-            </Badge>
+            <div className="flex items-center gap-1.5 mt-1">
+              <Badge variant="outline" className={`text-[10px] ${config.color}`}>
+                {config.label}
+              </Badge>
+              {step.subtype && (
+                <Badge variant="outline" className={`text-[10px] ${config.color}`}>
+                  {step.subtype.charAt(0).toUpperCase() + step.subtype.slice(1)}
+                </Badge>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
               {step.description}
             </p>

@@ -37,11 +37,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { chatJSON, jsonPrompt, useFlowExecution, useFlowDefinition } from "@/lib/flow-engine";
+import { chatJSON, jsonPrompt, useFlowExecution, useFlowDefinition, useFlowChat } from "@/lib/flow-engine";
 import { useVoice } from "@/contexts/voice-context";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { VoiceStatusBar } from "@/components/voice-status-bar";
+import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
 // ── Types ────────────────────────────────────────────────
 
@@ -258,7 +259,7 @@ No markdown. ONLY the JSON object.`;
 
 // ── Component ────────────────────────────────────────────
 
-export function LinkedInStrategistFlow() {
+export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
   const [phase, setPhase] = useState<Phase>("intro");
   const [goal, setGoal] = useState<FlowGoal | null>(null);
   const [linkedinUrl, setLinkedinUrl] = useState("");
@@ -289,6 +290,29 @@ export function LinkedInStrategistFlow() {
     "linkedin-strategist",
     "LinkedIn Strategist",
   );
+  const { pushMessage } = useFlowChat();
+
+  const agent = getFlowAgent("linkedin");
+  const pushAgentMessage = useCallback((text: string, speech?: string) => {
+    pushMessage("linkedin-strategist", {
+      speaker: "agent",
+      text,
+      speech: speech ?? text,
+      agentName: agent?.chatName,
+      agentDisplayName: agent?.name,
+      agentAccent: agent?.accentColor,
+    });
+  }, [pushMessage, agent]);
+
+  // Push greeting on mount
+  const didGreet = useRef(false);
+  useEffect(() => {
+    if (didGreet.current) return;
+    didGreet.current = true;
+    if (agent) {
+      pushAgentMessage(agent.greeting, agent.greetingSpeech);
+    }
+  }, [agent, pushAgentMessage]);
 
   // Sync phase to flow bus
   useEffect(() => {
@@ -643,10 +667,22 @@ export function LinkedInStrategistFlow() {
               </Badge>
             )}
             {phase === "results" && (
-              <Button variant="ghost" size="sm" onClick={reset} className="h-7 gap-1">
-                <RotateCcw className="h-3 w-3" />
-                Start Over
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={reset} className="h-7 gap-1">
+                  <RotateCcw className="h-3 w-3" />
+                  Start Over
+                </Button>
+                {onComplete && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7"
+                    onClick={() => onComplete(`Optimized ${updatedRoles.length} LinkedIn role descriptions.`)}
+                  >
+                    Done
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         </div>

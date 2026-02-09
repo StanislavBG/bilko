@@ -2,20 +2,29 @@
  * Landing Page — Flow-driven split-panel experience.
  *
  * This is the bilko-main flow (registered in flow-inspector/registry).
- * The flow drives the entire landing experience:
  *
- * Left panel:  FlowChat — messages only (NO options, NO interactive cards).
- *              Populated by flow steps pushing (speaker, text) or user voice/typing.
- *              TTS triggers only for bilko/agent messages.
+ * Left panel:  FlowChat — messages only.
+ * Right panel:  Delivery surface — mode grid or sub-flow experience.
  *
- * Right panel:  Agent DELIVERY SURFACE — mode selection grid, sub-flow experiences.
- *               All interactive content lives here, not in the chat.
+ * Flow architecture (recursive):
  *
- * Flow steps:
- * 1. greeting (llm) → push Bilko's greeting to chat with TTS
- * 2. mode-selection (user-input) → options shown in right panel, user choice pushed to chat
- * 3. agent-handoff (transform) → handoff messages pushed to chat
- * 4. run-subflow (display) → sub-flow renders in right panel
+ *   ┌──────────────────────────────────────────────────────┐
+ *   │                                                      │
+ *   ▼                                                      │
+ *  [greeting(context?)] → [mode-selection] → [run-subflow] │
+ *                                                │         │
+ *                                       onComplete(summary)│
+ *                                                └─────────┘
+ *
+ * The greeting node is the HEAD of the flow. It runs:
+ * - First time: no context → fresh welcome
+ * - After a sub-flow exits: with summary → personalized return
+ *
+ * Sub-flows are autonomous:
+ * - They push their own messages to the Chat API
+ * - They own the chat during execution
+ * - When done, they call onComplete(summary) with an exit message
+ * - That summary feeds back into the greeting node for recursive learning
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -30,9 +39,7 @@ import {
 } from "@/components/ai-consultation-flow";
 import { LinkedInStrategistFlow } from "@/components/linkedin-strategist-flow";
 import { WorkWithMeFlow } from "@/components/work-with-me-flow";
-import { bilkoSays } from "@/lib/bilko-persona";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
-import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 import { chat, useFlowExecution, FlowChatProvider, useFlowChat } from "@/lib/flow-engine";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,13 +56,19 @@ import {
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
+import { flowRegistry } from "@/lib/flow-inspector/registry";
 import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
 import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
 import { useVoice } from "@/contexts/voice-context";
 import { useSidebarSafe } from "@/components/ui/sidebar";
 
+// ── Owner ID for this flow ────────────────────────────────
+const OWNER_ID = "bilko-main";
+
 // ── Mode definitions for the delivery surface ────────────
+// Built dynamically from the flow registry (all landing-location flows
+// except the root bilko-main flow), plus special navigation tiles.
 
 interface ModeOption {
   id: string;
@@ -73,18 +86,36 @@ const iconMap: Record<string, ReactNode> = {
   Handshake: <Handshake className="h-6 w-6" />,
 };
 
-const MODE_OPTIONS: ModeOption[] = LEARNING_MODES.map((mode) => ({
-  id: mode.id,
-  label: mode.label,
-  description: mode.description,
-  icon: iconMap[mode.icon] ?? <Sparkles className="h-5 w-5" />,
-}));
+/** Menu items sourced from the flow registry — any landing flow (except bilko-main) becomes a tile */
+const MODE_OPTIONS: ModeOption[] = flowRegistry
+  .filter((f) => f.location === "landing" && f.id !== "bilko-main")
+  .map((f) => ({
+    id: f.id,
+    label: f.name,
+    description: f.description,
+    icon: f.icon ? (iconMap[f.icon] ?? <Sparkles className="h-5 w-5" />) : <Sparkles className="h-5 w-5" />,
+  }));
 
-const EXPLORE_OPTION: ModeOption = {
-  id: "explore",
-  label: "Explore the Site",
-  description: "Browse everything Bilko's AI School has to offer",
-  icon: <Compass className="h-6 w-6" />,
+/** Special tiles that aren't flows but appear in the menu */
+const SPECIAL_TILES: ModeOption[] = [
+  {
+    id: "explore",
+    label: "Explore the Site",
+    description: "Browse everything Bilko's AI School has to offer",
+    icon: <Compass className="h-6 w-6" />,
+  },
+];
+
+const EXPLORE_OPTION = SPECIAL_TILES[0];
+
+/** Maps flow registry IDs to the short mode IDs used by RightPanelContent */
+const FLOW_TO_MODE: Record<string, LearningModeId> = {
+  "video-discovery": "video",
+  "ai-consultation": "chat",
+  "recursive-interviewer": "interviewer",
+  "linkedin-strategist": "linkedin",
+  "socratic-architect": "socratic",
+  "work-with-me": "work-with-me",
 };
 
 const constructionBadge = (
@@ -94,15 +125,33 @@ const constructionBadge = (
   </span>
 );
 
-// ── LLM greeting prompt ──────────────────────────────────
+// ── Subflow ID mapping ──────────────────────────────────
+
+/** Maps learning mode IDs to their chat owner IDs (used for claimChat) */
+const MODE_TO_OWNER: Record<string, string> = {
+  video: "video-discovery",
+  chat: "ai-consultation",
+  interviewer: "recursive-interviewer",
+  linkedin: "linkedin-strategist",
+  socratic: "socratic-architect",
+  "work-with-me": "work-with-me",
+};
+
+// ── LLM greeting prompts ────────────────────────────────
+
+/** Build greeting context from flow registry — available experiences listed dynamically */
+const menuFlowDescriptions = flowRegistry
+  .filter((f) => f.location === "landing" && f.id !== "bilko-main")
+  .map((f) => `- ${f.name}: ${f.description}`)
+  .join("\n");
 
 const GREETING_SYSTEM_PROMPT = bilkoSystemPrompt(
   `You are greeting a new visitor to the AI School. This is their first interaction with you.
 
 Generate a warm, natural opening. Welcome them, introduce yourself briefly as Bilko their AI training partner, and ask how they'd like to learn today. Make it feel like meeting a friendly coach — not a scripted bot.
 
-Available training modes they can pick from:
-${LEARNING_MODES.map((m) => `- ${m.label}: ${m.description}`).join("\n")}
+Available experiences they can pick from:
+${menuFlowDescriptions}
 
 Rules:
 - 2-3 sentences max. Keep it tight.
@@ -111,24 +160,51 @@ Rules:
 - Plain text only. No formatting, no markdown, no JSON.`,
 );
 
+/** Return greeting — after a sub-flow exits with a summary */
+const GREETING_RETURN_PROMPT = bilkoSystemPrompt(
+  `You are Bilko, welcoming the user back after they just finished a learning session with one of your specialist agents.
+
+You'll be given what they did and a brief summary. Use it to:
+1. Acknowledge what they just accomplished (briefly — one sentence)
+2. Ask what they want to do next
+
+Available training modes:
+${LEARNING_MODES.map((m) => `- ${m.label}: ${m.description}`).join("\n")}
+
+Rules:
+- 2-3 sentences max. Keep it warm and energetic.
+- Reference what they just did — show you were paying attention.
+- End with a question about what's next.
+- Plain text only. No formatting, no markdown, no JSON.`,
+);
+
 const GREETING_FALLBACK =
   "Welcome to the AI School. I'm Bilko — your AI training partner. What would you like to work on today?";
+
+const GREETING_RETURN_FALLBACK =
+  "Good session. I'm back. What do you want to try next?";
 
 // ── Bilko's patience ────────────────────────────────────
 const PATIENCE_THRESHOLD = 3;
 
+/** Build guidance from flow registry — lists available experiences dynamically */
+const menuFlowNames = flowRegistry
+  .filter((f) => f.location === "landing" && f.id !== "bilko-main")
+  .map((f) => f.name);
+const flowNameList = menuFlowNames.join(", ");
+
 const GUIDANCE_MESSAGES = [
   {
-    text: "Take your time. When you're ready, just say something like \"video\", \"interview\", or \"chat\" — or tap one on the right.",
-    speech: "Take your time. When you're ready, just say something like video, interview, or chat, or tap one on the right.",
+    text: "Take your time. When you're ready, just say the name of an experience — or tap one on the right.",
+    speech: "Take your time. When you're ready, just say the name of an experience, or tap one on the right.",
   },
   {
-    text: "Still here. You can pick a training mode by name, or just tap one of the options on the right side.",
-    speech: "Still here. You can pick a training mode by name, or just tap one of the options on the right side.",
+    text: "Still here. You can pick an experience by name, or just tap one of the options on the right side.",
+    speech: "Still here. You can pick an experience by name, or just tap one of the options on the right side.",
   },
   {
-    text: "No rush. The modes are: Video Discovery, AI Consultation, Recursive Interview, LinkedIn Strategist, Socratic Architect, and Work With Me. Say any of those or tap one.",
-    speech: "No rush. The modes are Video Discovery, AI Consultation, Recursive Interview, LinkedIn Strategist, Socratic Architect, and Work With Me. Say any of those, or tap one.",
+    text: `No rush. The options are: ${flowNameList}. Say any of those or tap one.`,
+    speech: `No rush. The options are ${flowNameList}. Say any of those, or tap one.`,
   },
 ];
 
@@ -150,7 +226,7 @@ function ExperienceBack({ onBack }: { onBack: () => void }) {
 // ── Main component (flow-driven) ─────────────────────────
 
 export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean }) {
-  const { pushMessage, clearMessages } = useFlowChat();
+  const { pushMessage, clearMessages, claimChat, releaseChat } = useFlowChat();
   const { trackStep, resolveUserInput } = useFlowExecution("bilko-main");
   const [, navigate] = useLocation();
   const { startListening, isListening } = useVoice();
@@ -159,17 +235,78 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
   const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
   const [greetingLoading, setGreetingLoading] = useState(false);
 
-  // ── Flow Step 1: Greeting — Bilko speaks first (C1) ──
+  // Track completed activity summaries for Bilko's recursive learning
+  const activityLogRef = useRef<Array<{ modeId: string; modeLabel: string; summary: string }>>([]);
+
+  // ── Greeting Node (HEAD) — reusable, context-aware ──
+  //
+  // This is the HEAD of the flow. It runs:
+  // - First invocation: no context → fresh welcome
+  // - After sub-flow exit: with summary → personalized return
+  //
+  // The greeting node can be "recycled" — called again from the
+  // end of any sub-flow, creating the recursive learning loop.
+
+  const runGreeting = useCallback(
+    async (context?: { modeLabel: string; summary: string }) => {
+      setGreetingLoading(true);
+
+      const isReturn = !!context;
+      const stepId = isReturn ? `greeting-return-${Date.now()}` : "greeting";
+      const systemPrompt = isReturn ? GREETING_RETURN_PROMPT : GREETING_FRESH_PROMPT;
+      const userMessage = isReturn
+        ? `The user just finished "${context.modeLabel}". Here's what happened: ${context.summary}. Welcome them back.`
+        : "A new visitor just arrived at the AI School.";
+      const fallback = isReturn ? GREETING_RETURN_FALLBACK : GREETING_FALLBACK;
+
+      try {
+        await trackStep(
+          stepId,
+          { context: context ?? { visitor: "new" }, isReturn },
+          async () => {
+            try {
+              const result = await chat(
+                [
+                  { role: "system", content: systemPrompt },
+                  { role: "user", content: userMessage },
+                ],
+                { temperature: 0.9 },
+              );
+              const text = result.data.trim();
+              pushMessage(OWNER_ID, {
+                speaker: "bilko",
+                text,
+                speech: text,
+              });
+              return { greeting: text };
+            } catch {
+              pushMessage(OWNER_ID, {
+                speaker: "bilko",
+                text: fallback,
+                speech: fallback,
+              });
+              return { greeting: fallback };
+            }
+          },
+        );
+      } finally {
+        setGreetingLoading(false);
+      }
+    },
+    [pushMessage, trackStep],
+  );
+
+  // ── Initial greeting on mount ──
   const didInit = useRef(false);
   useEffect(() => {
     if (didInit.current) return;
     didInit.current = true;
 
     if (skipWelcome) {
-      // Authenticated users — shorter opening, tracked as flow step
+      // Authenticated users — shorter opening
       trackStep("greeting", { skipWelcome: true }, async () => {
         const text = "What do you want to train today?";
-        pushMessage({
+        pushMessage(OWNER_ID, {
           speaker: "bilko",
           text,
           speech: text,
@@ -179,43 +316,23 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       return;
     }
 
-    // LLM-generated greeting — tracked as the greeting flow step
-    setGreetingLoading(true);
-    trackStep("greeting", { visitor: "new" }, async () => {
-      try {
-        const result = await chat(
-          [
-            { role: "system", content: GREETING_SYSTEM_PROMPT },
-            { role: "user", content: "A new visitor just arrived at the AI School." },
-          ],
-          { temperature: 0.9 },
-        );
-        const text = result.data.trim();
-        pushMessage({
-          speaker: "bilko",
-          text,
-          speech: text,
-        });
-        return { greeting: text };
-      } catch {
-        pushMessage({
-          speaker: "bilko",
-          text: GREETING_FALLBACK,
-          speech: GREETING_FALLBACK,
-        });
-        return { greeting: GREETING_FALLBACK };
-      }
-    }).finally(() => setGreetingLoading(false));
+    runGreeting();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Track completed activity summaries for Bilko's context-aware returns
-  const activityLogRef = useRef<Array<{ modeId: string; modeLabel: string; summary: string }>>([]);
-
   // ── Flow Step 2: Mode Selection — user picks from right panel ──
+  //
+  // handleChoice is the simplest possible hand-off:
+  // 1. Push user's choice to chat
+  // 2. System divider
+  // 3. Claim chat for sub-flow
+  // 4. Render sub-flow
+  //
+  // No agent identity mapping — the sub-flow handles its own persona.
+
   const handleChoice = useCallback(
     (choiceId: string) => {
-      // "Explore the Site" — open sidebar or redirect
+      // Special tiles — handle non-flow actions
       if (choiceId === "explore") {
         if (sidebarCtx) {
           sidebarCtx.setOpen(true);
@@ -225,9 +342,11 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         return;
       }
 
-      const mode = choiceId as LearningModeId;
-      const modeLabel = LEARNING_MODES.find((m) => m.id === mode)?.label;
-      const agent = getFlowAgent(mode);
+      // Resolve flow registry ID → short mode ID for component rendering
+      const mode = FLOW_TO_MODE[choiceId] ?? (choiceId as LearningModeId);
+      const flowDef = flowRegistry.find((f) => f.id === choiceId);
+      const modeLabel = flowDef?.name ?? LEARNING_MODES.find((m) => m.id === mode)?.label;
+      const agent = getFlowAgent(choiceId);
 
       // Auto-start mic on first interaction
       if (!isListening) {
@@ -237,91 +356,75 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       // Track as user-input flow step
       resolveUserInput("mode-selection", { selectedMode: mode, modeLabel });
 
-      // Push user's choice to chat (speaker: user)
-      pushMessage({
+      // Push user's choice to chat
+      pushMessage(OWNER_ID, {
         speaker: "user",
         text: modeLabel ?? choiceId,
       });
 
-      // ── Flow Step 3: Agent Handoff ──
-      // Bilko acknowledges the choice
-      const handoff = bilkoSays({ event: "choice-made", topic: modeLabel });
-      pushMessage({
-        speaker: "bilko",
-        text: agent
-          ? `${handoff.text} I'm handing you over to ${agent.name}.`
-          : handoff.text,
-        speech: agent
-          ? `${handoff.speech} I'm handing you over to ${agent.name}.`
-          : handoff.speech,
+      // System divider — starting sub-flow
+      pushMessage(OWNER_ID, {
+        speaker: "system",
+        text: `Starting ${modeLabel ?? mode}`,
       });
 
-      // System handoff message
-      if (agent) {
-        pushMessage({
-          speaker: "system",
-          text: `Bilko \u2192 ${agent.name}`,
-          handoff: {
-            fromName: "Bilko",
-            toName: agent.name,
-            toChatName: agent.chatName,
-          },
-        });
-      }
+      // Transfer chat ownership to the sub-flow.
+      // The sub-flow will push its own greeting as the new owner.
+      const subflowOwnerId = MODE_TO_OWNER[mode] ?? mode;
+      claimChat(subflowOwnerId);
 
-      // Specialist agent greets the user
-      if (agent) {
-        pushMessage({
-          speaker: "agent",
-          text: agent.greeting,
-          speech: agent.greetingSpeech,
-          agentName: agent.chatName,
-          agentDisplayName: agent.name,
-          agentAccent: agent.accentColor,
-        });
-      }
-
-      // Track handoff as transform step
-      resolveUserInput("agent-handoff", { agent, modeLabel });
-
-      // Activate the sub-flow
+      // Activate the sub-flow (renders in right panel)
       setSelectedMode(mode);
     },
-    [pushMessage, resolveUserInput, isListening, startListening, sidebarCtx],
+    [pushMessage, resolveUserInput, isListening, startListening, sidebarCtx, claimChat],
   );
 
+  // ── Sub-flow exit — recycle the greeting node ──
+  //
+  // Called when:
+  // 1. Sub-flow calls onComplete(summary) — natural completion
+  // 2. User clicks "Ask me something else" — manual exit
+  //
+  // In both cases: release chat → system divider → recycle greeting with summary
+
+  const handleSubflowExit = useCallback(
+    (exitSummary?: string) => {
+      const lastActivity = activityLogRef.current[activityLogRef.current.length - 1];
+      const summary = exitSummary ?? lastActivity?.summary;
+      const modeLabel = lastActivity?.modeLabel ?? "the session";
+
+      // Release chat ownership back to bilko-main
+      releaseChat();
+
+      // System return divider
+      pushMessage(OWNER_ID, {
+        speaker: "system",
+        text: "Returning to Bilko",
+      });
+
+      // Clear the selected mode — show mode grid again
+      setSelectedMode(null);
+
+      // Recycle the greeting node with context from the sub-flow.
+      // This is the recursive learning loop: sub-flow summary → greeting context.
+      if (summary) {
+        runGreeting({ modeLabel, summary });
+      } else {
+        runGreeting();
+      }
+    },
+    [pushMessage, releaseChat, runGreeting],
+  );
+
+  // handleBack is just handleSubflowExit triggered by the back button
   const handleBack = useCallback(() => {
     // Push user's back request to chat
-    pushMessage({
+    pushMessage(OWNER_ID, {
       speaker: "user",
       text: "Show me what else you've got",
     });
-
-    // System return message
-    pushMessage({
-      speaker: "system",
-      text: "Returning to Bilko",
-    });
-
-    // Bilko returns — context-aware based on past activities
-    const activities = activityLogRef.current;
-    const lastActivity = activities[activities.length - 1];
-    let returnText: string;
-
-    if (lastActivity) {
-      returnText = `Good session with ${lastActivity.modeLabel}. I'm back. What do you want to try next?`;
-    } else {
-      returnText = "I'm back. What else are you interested in?";
-    }
-
-    pushMessage({
-      speaker: "bilko",
-      text: returnText,
-      speech: returnText,
-    });
-
-    setSelectedMode(null);
-  }, [pushMessage]);
+    handleSubflowExit();
+  }, [pushMessage, handleSubflowExit]);
 
   // ── Conversation design: voice turn-taking ──
   const { onUserUtterance, screenOptions } = useConversationDesign();
@@ -332,8 +435,8 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
 
   useEffect(() => {
     const unsub = onUserUtterance((text: string) => {
-      // Push what the user said to the chat
-      pushMessage({ speaker: "user", text });
+      // Push what the user said to the chat (user messages always accepted)
+      pushMessage(OWNER_ID, { speaker: "user", text });
 
       // 1. Try to match against dynamic screen options
       const screenMatch = matchScreenOption(text, screenOptions);
@@ -346,18 +449,18 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
       // If a mode is already selected, the subflow owns the screen
       if (selectedMode) return;
 
-      // 2. Fall back to static learning mode matching
+      // 2. Fall back to flow registry voice trigger + name matching
       const lower = text.toLowerCase();
-      const matched = LEARNING_MODES.find((m) => {
-        const label = m.label.toLowerCase();
-        const id = m.id.toLowerCase();
-        const desc = m.description.toLowerCase();
-        return (
-          lower.includes(label) ||
-          lower.includes(id) ||
-          label.split(/\s+/).some((w) => w.length > 3 && lower.includes(w)) ||
-          desc.split(/\s+/).some((w) => w.length > 5 && lower.includes(w))
-        );
+      const menuFlows = flowRegistry.filter((f) => f.location === "landing" && f.id !== "bilko-main");
+      const matched = menuFlows.find((f) => {
+        // Match on voice triggers defined in the flow registry
+        if (f.voiceTriggers?.some((t) => lower.includes(t.toLowerCase()))) return true;
+        // Match on flow name
+        const name = f.name.toLowerCase();
+        if (lower.includes(name)) return true;
+        // Match on significant words in name
+        if (name.split(/\s+/).some((w) => w.length > 3 && lower.includes(w))) return true;
+        return false;
       });
 
       if (matched) {
@@ -366,12 +469,12 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         return;
       }
 
-      // No match — patience counter
+      // No match — patience counter (only when bilko-main owns the chat)
       unmatchedCountRef.current += 1;
 
       if (unmatchedCountRef.current >= PATIENCE_THRESHOLD) {
         const msg = GUIDANCE_MESSAGES[guidanceRoundRef.current % GUIDANCE_MESSAGES.length];
-        pushMessage({
+        pushMessage(OWNER_ID, {
           speaker: "bilko",
           text: msg.text,
           speech: msg.speech,
@@ -383,47 +486,34 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
     return unsub;
   }, [onUserUtterance, selectedMode, handleChoice, pushMessage, screenOptions]);
 
-  // Subscribe to FlowBus messages addressed to "main" conversation
+  // Subscribe to FlowBus messages addressed to "main" — for ACTIVITY LOGGING only.
+  // Subflows push their own chat messages directly. The bus is for metadata.
   const { subscribe } = useFlowBus();
   useEffect(() => {
     const unsub = subscribe("main", (msg) => {
       if (msg.type === "summary" && typeof msg.payload.summary === "string") {
         const fromAgent = getFlowAgent(msg.from);
-        const modeLabel = LEARNING_MODES.find((m) => m.id === msg.from)?.label ?? msg.from;
+        const modeLabel = flowRegistry.find((f) => f.id === msg.from)?.name
+          ?? LEARNING_MODES.find((m) => m.id === msg.from)?.label
+          ?? msg.from;
 
         activityLogRef.current.push({
           modeId: msg.from,
           modeLabel,
           summary: msg.payload.summary,
         });
-
-        if (fromAgent) {
-          pushMessage({
-            speaker: "agent",
-            text: msg.payload.summary,
-            speech: msg.payload.summary,
-            agentName: fromAgent.chatName,
-            agentDisplayName: fromAgent.name,
-            agentAccent: fromAgent.accentColor,
-          });
-        } else {
-          pushMessage({
-            speaker: "bilko",
-            text: msg.payload.summary,
-            speech: msg.payload.summary,
-          });
-        }
       }
     });
     return unsub;
-  }, [subscribe, pushMessage]);
+  }, [subscribe]);
 
   // Reset
   const handleReset = useCallback(() => {
+    releaseChat();
     clearMessages();
     navigate("/", { replace: true });
     window.location.reload();
-  }, [clearMessages, navigate]);
+  }, [clearMessages, navigate, releaseChat]);
 
   return (
     <div className="flex flex-1 overflow-hidden">
@@ -439,7 +529,10 @@ export function LandingContent({ skipWelcome = false }: { skipWelcome?: boolean 
         {selectedMode ? (
           <div className="flex-1 max-w-4xl mx-auto px-6 py-6 w-full">
             <ExperienceBack onBack={handleBack} />
-            <RightPanelContent mode={selectedMode} />
+            <RightPanelContent
+              mode={selectedMode}
+              onComplete={handleSubflowExit}
+            />
           </div>
         ) : (
           <ModeSelectionGrid onSelect={handleChoice} />
@@ -459,12 +552,12 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
       keywords: opt.description.split(/\s+/).filter((w) => w.length > 4),
       action: () => onSelect(opt.id),
     })),
-    {
-      id: EXPLORE_OPTION.id,
-      label: EXPLORE_OPTION.label,
-      keywords: ["explore", "browse", "navigate", "site", "menu"],
-      action: () => onSelect(EXPLORE_OPTION.id),
-    },
+    ...SPECIAL_TILES.map((tile) => ({
+      id: tile.id,
+      label: tile.label,
+      keywords: tile.description.split(/\s+/).filter((w) => w.length > 4),
+      action: () => onSelect(tile.id),
+    })),
   ],
     [onSelect],
   );
@@ -474,6 +567,7 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
     <div className="flex-1 flex items-center justify-center p-8">
       <div className="max-w-4xl w-full space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {/* Flow-registry-driven tiles */}
           {MODE_OPTIONS.map((option, i) => (
             <button
               key={option.id}
@@ -500,27 +594,30 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
               </div>
             </button>
           ))}
-          {/* Explore the Site */}
-          <button
-            onClick={() => onSelect(EXPLORE_OPTION.id)}
-            className="group text-left rounded-xl border-2 border-dashed border-primary/40 p-7 transition-all duration-300
-              hover:border-primary hover:bg-primary/5 hover:shadow-lg hover:scale-[1.03]
-              animate-in fade-in slide-in-from-bottom-4 duration-500"
-            style={{ animationDelay: `${MODE_OPTIONS.length * 60}ms` }}
-          >
-            <div className="flex flex-col gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
-                bg-primary/10 text-primary group-hover:bg-primary/20">
-                {EXPLORE_OPTION.icon}
+          {/* Special tiles (non-flow navigation) */}
+          {SPECIAL_TILES.map((tile, i) => (
+            <button
+              key={tile.id}
+              onClick={() => onSelect(tile.id)}
+              className="group text-left rounded-xl border-2 border-dashed border-primary/40 p-7 transition-all duration-300
+                hover:border-primary hover:bg-primary/5 hover:shadow-lg hover:scale-[1.03]
+                animate-in fade-in slide-in-from-bottom-4 duration-500"
+              style={{ animationDelay: `${(MODE_OPTIONS.length + i) * 60}ms` }}
+            >
+              <div className="flex flex-col gap-4">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
+                  bg-primary/10 text-primary group-hover:bg-primary/20">
+                  {tile.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base">{tile.label}</h3>
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                    {tile.description}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-base">{EXPLORE_OPTION.label}</h3>
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                  {EXPLORE_OPTION.description}
-                </p>
-              </div>
-            </div>
-          </button>
+            </button>
+          ))}
         </div>
       </div>
     </div>
@@ -529,15 +626,21 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
 
 // ── Right panel: subflow experience rendering ────────────
 
-function RightPanelContent({ mode }: { mode: LearningModeId }) {
+function RightPanelContent({
+  mode,
+  onComplete,
+}: {
+  mode: LearningModeId;
+  onComplete: (summary?: string) => void;
+}) {
   return (
     <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {mode === "video" && <VideoDiscoveryFlow />}
-      {mode === "chat" && <AiConsultationFlow />}
-      {mode === "interviewer" && <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} />}
-      {mode === "linkedin" && <LinkedInStrategistFlow />}
-      {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} />}
-      {mode === "work-with-me" && <WorkWithMeFlow />}
+      {mode === "video" && <VideoDiscoveryFlow onComplete={onComplete} />}
+      {mode === "chat" && <AiConsultationFlow onComplete={onComplete} />}
+      {mode === "interviewer" && <AiConsultationFlow config={RECURSIVE_INTERVIEWER_CONFIG} onComplete={onComplete} />}
+      {mode === "linkedin" && <LinkedInStrategistFlow onComplete={onComplete} />}
+      {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} onComplete={onComplete} />}
+      {mode === "work-with-me" && <WorkWithMeFlow onComplete={onComplete} />}
     </div>
   );
 }

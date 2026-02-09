@@ -50,72 +50,46 @@ const allFlows: FlowDefinition[] = [
       },
       {
         id: "mode-selection",
-        name: "User Selects Training Mode",
+        name: "User Selects Experience",
         type: "user-input",
+        subtype: "menu",
         description:
-          "User picks a learning mode from options shown in the main app area (NOT in the chat). Options include Video Discovery, AI Consultation, Recursive Interviewer, LinkedIn Strategist, Socratic Architect, and Work With Me. Each option has voice triggers for voice selection.",
+          "A menu-style input that dynamically presents all available Bilko-Flows from the flow registry (landing-location flows, excluding the root bilko-main flow) plus special navigation tiles (e.g., Explore the Site). Each menu item shows the flow's name, description, and icon. Supports click and voice selection.",
         inputSchema: [
           {
-            name: "modes",
+            name: "availableFlows",
             type: "array",
-            description: "Available learning modes with labels, descriptions, and voice triggers",
+            description: "Bilko-Flow entries from the flow registry (id, name, description, icon, voiceTriggers), filtered by location",
+          },
+          {
+            name: "specialTiles",
+            type: "array",
+            description: "Additional navigation tiles beyond flows (e.g., Explore the Site)",
           },
         ],
         outputSchema: [
           {
-            name: "selectedMode",
+            name: "selectedFlowId",
             type: "string",
-            description: "The learning mode ID the user selected",
+            description: "The flow ID or special tile ID the user selected",
           },
         ],
         dependsOn: ["greeting"],
       },
       {
-        id: "agent-handoff",
-        name: "Hand Off to Specialist Agent",
-        type: "transform",
+        id: "run-subflow",
+        name: "Run Sub-Flow",
+        type: "display",
         description:
-          "Maps the selected mode to its specialist agent identity (name, chat handle, greeting, accent color). Pushes handoff messages to the chat: Bilko acknowledges, system shows handoff, and the specialist agent greets the user.",
+          "Starts the selected sub-flow by ID. The sub-flow is autonomous — it claims the chat, pushes its own agent greeting and messages, and manages its own persona identity. When the sub-flow calls onComplete(summary), ownership returns to bilko-main and the greeting node is recycled with the exit summary for recursive personalization.",
         inputSchema: [
           {
             name: "selectedMode",
             type: "string",
-            description: "The chosen learning mode ID",
-          },
-        ],
-        outputSchema: [
-          {
-            name: "agent",
-            type: "object",
-            description: "The specialist agent identity (name, chatName, greeting, accentColor)",
-          },
-          {
-            name: "modeLabel",
-            type: "string",
-            description: "Human-readable mode label",
+            description: "Which sub-flow to render (maps to a sub-flow ID)",
           },
         ],
         dependsOn: ["mode-selection"],
-      },
-      {
-        id: "run-subflow",
-        name: "Execute Sub-Flow",
-        type: "display",
-        description:
-          "The selected sub-flow (video-discovery, ai-consultation, etc.) runs in the delivery surface. The sub-flow can push messages to the chat via the FlowChat channel. When the sub-flow completes, a summary is pushed to the chat.",
-        inputSchema: [
-          {
-            name: "selectedMode",
-            type: "string",
-            description: "Which sub-flow to render",
-          },
-          {
-            name: "agent",
-            type: "object",
-            description: "The specialist agent running the sub-flow",
-          },
-        ],
-        dependsOn: ["agent-handoff"],
       },
     ],
   },
@@ -130,6 +104,8 @@ const allFlows: FlowDefinition[] = [
     location: "landing",
     componentPath: "client/src/components/work-with-me-flow.tsx",
     tags: ["landing", "guidance", "web", "assistant", "wireframe", "gemini"],
+    icon: "Handshake",
+    voiceTriggers: ["work with me", "guide", "help me", "walk me through", "assist", "task"],
     output: {
       name: "completedSteps",
       type: "object",
@@ -322,6 +298,8 @@ const allFlows: FlowDefinition[] = [
     location: "landing",
     componentPath: "client/src/components/video-discovery-flow.tsx",
     tags: ["landing", "learning", "video", "youtube", "gemini"],
+    icon: "Play",
+    voiceTriggers: ["video", "watch", "tutorial", "show me"],
     output: {
       name: "selectedVideo",
       type: "object",
@@ -539,6 +517,8 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
     tags: ["landing", "ai", "consultation", "recommendations", "gemini"],
+    icon: "MessageCircle",
+    voiceTriggers: ["chat", "talk", "consult", "leverage", "consultation", "advice"],
     output: {
       name: "recommendations",
       type: "object",
@@ -691,6 +671,8 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
     tags: ["landing", "ai", "strategy", "recursive", "framework", "gemini"],
+    icon: "Lightbulb",
+    voiceTriggers: ["interviewer", "recursive", "deep dive", "strategy"],
     output: {
       name: "insights",
       type: "object",
@@ -873,6 +855,8 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
     tags: ["landing", "socratic", "configurable", "template", "interview", "gemini"],
+    icon: "GraduationCap",
+    voiceTriggers: ["socratic", "architect", "custom", "configure", "expert"],
     output: {
       name: "findings",
       type: "object",
