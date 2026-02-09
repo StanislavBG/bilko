@@ -12,6 +12,114 @@ import type { FlowDefinition } from "./types";
 import { validateRegistry } from "./validate";
 
 const allFlows: FlowDefinition[] = [
+  // ── Bilko Main — The landing page experience as a flow ────
+  {
+    id: "bilko-main",
+    name: "Bilko Main Flow",
+    description:
+      "The main landing experience — Bilko greets users and routes them to specialist sub-flows. This is the root flow that governs the entire conversational landing page.",
+    version: "1.0.0",
+    location: "landing",
+    componentPath: "client/src/pages/landing.tsx",
+    tags: ["landing", "main", "greeting", "routing", "root"],
+    output: {
+      name: "selectedExperience",
+      type: "object",
+      description: "The sub-flow the user chose and its execution result",
+    },
+    steps: [
+      {
+        id: "greeting",
+        name: "Greetings from Bilko",
+        type: "llm",
+        description:
+          "Bilko generates a warm, natural opening greeting for the user. The greeting is pushed to the chat with TTS. This is always the first step — Bilko speaks first (C1).",
+        prompt:
+          "You are greeting a new visitor to the AI School. Generate a warm, natural opening. Welcome them, introduce yourself briefly as Bilko their AI training partner, and ask how they'd like to learn today. 2-3 sentences max. Plain text only.",
+        userMessage: "A new visitor just arrived at the AI School.",
+        model: "gemini-2.5-flash",
+        inputSchema: [],
+        outputSchema: [
+          {
+            name: "greeting",
+            type: "string",
+            description: "Bilko's welcome message — 2-3 sentences, conversational",
+          },
+        ],
+        dependsOn: [],
+      },
+      {
+        id: "mode-selection",
+        name: "User Selects Training Mode",
+        type: "user-input",
+        description:
+          "User picks a learning mode from options shown in the main app area (NOT in the chat). Options include Video Discovery, AI Consultation, Recursive Interviewer, LinkedIn Strategist, Socratic Architect, and Work With Me. Each option has voice triggers for voice selection.",
+        inputSchema: [
+          {
+            name: "modes",
+            type: "array",
+            description: "Available learning modes with labels, descriptions, and voice triggers",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "selectedMode",
+            type: "string",
+            description: "The learning mode ID the user selected",
+          },
+        ],
+        dependsOn: ["greeting"],
+      },
+      {
+        id: "agent-handoff",
+        name: "Hand Off to Specialist Agent",
+        type: "transform",
+        description:
+          "Maps the selected mode to its specialist agent identity (name, chat handle, greeting, accent color). Pushes handoff messages to the chat: Bilko acknowledges, system shows handoff, and the specialist agent greets the user.",
+        inputSchema: [
+          {
+            name: "selectedMode",
+            type: "string",
+            description: "The chosen learning mode ID",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "agent",
+            type: "object",
+            description: "The specialist agent identity (name, chatName, greeting, accentColor)",
+          },
+          {
+            name: "modeLabel",
+            type: "string",
+            description: "Human-readable mode label",
+          },
+        ],
+        dependsOn: ["mode-selection"],
+      },
+      {
+        id: "run-subflow",
+        name: "Execute Sub-Flow",
+        type: "display",
+        description:
+          "The selected sub-flow (video-discovery, ai-consultation, etc.) runs in the delivery surface. The sub-flow can push messages to the chat via the FlowChat channel. When the sub-flow completes, a summary is pushed to the chat.",
+        inputSchema: [
+          {
+            name: "selectedMode",
+            type: "string",
+            description: "Which sub-flow to render",
+          },
+          {
+            name: "agent",
+            type: "object",
+            description: "The specialist agent running the sub-flow",
+          },
+        ],
+        dependsOn: ["agent-handoff"],
+      },
+    ],
+  },
+
   // ── Work With Me — Guided web task assistant ─────────────
   {
     id: "work-with-me",
