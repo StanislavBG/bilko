@@ -105,4 +105,143 @@ router.post("/validate-videos", async (req: Request, res: Response) => {
   }
 });
 
+// ── YouTube Data API search ──────────────────────────────────────────
+
+function formatViewCount(count: string): string {
+  const n = parseInt(count, 10);
+  if (isNaN(n)) return count;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return count;
+}
+
+router.post("/youtube-search", async (req: Request, res: Response) => {
+  try {
+    const { queries } = req.body;
+    if (!Array.isArray(queries) || queries.length === 0) {
+      res.status(400).json({ error: "queries array is required" });
+      return;
+    }
+
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    if (!apiKey) {
+      res.status(500).json({ error: "YOUTUBE_API_KEY not configured" });
+      return;
+    }
+
+    // Search YouTube for each query (max 5 results per query)
+    const allVideoIds: string[] = [];
+    const searchSnippets: Record<string, { title: string; channelTitle: string; description: string; thumbnailUrl: string; searchQuery: string }> = {};
+
+    await Promise.all(
+      queries.slice(0, 5).map(async (query: string) => {
+        try {
+          const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
+          searchUrl.searchParams.set("part", "snippet");
+          searchUrl.searchParams.set("q", query);
+          searchUrl.searchParams.set("type", "video");
+          searchUrl.searchParams.set("maxResults", "5");
+          searchUrl.searchParams.set("order", "relevance");
+          searchUrl.searchParams.set("videoEmbeddable", "true");
+          searchUrl.searchParams.set("key", apiKey);
+
+          const resp = await fetch(searchUrl.toString(), { signal: AbortSignal.timeout(10000) });
+          if (!resp.ok) {
+            console.warn(`[youtube-search] Search failed for "${query}": ${resp.status}`);
+            return;
+          }
+
+          const data = await resp.json() as {
+            items?: Array<{
+              id: { videoId?: string };
+              snippet: { title: string; channelTitle: string; description: string; thumbnails?: { medium?: { url: string } } };
+            }>;
+          };
+
+          for (const item of data.items ?? []) {
+            const videoId = item.id?.videoId;
+            if (!videoId || searchSnippets[videoId]) continue;
+            allVideoIds.push(videoId);
+            searchSnippets[videoId] = {
+              title: item.snippet.title,
+              channelTitle: item.snippet.channelTitle,
+              description: item.snippet.description,
+              thumbnailUrl: item.snippet.thumbnails?.medium?.url ?? "",
+              searchQuery: query,
+            };
+          }
+        } catch (err) {
+          console.warn(`[youtube-search] Error searching "${query}":`, err instanceof Error ? err.message : err);
+        }
+      })
+    );
+
+    if (allVideoIds.length === 0) {
+      console.warn("[youtube-search] No videos found across all queries");
+      res.json({ videos: [] });
+      return;
+    }
+
+    // Fetch statistics for all found videos in one batch
+    const uniqueIds = [...new Set(allVideoIds)];
+    const statsUrl = new URL("https://www.googleapis.com/youtube/v3/videos");
+    statsUrl.searchParams.set("part", "statistics");
+    statsUrl.searchParams.set("id", uniqueIds.slice(0, 20).join(","));
+    statsUrl.searchParams.set("key", apiKey);
+
+    const statsResp = await fetch(statsUrl.toString(), { signal: AbortSignal.timeout(10000) });
+    const statsMap: Record<string, { viewCount: string; likeCount: string; commentCount: string }> = {};
+
+    if (statsResp.ok) {
+      const statsData = await statsResp.json() as {
+        items?: Array<{
+          id: string;
+          statistics: { viewCount?: string; likeCount?: string; commentCount?: string };
+        }>;
+      };
+      for (const item of statsData.items ?? []) {
+        statsMap[item.id] = {
+          viewCount: item.statistics.viewCount ?? "0",
+          likeCount: item.statistics.likeCount ?? "0",
+          commentCount: item.statistics.commentCount ?? "0",
+        };
+      }
+    }
+
+    // Build response — sort by view count descending, deduplicated
+    const videos = uniqueIds
+      .map((videoId) => {
+        const snippet = searchSnippets[videoId];
+        const stats = statsMap[videoId];
+        if (!snippet) return null;
+        return {
+          title: snippet.title,
+          creator: snippet.channelTitle,
+          description: snippet.description.slice(0, 120),
+          url: `https://www.youtube.com/watch?v=${videoId}`,
+          embedId: videoId,
+          whyRecommended: `Found for: ${snippet.searchQuery}`,
+          views: stats ? formatViewCount(stats.viewCount) : "",
+          likes: stats ? formatViewCount(stats.likeCount) : "",
+          comments: stats ? formatViewCount(stats.commentCount) : "",
+          thumbnailUrl: snippet.thumbnailUrl,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => {
+        // Sort by raw view count descending
+        const aViews = parseInt(statsMap[a!.embedId]?.viewCount ?? "0", 10);
+        const bViews = parseInt(statsMap[b!.embedId]?.viewCount ?? "0", 10);
+        return bViews - aViews;
+      })
+      .slice(0, 10);
+
+    console.info(`[youtube-search] Found ${videos.length} videos from ${queries.length} queries`);
+    res.json({ videos });
+  } catch (error) {
+    console.error("YouTube search error:", error);
+    res.status(500).json({ error: "Failed to search YouTube" });
+  }
+});
+
 export default router;

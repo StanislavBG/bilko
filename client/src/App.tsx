@@ -12,9 +12,9 @@ import { ConversationDesignProvider } from "@/contexts/conversation-design-conte
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
-import Landing, { LandingContent } from "@/pages/landing";
-import { ConversationProvider } from "@/contexts/conversation-context";
+import { LandingContent } from "@/pages/landing";
 import { FlowBusProvider } from "@/contexts/flow-bus-context";
+import { FlowChatProvider } from "@/lib/flow-engine";
 import Projects from "@/pages/projects";
 import AgenticWorkflows from "@/pages/agentic-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
@@ -22,6 +22,7 @@ import RulesExplorer from "@/pages/rules-explorer";
 import Academy from "@/pages/academy";
 import FlowExplorer from "@/pages/flow-explorer";
 import FlowDetail from "@/pages/flow-detail";
+import BilkosWay from "@/pages/bilkos-way";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DebugProvider } from "@/contexts/debug-context";
@@ -42,14 +43,37 @@ function AuthenticatedApp() {
     );
   }
 
-  // All routes require authentication
+  // Landing page IS the Home App — same layout for both auth and unauth.
+  // Unauth: sidebar starts closed, full greeting.
+  // Auth: sidebar starts open, skipWelcome greeting.
   return (
     <Switch>
-      {/* Everything goes through the auth gate */}
       <Route>
         {() => {
           if (!isAuthenticated || !user) {
-            return <Landing />;
+            // Unauth: Landing = Home App without nav initially.
+            // SidebarProvider(defaultOpen=false) so "Explore the Site" can open it.
+            return (
+              <ViewModeProvider>
+                <SidebarProvider defaultOpen={false}>
+                  <NavigationProvider>
+                    <div className="flex flex-col h-screen w-full">
+                      <GlobalHeader variant="landing" />
+                      <div className="flex flex-1 overflow-hidden pt-14">
+                        <AppSidebar />
+                        <main className="flex-1 flex overflow-hidden">
+                          <FlowBusProvider>
+                            <FlowChatProvider voiceDefaultOn>
+                              <LandingContent />
+                            </FlowChatProvider>
+                          </FlowBusProvider>
+                        </main>
+                      </div>
+                    </div>
+                  </NavigationProvider>
+                </SidebarProvider>
+              </ViewModeProvider>
+            );
           }
 
           return (
@@ -64,9 +88,9 @@ function AuthenticatedApp() {
                         <Switch>
                           <Route path="/">
                             <FlowBusProvider>
-                              <ConversationProvider>
+                              <FlowChatProvider voiceDefaultOn>
                                 <LandingContent skipWelcome />
-                              </ConversationProvider>
+                              </FlowChatProvider>
                             </FlowBusProvider>
                           </Route>
                           <Route path="/academy" component={Academy} />
@@ -75,6 +99,7 @@ function AuthenticatedApp() {
                           <Route path="/workflows" component={AgenticWorkflows} />
                           <Route path="/memory" component={MemoryExplorer} />
                           <Route path="/rules" component={RulesExplorer} />
+                          <Route path="/bilkos-way" component={BilkosWay} />
                           <Route path="/flows/:flowId" component={FlowDetail} />
                           <Route path="/flows" component={FlowExplorer} />
                           <Route component={NotFound} />

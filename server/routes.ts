@@ -41,7 +41,7 @@ export async function registerRoutes(
   // LLM proxy routes for PromptPlayground
   app.use("/api/llm", llmRoutes);
 
-  // TTS routes (OpenAI Text-to-Speech)
+  // TTS routes (Gemini Text-to-Speech)
   app.use("/api/tts", ttsRoutes);
 
   // Web proxy routes for Work With Me flow (page fetching + structure extraction)

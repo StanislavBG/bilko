@@ -1439,7 +1439,7 @@ Coming soon.`,
 // ============================================
 // BILKO'S WAY TRACK - Meta-Knowledge
 // ============================================
-const bilkosWayLevels: AcademyLevel[] = [
+export const bilkosWayLevels: AcademyLevel[] = [
   // ── Guide 1: Environment Setup ─────────────────────────
   {
     id: "bilkos-way-level-0",

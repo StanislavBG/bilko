@@ -72,6 +72,8 @@ function RuleDetailPanel({
 }) {
   const { data: rule, isLoading, error } = useQuery<RuleContent>({
     queryKey: ["/api/rules", ruleId],
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) {
@@ -197,6 +199,8 @@ function CatalogView({
 
   const { data: catalog, isLoading } = useQuery<RulesCatalog>({
     queryKey: ["/api/rules"],
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) {

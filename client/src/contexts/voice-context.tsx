@@ -4,6 +4,9 @@
  * First-class voice abstraction for the entire site.
  * Manages a single SpeechRecognition instance, persists mic preference,
  * and lets any page register/unregister voice command handlers.
+ *
+ * TTS: Gemini TTS exclusively via /api/tts/speak (no browser fallback).
+ * STT: Web Speech API (SpeechRecognition).
  */
 
 import {
@@ -22,9 +25,6 @@ import {
 } from "@/lib/bilko-persona/pacing";
 
 const VOICE_STORAGE_KEY = "bilko-voice-enabled";
-
-/** TTS backend: "openai" (server-side, high quality) or "browser" (Web Speech API fallback) */
-type TTSBackend = "openai" | "browser";
 
 interface VoiceHandler {
   options: readonly VoiceTriggerOption[];
@@ -49,13 +49,11 @@ interface VoiceContextType {
   transcript: string;
   /** Accumulated session transcript log (all final results) */
   transcriptLog: TranscriptEntry[];
-  /** Which TTS backend is active */
-  ttsBackend: TTSBackend;
   toggleListening: () => Promise<void>;
   startListening: () => Promise<void>;
   stopListening: () => void;
-  /** Bilko speaks — uses OpenAI TTS with Web Speech API fallback */
-  speak: (text: string) => Promise<void>;
+  /** Bilko speaks — uses Gemini TTS exclusively. Optional voice param selects Gemini voice. */
+  speak: (text: string, voice?: string) => Promise<void>;
   stopSpeaking: () => void;
   registerHandler: (id: string, handler: VoiceHandler) => () => void;
   clearTranscriptLog: () => void;
@@ -86,7 +84,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const [transcript, setTranscript] = useState("");
   const [transcriptLog, setTranscriptLog] = useState<TranscriptEntry[]>([]);
   const [ttsUnlocked, setTtsUnlocked] = useState(false);
-  const [ttsBackend, setTtsBackend] = useState<TTSBackend>("browser");
+  const [ttsSupported, setTtsSupported] = useState(false);
 
   const recognitionRef = useRef<any>(null);
   const handlersRef = useRef<Map<string, VoiceHandler>>(new Map());
@@ -94,17 +92,16 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const permissionDeniedRef = useRef(false);
   const isMutedRef = useRef(false);
   const autoStartedRef = useRef(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const selectedVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const ttsUnlockedRef = useRef(false);
+  const ttsSupportedRef = useRef(false);
   const pendingSpeakRef = useRef<string | null>(null);
+  const pendingSpeakVoiceRef = useRef<string | undefined>(undefined);
   const pendingSpeakResolveRef = useRef<(() => void) | null>(null);
 
-  // OpenAI TTS refs
-  const ttsBackendRef = useRef<TTSBackend>("browser");
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const currentAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
-  const doSpeakRef = useRef<(text: string) => Promise<void>>(async () => {});
+  // Gemini TTS refs
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const doSpeakRef = useRef<(text: string, voice?: string) => Promise<void>>(async () => {});
+  const startListeningRef = useRef<() => Promise<void>>(async () => {});
 
   // End-of-speech detection
   const utteranceEndCallbacksRef = useRef<Set<(text: string) => void>>(new Set());
@@ -113,7 +110,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const SILENCE_TIMEOUT_MS = PACING_SILENCE_TIMEOUT_MS;
 
   const isSupported = getSpeechRecognition() !== null;
-  const ttsSupported = typeof window !== "undefined" && "speechSynthesis" in window;
 
   // ── Check if OpenAI TTS is available on mount ──
   useEffect(() => {
@@ -121,22 +117,21 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       .then((r) => r.json())
       .then((data) => {
         if (data.available) {
-          console.info("[TTS] OpenAI TTS available — using server-side TTS");
-          ttsBackendRef.current = "openai";
-          setTtsBackend("openai");
+          console.info("[TTS] Gemini TTS available — using server-side TTS");
+          ttsSupportedRef.current = true;
+          setTtsSupported(true);
         } else {
-          console.info("[TTS] OpenAI TTS unavailable — falling back to Web Speech API");
+          console.warn("[TTS] Gemini TTS unavailable — GEMINI_API_KEY not configured");
         }
       })
       .catch(() => {
-        console.info("[TTS] Could not reach TTS status endpoint — using Web Speech API");
+        console.warn("[TTS] Could not reach TTS status endpoint");
       });
   }, []);
 
   // ── TTS auto-unlock ──
-  // For OpenAI TTS we need an AudioContext, which requires a user gesture.
-  // For Web Speech API we need the speechSynthesis unlock dance.
-  // In both cases, first user interaction unlocks audio.
+  // Audio playback requires a user gesture (autoplay policy).
+  // First user interaction marks TTS as unlocked.
   useEffect(() => {
     if (ttsUnlockedRef.current) return;
 
@@ -144,76 +139,33 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       if (ttsUnlockedRef.current) return;
       ttsUnlockedRef.current = true;
       setTtsUnlocked(true);
-
-      // Ensure AudioContext is created/resumed for OpenAI TTS playback
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
-      if (audioContextRef.current.state === "suspended") {
-        audioContextRef.current.resume();
-      }
     };
 
     const flushPending = () => {
       if (pendingSpeakRef.current !== null) {
         const text = pendingSpeakRef.current;
+        const voice = pendingSpeakVoiceRef.current;
         const resolve = pendingSpeakResolveRef.current;
         pendingSpeakRef.current = null;
+        pendingSpeakVoiceRef.current = undefined;
         pendingSpeakResolveRef.current = null;
         setTimeout(() => {
-          doSpeak(text).then(() => resolve?.());
+          doSpeakRef.current(text, voice).then(() => resolve?.());
         }, 100);
       }
     };
 
-    // Proactive auto-unlock: attempt silent audio to check if browser allows auto-play.
-    if (ttsSupported) {
-      try {
-        const probe = new SpeechSynthesisUtterance("");
-        probe.volume = 0;
-        probe.lang = "en-US";
-
-        probe.onend = () => {
-          markUnlocked();
-          flushPending();
-          document.removeEventListener("click", gestureUnlock, true);
-          document.removeEventListener("touchstart", gestureUnlock, true);
-          document.removeEventListener("keydown", gestureUnlock, true);
-        };
-        probe.onerror = () => {
-          // Browser blocked auto-play — gesture listeners will handle it
-        };
-
-        window.speechSynthesis.speak(probe);
-        setTimeout(() => {
-          window.speechSynthesis.cancel();
-        }, 50);
-      } catch (e) {
-        // speechSynthesis not available — gesture listeners will handle it
-      }
-    }
-
-    // Fallback: unlock on first user interaction
+    // Unlock on first user interaction
     const gestureUnlock = () => {
       if (ttsUnlockedRef.current) return;
       markUnlocked();
-
-      // Also warm up Web Speech API as fallback
-      if (ttsSupported) {
-        try {
-          const warmUp = new SpeechSynthesisUtterance("");
-          warmUp.volume = 0;
-          warmUp.lang = "en-US";
-          window.speechSynthesis.speak(warmUp);
-          setTimeout(() => {
-            window.speechSynthesis.cancel();
-          }, 50);
-        } catch (e) {
-          console.warn("[TTS] warm-up failed:", e);
-        }
-      }
-
       flushPending();
+
+      // Auto-start mic on first user gesture if not already listening
+      // and user hasn't explicitly disabled voice
+      if (!isListeningRef.current && localStorage.getItem(VOICE_STORAGE_KEY) !== "false") {
+        setTimeout(() => startListeningRef.current(), 300);
+      }
 
       document.removeEventListener("click", gestureUnlock, true);
       document.removeEventListener("touchstart", gestureUnlock, true);
@@ -229,32 +181,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       document.removeEventListener("touchstart", gestureUnlock, true);
       document.removeEventListener("keydown", gestureUnlock, true);
     };
-  }, [ttsSupported]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Voice loading (Chrome loads voices asynchronously) ──
-  useEffect(() => {
-    if (!ttsSupported) return;
-    const synth = window.speechSynthesis;
-    const pickVoice = () => {
-      const voices = synth.getVoices();
-      if (voices.length > 0) {
-        const preferred =
-          voices.find((v) => v.lang === "en-US" && v.localService) ||
-          voices.find((v) => v.lang === "en-US") ||
-          voices.find((v) => v.lang.startsWith("en")) ||
-          voices[0];
-        selectedVoiceRef.current = preferred;
-        console.info(`[TTS] Voice selected: "${preferred.name}" (${preferred.lang}, local=${preferred.localService})`);
-      } else {
-        console.info("[TTS] No voices available yet");
-      }
-    };
-    pickVoice();
-    if (typeof synth.addEventListener === "function") {
-      synth.addEventListener("voiceschanged", pickVoice);
-      return () => synth.removeEventListener("voiceschanged", pickVoice);
-    }
-  }, [ttsSupported]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keep refs in sync with state so event handlers see current values
   useEffect(() => {
@@ -413,21 +340,16 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       ttsUnlockedRef.current = true;
       setTtsUnlocked(true);
 
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
-      if (audioContextRef.current.state === "suspended") {
-        audioContextRef.current.resume();
-      }
-
       // Flush pending speak (e.g. Bilko's welcome message queued before unlock)
       if (pendingSpeakRef.current !== null) {
         const text = pendingSpeakRef.current;
+        const voice = pendingSpeakVoiceRef.current;
         const resolve = pendingSpeakResolveRef.current;
         pendingSpeakRef.current = null;
+        pendingSpeakVoiceRef.current = undefined;
         pendingSpeakResolveRef.current = null;
         setTimeout(() => {
-          doSpeakRef.current(text).then(() => resolve?.());
+          doSpeakRef.current(text, voice).then(() => resolve?.());
         }, 100);
       }
     }
@@ -462,10 +384,11 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     }
   }, [isListening, startListening, stopListening]);
 
-  // ── OpenAI TTS: fetch audio from server and play via Web Audio API ──
-  const doSpeakOpenAI = useCallback(async (text: string): Promise<void> => {
+  // ── Gemini TTS: fetch audio from server and play via Audio element ──
+  const doSpeak = useCallback(async (text: string, voice?: string): Promise<void> => {
     const preview = text.length > 60 ? text.slice(0, 60) + "..." : text;
-    console.info(`[TTS:OpenAI] Speaking: "${preview}" (${text.split(/\s+/).length} words)`);
+    const selectedVoice = voice || "Kore";
+    console.info(`[TTS:Gemini] Speaking (${selectedVoice}): "${preview}" (${text.split(/\s+/).length} words)`);
 
     setIsMuted(true);
     setIsSpeaking(true);
@@ -474,7 +397,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       const response = await fetch("/api/tts/speak", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, voice: "onyx" }),
+        body: JSON.stringify({ text, voice: selectedVoice }),
       });
 
       if (!response.ok) {
@@ -482,187 +405,102 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         throw new Error(errBody.error || `TTS request failed: ${response.status}`);
       }
 
+      const contentType = response.headers.get("Content-Type") || "audio/wav";
       const arrayBuffer = await response.arrayBuffer();
+      console.info(`[TTS:Gemini] Received ${arrayBuffer.byteLength} bytes (${contentType})`);
 
-      // Create/resume AudioContext
-      if (!audioContextRef.current) {
-        audioContextRef.current = new AudioContext();
-      }
-      const ctx = audioContextRef.current;
-      if (ctx.state === "suspended") {
-        await ctx.resume();
+      if (arrayBuffer.byteLength === 0) {
+        throw new Error("Received empty audio response");
       }
 
-      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      currentAudioSourceRef.current = source;
+      // Play via Audio element — more robust format support than Web Audio decodeAudioData
+      const blob = new Blob([arrayBuffer], { type: contentType });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      currentAudioRef.current = audio;
 
       return new Promise<void>((resolve) => {
-        source.onended = () => {
-          console.info("[TTS:OpenAI] Playback complete");
-          currentAudioSourceRef.current = null;
+        const cleanup = () => {
+          URL.revokeObjectURL(url);
+          if (currentAudioRef.current === audio) {
+            currentAudioRef.current = null;
+          }
           setIsSpeaking(false);
           setTimeout(() => setIsMuted(false), POST_TTS_BUFFER_MS);
           resolve();
         };
-        source.start(0);
+
+        audio.onended = () => {
+          console.info("[TTS:Gemini] Playback complete");
+          cleanup();
+        };
+
+        audio.onerror = () => {
+          console.error("[TTS:Gemini] Audio element playback error");
+          cleanup();
+        };
+
+        audio.play().catch((playError) => {
+          console.error("[TTS:Gemini] play() rejected:", playError);
+          cleanup();
+        });
       });
     } catch (error) {
-      console.warn("[TTS:OpenAI] Error, falling back to Web Speech API:", error);
+      console.error("[TTS:Gemini] Error:", error);
       setIsSpeaking(false);
       setIsMuted(false);
-      // Fall back to browser TTS for this utterance
-      return doSpeakBrowser(text);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // ── Browser TTS: Web Speech API (fallback) ──
-  // Kept as fallback when OpenAI TTS is unavailable or fails.
-  const doSpeakBrowser = useCallback(async (text: string): Promise<void> => {
-    if (!ttsSupported) {
-      console.info("[TTS:Browser] speechSynthesis not supported");
-      return;
-    }
-
-    const preview = text.length > 60 ? text.slice(0, 60) + "..." : text;
-    console.info(`[TTS:Browser] Speaking: "${preview}" (${text.split(/\s+/).length} words)`);
-
-    // Cancel any in-progress speech
-    window.speechSynthesis.cancel();
-    await new Promise((r) => setTimeout(r, 50));
-
-    // Wait for voices if needed
-    const synth = window.speechSynthesis;
-    if (synth.getVoices().length === 0 && typeof synth.addEventListener === "function") {
-      await new Promise<void>((resolve) => {
-        const onLoad = () => {
-          synth.removeEventListener("voiceschanged", onLoad);
-          resolve();
-        };
-        synth.addEventListener("voiceschanged", onLoad);
-        setTimeout(() => resolve(), 2000);
-      });
-    }
-
-    setIsMuted(true);
-
-    return new Promise<void>((resolve) => {
-      let resolved = false;
-      const done = () => {
-        if (resolved) return;
-        resolved = true;
-        clearInterval(resumeInterval);
-        clearTimeout(fallbackTimeout);
-        setIsSpeaking(false);
-        setTimeout(() => setIsMuted(false), POST_TTS_BUFFER_MS);
-        resolve();
-      };
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-      utterance.lang = "en-US";
-      if (selectedVoiceRef.current) {
-        utterance.voice = selectedVoiceRef.current;
-      }
-
-      utterance.onstart = () => {
-        setIsSpeaking(true);
-      };
-      utterance.onend = () => {
-        console.info("[TTS:Browser] onend fired");
-        done();
-      };
-      utterance.onerror = (e) => {
-        console.warn("[TTS:Browser] onerror:", e.error || e);
-        setIsSpeaking(false);
-        setIsMuted(false);
-        if (!resolved) {
-          resolved = true;
-          clearInterval(resumeInterval);
-          clearTimeout(fallbackTimeout);
-        }
-        resolve();
-      };
-
-      utteranceRef.current = utterance;
-
-      // Chrome workaround: poke speechSynthesis to prevent silent pause
-      const resumeInterval = setInterval(() => {
-        if (window.speechSynthesis.speaking) {
-          window.speechSynthesis.resume();
-        }
-      }, 5000);
-
-      // Fallback timeout
-      const wordCount = text.split(/\s+/).length;
-      const estimatedMs = Math.max((wordCount / 150) * 60 * 1000, 3000) + 2000;
-      const fallbackTimeout = setTimeout(() => {
-        if (!resolved) {
-          console.warn("[TTS:Browser] onend never fired — resolving via timeout");
-          done();
-        }
-      }, estimatedMs);
-
-      window.speechSynthesis.speak(utterance);
-    });
-  }, [ttsSupported]);
-
-  // ── TTS core: route to the active backend ──
-  const doSpeak = useCallback(async (text: string) => {
-    if (ttsBackendRef.current === "openai") {
-      return doSpeakOpenAI(text);
-    }
-    return doSpeakBrowser(text);
-  }, [doSpeakOpenAI, doSpeakBrowser]);
-
-  // Keep ref in sync so startListening can call doSpeak without circular deps
+  // Keep refs in sync so gesture handlers can call these without circular deps
   useEffect(() => {
     doSpeakRef.current = doSpeak;
   }, [doSpeak]);
+  useEffect(() => {
+    startListeningRef.current = startListening;
+  }, [startListening]);
 
   // ── Public speak: gates on TTS unlock, queues if needed ──
   // If TTS hasn't been unlocked by a user gesture yet, we queue the
   // request and play it as soon as the user clicks/taps anything.
-  const speak = useCallback(async (text: string) => {
-    if (!ttsSupported) {
-      console.info("[TTS] speak() called but speechSynthesis not supported");
+  // Latest speak always wins — if a newer message calls speak() before
+  // the previous one played, the previous one is discarded.
+  const speak = useCallback(async (text: string, voice?: string) => {
+    // Clear any previous pending speak — newer message takes priority
+    if (pendingSpeakRef.current !== null) {
+      const prevResolve = pendingSpeakResolveRef.current;
+      pendingSpeakRef.current = null;
+      pendingSpeakVoiceRef.current = undefined;
+      pendingSpeakResolveRef.current = null;
+      prevResolve?.();
+    }
+
+    if (!ttsSupportedRef.current) {
+      console.info("[TTS] speak() called but Gemini TTS not available");
       return;
     }
 
     if (ttsUnlockedRef.current) {
-      return doSpeak(text);
+      return doSpeak(text, voice);
     }
 
     console.info("[TTS] speak() called before unlock — queuing");
-    // TTS not yet unlocked — queue this speak and wait
-    // It will be played when the user interacts with the page
     return new Promise<void>((resolve) => {
       pendingSpeakRef.current = text;
+      pendingSpeakVoiceRef.current = voice;
       pendingSpeakResolveRef.current = resolve;
     });
-  }, [ttsSupported, doSpeak]);
+  }, [doSpeak]);
 
   const stopSpeaking = useCallback(() => {
-    // Stop OpenAI TTS audio if playing
-    if (currentAudioSourceRef.current) {
-      try {
-        currentAudioSourceRef.current.stop();
-      } catch (e) {
-        // Might already be stopped
-      }
-      currentAudioSourceRef.current = null;
-    }
-    // Stop Web Speech API if active
-    if (ttsSupported) {
-      window.speechSynthesis.cancel();
+    // Stop Gemini TTS audio if playing
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
     }
     setIsSpeaking(false);
     setIsMuted(false);
-  }, [ttsSupported]);
+  }, []);
 
   const registerHandler = useCallback(
     (id: string, handler: VoiceHandler) => {
@@ -711,7 +549,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         isSupported,
         ttsSupported,
         ttsUnlocked,
-        ttsBackend,
         permissionDenied,
         transcript,
         transcriptLog,

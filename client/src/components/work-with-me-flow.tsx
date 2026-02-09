@@ -51,10 +51,13 @@ import {
   jsonPrompt,
   apiPost,
   useFlowExecution,
+  useFlowDefinition,
+  useFlowChat,
 } from "@/lib/flow-engine";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { useVoice } from "@/contexts/voice-context";
+import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -285,7 +288,7 @@ function getActionLabel(action: GuidanceItem["action"]): string {
 
 // ── Component ──────────────────────────────────────────────
 
-export function WorkWithMeFlow() {
+export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
   const [phase, setPhase] = useState<FlowPhase>("objective-input");
   const [objective, setObjective] = useState("");
   const [research, setResearch] = useState<ResearchResponse | null>(null);
@@ -298,11 +301,35 @@ export function WorkWithMeFlow() {
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
   const { trackStep, resolveUserInput } = useFlowExecution("work-with-me");
+  const { definition: flowDef } = useFlowDefinition("work-with-me");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(
     "work-with-me",
     "Work With Me",
   );
   const { speak } = useVoice();
+  const { pushMessage } = useFlowChat();
+
+  const agent = getFlowAgent("work-with-me");
+  const pushAgentMessage = useCallback((text: string, speech?: string) => {
+    pushMessage("work-with-me", {
+      speaker: "agent",
+      text,
+      speech: speech ?? text,
+      agentName: agent?.chatName,
+      agentDisplayName: agent?.name,
+      agentAccent: agent?.accentColor,
+    });
+  }, [pushMessage, agent]);
+
+  // Push greeting on mount
+  const didGreet = useRef(false);
+  useEffect(() => {
+    if (didGreet.current) return;
+    didGreet.current = true;
+    if (agent) {
+      pushAgentMessage(agent.greeting, agent.greetingSpeech);
+    }
+  }, [agent, pushAgentMessage]);
 
   const [steps, setSteps] = useState<WorkflowStep[]>([
     { id: "objective", name: "Set Your Goal", status: "active" },
@@ -386,6 +413,7 @@ export function WorkWithMeFlow() {
       setPhase("select-step");
       speak(
         `Found ${result.data.steps.length} steps to ${result.data.taskTitle}. Pick one to get started.`,
+        "Fenrir",
       );
     } catch (err) {
       console.error("Research error:", err);
@@ -394,7 +422,7 @@ export function WorkWithMeFlow() {
       );
       updateStep("research", "error", "Something went wrong");
       setPhase("error");
-      speak("Something went wrong researching your task. Let me try again.");
+      speak("Something went wrong researching your task. Let me try again.", "Fenrir");
     }
   }, [objective, trackStep, resolveUserInput, speak]);
 
@@ -446,7 +474,7 @@ export function WorkWithMeFlow() {
         setGuidance(guidanceResult.data);
         setPhase("guided-view");
         updateStep("guide", "active", `Viewing: ${page.data.title}`);
-        speak(guidanceResult.data.pageSummary);
+        speak(guidanceResult.data.pageSummary, "Fenrir");
       } catch (err) {
         console.error("Page fetch/analyze error:", err);
         setError(
@@ -490,7 +518,7 @@ export function WorkWithMeFlow() {
         setGuidance(guidanceResult);
         setPhase("guided-view");
         updateStep("guide", "active", `Viewing: ${page.title}`);
-        speak(guidanceResult.pageSummary);
+        speak(guidanceResult.pageSummary, "Fenrir");
       } catch (err) {
         console.error("Navigation error:", err);
         setError(
@@ -516,11 +544,11 @@ export function WorkWithMeFlow() {
     updateStep("guide", "active", "Pick your next step");
 
     if (selectedStep) {
-      busSend("main", "summary", {
-        summary: `Completed step ${selectedStep.stepNumber}: ${selectedStep.title}`,
-      });
+      const summaryText = `Completed step ${selectedStep.stepNumber}: ${selectedStep.title}`;
+      pushAgentMessage(summaryText);
+      busSend("main", "summary", { summary: summaryText });
     }
-  }, [selectedStep, busSend]);
+  }, [selectedStep, busSend, pushAgentMessage]);
 
   // ── Full reset ───────────────────────────────────────────
 
@@ -799,11 +827,20 @@ export function WorkWithMeFlow() {
             })}
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center gap-3">
             <Button variant="outline" size="sm" onClick={handleReset}>
               <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
               Start over with a new goal
             </Button>
+            {onComplete && completedSteps.size > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onComplete(`Completed ${completedSteps.size} steps for: ${research?.taskTitle ?? objective}.`)}
+              >
+                Done
+              </Button>
+            )}
           </div>
         </div>
       )}

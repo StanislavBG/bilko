@@ -107,7 +107,7 @@ Note: This is an AI-generated summary based on the video metadata. Watch the ful
       ]);
       setSummary(result.data);
       setSummaryState("ready");
-      speak("Summary is ready.");
+      speak("Summary is ready.", "Aoede");
     } catch (err) {
       console.error("[VideoExperience] Summary error:", err);
       setSummaryState("error");

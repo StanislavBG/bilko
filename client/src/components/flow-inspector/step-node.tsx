@@ -6,26 +6,14 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import {
-  Brain,
-  MousePointerClick,
-  ArrowRightLeft,
-  ShieldCheck,
-  Monitor,
   CheckCircle2,
   Circle,
   Loader2,
   XCircle,
   SkipForward,
 } from "lucide-react";
-import type { FlowStep, StepStatus, StepType } from "@/lib/flow-inspector/types";
-
-const TYPE_CONFIG: Record<StepType, { icon: typeof Brain; label: string; color: string }> = {
-  llm: { icon: Brain, label: "LLM", color: "text-purple-500 bg-purple-500/10" },
-  "user-input": { icon: MousePointerClick, label: "User Input", color: "text-blue-500 bg-blue-500/10" },
-  transform: { icon: ArrowRightLeft, label: "Transform", color: "text-orange-500 bg-orange-500/10" },
-  validate: { icon: ShieldCheck, label: "Validate", color: "text-green-500 bg-green-500/10" },
-  display: { icon: Monitor, label: "Display", color: "text-cyan-500 bg-cyan-500/10" },
-};
+import type { FlowStep, StepStatus } from "@/lib/flow-inspector/types";
+import { STEP_TYPE_CONFIG } from "@/lib/flow-inspector/step-type-config";
 
 const STATUS_ICON: Record<StepStatus, typeof Circle> = {
   idle: Circle,
@@ -45,7 +33,7 @@ interface StepNodeProps {
 }
 
 export function StepNode({ step, status, isSelected, onClick, index, isLast }: StepNodeProps) {
-  const config = TYPE_CONFIG[step.type];
+  const config = STEP_TYPE_CONFIG[step.type];
   const StatusIcon = STATUS_ICON[status];
   const TypeIcon = config.icon;
 
@@ -99,9 +87,9 @@ export function StepNode({ step, status, isSelected, onClick, index, isLast }: S
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
           <h4 className="text-sm font-medium flex-1">{step.name}</h4>
-          <Badge variant="outline" className={cn("text-xs gap-1", config.color)}>
+          <Badge variant="outline" className={cn("text-xs gap-1", config.color, config.bg)}>
             <TypeIcon className="h-3 w-3" />
-            {config.label}
+            {step.subtype ? `${config.label} \u203A ${step.subtype.charAt(0).toUpperCase() + step.subtype.slice(1)}` : config.label}
           </Badge>
           {step.parallel && (
             <Badge variant="secondary" className="text-xs">

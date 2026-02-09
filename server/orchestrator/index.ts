@@ -89,19 +89,18 @@ export function registerOrchestratorRoutes(app: Express) {
         let enrichedPayload = { ...payload };
         const callbackUrl = getCallbackUrl();
 
-        if (workflowId === "european-football-daily") {
-          const recentTopics = await orchestratorStorage.getRecentTopics(workflowId, 24);
-          enrichedPayload = {
-            ...payload,
-            geminiApiKey: process.env.GEMINI_API_KEY,
-            callbackUrl,
-            recentTopics: recentTopics.map(t => ({
-              headline: t.headline,
-              headlineHash: t.headlineHash,
-              usedAt: t.usedAt,
-            })),
-          };
-        }
+        // Enrich all n8n workflow payloads with secrets and context (ARCH-000-B)
+        const recentTopics = await orchestratorStorage.getRecentTopics(workflowId, 24);
+        enrichedPayload = {
+          ...payload,
+          geminiApiKey: process.env.GEMINI_API_KEY,
+          callbackUrl,
+          recentTopics: recentTopics.map(t => ({
+            headline: t.headline,
+            headlineHash: t.headlineHash,
+            usedAt: t.usedAt,
+          })),
+        };
 
         const trace = await orchestratorStorage.createTrace({
           traceId,
