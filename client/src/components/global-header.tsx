@@ -184,7 +184,7 @@ function ToolsMenu() {
             <span className="ml-auto text-[10px] text-amber-400">locked</span>
           )}
           {session.state.ttsSupported && session.state.ttsUnlocked && (
-            <span className="ml-auto text-[10px] text-emerald-400">OpenAI</span>
+            <span className="ml-auto text-[10px] text-emerald-400">Gemini</span>
           )}
         </Button>
         <Button
