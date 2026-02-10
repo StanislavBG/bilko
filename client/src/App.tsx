@@ -85,7 +85,7 @@ function AuthenticatedApp() {
                 </main>
               </div>
             </div>
-          </GlobalControlsProvider>
+          </div>
         </NavigationProvider>
       </SidebarProvider>
     </ViewModeProvider>
