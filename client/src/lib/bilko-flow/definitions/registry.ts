@@ -427,55 +427,45 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     ],
   },
 
-  // ── ACTIVE — TEST: Newsletter ────────────────────────────
-  // Minimal test flow. Discovers 3 European football stories,
-  // writes articles with image descriptions, then produces an
-  // experience summary that feeds back into bilko-main.
-  // Inspired by the [EFD] European Football Daily n8n workflow.
+  // ── ACTIVE — Newsletter + Infographic + Video Pipeline ───
+  // The full media pipeline. Discovers stories, writes articles,
+  // then branches into parallel production of:
+  //   1. Newsletter summary
+  //   2. Infographic (ranked stories)
+  //   3. Slideshow video (image sequence + TTS narration)
+  //   4. AI video plan (Veo-optimized prompts)
+  // 8-step DAG with 3 parallel branch points.
   {
     id: "test-newsletter",
     name: "European Football Newsletter",
     description:
-      "A daily newspaper for European football fans — discovers 3 trending stories, writes short articles for each, and generates cinematic image descriptions to accompany them. Inspired by the European Football Daily infographic pipeline.",
-    version: "1.0.0",
+      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces 4 outputs in parallel: a newsletter, a bold infographic (1 main + 2 supporting stories), a 60-second slideshow video with TTS narration, and a Veo-optimized AI video production plan.",
+    version: "2.0.0",
     location: "landing",
     componentPath: "client/src/components/newsletter-flow.tsx",
-    tags: ["landing", "newsletter", "football", "european", "test"],
+    tags: ["landing", "newsletter", "football", "european", "infographic", "video", "media-pipeline"],
     icon: "Newspaper",
-    voiceTriggers: ["newsletter", "football", "news", "newspaper", "daily"],
+    voiceTriggers: ["newsletter", "football", "news", "newspaper", "daily", "infographic", "video"],
     phases: [
       { id: "discovering", label: "Discover", stepIds: ["discover-stories"] },
       { id: "writing", label: "Write", stepIds: ["write-articles"] },
-      { id: "summarizing", label: "Summary", stepIds: ["newsletter-summary"] },
+      { id: "summarizing", label: "Rank & Summarize", stepIds: ["newsletter-summary", "rank-stories"] },
+      { id: "producing", label: "Produce", stepIds: ["design-infographic", "create-narrative"] },
+      { id: "assembling", label: "Assemble", stepIds: ["generate-storyboard", "generate-video-prompts"] },
     ],
     output: {
-      name: "newsletterSummary",
+      name: "mediaPackage",
       type: "object",
-      description: "The experience summary from the newsletter session, including headline, mood, and takeaway",
+      description: "The complete media package: newsletter summary, infographic data, slideshow storyboard, and AI video prompts",
     },
     steps: [
       {
         id: "discover-stories",
-        name: "Discover Trending Stories",
+        name: "Discover Stories",
         type: "llm",
         description:
-          "Acts as a European football journalist to discover 3 trending stories from across the major leagues — Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and Champions League. Each story includes a headline, summary, league, and key stat.",
-        prompt: `You are a senior European football journalist with deep knowledge of the Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and UEFA Champions League.
-
-INPUT: You are asked to discover 3 trending European football stories for today's newsletter.
-
-MISSION: Identify 3 compelling stories that European football fans would want to read right now. Mix different leagues and story types — transfers, match results, tactical analysis, player milestones, managerial changes, or breaking news.
-
-For each story provide:
-- A punchy newspaper headline (max 10 words)
-- A brief summary of what happened (max 30 words)
-- Which league or competition it relates to
-- One key stat or fact that makes the story compelling
-
-Return ONLY valid JSON:
-{"stories":[{"headline":"...","summary":"...","league":"...","keyStat":"..."},{"headline":"...","summary":"...","league":"...","keyStat":"..."},{"headline":"...","summary":"...","league":"...","keyStat":"..."}]}
-
-Rules: exactly 3 stories. headline max 10 words, summary max 30 words, league max 4 words, keyStat max 15 words. No markdown.`,
+          "Acts as a European football journalist to discover 3 trending stories from across the major leagues — Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and Champions League.",
+        prompt: "Discover 3 trending European football stories with headline, summary, league, and keyStat.",
         userMessage: "Discover 3 trending European football stories for today's newsletter.",
         model: "gemini-2.5-flash",
         inputSchema: [],
@@ -483,88 +473,138 @@ Rules: exactly 3 stories. headline max 10 words, summary max 30 words, league ma
           {
             name: "stories",
             type: "array",
-            description: "Array of 3 trending European football stories with headline, summary, league, and keyStat",
+            description: "Array of 3 trending stories with headline, summary, league, keyStat",
           },
         ],
         dependsOn: [],
       },
       {
         id: "write-articles",
-        name: "Write Articles & Image Descriptions",
+        name: "Write Articles",
         type: "llm",
         description:
-          "Takes the 3 discovered stories and writes a short newspaper article for each, plus a cinematic image description that could be used to generate a supporting infographic or photo. Inspired by the European Football Daily's image pipeline.",
-        prompt: `You are a sports editor producing a daily European football newsletter. You write punchy, engaging articles and commission vivid editorial images.
-
-INPUT: You will receive 3 trending European football stories with headlines, summaries, leagues, and key stats.
-
-MISSION: For each of the 3 stories, produce:
-1. A short newspaper article (60-80 words) — factual, engaging, with a hook opening and the key stat woven in naturally
-2. A cinematic image description (max 30 words) — describe a striking editorial photo or infographic that would accompany this article. Think bold compositions, team colors, dramatic lighting, stadium atmospheres.
-
-Return ONLY valid JSON:
-{"articles":[{"headline":"...","article":"...","imageDescription":"...","league":"..."},{"headline":"...","article":"...","imageDescription":"...","league":"..."},{"headline":"...","article":"...","imageDescription":"...","league":"..."}]}
-
-Rules: exactly 3 articles matching the 3 input stories. article 60-80 words, imageDescription max 30 words. No markdown.`,
-        userMessage: 'Write 3 newspaper articles with image descriptions for these European football stories.',
+          "Writes short newspaper articles and cinematic image descriptions for each discovered story.",
+        prompt: "Write 3 newspaper articles (60-80 words each) with image descriptions.",
+        userMessage: "Write 3 newspaper articles with image descriptions.",
         model: "gemini-2.5-flash",
         inputSchema: [
-          {
-            name: "stories",
-            type: "array",
-            description: "The 3 discovered trending stories from the previous step",
-          },
+          { name: "stories", type: "array", description: "The 3 discovered stories" },
         ],
         outputSchema: [
-          {
-            name: "articles",
-            type: "array",
-            description: "Array of 3 articles each with headline, article text, imageDescription, and league",
-          },
+          { name: "articles", type: "array", description: "3 articles with headline, article, imageDescription, league" },
         ],
         dependsOn: ["discover-stories"],
       },
       {
         id: "newsletter-summary",
-        name: "Generate Newsletter Summary",
+        name: "Newsletter Summary",
         type: "llm",
         description:
-          "Takes the completed newsletter articles and produces an experience summary. This feeds back into bilko-main's greeting node to adjust Bilko's mood and conversation references for the next interaction.",
-        prompt: `You are an experience designer summarizing a newsletter reading session for a coaching AI that will use this summary to personalize its next interaction.
-
-INPUT: You will receive 3 European football newsletter articles with headlines and league information.
-
-MISSION: Create a concise experience summary that captures:
-1. The overall theme of today's newsletter (what leagues/stories dominated)
-2. The most exciting story and why
-3. An inferred mood/energy level for a football fan reading this:
-   - Big transfer news → "buzzing"
-   - Dramatic match results → "thrilled"
-   - Tactical/analytical stories → "informed"
-   - Mixed bag → "engaged"
-4. A one-line takeaway the coaching AI can reference
-
-Return ONLY valid JSON:
-{"newsletter":{"editionTitle":"...","topStory":"...","leaguesCovered":["..."],"mood":"...","takeaway":"..."}}
-
-Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, takeaway max 15 words. No markdown.`,
-        userMessage: 'Create a newsletter experience summary for today\'s European football edition.',
+          "Distills articles into an experience summary with mood and takeaway. Runs in parallel with rank-stories.",
+        prompt: "Create a newsletter experience summary with editionTitle, topStory, mood, takeaway.",
+        userMessage: "Create a newsletter experience summary.",
         model: "gemini-2.5-flash",
         inputSchema: [
-          {
-            name: "articles",
-            type: "array",
-            description: "The 3 completed newsletter articles",
-          },
+          { name: "articles", type: "array", description: "The 3 completed articles" },
         ],
         outputSchema: [
-          {
-            name: "newsletter",
-            type: "object",
-            description: "The newsletter summary with editionTitle, topStory, leaguesCovered, mood, and takeaway",
-          },
+          { name: "newsletter", type: "object", description: "Summary with editionTitle, topStory, leaguesCovered, mood, takeaway" },
         ],
         dependsOn: ["write-articles"],
+        parallel: true,
+      },
+      {
+        id: "rank-stories",
+        name: "Rank Stories",
+        type: "llm",
+        description:
+          "Ranks the 3 stories by newsworthiness. #1 becomes the infographic/video lead. Runs in parallel with newsletter-summary.",
+        prompt: "Rank stories: pick 1 main + 2 supporting with stat callouts for infographic and video.",
+        userMessage: "Rank the 3 stories by newsworthiness for infographic and video production.",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          { name: "articles", type: "array", description: "The 3 articles" },
+          { name: "stories", type: "array", description: "Original story data with keyStats" },
+        ],
+        outputSchema: [
+          { name: "ranked", type: "object", description: "main story + supporting array + rankingRationale" },
+        ],
+        dependsOn: ["write-articles"],
+        parallel: true,
+      },
+      {
+        id: "design-infographic",
+        name: "Design Infographic",
+        type: "llm",
+        description:
+          "Creates structured infographic data from ranked stories — title, stat callouts, layout, colors. Runs in parallel with create-narrative.",
+        prompt: "Design an infographic layout with title, mainStory (60% space), 2 supporting cards.",
+        userMessage: "Design a sports infographic for the ranked stories.",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          { name: "ranked", type: "object", description: "Ranked stories with main + supporting" },
+        ],
+        outputSchema: [
+          { name: "infographic", type: "object", description: "Infographic data with title, mainStory, supportingStories, colors" },
+        ],
+        dependsOn: ["rank-stories"],
+        parallel: true,
+      },
+      {
+        id: "create-narrative",
+        name: "Create Narrative",
+        type: "llm",
+        description:
+          "Writes a 60-second broadcast narration script (10s intro, 20s main, 15s+15s supporting). Runs in parallel with design-infographic.",
+        prompt: "Write a 60-second sports TV narration: intro(10s) + main(20s) + 2 supporting(15s each).",
+        userMessage: "Write a 60-second broadcast narration script.",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          { name: "ranked", type: "object", description: "Ranked stories" },
+        ],
+        outputSchema: [
+          { name: "narrative", type: "object", description: "Script with intro + segments array + totalDurationSec" },
+        ],
+        dependsOn: ["rank-stories"],
+        parallel: true,
+      },
+      {
+        id: "generate-storyboard",
+        name: "Generate Storyboard",
+        type: "llm",
+        description:
+          "Creates a 4-scene visual storyboard for the slideshow video — image descriptions, visual styles, transitions. Runs in parallel with generate-video-prompts.",
+        prompt: "Create 4 storyboard scenes with image descriptions, visual style, transitions.",
+        userMessage: "Create a visual storyboard for the video slideshow.",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          { name: "narrative", type: "object", description: "The narration script" },
+          { name: "ranked", type: "object", description: "Ranked stories for visual context" },
+        ],
+        outputSchema: [
+          { name: "storyboard", type: "object", description: "4 scenes with imageDescription, visualStyle, transitions, narrationText" },
+        ],
+        dependsOn: ["create-narrative"],
+        parallel: true,
+      },
+      {
+        id: "generate-video-prompts",
+        name: "Generate Video Prompts",
+        type: "llm",
+        description:
+          "Creates Veo-optimized video generation prompts for a ~30s AI video (10s per story) with extension techniques. Runs in parallel with generate-storyboard.",
+        prompt: "Create 3 Veo-optimized scene prompts with camera movements, moods, extension technique.",
+        userMessage: "Generate Veo-optimized video prompts for AI video generation.",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          { name: "narrative", type: "object", description: "The narration script" },
+          { name: "ranked", type: "object", description: "Ranked stories for visual context" },
+        ],
+        outputSchema: [
+          { name: "videoPrompts", type: "object", description: "3 scenes with veoPrompt, cameraMovement, visualMood + extensionTechnique" },
+        ],
+        dependsOn: ["create-narrative"],
+        parallel: true,
       },
     ],
   },
