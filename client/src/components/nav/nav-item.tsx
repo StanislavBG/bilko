@@ -20,6 +20,24 @@ export function NavItem({ item, isSelected, isCollapsed, onSelect }: NavItemProp
   const Icon = item.icon;
   const shortLabel = item.shortLabel ?? item.label.charAt(0);
 
+  // Group header — non-clickable section label
+  if (item.isGroupHeader) {
+    if (isCollapsed) {
+      return (
+        <div className="pt-2 pb-0.5 px-1">
+          <div className="border-t border-border/40" />
+        </div>
+      );
+    }
+    return (
+      <div className="pt-3 pb-1 px-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+          {item.label}
+        </span>
+      </div>
+    );
+  }
+
   // Active/hover background classes (support per-item color coding)
   const activeBg = item.activeBg ?? "bg-accent text-accent-foreground";
   const hoverBg = item.hoverBg ?? "";
