@@ -18,7 +18,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { StepTracker, type TrackerStep } from "@/components/ui/step-tracker";
-import { Newspaper, PenLine, Image, RotateCcw, Sparkles } from "lucide-react";
+import { Newspaper, PenLine, Image, RotateCcw, Sparkles, Download } from "lucide-react";
 import {
   chatJSON,
   jsonPrompt,
@@ -337,6 +337,80 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     }
   }, [runFlow]);
 
+  // ── Download newsletter as HTML ─────────────────────────────────────
+
+  const downloadNewsletter = useCallback(() => {
+    if (!articles || !newsletter) return;
+
+    const today = new Date().toLocaleDateString("en-GB", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    const articleBlocks = articles
+      .map(
+        (a) => `
+      <article style="margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid #e5e5e5;">
+        <span style="display:inline-block;background:#16a34a;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;margin-bottom:8px;">${a.league}</span>
+        <h2 style="margin:0 0 8px;font-size:20px;line-height:1.3;">${a.headline}</h2>
+        <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#333;">${a.article}</p>
+        <div style="background:#f5f5f5;border-radius:8px;padding:12px 16px;display:flex;align-items:flex-start;gap:8px;">
+          <span style="font-size:18px;line-height:1;">&#128247;</span>
+          <p style="margin:0;font-size:13px;color:#666;font-style:italic;">${a.imageDescription}</p>
+        </div>
+      </article>`,
+      )
+      .join("\n");
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${newsletter.editionTitle}</title>
+</head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:640px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;margin-top:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+    <!-- Header -->
+    <div style="background:#16a34a;color:#fff;padding:32px 24px;text-align:center;">
+      <h1 style="margin:0 0 4px;font-size:26px;">${newsletter.editionTitle}</h1>
+      <p style="margin:0;font-size:14px;opacity:0.85;">${today}</p>
+      <p style="margin:8px 0 0;font-size:13px;opacity:0.7;">${newsletter.leaguesCovered.join(" &middot; ")}</p>
+    </div>
+
+    <!-- Articles -->
+    <div style="padding:24px;">
+      ${articleBlocks}
+
+      <!-- Summary -->
+      <div style="background:#f0fdf4;border-radius:8px;padding:16px;margin-top:8px;">
+        <p style="margin:0 0 4px;font-size:14px;font-weight:600;">Top Story</p>
+        <p style="margin:0 0 8px;font-size:14px;color:#333;">${newsletter.topStory}</p>
+        <p style="margin:0;font-size:13px;color:#666;">${newsletter.takeaway}</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:16px 24px;text-align:center;border-top:1px solid #e5e5e5;">
+      <p style="margin:0;font-size:12px;color:#999;">European Football Newsletter &middot; Powered by Bilko's Mental Gym</p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `football-newsletter-${new Date().toISOString().slice(0, 10)}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [articles, newsletter]);
+
   // ── Reset ──────────────────────────────────────────────────────────
 
   const reset = useCallback(() => {
@@ -475,6 +549,14 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
 
           {/* Actions */}
           <div className="flex justify-center gap-3 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={downloadNewsletter}
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" />
+              Download
+            </Button>
             <Button
               variant="ghost"
               size="sm"
