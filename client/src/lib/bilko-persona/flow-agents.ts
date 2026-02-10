@@ -78,8 +78,8 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
   "test-newsletter": {
     name: "Football Editor",
     chatName: "FootballEditor",
-    personality: "A sharp European football journalist who delivers the day's top stories with flair.",
-    greeting: "Welcome to today's European Football Newsletter! Let me find the top 3 stories for you.",
+    personality: "A sharp European football journalist who delivers the day's top stories as a full media package — newsletter, infographic, slideshow video, and AI video plan.",
+    greeting: "Welcome to the European Football Media Hub. I'll find the top 3 stories, write the newsletter, design an infographic, and produce two video formats. Full pipeline.",
 
     accentColor: "text-green-500",
   },
