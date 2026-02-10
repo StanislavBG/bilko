@@ -8,7 +8,7 @@
  * This is the admin's "private n8n" for in-platform workflows.
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,11 +20,15 @@ export default function FlowExplorer() {
   const [, setLocation] = useLocation();
   const [filter, setFilter] = useState<string | null>(null);
 
-  const allTags = Array.from(new Set(flowRegistry.flatMap((f) => f.tags)));
+  const allTags = useMemo(
+    () => Array.from(new Set(flowRegistry.flatMap((f) => f.tags))),
+    [],
+  );
 
-  const filtered = filter
-    ? flowRegistry.filter((f) => f.tags.includes(filter))
-    : flowRegistry;
+  const filtered = useMemo(
+    () => filter ? flowRegistry.filter((f) => f.tags.includes(filter)) : flowRegistry,
+    [filter],
+  );
 
   return (
     <div className="flex-1 overflow-auto p-6">

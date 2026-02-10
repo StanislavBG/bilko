@@ -11,6 +11,7 @@
  * Every route is wrapped in an AppErrorBoundary (ARCH-007 I4).
  */
 
+import { lazy, Suspense } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -27,18 +28,20 @@ import { GlobalHeader } from "@/components/global-header";
 import { LandingContent } from "@/pages/landing";
 import { FlowBusProvider } from "@/contexts/flow-bus-context";
 import { FlowChatProvider } from "@/lib/bilko-flow";
-import Projects from "@/pages/projects";
-import N8nWorkflows from "@/pages/n8n-workflows";
-import MemoryExplorer from "@/pages/memory-explorer";
-import RulesExplorer from "@/pages/rules-explorer";
-import FlowExplorer from "@/pages/flow-explorer";
-import FlowDetail from "@/pages/flow-detail";
-import BilkosWay from "@/pages/bilkos-way";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DebugProvider } from "@/contexts/debug-context";
 import { GlobalControlsProvider } from "@/lib/global-controls";
 import { AppErrorBoundary } from "@/components/app-error-boundary";
+
+// Lazy-loaded pages — only fetched when their route is visited
+const Projects = lazy(() => import("@/pages/projects"));
+const N8nWorkflows = lazy(() => import("@/pages/n8n-workflows"));
+const MemoryExplorer = lazy(() => import("@/pages/memory-explorer"));
+const RulesExplorer = lazy(() => import("@/pages/rules-explorer"));
+const FlowExplorer = lazy(() => import("@/pages/flow-explorer"));
+const FlowDetail = lazy(() => import("@/pages/flow-detail"));
+const BilkosWay = lazy(() => import("@/pages/bilkos-way"));
 
 // ── App-scoped wrappers (ARCH-007 I3: context scoping) ──────────
 
@@ -100,17 +103,19 @@ function AuthenticatedApp() {
               <div className={`flex flex-1 overflow-hidden${isAuth ? "" : " pt-14"}`}>
                 <AppSidebar />
                 <main className="flex-1 flex overflow-hidden">
-                  <Switch>
-                    <Route path="/" component={MainFlow} />
-<Route path="/projects/:projectId?" component={Projects} />
-                    <Route path="/bilkos-way" component={BilkosWay} />
-                    {isAuth && <Route path="/workflows" component={N8nWorkflows} />}
-                    {isAuth && <Route path="/memory" component={MemoryExplorer} />}
-                    {isAuth && <Route path="/rules" component={RulesExplorer} />}
-                    {isAuth && <Route path="/flows/:flowId" component={FlowDetail} />}
-                    {isAuth && <Route path="/flows" component={FlowExplorer} />}
-                    <Route component={NotFound} />
-                  </Switch>
+                  <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Skeleton className="h-8 w-48" /></div>}>
+                    <Switch>
+                      <Route path="/" component={MainFlow} />
+                      <Route path="/projects/:projectId?" component={Projects} />
+                      <Route path="/bilkos-way" component={BilkosWay} />
+                      {isAuth && <Route path="/workflows" component={N8nWorkflows} />}
+                      {isAuth && <Route path="/memory" component={MemoryExplorer} />}
+                      {isAuth && <Route path="/rules" component={RulesExplorer} />}
+                      {isAuth && <Route path="/flows/:flowId" component={FlowDetail} />}
+                      {isAuth && <Route path="/flows" component={FlowExplorer} />}
+                      <Route component={NotFound} />
+                    </Switch>
+                  </Suspense>
                 </main>
               </div>
             </div>

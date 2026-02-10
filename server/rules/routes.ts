@@ -54,9 +54,6 @@ export function registerRulesRoutes(app: Express): void {
         });
       }
 
-      // Reload manifest from disk so rule changes reflect without restart
-      rulesService.reload();
-
       const allRules = rulesService.getAllRules();
       const primaryDirective = rulesService.getPrimaryDirective();
       const partitionConfigs = rulesService.getPartitionConfigs();
@@ -121,9 +118,6 @@ export function registerRulesRoutes(app: Express): void {
           error: "Rules service not initialized"
         });
       }
-
-      // Reload so edits to rule files are reflected without restart
-      rulesService.reload();
 
       const { ruleId } = req.params;
       const rule = rulesService.getRule(ruleId);
