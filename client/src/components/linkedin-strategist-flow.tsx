@@ -37,10 +37,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { chatJSON, jsonPrompt, useFlowExecution, useFlowDefinition, useFlowChat } from "@/lib/bilko-flow";
-import { useVoice } from "@/contexts/voice-context";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
-import { VoiceStatusBar } from "@/components/voice-status-bar";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
 // ── Types ────────────────────────────────────────────────
@@ -284,7 +282,6 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
 
   const { trackStep, resolveUserInput } = useFlowExecution("linkedin-strategist");
   const { definition: flowDef } = useFlowDefinition("linkedin-strategist");
-  const { speak } = useVoice();
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(
     "linkedin-strategist",
     "LinkedIn Strategist",
@@ -292,11 +289,10 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
   const { pushMessage } = useFlowChat();
 
   const agent = getFlowAgent("linkedin");
-  const pushAgentMessage = useCallback((text: string, speech?: string) => {
+  const pushAgentMessage = useCallback((text: string) => {
     pushMessage("linkedin-strategist", {
       speaker: "agent",
       text,
-      speech: speech ?? text,
       agentName: agent?.chatName,
       agentDisplayName: agent?.name,
       agentAccent: agent?.accentColor,
@@ -309,7 +305,7 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
     if (didGreet.current) return;
     didGreet.current = true;
     if (agent) {
-      pushAgentMessage(agent.greeting, agent.greetingSpeech);
+      pushAgentMessage(agent.greeting);
     }
   }, [agent, pushAgentMessage]);
 
@@ -400,8 +396,6 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
       setConversationTurns([
         { role: "assistant", message: turn.message, context: turn.context },
       ]);
-
-      await speak(turn.message, "Charon");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start the conversation");
       setPhase("linkedin-input");
@@ -409,7 +403,7 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
       setIsThinking(false);
       inputRef.current?.focus();
     }
-  }, [linkedinUrl, goal, trackStep, resolveUserInput, speak]);
+  }, [linkedinUrl, goal, trackStep, resolveUserInput]);
 
   // ── Conversation: submit message ───────────────────────
 
@@ -465,10 +459,8 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
         if (turn.done) {
           // Conversation complete — generate results
           const finalRoles = turn.rolesDiscovered?.length ? turn.rolesDiscovered : discoveredRoles;
-          await speak(turn.message, "Charon");
           await generateResults(finalRoles);
         } else {
-          await speak(turn.message, "Charon");
           inputRef.current?.focus();
         }
       } catch (e) {
@@ -477,7 +469,7 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
         setIsThinking(false);
       }
     },
-    [userInput, isThinking, conversationTurns, discoveredRoles, trackStep, resolveUserInput, speak],
+    [userInput, isThinking, conversationTurns, discoveredRoles, trackStep, resolveUserInput],
   );
 
   // ── Generate results ──────────────────────────────────
@@ -531,10 +523,6 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
           busSend("main", "summary", {
             summary: `I've crafted ${llmResult.data.roles.reduce((acc, r) => acc + r.options.length, 0)} description options across ${llmResult.data.roles.length} roles. Pick the one that fits best for each role.`,
           });
-          await speak(
-            `Done. I've written multiple description options for each of your ${llmResult.data.roles.length} roles. Take a look and pick the ones you like best.`,
-            "Charon",
-          );
         } else {
           // Interview mode — generate summary
           const { data: llmResult } = await trackStep(
@@ -556,10 +544,6 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
           busSend("main", "summary", {
             summary: `Interview complete. Here's your feedback with strengths, areas to explore, and role-specific insights.`,
           });
-          await speak(
-            `Great interview. I've put together detailed feedback on how you presented your experience, including your strengths and areas you could develop further.`,
-            "Charon",
-          );
         }
 
         setPhase("results");
@@ -570,7 +554,7 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
         setIsThinking(false);
       }
     },
-    [goal, linkedinUrl, conversationTurns, trackStep, busSend, speak],
+    [goal, linkedinUrl, conversationTurns, trackStep, busSend],
   );
 
   // ── Copy to clipboard ────────────────────────────────
@@ -951,7 +935,6 @@ export function LinkedInStrategistFlow({ onComplete }: { onComplete?: (summary?:
                     Press Enter to send
                   </p>
                 </div>
-                <VoiceStatusBar />
               </div>
             )}
           </div>

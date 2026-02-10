@@ -57,12 +57,10 @@ export type BilkoEvent =
 
 // ── Bilko's speech output ──────────────────────────────────
 
-/** What Bilko will say — text for canvas, speech for TTS */
+/** What Bilko will say — text for canvas display */
 export interface BilkoSpeech {
   /** Display text (may include emphasis markers) */
   text: string;
-  /** TTS text (natural spoken form, no formatting) */
-  speech: string;
   /** The tone used */
   tone: BilkoTone;
 }

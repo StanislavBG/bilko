@@ -81,8 +81,6 @@ export type DebugPI = ProgramInterface<DebugPIState, DebugPIActions>;
 // ── Session PI ────────────────────────────────────────────
 
 export interface SessionPIState {
-  /** Whether TTS is currently playing */
-  isSpeaking: boolean;
 }
 
 export interface SessionPIActions {

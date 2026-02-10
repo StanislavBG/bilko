@@ -12,7 +12,7 @@
  * Plus system messages for handoffs and status updates.
  *
  * Turn types:
- * - bilko: Bilko speaking (typewriter text + TTS)
+ * - bilko: Bilko speaking (typewriter text)
  * - agent: Sub-agent speaking (left-border accent + badge + typewriter)
  * - user: User message (right-aligned bubble)
  * - user-choice: User responding (clicking option cards or voice)
@@ -41,7 +41,6 @@ import { breathingPause } from "@/lib/bilko-persona/pacing";
 export interface BilkoTurn {
   type: "bilko";
   text: string;
-  speech?: string;
   /** Delay before showing (ms) */
   delay?: number;
 }
@@ -66,7 +65,6 @@ export interface UserChoiceTurn {
 export interface AgentTurn {
   type: "agent";
   text: string;
-  speech?: string;
   /** Agent chat name (e.g. "YoutubeExpert") */
   agentName: string;
   /** Agent display name (e.g. "YouTube Librarian") */
@@ -157,7 +155,6 @@ export function agentResultToTurns(
     turns.push({
       type: "bilko",
       text: result.introduction.text,
-      speech: result.introduction.speech ?? result.introduction.text,
       delay: 200,
     });
   }
@@ -426,8 +423,6 @@ function BilkoTurnView({
     <article aria-label={`Bilko says: ${turn.text}`}>
       <BilkoMessage
         text={turn.text}
-        speech={turn.speech}
-        speakAloud
         delay={turn.delay ?? 300}
         speed={70}
         onComplete={onSettled}
@@ -504,8 +499,6 @@ function AgentTurnView({
       )}
       <BilkoMessage
         text={turn.text}
-        speech={turn.speech}
-        speakAloud
         delay={turn.delay ?? 200}
         speed={70}
         onComplete={onSettled}

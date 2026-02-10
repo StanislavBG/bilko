@@ -651,7 +651,6 @@
         "microphone",
         "mic",
         "voice settings",
-        "tts voice",
         "agent handoff",
         "flow step",
         "chat widget",
@@ -939,7 +938,7 @@
         ]
       },
       {
-        "pattern": "chat|conversation|microphone|mic|speaker|agent voice|who is talking|handoff|tts voice|voice settings|canvas contract",
+        "pattern": "chat|conversation|microphone|mic|speaker|agent voice|who is talking|handoff|voice settings|canvas contract",
         "partitions": [
           "apps"
         ]

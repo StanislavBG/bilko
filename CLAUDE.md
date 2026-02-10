@@ -36,7 +36,7 @@ bilko/
 │   │   ├── contexts/        # React context providers
 │   │   │   ├── navigation-context.tsx
 │   │   │   ├── view-mode-context.tsx
-│   │   │   └── voice-context.tsx  # STT + TTS
+│   │   │   └── conversation-design-context.tsx  # Turn-taking
 │   │   ├── data/            # Static data (academy, navigation, projects)
 │   │   ├── hooks/           # Custom hooks (auth, voice, clipboard, toast)
 │   │   ├── lib/
@@ -73,8 +73,7 @@ bilko/
 - **Database**: PostgreSQL + Drizzle ORM
 - **Auth**: Replit Auth
 - **LLM**: Gemini 2.5 Flash via OpenAI-compatible endpoint (`openai` package)
-- **Voice (TTS)**: Gemini 2.5 Flash TTS via `/api/llm/tts`
-- **Voice (STT)**: Web Speech API via VoiceContext
+- **Voice (STT)**: Web Speech API via ConversationDesignContext
 - **Build**: Vite + esbuild
 - **External Integration**: n8n (workflow automation)
 
@@ -113,7 +112,7 @@ All in-platform flows must satisfy non-negotiable structural invariants:
 
 ### 6. Conversational Canvas Pattern
 The website IS the conversation with Bilko:
-- Bilko speaks first (typewriter + TTS)
+- Bilko speaks first (typewriter)
 - Options are user responses (click or voice)
 - Content renders as conversation turns
 - No chat frame — the page is the canvas
@@ -268,8 +267,8 @@ Optional:
 | `client/src/lib/flow-inspector/registry.ts` | Flow definitions (validated at import) |
 | `client/src/lib/flow-inspector/validate.ts` | ARCH-005 runtime validator |
 | `client/src/components/conversation-canvas.tsx` | Full-page conversational layout engine |
-| `client/src/components/bilko-message.tsx` | Typewriter + TTS for Bilko's voice |
-| `client/src/contexts/voice-context.tsx` | Speech recognition + TTS context |
+| `client/src/components/bilko-message.tsx` | Typewriter animation for Bilko's voice |
+| `client/src/contexts/conversation-design-context.tsx` | Turn-taking and conversation flow |
 | `server/orchestrator/index.ts` | Orchestration layer implementation |
 | `server/routes.ts` | API route registration |
 | `shared/schema.ts` | Database schema exports |
@@ -280,7 +279,7 @@ Optional:
 - **Single-user phase**: Bilko is the super admin and sole user
 - **Authentication**: All features gated behind Replit Auth
 - **n8n Integration**: Self-hosted on separate Replit project
-- **Conversational UI**: Landing page is a conversation with Bilko (typewriter + TTS + voice)
+- **Conversational UI**: Landing page is a conversation with Bilko (typewriter + voice)
 - **Flow Inspector**: DAG canvas with minimap, search, keyboard shortcuts, step-through, execution history
 - **LLM**: Gemini 2.5 Flash via `chatJSON<T>()` with server-side response cleaning
 - **Focus**: Utility over polish

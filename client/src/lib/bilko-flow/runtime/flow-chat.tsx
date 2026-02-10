@@ -47,12 +47,10 @@ export type MessageDirection = "top-down" | "bottom-up";
 
 export interface FlowChatMessage {
   id: string;
-  /** Who is speaking — determines rendering style and TTS eligibility */
+  /** Who is speaking — determines rendering style */
   speaker: "bilko" | "agent" | "user" | "system";
   /** The text content of the message */
   text: string;
-  /** Optional TTS text — only spoken for bilko/agent speakers */
-  speech?: string;
   /** Agent identity when speaker is "agent" */
   agentName?: string;
   agentDisplayName?: string;
@@ -102,8 +100,6 @@ interface FlowChatContextValue {
   releaseChat: () => void;
   /** Clear all messages (e.g. on flow reset) */
   clearMessages: () => void;
-  /** Whether voice should auto-start (default ON) */
-  voiceDefaultOn: boolean;
   /** Message rendering direction */
   messageDirection: MessageDirection;
   /** Update message direction preference */
@@ -130,13 +126,10 @@ function loadDirection(): MessageDirection {
 
 interface FlowChatProviderProps {
   children: ReactNode;
-  /** Whether voice should default to ON (default: false — voice is opt-in) */
-  voiceDefaultOn?: boolean;
 }
 
 export function FlowChatProvider({
   children,
-  voiceDefaultOn = false,
 }: FlowChatProviderProps) {
   const [messages, setMessages] = useState<FlowChatMessage[]>([]);
   const [activeOwner, setActiveOwner] = useState<string>(DEFAULT_OWNER);
@@ -211,7 +204,6 @@ export function FlowChatProvider({
         claimChat,
         releaseChat,
         clearMessages,
-        voiceDefaultOn,
         messageDirection,
         setMessageDirection,
       }}

@@ -20,8 +20,6 @@ export interface FlowAgent {
   personality: string;
   /** First message when the agent takes over */
   greeting: string;
-  /** TTS version of greeting (natural spoken form) */
-  greetingSpeech: string;
   /** Accent color class for the agent's messages */
   accentColor: string;
 }
@@ -34,7 +32,7 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
     chatName: "YoutubeExpert",
     personality: "A curious video curator who finds the perfect learning content for any topic.",
     greeting: "I'll find you the perfect video. Let me pull up some topics.",
-    greetingSpeech: "I'll find you the perfect video. Let me pull up some topics.",
+
     accentColor: "text-red-500",
   },
   chat: {
@@ -42,7 +40,7 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
     chatName: "LeverageAdvisor",
     personality: "A sharp consultant who spots where AI can transform your workflow.",
     greeting: "Let's figure out where AI can save you the most time. I've got some questions.",
-    greetingSpeech: "Let's figure out where AI can save you the most time. I've got some questions.",
+
     accentColor: "text-yellow-500",
   },
   interviewer: {
@@ -50,7 +48,7 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
     chatName: "RecursiveInterviewer",
     personality: "A strategic thinker who builds on every answer to uncover hidden patterns.",
     greeting: "I'm going to dig deep. Each answer shapes my next question. Ready?",
-    greetingSpeech: "I'm going to dig deep. Each answer shapes my next question. Ready?",
+
     accentColor: "text-violet-500",
   },
   linkedin: {
@@ -58,7 +56,7 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
     chatName: "LinkedInStrategist",
     personality: "A career positioning expert who transforms profiles into professional narratives.",
     greeting: "Let's work on your LinkedIn presence. Pick your goal — improve your profile or practice interviewing — and share your link.",
-    greetingSpeech: "Let's work on your LinkedIn presence. Pick your goal, improve your profile or practice interviewing, and share your link.",
+
     accentColor: "text-blue-500",
   },
   socratic: {
@@ -66,7 +64,7 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
     chatName: "SocraticArchitect",
     personality: "A configurable expert who adapts to any domain through guided questioning.",
     greeting: "Pick your expert or build one from scratch. I'll match the depth to your needs.",
-    greetingSpeech: "Pick your expert or build one from scratch. I'll match the depth to your needs.",
+
     accentColor: "text-emerald-500",
   },
   "work-with-me": {
@@ -74,7 +72,7 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
     chatName: "TaskGuide",
     personality: "A patient web navigator who sees what you see and guides you through each step.",
     greeting: "Tell me what you need to get done. I'll walk you through it step by step.",
-    greetingSpeech: "Tell me what you need to get done. I'll walk you through it step by step.",
+
     accentColor: "text-orange-500",
   },
   "fake-game": {
@@ -82,7 +80,7 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
     chatName: "BrainCoach",
     personality: "An enthusiastic brain training coach who makes cognitive challenges feel like play.",
     greeting: "Time for a brain workout! I'm picking a neuroscientist-approved challenge for you.",
-    greetingSpeech: "Time for a brain workout! I'm picking a neuroscientist-approved challenge for you.",
+
     accentColor: "text-pink-500",
   },
 };
