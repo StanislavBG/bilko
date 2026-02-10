@@ -42,6 +42,8 @@ import {
   RotateCcw,
   ArrowLeft,
   Pencil,
+  Mic,
+  MicOff,
 } from "lucide-react";
 import {
   chatJSON,
@@ -173,6 +175,8 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
   const [lastResult, setLastResult] = useState<string | undefined>(undefined);
   const [customInput, setCustomInput] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [isVoiceListening, setIsVoiceListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
   const hasStarted = useRef(false);
 
   const { trackStep, resolveUserInput } = useFlowExecution("video-discovery");
@@ -512,12 +516,60 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
     setLastResult(undefined);
     setCustomInput("");
     setShowCustomInput(false);
+    setIsVoiceListening(false);
+    if (recognitionRef.current) {
+      recognitionRef.current.abort();
+      recognitionRef.current = null;
+    }
     setTimeout(() => {
       hasStarted.current = true;
       didGreet.current = true;
       generateTopics();
     }, 0);
   };
+
+  // ── Voice input for custom topic ────────────────────────────────────
+
+  const toggleVoiceInput = useCallback(() => {
+    if (isVoiceListening && recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+      setIsVoiceListening(false);
+      return;
+    }
+
+    const SpeechRecognitionAPI =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) return;
+
+    const recognition = new SpeechRecognitionAPI();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0]?.[0]?.transcript ?? "";
+      if (transcript.trim()) {
+        setCustomInput(transcript.trim());
+      }
+      setIsVoiceListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognition.onerror = () => {
+      setIsVoiceListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognition.onend = () => {
+      setIsVoiceListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsVoiceListening(true);
+  }, [isVoiceListening]);
 
   // ── Register screen options for voice matching ─────────────────────
 
@@ -585,14 +637,58 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
 
       {/* ── STEP 1: Select Topic ───────────────────────────────── */}
       {flowState === "select-topic" && topics.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div className="text-center py-2">
             <h2 className="text-xl font-semibold" data-testid="text-topic-heading">
               What do you want to learn about?
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Pick a topic or type your own
+              Type your own topic or pick one below
             </p>
+          </div>
+
+          {/* Custom topic input — prominent, always visible at top */}
+          <div className="max-w-lg mx-auto" data-testid="button-custom-topic">
+            <div className="flex gap-2 items-center rounded-xl border-2 border-primary/40 bg-card p-2 shadow-sm shadow-primary/5 transition-all focus-within:border-primary focus-within:shadow-md focus-within:shadow-primary/10">
+              <Pencil className="h-4 w-4 text-muted-foreground ml-2 shrink-0" />
+              <input
+                type="text"
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCustomTopicSubmit()}
+                placeholder="Type your own topic..."
+                className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground/60 focus:outline-none"
+                data-testid="input-custom-topic"
+              />
+              <button
+                type="button"
+                onClick={toggleVoiceInput}
+                className={`shrink-0 rounded-lg p-2 transition-colors ${
+                  isVoiceListening
+                    ? "bg-red-500/15 text-red-500 animate-pulse"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+                title={isVoiceListening ? "Stop listening" : "Speak your topic"}
+                aria-label={isVoiceListening ? "Stop voice input" : "Start voice input"}
+              >
+                {isVoiceListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </button>
+              <Button
+                size="sm"
+                onClick={handleCustomTopicSubmit}
+                disabled={!customInput.trim()}
+                data-testid="button-submit-custom-topic"
+              >
+                Go
+              </Button>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 max-w-lg mx-auto">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-xs text-muted-foreground/50 uppercase tracking-wider">or pick a topic</span>
+            <div className="flex-1 h-px bg-border" />
           </div>
 
           {/* Topic grid */}
@@ -617,43 +713,6 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
               </button>
             ))}
           </div>
-
-          {/* Custom input toggle + field */}
-          {!showCustomInput ? (
-            <div className="flex justify-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowCustomInput(true)}
-                data-testid="button-custom-topic"
-                className="text-muted-foreground"
-              >
-                <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                Type your own topic
-              </Button>
-            </div>
-          ) : (
-            <div className="flex gap-2 max-w-md mx-auto">
-              <input
-                type="text"
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleCustomTopicSubmit()}
-                placeholder="e.g. How black holes work..."
-                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                data-testid="input-custom-topic"
-                autoFocus
-              />
-              <Button
-                size="sm"
-                onClick={handleCustomTopicSubmit}
-                disabled={!customInput.trim()}
-                data-testid="button-submit-custom-topic"
-              >
-                Go
-              </Button>
-            </div>
-          )}
         </div>
       )}
 
