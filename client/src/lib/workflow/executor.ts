@@ -1,5 +1,5 @@
 /**
- * Workflow Executor - Runs agentic workflows
+ * Workflow Executor - Runs Bilko workflows
  */
 
 import type {

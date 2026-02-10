@@ -1,5 +1,5 @@
 /**
- * Flow Explorer - Browse and inspect PER-002 agentic flows.
+ * Bilko Workflows - Browse and inspect PER-002 in-platform flows.
  *
  * Two tabs:
  * - Flows: Lists all registered flows. Click to open the step-level inspector.
@@ -36,9 +36,9 @@ export default function FlowExplorer() {
               <Workflow className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold">Flow Explorer</h1>
+              <h1 className="text-2xl font-bold">Bilko Workflows</h1>
               <p className="text-sm text-muted-foreground">
-                Inspect and debug in-platform agentic workflows (PER-002)
+                Build and inspect in-platform workflows (PER-002)
               </p>
             </div>
           </div>
