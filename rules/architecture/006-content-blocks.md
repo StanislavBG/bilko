@@ -29,7 +29,7 @@ agentResultToTurns() ── converts to ConversationTurn[]
   ▼
 ConversationCanvas ── renders turns sequentially
   │
-  ├── BilkoTurn ── typewriter + TTS (from introduction)
+  ├── BilkoTurn ── typewriter (from introduction)
   ├── ContentBlocksTurn ── BlockSequence renders blocks
   └── UserChoiceTurn ── follow-up options
 ```

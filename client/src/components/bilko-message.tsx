@@ -1,24 +1,19 @@
 /**
  * BilkoMessage — Bilko speaks to the user.
  *
- * Full-canvas text that types itself out word-by-word, with optional TTS.
+ * Full-canvas text that types itself out word-by-word.
  * This is NOT a chat bubble. It's a first-class page element —
  * the website talking to you.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useVoice } from "@/contexts/voice-context";
+import { useState, useEffect, useRef } from "react";
 import { useConversationDesign } from "@/contexts/conversation-design-context";
 import { ENTRANCE_DELAY_MS, TYPEWRITER_SPEED_MS } from "@/lib/bilko-persona/pacing";
 
 interface BilkoMessageProps {
   /** The text Bilko says */
   text: string;
-  /** Optional different text for TTS (e.g. more natural spoken form) */
-  speech?: string;
-  /** Whether to speak aloud via TTS */
-  speakAloud?: boolean;
-  /** Called when the typewriter + speech finishes */
+  /** Called when the typewriter finishes */
   onComplete?: () => void;
   /** Delay before starting (ms) */
   delay?: number;
@@ -30,8 +25,6 @@ interface BilkoMessageProps {
 
 export function BilkoMessage({
   text,
-  speech,
-  speakAloud = true,
   onComplete,
   delay = ENTRANCE_DELAY_MS,
   className = "",
@@ -40,7 +33,6 @@ export function BilkoMessage({
   const [displayedWords, setDisplayedWords] = useState(0);
   const [started, setStarted] = useState(false);
   const [complete, setComplete] = useState(false);
-  const { speak, ttsSupported } = useVoice();
   const { bilkoStartedSpeaking, bilkoFinishedSpeaking } = useConversationDesign();
   const completeCalled = useRef(false);
   const words = text.split(/\s+/);
@@ -50,6 +42,12 @@ export function BilkoMessage({
     const timer = setTimeout(() => setStarted(true), delay);
     return () => clearTimeout(timer);
   }, [delay]);
+
+  // Signal that Bilko started when typewriter begins
+  useEffect(() => {
+    if (!started) return;
+    bilkoStartedSpeaking();
+  }, [started]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Typewriter: reveal word by word
   useEffect(() => {
@@ -64,27 +62,14 @@ export function BilkoMessage({
     return () => clearTimeout(timer);
   }, [started, displayedWords, words.length, speed]);
 
-  // TTS: speak when the typewriter starts
-  useEffect(() => {
-    if (!started || !speakAloud || !ttsSupported) return;
-    bilkoStartedSpeaking();
-    speak(speech || text)
-      .then(() => {
-        bilkoFinishedSpeaking();
-      })
-      .catch(() => {
-        // If TTS fails for any reason, still release the floor
-        bilkoFinishedSpeaking();
-      });
-  }, [started, speakAloud, ttsSupported]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Fire onComplete once
+  // Fire onComplete once and signal Bilko finished
   useEffect(() => {
     if (complete && !completeCalled.current) {
       completeCalled.current = true;
+      bilkoFinishedSpeaking();
       onComplete?.();
     }
-  }, [complete, onComplete]);
+  }, [complete, onComplete]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!started) return null;
 

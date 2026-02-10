@@ -142,7 +142,7 @@ export const componentDefinitions: ComponentDefinition[] = [
     ],
     references: [
       { label: "resolveUserInput()", path: "client/src/lib/flow-engine/use-flow-execution.ts", description: "Hook method that completes a user-input step with the user's data" },
-      { label: "VoiceContext", path: "client/src/contexts/voice-context.tsx", description: "STT + TTS context enabling voice input for user-input steps" },
+      { label: "ConversationDesignContext", path: "client/src/contexts/conversation-design-context.tsx", description: "Turn-taking context for conversation-driven user input" },
       { label: "ARCH-005 User-Input Contract", path: "client/src/lib/flow-inspector/validate.ts", description: "Steel frame validator enforcing inputSchema + outputSchema requirements" },
     ],
   },

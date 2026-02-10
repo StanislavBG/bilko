@@ -169,11 +169,10 @@ export function FakeGameFlow({ onComplete }: { onComplete?: (summary?: string) =
 
   // ── Push agent message to chat ──────────────────────────
   const pushAgentMessage = useCallback(
-    (text: string, speech?: string) => {
+    (text: string) => {
       pushMessage(OWNER_ID, {
         speaker: "agent",
         text,
-        speech: speech ?? text,
         agentName: agent?.chatName ?? "BrainCoach",
         agentDisplayName: agent?.name ?? "Brain Coach",
         agentAccent: agent?.accentColor ?? "text-pink-500",
@@ -188,7 +187,7 @@ export function FakeGameFlow({ onComplete }: { onComplete?: (summary?: string) =
     if (didGreet.current) return;
     didGreet.current = true;
     if (agent) {
-      pushAgentMessage(agent.greeting, agent.greetingSpeech);
+      pushAgentMessage(agent.greeting);
     }
   }, [agent, pushAgentMessage]);
 

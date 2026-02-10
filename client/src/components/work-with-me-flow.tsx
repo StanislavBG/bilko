@@ -56,7 +56,6 @@ import {
 } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
-import { useVoice } from "@/contexts/voice-context";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
 // ── Types ──────────────────────────────────────────────────
@@ -306,15 +305,13 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
     "work-with-me",
     "Work With Me",
   );
-  const { speak } = useVoice();
   const { pushMessage } = useFlowChat();
 
   const agent = getFlowAgent("work-with-me");
-  const pushAgentMessage = useCallback((text: string, speech?: string) => {
+  const pushAgentMessage = useCallback((text: string) => {
     pushMessage("work-with-me", {
       speaker: "agent",
       text,
-      speech: speech ?? text,
       agentName: agent?.chatName,
       agentDisplayName: agent?.name,
       agentAccent: agent?.accentColor,
@@ -327,7 +324,7 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
     if (didGreet.current) return;
     didGreet.current = true;
     if (agent) {
-      pushAgentMessage(agent.greeting, agent.greetingSpeech);
+      pushAgentMessage(agent.greeting);
     }
   }, [agent, pushAgentMessage]);
 
@@ -411,10 +408,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
       updateStep("research", "complete", `${result.data.steps.length} steps found`);
       updateStep("guide", "active", "Pick a step to start");
       setPhase("select-step");
-      speak(
-        `Found ${result.data.steps.length} steps to ${result.data.taskTitle}. Pick one to get started.`,
-        "Fenrir",
-      );
     } catch (err) {
       console.error("Research error:", err);
       setError(
@@ -422,9 +415,8 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
       );
       updateStep("research", "error", "Something went wrong");
       setPhase("error");
-      speak("Something went wrong researching your task. Let me try again.", "Fenrir");
     }
-  }, [objective, trackStep, resolveUserInput, speak]);
+  }, [objective, trackStep, resolveUserInput]);
 
   // ── Step 3: Select a step and fetch page ─────────────────
 
@@ -474,7 +466,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
         setGuidance(guidanceResult.data);
         setPhase("guided-view");
         updateStep("guide", "active", `Viewing: ${page.data.title}`);
-        speak(guidanceResult.data.pageSummary, "Fenrir");
       } catch (err) {
         console.error("Page fetch/analyze error:", err);
         setError(
@@ -483,7 +474,7 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
         setPhase("error");
       }
     },
-    [objective, trackStep, resolveUserInput, speak],
+    [objective, trackStep, resolveUserInput],
   );
 
   // ── Navigate to a link within the guided view ────────────
@@ -518,7 +509,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
         setGuidance(guidanceResult);
         setPhase("guided-view");
         updateStep("guide", "active", `Viewing: ${page.title}`);
-        speak(guidanceResult.pageSummary, "Fenrir");
       } catch (err) {
         console.error("Navigation error:", err);
         setError(
@@ -527,7 +517,7 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
         setPhase("error");
       }
     },
-    [objective, selectedStep, speak],
+    [objective, selectedStep],
   );
 
   // ── Mark step complete and go back to step list ──────────

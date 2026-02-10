@@ -15,28 +15,19 @@
  * Rules:
  * - ONLY messages render here (NO options, NO interactive cards)
  * - Messages come from flow steps (speaker + text) or user typing
- * - TTS triggers only for bilko/agent messages (not user, not system)
- * - STT (mic/listening) has been removed
  */
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { Volume2, VolumeX, User, ArrowRight, ArrowDown, ArrowUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { User, ArrowRight, ArrowDown, ArrowUp } from "lucide-react";
 import { BilkoMessage } from "@/components/bilko-message";
 import { AgentBadge, getAgentColors } from "@/components/speaker-identity";
 import { useFlowChat, type FlowChatMessage } from "@/lib/bilko-flow/runtime/flow-chat";
-import { useVoice } from "@/contexts/voice-context";
-import { useConversationDesign } from "@/contexts/conversation-design-context";
 import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
-
-const GEMINI_VOICES = ["Kore", "Puck", "Charon", "Fenrir", "Aoede", "Leda", "Orus", "Zephyr"];
-const TTS_TEST_PHRASE = "Bilko Bibitkov Mental Gym";
 
 // ── Main FlowChat component ─────────────────────────────
 
 export function FlowChat() {
   const { messages, activeOwner, messageDirection, setMessageDirection } = useFlowChat();
-  const { isSpeaking, speak, stopSpeaking, ttsSupported } = useVoice();
-  const { floor } = useConversationDesign();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [settledIds, setSettledIds] = useState<Set<string>>(new Set());
 
@@ -55,54 +46,22 @@ export function FlowChat() {
     setMessageDirection(isBottomUp ? "top-down" : "bottom-up");
   };
 
-  const testTTS = useCallback(() => {
-    if (isSpeaking) {
-      stopSpeaking();
-    } else {
-      const randomVoice = GEMINI_VOICES[Math.floor(Math.random() * GEMINI_VOICES.length)];
-      speak(TTS_TEST_PHRASE, randomVoice);
-    }
-  }, [isSpeaking, stopSpeaking, speak]);
-
   return (
     <div className="flex flex-col h-full">
-      {/* Header bar with TTS indicator and direction toggle */}
+      {/* Header bar with direction toggle */}
       <div className="border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="px-4 py-1.5 flex items-center justify-between">
-          {isSpeaking ? (
-            <div className="flex items-center gap-2">
-              <Volume2 className="h-3.5 w-3.5 text-amber-400 animate-pulse" />
-              <span className="text-xs text-amber-400 font-medium">Bilko is speaking</span>
-            </div>
-          ) : (
-            <div />
-          )}
-          <div className="flex items-center gap-1">
-            {ttsSupported && (
-              <button
-                onClick={testTTS}
-                className="p-1 rounded hover:bg-foreground/10 transition-colors"
-                title={isSpeaking ? "Stop TTS" : "Test TTS (random voice)"}
-              >
-                {isSpeaking ? (
-                  <VolumeX className="h-3.5 w-3.5 text-red-500" />
-                ) : (
-                  <Volume2 className="h-3.5 w-3.5 text-muted-foreground/50" />
-                )}
-              </button>
+        <div className="px-4 py-1.5 flex items-center justify-end">
+          <button
+            onClick={toggleDirection}
+            className="p-1 rounded hover:bg-foreground/10 transition-colors"
+            title={messageDirection === "top-down" ? "Switch to bottom-up messages" : "Switch to top-down messages"}
+          >
+            {messageDirection === "top-down" ? (
+              <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+            ) : (
+              <ArrowUp className="h-3.5 w-3.5 text-muted-foreground/50" />
             )}
-            <button
-              onClick={toggleDirection}
-              className="p-1 rounded hover:bg-foreground/10 transition-colors"
-              title={messageDirection === "top-down" ? "Switch to bottom-up messages" : "Switch to top-down messages"}
-            >
-              {messageDirection === "top-down" ? (
-                <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/50" />
-              ) : (
-                <ArrowUp className="h-3.5 w-3.5 text-muted-foreground/50" />
-              )}
-            </button>
-          </div>
+          </button>
         </div>
       </div>
 
@@ -241,8 +200,6 @@ function BilkoMessageView({
       </div>
       <BilkoMessage
         text={message.text}
-        speech={message.speech}
-        speakAloud
         delay={isFirst ? ENTRANCE_DELAY_MS : 200}
         speed={70}
         onComplete={onSettled}
@@ -310,8 +267,6 @@ function AgentMessageView({
       )}
       <BilkoMessage
         text={message.text}
-        speech={message.speech}
-        speakAloud
         delay={200}
         speed={70}
         onComplete={onSettled}

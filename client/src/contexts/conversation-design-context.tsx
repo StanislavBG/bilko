@@ -1,13 +1,13 @@
 /**
  * Conversation Design — ONE framework for the entire site.
  *
- * Governs turn-taking and TTS timing between Bilko and the user.
+ * Governs turn-taking between Bilko and the user.
  * Every conversation surface uses this context so the experience
- * is consistent — same cadence, same voice, same flow.
+ * is consistent — same cadence, same flow.
  *
  * Turn lifecycle:
- * 1. Bilko speaks (TTS + typewriter)
- * 2. Brief pause (POST_TTS_BUFFER_MS)
+ * 1. Bilko speaks (typewriter)
+ * 2. Brief pause
  * 3. Floor passes to user (click-based interaction)
  * 4. User picks an option → go to 1
  *
@@ -24,8 +24,6 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import { useVoice } from "@/contexts/voice-context";
-import { POST_TTS_BUFFER_MS } from "@/lib/bilko-persona/pacing";
 
 // ── Types ────────────────────────────────────────────────
 
@@ -239,10 +237,10 @@ interface ConversationDesignValue {
   /** Who currently has the conversational floor */
   floor: ConversationFloor;
 
-  /** Signal that Bilko has started speaking (TTS active) */
+  /** Signal that Bilko has started speaking (typewriter active) */
   bilkoStartedSpeaking: () => void;
 
-  /** Signal that Bilko finished speaking */
+  /** Signal that Bilko finished speaking (typewriter complete) */
   bilkoFinishedSpeaking: () => void;
 
   /** Signal that the user has been given the floor */
@@ -267,8 +265,6 @@ interface ConversationDesignValue {
 const ConversationDesignCtx = createContext<ConversationDesignValue | undefined>(undefined);
 
 export function ConversationDesignProvider({ children }: { children: ReactNode }) {
-  const { isSpeaking } = useVoice();
-
   const [floor, setFloor] = useState<ConversationFloor>("idle");
 
   const floorRef = useRef(floor);
@@ -304,7 +300,7 @@ export function ConversationDesignProvider({ children }: { children: ReactNode }
     autoListenTimerRef.current = setTimeout(() => {
       setFloor("user");
       autoListenTimerRef.current = null;
-    }, POST_TTS_BUFFER_MS + 200);
+    }, 200);
   }, []);
 
   const giveFloorToUser = useCallback(() => {
@@ -319,18 +315,6 @@ export function ConversationDesignProvider({ children }: { children: ReactNode }
     userUtteranceCbsRef.current.add(cb);
     return () => { userUtteranceCbsRef.current.delete(cb); };
   }, []);
-
-  // Sync floor with TTS state
-  useEffect(() => {
-    if (isSpeaking && floorRef.current !== "bilko") {
-      setFloor("bilko");
-    } else if (!isSpeaking && floorRef.current === "bilko") {
-      autoListenTimerRef.current = setTimeout(() => {
-        setFloor("user");
-        autoListenTimerRef.current = null;
-      }, POST_TTS_BUFFER_MS + 200);
-    }
-  }, [isSpeaking]);
 
   // Cleanup timers
   useEffect(() => {

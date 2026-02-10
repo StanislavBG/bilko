@@ -73,7 +73,7 @@ const allFlows: FlowDefinition[] = [
         name: "Push Greeting to Chat",
         type: "chat",
         description:
-          "Pushes the generated greeting text to the FlowChat panel with TTS. This is the explicit chat-publish step — the greeting LLM output is only visible to the user after this step runs.",
+          "Pushes the generated greeting text to the FlowChat panel. This is the explicit chat-publish step — the greeting LLM output is only visible to the user after this step runs.",
         inputSchema: [
           {
             name: "greeting",

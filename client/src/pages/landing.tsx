@@ -42,7 +42,6 @@ import { WorkWithMeFlow } from "@/components/work-with-me-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 import { chat, useFlowExecution, FlowChatProvider, useFlowChat } from "@/lib/bilko-flow";
-import { useVoice } from "@/contexts/voice-context";
 import { Button } from "@/components/ui/button";
 import {
   Play,
@@ -185,18 +184,9 @@ const activeFlowNames = flowRegistry
 const flowNameList = [...activeFlowNames, "Explore the Site"].join(", ");
 
 const GUIDANCE_MESSAGES = [
-  {
-    text: "Take your time. When you're ready, just say the name of an experience — or tap one on the right.",
-    speech: "Take your time. When you're ready, just say the name of an experience, or tap one on the right.",
-  },
-  {
-    text: "Still here. You can pick an experience by name, or just tap one of the options on the right side.",
-    speech: "Still here. You can pick an experience by name, or just tap one of the options on the right side.",
-  },
-  {
-    text: `No rush. The options are: ${flowNameList}. Say any of those or tap one.`,
-    speech: `No rush. The options are ${flowNameList}. Say any of those, or tap one.`,
-  },
+  { text: "Take your time. When you're ready, just say the name of an experience — or tap one on the right." },
+  { text: "Still here. You can pick an experience by name, or just tap one of the options on the right side." },
+  { text: `No rush. The options are: ${flowNameList}. Say any of those or tap one.` },
 ];
 
 // ── Experience back button ───────────────────────────────
@@ -219,7 +209,6 @@ function ExperienceBack({ onBack }: { onBack: () => void }) {
 export function LandingContent() {
   const { pushMessage, clearMessages, claimChat, releaseChat } = useFlowChat();
   const { trackStep, resolveUserInput } = useFlowExecution("bilko-main");
-  const { stopSpeaking } = useVoice();
   const { userTurnDone } = useConversationDesign();
   const [, navigate] = useLocation();
   const sidebarCtx = useSidebarSafe();
@@ -241,10 +230,7 @@ export function LandingContent() {
       // 1. Abort any in-flight LLM requests
       abortRef.current.abort();
 
-      // 2. Stop TTS immediately (drains queue + halts playback)
-      stopSpeaking();
-
-      // 3. Reset conversation floor to idle so other apps start clean
+      // 2. Reset conversation floor to idle so other apps start clean
       userTurnDone();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -316,7 +302,6 @@ export function LandingContent() {
             pushMessage(OWNER_ID, {
               speaker: "bilko",
               text: greetingText,
-              speech: greetingText,
             });
             return {};
           },
@@ -329,7 +314,6 @@ export function LandingContent() {
         pushMessage(OWNER_ID, {
           speaker: "bilko",
           text: fallback,
-          speech: fallback,
         });
       } finally {
         setGreetingLoading(false);
@@ -552,7 +536,6 @@ export function LandingContent() {
         pushMessage(OWNER_ID, {
           speaker: "bilko",
           text: msg.text,
-          speech: msg.speech,
         });
         unmatchedCountRef.current = 0;
         guidanceRoundRef.current += 1;
