@@ -1,26 +1,32 @@
 /**
  * Newsletter + Infographic + Video Workflow — bilko-flow DSL definition
  *
- * Translates the test-newsletter flow (8-step DAG with parallel branches)
+ * Translates the test-newsletter flow (12-step DAG with parallel branches)
  * into the bilko-flow deterministic workflow format.
  *
  * Inspired by the [EFD] European Football Daily n8n workflow
  * that generates cinematic infographics with stat overlays.
  *
  * Steps:
- *   1. discover-stories       (ai.generate-text) — Find 3 trending stories
- *   2. write-articles         (ai.generate-text) — Write articles + image descriptions
- *   3. newsletter-summary     (ai.generate-text) — Distill into experience report
- *   4. rank-stories           (ai.generate-text) — Rank by newsworthiness
- *   5. design-infographic     (ai.generate-text) — Create infographic data model
- *   6. create-narrative       (ai.generate-text) — Write 60s broadcast narration
- *   7. generate-storyboard    (ai.generate-text) — Visual shot list for slideshow
- *   8. generate-video-prompts (ai.generate-text) — Veo-optimized video prompts
+ *   1. discover-stories            (ai.generate-text)  — Find 3 trending stories
+ *   2. write-articles              (ai.generate-text)  — Write articles + image descriptions
+ *   3. newsletter-summary          (ai.generate-text)  — Distill into experience report
+ *   4. rank-stories                (ai.generate-text)  — Rank by newsworthiness
+ *   5. design-infographic          (ai.generate-text)  — Create infographic data + imagePrompt
+ *   6. create-narrative            (ai.generate-text)  — Write 60s broadcast narration
+ *   7. generate-storyboard         (ai.generate-text)  — Visual shot list for slideshow
+ *   8. generate-video-prompts      (ai.generate-text)  — Veo-optimized video prompts
+ *   9. generate-infographic-image  (ai.generate-image) — Nano Banana cinematic infographic
+ *  10. generate-scene-images       (ai.generate-image) — Nano Banana scene images
+ *  11. generate-video-clips        (ai.generate-video) — Veo 7-8s video clips
  *
  * DAG:
  *   discover-stories → write-articles → [newsletter-summary ∥ rank-stories]
  *   rank-stories → [design-infographic ∥ create-narrative]
  *   create-narrative → [generate-storyboard ∥ generate-video-prompts]
+ *   [design-infographic, generate-storyboard] → generate-infographic-image
+ *   generate-storyboard → generate-scene-images
+ *   generate-video-prompts → generate-video-clips
  */
 
 import type { Step, CreateWorkflowInput } from "bilko-flow/dist/domain/workflow";
@@ -138,11 +144,11 @@ export function createNewsletterWorkflowInput(
       id: "design-infographic",
       name: "Design Infographic Layout",
       type: "ai.generate-text",
-      description: "Creates structured infographic data: title, main story (large stat callout), 2 supporting cards, colors. Parallel with create-narrative.",
+      description: "Creates structured infographic data emphasizing SCORES, TRANSFER FEES, and numerical data, plus a rich imagePrompt for Nano Banana cinematic wallpaper generation. Parallel with create-narrative.",
       dependsOn: ["rank-stories"],
       inputs: {
-        systemPromptTemplate: `Data visualization designer. Create infographic: title, mainStory with stat, 2 supporting, accent colors.`,
-        userMessageTemplate: "Design a sports infographic layout.",
+        systemPromptTemplate: `Data visualization designer focused on SCORES, TRANSFER FEES, and NUMERICAL DATA. Create infographic: title, mainStory with prominent stat, 2 supporting with stats, accent colors, and a cinematic imagePrompt (40-80 words) for AI wallpaper generation.`,
+        userMessageTemplate: "Design a sports infographic layout with scores and transfer fee emphasis.",
         model: "gemini-2.5-flash",
         templateSource: "rank-stories",
       },
@@ -198,15 +204,93 @@ export function createNewsletterWorkflowInput(
       policy: defaultPolicy,
       determinism: llmDeterminism,
     },
+    // ── Image Generation Phase (Nano Banana) ──
+    {
+      id: "generate-infographic-image",
+      name: "Generate Cinematic Infographic Image",
+      type: "ai.generate-image",
+      description: "Generates a cinematic wallpaper-style infographic image using Nano Banana. Focuses on scores, transfer fees, dramatic stadium lighting.",
+      dependsOn: ["design-infographic", "generate-storyboard"],
+      inputs: {
+        promptTemplate: "{{design-infographic.infographic.imagePrompt}}",
+        aspectRatio: "16:9",
+        model: "gemini-2.5-flash-preview-image-generation",
+      },
+      outputs: { schema: { type: "object", properties: { imageBase64: { type: "string" }, mimeType: { type: "string" } } } },
+      policy: { ...defaultPolicy, timeoutMs: 120000 },
+      determinism: {
+        ...llmDeterminism,
+        externalDependencies: [
+          {
+            name: "nano-banana-image-gen",
+            kind: "http-api",
+            deterministic: false,
+            evidenceCapture: "full-response",
+          },
+        ],
+      },
+    },
+    {
+      id: "generate-scene-images",
+      name: "Generate Slideshow Scene Images",
+      type: "ai.generate-image",
+      description: "Generates cinematic AI images for each storyboard scene using Nano Banana. Each image focuses on one key football event.",
+      dependsOn: ["generate-storyboard"],
+      inputs: {
+        promptsTemplate: "{{generate-storyboard.storyboard.scenes|map:imageDescription}}",
+        aspectRatio: "16:9",
+        model: "gemini-2.5-flash-preview-image-generation",
+      },
+      outputs: { schema: { type: "object", properties: { images: { type: "array" } } } },
+      policy: { ...defaultPolicy, timeoutMs: 120000 },
+      determinism: {
+        ...llmDeterminism,
+        externalDependencies: [
+          {
+            name: "nano-banana-image-gen",
+            kind: "http-api",
+            deterministic: false,
+            evidenceCapture: "full-response",
+          },
+        ],
+      },
+    },
+    // ── Video Generation Phase (Veo) ──
+    {
+      id: "generate-video-clips",
+      name: "Generate AI Video Clips",
+      type: "ai.generate-video",
+      description: "Generates 7-8 second AI video clips using Veo for each scene prompt. Creates cinematic football footage.",
+      dependsOn: ["generate-video-prompts"],
+      inputs: {
+        promptsTemplate: "{{generate-video-prompts.videoPrompts.scenes|map:veoPrompt}}",
+        durationSeconds: 8,
+        aspectRatio: "16:9",
+        model: "veo-3.0-generate-preview",
+      },
+      outputs: { schema: { type: "object", properties: { videos: { type: "array" } } } },
+      policy: { ...defaultPolicy, timeoutMs: 300000, maxAttempts: 1 },
+      determinism: {
+        ...llmDeterminism,
+        externalDependencies: [
+          {
+            name: "veo-video-gen",
+            kind: "http-api",
+            deterministic: false,
+            evidenceCapture: "full-response",
+          },
+        ],
+      },
+    },
   ];
 
   return {
     accountId,
     projectId,
     environmentId,
-    name: "DEMO European Football Newsletter + Media Pipeline",
+    name: "DEMO European Football Newsletter + Media Pipeline v3",
     description:
-      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces 4 outputs: newsletter, infographic, slideshow video storyboard, and Veo-optimized AI video prompts. 8-step DAG with 3 parallel branch points. Powered by bilko-flow engine.",
+      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana), slideshow with AI scene images, and Veo video clips. 12-step DAG with image/video generation. Powered by bilko-flow engine.",
     specVersion: "1.0.0",
     determinism,
     entryStepId: "discover-stories",
