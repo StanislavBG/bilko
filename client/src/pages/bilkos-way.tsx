@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronLeft, Video, Image, FileText, Upload, X, Download, Trash2 } from "lucide-react";
+import { ChevronLeft, Video, Image, FileText, Upload, X, Download, Trash2, Play, Eye, BookOpen } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageContent } from "@/components/page-content";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/tooltip";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { useViewMode } from "@/contexts/view-mode-context";
 import { writeUps, getWriteUpById, thinkingVideos, type WriteUp, type Video as VideoType } from "@/data/bilkos-way";
 
 type NavItem = { id: string; label: string; shortLabel: string; section?: "writeups" | "videos" };
@@ -57,9 +58,9 @@ function useTopicMedia(topicId: string | null) {
   return { media, loading, refresh };
 }
 
-// ─── Upload button ───────────────────────────────────────────
+// ─── Admin upload button ─────────────────────────────────────
 
-function UploadButton({
+function AdminUploadButton({
   topicId,
   mediaType,
   accept,
@@ -237,9 +238,9 @@ function MediaViewer({
   );
 }
 
-// ─── Upload bar (3 icons in header) ──────────────────────────
+// ─── Admin upload bar (3 icons in header) ────────────────────
 
-function MediaUploadBar({
+function AdminMediaBar({
   topicId,
   media,
   onRefresh,
@@ -260,7 +261,7 @@ function MediaUploadBar({
 
   return (
     <div className="flex items-center gap-0.5">
-      <UploadButton
+      <AdminUploadButton
         topicId={topicId}
         mediaType="video"
         accept=".mp4,video/mp4"
@@ -271,7 +272,7 @@ function MediaUploadBar({
         onView={onView}
         onDelete={handleDelete}
       />
-      <UploadButton
+      <AdminUploadButton
         topicId={topicId}
         mediaType="infographic"
         accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
@@ -282,7 +283,7 @@ function MediaUploadBar({
         onView={onView}
         onDelete={handleDelete}
       />
-      <UploadButton
+      <AdminUploadButton
         topicId={topicId}
         mediaType="pdf"
         accept=".pdf,application/pdf"
@@ -295,6 +296,74 @@ function MediaUploadBar({
       />
     </div>
   );
+}
+
+// ─── User view bar (only shows buttons for existing media) ───
+
+const USER_LABELS: Record<string, { label: string; icon: typeof Play }> = {
+  video: { label: "Play Video", icon: Play },
+  infographic: { label: "View Image", icon: Eye },
+  pdf: { label: "View Slides", icon: BookOpen },
+};
+
+function UserMediaBar({
+  media,
+  onView,
+}: {
+  media: TopicMedia[];
+  onView: (media: TopicMedia) => void;
+}) {
+  if (media.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {media.map((m) => {
+        const cfg = USER_LABELS[m.mediaType];
+        if (!cfg) return null;
+        const Icon = cfg.icon;
+        return (
+          <Button
+            key={m.mediaType}
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 text-xs text-muted-foreground"
+            onClick={() => onView(m)}
+          >
+            <Icon className="h-3 w-3" />
+            {cfg.label}
+          </Button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Combined media bar (switches on admin) ──────────────────
+
+function TopicMediaBar({
+  topicId,
+  media,
+  isAdmin,
+  onRefresh,
+  onView,
+}: {
+  topicId: string;
+  media: TopicMedia[];
+  isAdmin: boolean;
+  onRefresh: () => void;
+  onView: (media: TopicMedia) => void;
+}) {
+  if (isAdmin) {
+    return (
+      <AdminMediaBar
+        topicId={topicId}
+        media={media}
+        onRefresh={onRefresh}
+        onView={onView}
+      />
+    );
+  }
+  return <UserMediaBar media={media} onView={onView} />;
 }
 
 // ─── Inline media preview strip ──────────────────────────────
@@ -351,6 +420,7 @@ function WriteUpDetail({
   writeUp: WriteUp;
   onBack?: () => void;
 }) {
+  const { effectiveIsAdmin } = useViewMode();
   const { media, refresh } = useTopicMedia(writeUp.id);
   const [viewingMedia, setViewingMedia] = useState<TopicMedia | null>(null);
 
@@ -387,16 +457,17 @@ function WriteUpDetail({
               {writeUp.subtitle}
             </p>
           </div>
-          <MediaUploadBar
+          <TopicMediaBar
             topicId={writeUp.id}
             media={media}
+            isAdmin={effectiveIsAdmin}
             onRefresh={refresh}
             onView={setViewingMedia}
           />
         </div>
       </div>
 
-      <MediaPreviewStrip media={media} onView={setViewingMedia} />
+      {effectiveIsAdmin && <MediaPreviewStrip media={media} onView={setViewingMedia} />}
 
       <div className="p-4">
         <div className="prose prose-sm dark:prose-invert max-w-none">
