@@ -69,6 +69,24 @@ export const AVAILABLE_MODELS: LLMModel[] = [
     inputPrice: 0,
     outputPrice: 0,
   },
+  {
+    id: "gemini-2.5-flash-preview-image-generation",
+    name: "Nano Banana (Image Generation)",
+    provider: "google",
+    description: "Gemini native image generation. Cinematic quality images from text prompts.",
+    contextWindow: 32768,
+    inputPrice: 0,
+    outputPrice: 0,
+  },
+  {
+    id: "veo-3.0-generate-preview",
+    name: "Veo 3 (Video Generation)",
+    provider: "google",
+    description: "AI video generation. Creates 5-8 second cinematic video clips from text prompts.",
+    contextWindow: 0,
+    inputPrice: 0,
+    outputPrice: 0,
+  },
 ];
 
 export function getModelById(modelId: string): LLMModel | undefined {
