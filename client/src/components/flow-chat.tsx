@@ -23,7 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import { Volume2, User, ArrowRight, ArrowDown, ArrowUp } from "lucide-react";
 import { BilkoMessage } from "@/components/bilko-message";
 import { AgentBadge, getAgentColors } from "@/components/speaker-identity";
-import { useFlowChat, type FlowChatMessage } from "@/lib/flow-engine/flow-chat";
+import { useFlowChat, type FlowChatMessage } from "@/lib/bilko-flow/runtime/flow-chat";
 import { useVoice } from "@/contexts/voice-context";
 import { useConversationDesign } from "@/contexts/conversation-design-context";
 import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";

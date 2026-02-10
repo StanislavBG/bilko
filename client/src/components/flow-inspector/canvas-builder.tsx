@@ -26,15 +26,15 @@ import {
   Sparkles,
   Undo2,
 } from "lucide-react";
-import { chatJSON, jsonPrompt } from "@/lib/flow-engine";
+import { chatJSON, jsonPrompt } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import {
   applyMutation,
   createBlankStep,
   type FlowMutation,
   type MutationResult,
-} from "@/lib/flow-engine/flow-mutations";
-import type { FlowDefinition, FlowStep, StepType } from "@/lib/flow-inspector/types";
+} from "@/lib/bilko-flow/definitions/mutations";
+import type { FlowDefinition, FlowStep, StepType } from "@/lib/bilko-flow/types";
 
 // ── Types ────────────────────────────────────────────────
 

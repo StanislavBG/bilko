@@ -14,7 +14,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
 import { LandingContent } from "@/pages/landing";
 import { FlowBusProvider } from "@/contexts/flow-bus-context";
-import { FlowChatProvider } from "@/lib/flow-engine";
+import { FlowChatProvider } from "@/lib/bilko-flow";
 import Projects from "@/pages/projects";
 import AgenticWorkflows from "@/pages/agentic-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";

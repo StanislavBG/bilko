@@ -13,7 +13,7 @@ import { useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Workflow, Blocks } from "lucide-react";
-import { flowRegistry } from "@/lib/flow-inspector";
+import { flowRegistry } from "@/lib/bilko-flow";
 import { FlowCard, ComponentCatalog } from "@/components/flow-inspector";
 
 export default function FlowExplorer() {

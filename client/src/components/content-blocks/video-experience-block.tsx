@@ -27,7 +27,7 @@ import {
   ChevronUp,
   AlertTriangle,
 } from "lucide-react";
-import { chat } from "@/lib/flow-engine";
+import { chat } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useVoice } from "@/contexts/voice-context";
 import type { VideoExperienceBlock } from "./types";
