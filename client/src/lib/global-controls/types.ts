@@ -83,13 +83,10 @@ export type DebugPI = ProgramInterface<DebugPIState, DebugPIActions>;
 export interface SessionPIState {
   /** Whether TTS is currently playing */
   isSpeaking: boolean;
-  ttsSupported: boolean;
-  ttsUnlocked: boolean;
 }
 
 export interface SessionPIActions {
   resetSession: () => void;
-  testTTS: () => void;
 }
 
 export type SessionPI = ProgramInterface<SessionPIState, SessionPIActions>;

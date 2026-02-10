@@ -19,8 +19,8 @@
  * - STT (mic/listening) has been removed
  */
 
-import { useEffect, useRef, useState } from "react";
-import { Volume2, User, ArrowRight, ArrowDown, ArrowUp } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Volume2, VolumeX, User, ArrowRight, ArrowDown, ArrowUp } from "lucide-react";
 import { BilkoMessage } from "@/components/bilko-message";
 import { AgentBadge, getAgentColors } from "@/components/speaker-identity";
 import { useFlowChat, type FlowChatMessage } from "@/lib/bilko-flow/runtime/flow-chat";
@@ -28,11 +28,14 @@ import { useVoice } from "@/contexts/voice-context";
 import { useConversationDesign } from "@/contexts/conversation-design-context";
 import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
 
+const GEMINI_VOICES = ["Kore", "Puck", "Charon", "Fenrir", "Aoede", "Leda", "Orus", "Zephyr"];
+const TTS_TEST_PHRASE = "Bilko Bibitkov AI Academy";
+
 // ── Main FlowChat component ─────────────────────────────
 
 export function FlowChat() {
   const { messages, activeOwner, messageDirection, setMessageDirection } = useFlowChat();
-  const { isSpeaking } = useVoice();
+  const { isSpeaking, speak, stopSpeaking, ttsSupported } = useVoice();
   const { floor } = useConversationDesign();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [settledIds, setSettledIds] = useState<Set<string>>(new Set());
@@ -52,6 +55,15 @@ export function FlowChat() {
     setMessageDirection(isBottomUp ? "top-down" : "bottom-up");
   };
 
+  const testTTS = useCallback(() => {
+    if (isSpeaking) {
+      stopSpeaking();
+    } else {
+      const randomVoice = GEMINI_VOICES[Math.floor(Math.random() * GEMINI_VOICES.length)];
+      speak(TTS_TEST_PHRASE, randomVoice);
+    }
+  }, [isSpeaking, stopSpeaking, speak]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Header bar with TTS indicator and direction toggle */}
@@ -65,17 +77,32 @@ export function FlowChat() {
           ) : (
             <div />
           )}
-          <button
-            onClick={toggleDirection}
-            className="p-1 rounded hover:bg-foreground/10 transition-colors"
-            title={messageDirection === "top-down" ? "Switch to bottom-up messages" : "Switch to top-down messages"}
-          >
-            {messageDirection === "top-down" ? (
-              <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/50" />
-            ) : (
-              <ArrowUp className="h-3.5 w-3.5 text-muted-foreground/50" />
+          <div className="flex items-center gap-1">
+            {ttsSupported && (
+              <button
+                onClick={testTTS}
+                className="p-1 rounded hover:bg-foreground/10 transition-colors"
+                title={isSpeaking ? "Stop TTS" : "Test TTS (random voice)"}
+              >
+                {isSpeaking ? (
+                  <VolumeX className="h-3.5 w-3.5 text-red-500" />
+                ) : (
+                  <Volume2 className="h-3.5 w-3.5 text-muted-foreground/50" />
+                )}
+              </button>
             )}
-          </button>
+            <button
+              onClick={toggleDirection}
+              className="p-1 rounded hover:bg-foreground/10 transition-colors"
+              title={messageDirection === "top-down" ? "Switch to bottom-up messages" : "Switch to top-down messages"}
+            >
+              {messageDirection === "top-down" ? (
+                <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/50" />
+              ) : (
+                <ArrowUp className="h-3.5 w-3.5 text-muted-foreground/50" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
