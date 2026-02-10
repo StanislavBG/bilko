@@ -575,9 +575,6 @@ export function LandingContent() {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      {/* Maximized flow progress banner — full width at top when subflow is active */}
-      {selectedMode && <FlowProgressBanner onReset={handleReset} />}
-
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {/* Left panel: Flow Chat — messages only, no options */}
         <div className="w-full lg:w-[420px] xl:w-[480px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
@@ -601,6 +598,9 @@ export function LandingContent() {
           )}
         </div>
       </div>
+
+      {/* Flow progress banner — below chat and main frame when subflow is active */}
+      {selectedMode && <FlowProgressBanner onReset={handleReset} />}
     </div>
   );
 }
