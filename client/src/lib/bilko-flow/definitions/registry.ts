@@ -7,14 +7,14 @@
  * Validated at import time by ARCH-005 steel frame validator.
  * Invalid flows are logged and excluded.
  *
+ * All flows have corresponding bilko-flow DSL definitions in
+ * server/bilko-flow/ for deterministic engine integration.
+ *
  * ═══════════════════════════════════════════════════════════
- * ACTIVE FLOWS:  bilko-main, video-discovery
- * STANDBY FLOWS: work-with-me, ai-consultation,
+ * ACTIVE FLOWS:  bilko-main, video-discovery, test-newsletter,
+ *                work-with-me, ai-consultation,
  *                recursive-interviewer, linkedin-strategist,
  *                socratic-architect
- *
- * DO NOT MODIFY standby flows — they are frozen until
- * explicitly moved back to active status.
  * ═══════════════════════════════════════════════════════════
  */
 
@@ -569,13 +569,7 @@ Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, t
     ],
   },
 
-  // ═══════════════════════════════════════════════════════════
-  // STANDBY FLOWS — DO NOT MODIFY
-  // These flows are frozen. Do not edit, refactor, or extend
-  // them until they are explicitly moved back to active status.
-  // ═══════════════════════════════════════════════════════════
-
-  // ── STANDBY — DO NOT MODIFY — Work With Me ────────────────
+  // ── Work With Me ──────────────────────────────────────────
   {
     id: "work-with-me",
     name: "Work With Me",
@@ -584,7 +578,7 @@ Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, t
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/work-with-me-flow.tsx",
-    tags: ["landing", "guidance", "web", "assistant", "wireframe", "gemini", "standby"],
+    tags: ["landing", "guidance", "web", "assistant", "wireframe", "gemini"],
     icon: "Handshake",
     voiceTriggers: ["work with me", "guide", "help me", "walk me through", "assist", "task"],
     output: {
@@ -769,7 +763,7 @@ Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, t
     ],
   },
 
-  // ── STANDBY — DO NOT MODIFY — AI Leverage Consultation ────
+  // ── AI Leverage Consultation ──────────────────────────────
   {
     id: "ai-consultation",
     name: "AI Leverage Consultation",
@@ -778,7 +772,7 @@ Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, t
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
-    tags: ["landing", "ai", "consultation", "recommendations", "gemini", "standby"],
+    tags: ["landing", "ai", "consultation", "recommendations", "gemini"],
     icon: "MessageCircle",
     voiceTriggers: ["chat", "talk", "consult", "leverage", "consultation", "advice"],
     phases: [
@@ -930,7 +924,7 @@ Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, t
     ],
   },
 
-  // ── STANDBY — DO NOT MODIFY — Recursive Interviewer ───────
+  // ── Recursive Interviewer ─────────────────────────────────
   {
     id: "recursive-interviewer",
     name: "The Recursive Interviewer",
@@ -939,7 +933,7 @@ Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, t
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
-    tags: ["landing", "ai", "strategy", "recursive", "framework", "gemini", "standby"],
+    tags: ["landing", "ai", "strategy", "recursive", "framework", "gemini"],
     icon: "Lightbulb",
     voiceTriggers: ["interviewer", "recursive", "deep dive", "strategy"],
     phases: [
@@ -1012,7 +1006,7 @@ Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, t
     ],
   },
 
-  // ── STANDBY — DO NOT MODIFY — LinkedIn Strategist ─────────
+  // ── LinkedIn Strategist ───────────────────────────────────
   {
     id: "linkedin-strategist",
     name: "LinkedIn Strategist",
@@ -1021,7 +1015,7 @@ Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, t
     version: "3.0.0",
     location: "landing",
     componentPath: "client/src/components/linkedin-strategist-flow.tsx",
-    tags: ["landing", "career", "linkedin", "profile", "optimization", "gemini", "standby"],
+    tags: ["landing", "career", "linkedin", "profile", "optimization", "gemini"],
     icon: "Briefcase",
     voiceTriggers: ["linkedin", "career", "resume", "profile", "dossier"],
     phases: [
@@ -1131,7 +1125,7 @@ Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, t
     ],
   },
 
-  // ── STANDBY — DO NOT MODIFY — Socratic Architect ──────────
+  // ── Socratic Architect ────────────────────────────────────
   {
     id: "socratic-architect",
     name: "The Socratic Architect",
@@ -1140,7 +1134,7 @@ Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, t
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-consultation-flow.tsx",
-    tags: ["landing", "socratic", "configurable", "template", "interview", "gemini", "standby"],
+    tags: ["landing", "socratic", "configurable", "template", "interview", "gemini"],
     icon: "GraduationCap",
     voiceTriggers: ["socratic", "architect", "custom", "configure", "expert"],
     phases: [
@@ -1234,8 +1228,17 @@ Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, t
 /** Validated registry — only flows passing ARCH-005 invariants */
 export const flowRegistry: FlowDefinition[] = validateRegistry(allFlows);
 
-/** Get only the active (non-standby) flows for the landing page */
-export const activeFlowIds = new Set(["bilko-main", "video-discovery", "test-newsletter"]);
+/** All active flows available on the landing page */
+export const activeFlowIds = new Set([
+  "bilko-main",
+  "video-discovery",
+  "test-newsletter",
+  "work-with-me",
+  "ai-consultation",
+  "recursive-interviewer",
+  "linkedin-strategist",
+  "socratic-architect",
+]);
 
 export function getFlowById(id: string): FlowDefinition | undefined {
   return flowRegistry.find((f) => f.id === id);
