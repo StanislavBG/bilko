@@ -24,6 +24,8 @@ export interface NavPanelItem {
   activeBg?: string;
   /** Hover background class (e.g. "hover:bg-emerald-500/10") */
   hoverBg?: string;
+  /** Render as a non-clickable section header instead of a selectable item */
+  isGroupHeader?: boolean;
 }
 
 /** Props for the NavPanel container */
