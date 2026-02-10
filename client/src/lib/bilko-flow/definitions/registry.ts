@@ -207,6 +207,13 @@ const allFlows: FlowDefinition[] = [
     tags: ["landing", "learning", "video", "youtube", "gemini"],
     icon: "Play",
     voiceTriggers: ["video", "watch", "tutorial", "show me", "recommend"],
+    phases: [
+      { id: "generating-topics", label: "Research", stepIds: ["generate-topics"] },
+      { id: "select-topic", label: "Pick Topic", stepIds: ["select-topic", "generate-questions", "select-question"] },
+      { id: "searching-videos", label: "Find Videos", stepIds: ["generate-search-terms", "youtube-search"] },
+      { id: "select-video", label: "Pick Video", stepIds: ["select-video"] },
+      { id: "watching", label: "Watch", stepIds: ["play-video"] },
+    ],
     output: {
       name: "selectedVideo",
       type: "object",
@@ -435,6 +442,11 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     tags: ["landing", "game", "brain-teaser", "test", "troubleshooting"],
     icon: "Gamepad2",
     voiceTriggers: ["game", "brain teaser", "play", "challenge", "puzzle"],
+    phases: [
+      { id: "selecting-game", label: "Pick Game", stepIds: ["select-game"] },
+      { id: "simulating", label: "Play", stepIds: ["generate-game-summary"] },
+      { id: "summarizing", label: "Results", stepIds: ["experience-summary"] },
+    ],
     output: {
       name: "experienceSummary",
       type: "object",
@@ -778,6 +790,13 @@ Rules: summary max 40 words, takeaway max 15 words, mood is a single word. No ma
     tags: ["landing", "ai", "consultation", "recommendations", "gemini", "standby"],
     icon: "MessageCircle",
     voiceTriggers: ["chat", "talk", "consult", "leverage", "consultation", "advice"],
+    phases: [
+      { id: "intro", label: "Start", stepIds: ["first-question"] },
+      { id: "setup", label: "Setup", stepIds: [] },
+      { id: "questioning", label: "Interview", stepIds: ["follow-up-questions", "user-answers"] },
+      { id: "analyzing", label: "Analyzing", stepIds: ["analysis"] },
+      { id: "complete", label: "Done", stepIds: ["display-results"] },
+    ],
     output: {
       name: "recommendations",
       type: "object",
@@ -932,6 +951,13 @@ Rules: summary max 40 words, takeaway max 15 words, mood is a single word. No ma
     tags: ["landing", "ai", "strategy", "recursive", "framework", "gemini", "standby"],
     icon: "Lightbulb",
     voiceTriggers: ["interviewer", "recursive", "deep dive", "strategy"],
+    phases: [
+      { id: "intro", label: "Start", stepIds: ["first-question"] },
+      { id: "setup", label: "Setup", stepIds: [] },
+      { id: "questioning", label: "Interview", stepIds: ["recursive-questions", "user-answers"] },
+      { id: "analyzing", label: "Analyzing", stepIds: ["analysis"] },
+      { id: "complete", label: "Done", stepIds: ["display-results"] },
+    ],
     output: {
       name: "insights",
       type: "object",
@@ -1007,6 +1033,14 @@ Rules: summary max 40 words, takeaway max 15 words, mood is a single word. No ma
     tags: ["landing", "career", "linkedin", "profile", "optimization", "gemini", "standby"],
     icon: "Briefcase",
     voiceTriggers: ["linkedin", "career", "resume", "profile", "dossier"],
+    phases: [
+      { id: "intro", label: "Start", stepIds: [] },
+      { id: "goal", label: "Goal", stepIds: ["goal-selection"] },
+      { id: "setup", label: "Setup", stepIds: ["linkedin-input"] },
+      { id: "conversation", label: "Conversation", stepIds: ["conversation", "user-responses"] },
+      { id: "analyzing", label: "Analyzing", stepIds: ["generate-results"] },
+      { id: "complete", label: "Done", stepIds: ["display-results"] },
+    ],
     output: {
       name: "goalDrivenResults",
       type: "object",
@@ -1118,6 +1152,13 @@ Rules: summary max 40 words, takeaway max 15 words, mood is a single word. No ma
     tags: ["landing", "socratic", "configurable", "template", "interview", "gemini", "standby"],
     icon: "GraduationCap",
     voiceTriggers: ["socratic", "architect", "custom", "configure", "expert"],
+    phases: [
+      { id: "intro", label: "Start", stepIds: ["setup"] },
+      { id: "setup", label: "Setup", stepIds: ["first-question"] },
+      { id: "questioning", label: "Interview", stepIds: ["socratic-questions", "user-answers"] },
+      { id: "analyzing", label: "Analyzing", stepIds: ["analysis"] },
+      { id: "complete", label: "Done", stepIds: ["display-results"] },
+    ],
     output: {
       name: "findings",
       type: "object",
