@@ -20,7 +20,7 @@ import remarkGfm from "remark-gfm";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { writeUps, getWriteUpById, thinkingVideos, type WriteUp, type Video as VideoType } from "@/data/bilkos-way";
 
-type NavItem = { id: string; label: string; shortLabel: string; section?: "writeups" | "videos" };
+type NavItem = { id: string; label: string; shortLabel: string; section?: "writeups" | "videos"; isGroupHeader?: boolean };
 
 const VIDEOS_HEADER_ID = "__videos_header__";
 
@@ -580,9 +580,10 @@ export default function BilkosWay() {
     })),
     {
       id: VIDEOS_HEADER_ID,
-      label: "Thinking Videos",
+      label: "Videos",
       shortLabel: "—",
       section: "videos" as const,
+      isGroupHeader: true,
     },
     ...thinkingVideos.map((v) => ({
       id: v.id,
@@ -596,7 +597,7 @@ export default function BilkosWay() {
     <>
       <NavPanel
         header="Bilko's Way"
-        items={navItems.filter((item) => item.id !== VIDEOS_HEADER_ID)}
+        items={navItems}
         selectedId={selectedId}
         onSelect={(id) => setSelectedId(id)}
         isCollapsed={false}
