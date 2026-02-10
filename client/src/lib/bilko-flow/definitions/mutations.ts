@@ -1,13 +1,14 @@
 /**
- * Flow Mutations — Pure transformations on FlowDefinitions.
+ * Bilko Flow API — Flow Mutations
  *
+ * Pure transformations on FlowDefinitions.
  * Every mutation takes a FlowDefinition and returns a new one.
  * All mutations re-validate against ARCH-005 steel frame.
  * Invalid mutations are rejected with specific errors.
  */
 
-import type { FlowDefinition, FlowStep, StepType } from "@/lib/flow-inspector/types";
-import { validateFlowDefinition, type FlowValidationError } from "@/lib/flow-inspector/validate";
+import type { FlowDefinition, FlowStep, StepType } from "../types";
+import { validateFlowDefinition, type FlowValidationError } from "./validate";
 
 // ── Mutation result ────────────────────────────────────────
 

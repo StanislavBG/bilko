@@ -1,5 +1,5 @@
 /**
- * useFlowExecution — Execution tracking hook for PER-002 flows.
+ * Bilko Flow API — Execution Tracking Hook
  *
  * Wraps any async operation via `trackStep()` and records a full
  * execution trace (timing, I/O, errors, token usage) that feeds
@@ -13,8 +13,8 @@ import type {
   FlowExecution,
   StepExecution,
   StepStatus,
-} from "@/lib/flow-inspector/types";
-import type { TokenUsage } from "./llm-client";
+} from "../types";
+import type { TokenUsage } from "../llm/client";
 import {
   setExecution as storeExecution,
   getExecution as storeGetExecution,
