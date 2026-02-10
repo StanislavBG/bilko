@@ -17,7 +17,6 @@ import {
 import { useTheme } from "@/components/theme-provider";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { useDebug } from "@/contexts/debug-context";
-import { useVoice } from "@/contexts/voice-context";
 import { useSidebar } from "@/components/ui/sidebar";
 import { queryClient } from "@/lib/queryClient";
 import type {
@@ -60,11 +59,6 @@ function formatCostValue(cost: number): string {
   return `$${cost.toFixed(4)}`;
 }
 
-// ── TTS test phrase ──────────────────────────────────────
-
-const TTS_TEST_PHRASE =
-  "Hello! This is Bilko's Mental Gym testing text-to-speech. Can you hear me?";
-
 // ── Context ──────────────────────────────────────────────
 
 const GlobalControlsContext = createContext<GlobalControlsMap | undefined>(
@@ -78,8 +72,6 @@ export function GlobalControlsProvider({ children }: { children: ReactNode }) {
   const { isViewingAsUser, effectiveIsAdmin, toggleViewMode, canToggleViewMode } =
     useViewMode();
   const { entries, unreadCount, markRead, clear, copyToClipboard } = useDebug();
-  const { speak, stopSpeaking, isSpeaking, ttsSupported, ttsUnlocked } =
-    useVoice();
   const { toggleSidebar, toggleHidden, hidden, isMobile } = useSidebar();
 
   // Cost config is the only locally-owned state in this provider
@@ -133,22 +125,14 @@ export function GlobalControlsProvider({ children }: { children: ReactNode }) {
     window.location.href = "/";
   }, []);
 
-  const testTTS = useCallback(() => {
-    if (isSpeaking) {
-      stopSpeaking();
-    } else {
-      speak(TTS_TEST_PHRASE);
-    }
-  }, [isSpeaking, stopSpeaking, speak]);
-
   const sessionPI: SessionPI = useMemo(
     () => ({
       id: "PI-SESSION",
       label: "Session",
-      state: { isSpeaking, ttsSupported, ttsUnlocked },
-      actions: { resetSession, testTTS },
+      state: { isSpeaking: false },
+      actions: { resetSession },
     }),
-    [isSpeaking, ttsSupported, ttsUnlocked, resetSession, testTTS],
+    [resetSession],
   );
 
   // ── Nav Toggle PI ────────────────────────────
