@@ -5,7 +5,7 @@
  * within the Bilko web application.
  *
  * Endpoints:
- *   POST /api/bilko-flow/demo/run     — Execute the DEMO fake-game workflow
+ *   POST /api/bilko-flow/demo/run     — Execute the DEMO newsletter workflow
  *   GET  /api/bilko-flow/demo/status   — Check status and see results
  *   POST /api/bilko-flow/demo/test     — Dry-run validation (no execution)
  */
@@ -18,7 +18,7 @@ import type { Run } from "bilko-flow/dist/domain/run";
 import type { Workflow } from "bilko-flow/dist/domain/workflow";
 import type { TenantScope } from "bilko-flow/dist/domain/account";
 import { registerLLMStepHandler } from "./llm-step-handler";
-import { createFakeGameWorkflowInput } from "./fake-game-workflow";
+import { createNewsletterWorkflowInput } from "./newsletter-workflow";
 
 const router = Router();
 
@@ -77,8 +77,8 @@ async function ensureSeeded(): Promise<string> {
   TENANT_SCOPE.projectId = project.id;
   TENANT_SCOPE.environmentId = environment.id;
 
-  // Create the fake-game workflow
-  const workflowInput = createFakeGameWorkflowInput(
+  // Create the newsletter workflow
+  const workflowInput = createNewsletterWorkflowInput(
     account.id,
     project.id,
     environment.id,
@@ -86,7 +86,7 @@ async function ensureSeeded(): Promise<string> {
 
   const workflow = await store.workflows.create({
     ...workflowInput,
-    id: "demo-fake-game",
+    id: "demo-newsletter",
     version: 1,
     specVersion: "1.0.0",
     status: "active" as any,
@@ -94,7 +94,7 @@ async function ensureSeeded(): Promise<string> {
     updatedAt: new Date().toISOString(),
     steps: workflowInput.steps.map((s) => ({
       ...s,
-      workflowId: "demo-fake-game",
+      workflowId: "demo-newsletter",
     })),
   } as Workflow);
 
@@ -108,7 +108,7 @@ async function ensureSeeded(): Promise<string> {
 /**
  * POST /api/bilko-flow/demo/run
  *
- * Execute the DEMO fake-game workflow through bilko-flow's engine.
+ * Execute the DEMO newsletter workflow through bilko-flow's engine.
  * Returns the full run result with step outputs, provenance, and timing.
  */
 router.post("/demo/run", async (_req: Request, res: Response) => {

@@ -171,7 +171,7 @@ const allFlows: FlowDefinition[] = [
         type: "external-input",
         subtype: "flow-output",
         description:
-          "Receives the experience summary from a completed sub-flow (e.g. fake-game). This external-input node injects mood and context data into the greeting node's next iteration, allowing Bilko to adjust tone and references based on what the user just experienced.",
+          "Receives the experience summary from a completed sub-flow (e.g. test-newsletter). This external-input node injects mood and context data into the greeting node's next iteration, allowing Bilko to adjust tone and references based on what the user just experienced.",
         outputSchema: [
           {
             name: "experienceSummary",
@@ -427,153 +427,144 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     ],
   },
 
-  // ── ACTIVE — TEST: Fake Game ─────────────────────────────
-  // Minimal troubleshooting flow. Picks a brain-teaser game,
-  // generates a fake play-through summary, then produces an
+  // ── ACTIVE — TEST: Newsletter ────────────────────────────
+  // Minimal test flow. Discovers 3 European football stories,
+  // writes articles with image descriptions, then produces an
   // experience summary that feeds back into bilko-main.
+  // Inspired by the [EFD] European Football Daily n8n workflow.
   {
-    id: "fake-game",
-    name: "Brain Teaser Game",
+    id: "test-newsletter",
+    name: "European Football Newsletter",
     description:
-      "A quick brain-teaser game — Bilko picks a neuroscientist-recommended cognitive challenge, simulates a round between you and an AI opponent, and reports the experience.",
+      "A daily newspaper for European football fans — discovers 3 trending stories, writes short articles for each, and generates cinematic image descriptions to accompany them. Inspired by the European Football Daily infographic pipeline.",
     version: "1.0.0",
     location: "landing",
-    componentPath: "client/src/components/fake-game-flow.tsx",
-    tags: ["landing", "game", "brain-teaser", "test", "troubleshooting"],
-    icon: "Gamepad2",
-    voiceTriggers: ["game", "brain teaser", "play", "challenge", "puzzle"],
+    componentPath: "client/src/components/newsletter-flow.tsx",
+    tags: ["landing", "newsletter", "football", "european", "test"],
+    icon: "Newspaper",
+    voiceTriggers: ["newsletter", "football", "news", "newspaper", "daily"],
     phases: [
-      { id: "selecting-game", label: "Pick Game", stepIds: ["select-game"] },
-      { id: "simulating", label: "Play", stepIds: ["generate-game-summary"] },
-      { id: "summarizing", label: "Results", stepIds: ["experience-summary"] },
+      { id: "discovering", label: "Discover", stepIds: ["discover-stories"] },
+      { id: "writing", label: "Write", stepIds: ["write-articles"] },
+      { id: "summarizing", label: "Summary", stepIds: ["newsletter-summary"] },
     ],
     output: {
-      name: "experienceSummary",
+      name: "newsletterSummary",
       type: "object",
-      description: "The experience summary from the fake game session, including game name, result, and mood",
+      description: "The experience summary from the newsletter session, including headline, mood, and takeaway",
     },
     steps: [
       {
-        id: "select-game",
-        name: "Research & Select Brain Teaser",
+        id: "discover-stories",
+        name: "Discover Trending Stories",
         type: "llm",
         description:
-          "Acts as a cognitive science researcher to identify brain-teaser games that neuroscientists recommend for positive cognitive effects — working memory, pattern recognition, mental flexibility, and creative problem-solving. Selects one at random from the curated set.",
-        prompt: `You are a cognitive neuroscience researcher specializing in brain training and neuroplasticity. Your expertise spans peer-reviewed studies on games that produce measurable positive cognitive outcomes.
+          "Acts as a European football journalist to discover 3 trending stories from across the major leagues — Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and Champions League. Each story includes a headline, summary, league, and key stat.",
+        prompt: `You are a senior European football journalist with deep knowledge of the Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and UEFA Champions League.
 
-INPUT: You are given a request to recommend a single brain-teaser game for a user session.
+INPUT: You are asked to discover 3 trending European football stories for today's newsletter.
 
-MISSION: Research and select ONE brain-teaser game from the category of games that neuroscientists have validated as beneficial for cognitive health. These include games that exercise:
-- Working memory (e.g. N-back variants, memory matrix)
-- Pattern recognition (e.g. Set, Raven's matrices)
-- Mental flexibility (e.g. Wisconsin card sort variants, task-switching games)
-- Creative problem-solving (e.g. lateral thinking puzzles, insight problems)
-- Processing speed (e.g. speed matching, visual search)
+MISSION: Identify 3 compelling stories that European football fans would want to read right now. Mix different leagues and story types — transfers, match results, tactical analysis, player milestones, managerial changes, or breaking news.
 
-Pick ONE game at random from your knowledge. Provide the game name, a brief description of how it works, which cognitive domain it exercises, and why neuroscientists consider it beneficial.
+For each story provide:
+- A punchy newspaper headline (max 10 words)
+- A brief summary of what happened (max 30 words)
+- Which league or competition it relates to
+- One key stat or fact that makes the story compelling
 
 Return ONLY valid JSON:
-{"game":{"name":"...","description":"...","cognitiveDomain":"...","whyBeneficial":"...","difficulty":"easy|medium|hard"}}
+{"stories":[{"headline":"...","summary":"...","league":"...","keyStat":"..."},{"headline":"...","summary":"...","league":"...","keyStat":"..."},{"headline":"...","summary":"...","league":"...","keyStat":"..."}]}
 
-Rules: name max 5 words, description max 30 words, cognitiveDomain max 4 words, whyBeneficial max 25 words. No markdown.`,
-        userMessage: "Select a random neuroscientist-recommended brain teaser game for me to play.",
+Rules: exactly 3 stories. headline max 10 words, summary max 30 words, league max 4 words, keyStat max 15 words. No markdown.`,
+        userMessage: "Discover 3 trending European football stories for today's newsletter.",
         model: "gemini-2.5-flash",
         inputSchema: [],
         outputSchema: [
           {
-            name: "game",
-            type: "object",
-            description: "The selected brain-teaser game with name, description, cognitiveDomain, whyBeneficial, and difficulty",
+            name: "stories",
+            type: "array",
+            description: "Array of 3 trending European football stories with headline, summary, league, and keyStat",
           },
         ],
         dependsOn: [],
       },
       {
-        id: "generate-game-summary",
-        name: "Simulate Game Round",
+        id: "write-articles",
+        name: "Write Articles & Image Descriptions",
         type: "llm",
         description:
-          "Given the selected brain-teaser game, generates a short fictional summary of a game session between the user and an AI opponent. The result is randomized — sometimes the user wins, sometimes the AI does, with varying scores and memorable moments.",
-        prompt: `You are a witty sports commentator narrating a brain-teaser game between a human player and an AI opponent named "Cortex".
+          "Takes the 3 discovered stories and writes a short newspaper article for each, plus a cinematic image description that could be used to generate a supporting infographic or photo. Inspired by the European Football Daily's image pipeline.",
+        prompt: `You are a sports editor producing a daily European football newsletter. You write punchy, engaging articles and commission vivid editorial images.
 
-INPUT: You will be given a brain-teaser game with its name, description, and difficulty level.
+INPUT: You will receive 3 trending European football stories with headlines, summaries, leagues, and key stats.
 
-MISSION: Generate a short, entertaining play-by-play summary of a fictional game round. Include:
-1. A brief setup (what the game looked like at the start)
-2. 2-3 key moments during play (turning points, clever moves, mistakes)
-3. The final result — randomly pick a winner (user wins ~60% of the time for positive experience)
-4. A memorable highlight moment
-
-Make it feel real and fun. The tone should be light and encouraging — win or lose, the user should feel like they got a good brain workout.
+MISSION: For each of the 3 stories, produce:
+1. A short newspaper article (60-80 words) — factual, engaging, with a hook opening and the key stat woven in naturally
+2. A cinematic image description (max 30 words) — describe a striking editorial photo or infographic that would accompany this article. Think bold compositions, team colors, dramatic lighting, stadium atmospheres.
 
 Return ONLY valid JSON:
-{"gameSummary":{"setup":"...","keyMoments":["...","..."],"winner":"user|cortex","userScore":N,"aiScore":N,"highlight":"...","duration":"Xm Ys"}}
+{"articles":[{"headline":"...","article":"...","imageDescription":"...","league":"..."},{"headline":"...","article":"...","imageDescription":"...","league":"..."},{"headline":"...","article":"...","imageDescription":"...","league":"..."}]}
 
-Rules: setup max 25 words, each keyMoment max 20 words, highlight max 20 words. No markdown.`,
-        userMessage: 'Simulate a round of "{gameName}" ({gameDescription}) at {difficulty} difficulty between the user and AI opponent Cortex.',
+Rules: exactly 3 articles matching the 3 input stories. article 60-80 words, imageDescription max 30 words. No markdown.`,
+        userMessage: 'Write 3 newspaper articles with image descriptions for these European football stories.',
         model: "gemini-2.5-flash",
         inputSchema: [
           {
-            name: "game",
-            type: "object",
-            description: "The selected brain-teaser game from the previous step",
+            name: "stories",
+            type: "array",
+            description: "The 3 discovered trending stories from the previous step",
           },
         ],
         outputSchema: [
           {
-            name: "gameSummary",
-            type: "object",
-            description: "The simulated game summary with setup, keyMoments, winner, scores, highlight, and duration",
+            name: "articles",
+            type: "array",
+            description: "Array of 3 articles each with headline, article text, imageDescription, and league",
           },
         ],
-        dependsOn: ["select-game"],
+        dependsOn: ["discover-stories"],
       },
       {
-        id: "experience-summary",
-        name: "Generate Experience Summary",
+        id: "newsletter-summary",
+        name: "Generate Newsletter Summary",
         type: "llm",
         description:
-          "Takes the game selection and simulated game summary and distills them into a concise experience summary. This summary is the flow's output — it feeds back into bilko-main's greeting node to adjust Bilko's mood and conversation tone for the next interaction.",
-        prompt: `You are an experience designer summarizing a brain-training session for a coaching AI that will use this summary to personalize its next interaction.
+          "Takes the completed newsletter articles and produces an experience summary. This feeds back into bilko-main's greeting node to adjust Bilko's mood and conversation references for the next interaction.",
+        prompt: `You are an experience designer summarizing a newsletter reading session for a coaching AI that will use this summary to personalize its next interaction.
 
-INPUT: You will receive the game details and the simulated game summary including winner, scores, and highlights.
+INPUT: You will receive 3 European football newsletter articles with headlines and league information.
 
 MISSION: Create a concise experience summary that captures:
-1. What game was played and what cognitive skill it exercised
-2. How the session went (who won, by how much, key moment)
-3. An inferred mood/energy level based on the outcome:
-   - User won decisively → "energized", "triumphant"
-   - User won narrowly → "focused", "determined"
-   - User lost but close → "challenged", "motivated"
-   - User lost decisively → "humbled", "curious"
+1. The overall theme of today's newsletter (what leagues/stories dominated)
+2. The most exciting story and why
+3. An inferred mood/energy level for a football fan reading this:
+   - Big transfer news → "buzzing"
+   - Dramatic match results → "thrilled"
+   - Tactical/analytical stories → "informed"
+   - Mixed bag → "engaged"
 4. A one-line takeaway the coaching AI can reference
 
 Return ONLY valid JSON:
-{"experience":{"gameName":"...","cognitiveDomain":"...","outcome":"win|loss","summary":"...","mood":"...","takeaway":"..."}}
+{"newsletter":{"editionTitle":"...","topStory":"...","leaguesCovered":["..."],"mood":"...","takeaway":"..."}}
 
-Rules: summary max 40 words, takeaway max 15 words, mood is a single word. No markdown.`,
-        userMessage: 'Create an experience summary for the {gameName} session. Result: {winner} won {userScore}-{aiScore}. Highlight: {highlight}',
+Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, takeaway max 15 words. No markdown.`,
+        userMessage: 'Create a newsletter experience summary for today\'s European football edition.',
         model: "gemini-2.5-flash",
         inputSchema: [
           {
-            name: "game",
-            type: "object",
-            description: "The selected brain-teaser game",
-          },
-          {
-            name: "gameSummary",
-            type: "object",
-            description: "The simulated game round results",
+            name: "articles",
+            type: "array",
+            description: "The 3 completed newsletter articles",
           },
         ],
         outputSchema: [
           {
-            name: "experience",
+            name: "newsletter",
             type: "object",
-            description: "The experience summary with gameName, cognitiveDomain, outcome, summary, mood, and takeaway",
+            description: "The newsletter summary with editionTitle, topStory, leaguesCovered, mood, and takeaway",
           },
         ],
-        dependsOn: ["generate-game-summary"],
+        dependsOn: ["write-articles"],
       },
     ],
   },
@@ -1244,7 +1235,7 @@ Rules: summary max 40 words, takeaway max 15 words, mood is a single word. No ma
 export const flowRegistry: FlowDefinition[] = validateRegistry(allFlows);
 
 /** Get only the active (non-standby) flows for the landing page */
-export const activeFlowIds = new Set(["bilko-main", "video-discovery", "fake-game"]);
+export const activeFlowIds = new Set(["bilko-main", "video-discovery", "test-newsletter"]);
 
 export function getFlowById(id: string): FlowDefinition | undefined {
   return flowRegistry.find((f) => f.id === id);
