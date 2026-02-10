@@ -17,7 +17,7 @@
  * - Messages come from flow steps (speaker + text) or user typing
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { User, ArrowRight, ArrowDown, ArrowUp } from "lucide-react";
 import { BilkoMessage } from "@/components/bilko-message";
 import { AgentBadge, getAgentColors } from "@/components/speaker-identity";
@@ -36,7 +36,10 @@ export function FlowChat() {
 
   // Default (top-down): newest messages at top, old ones pushed down
   // Bottom-up: traditional chat — oldest at top, newest at bottom
-  const displayMessages = isBottomUp ? messages : [...messages].reverse();
+  const displayMessages = useMemo(
+    () => isBottomUp ? messages : [...messages].reverse(),
+    [messages, isBottomUp],
+  );
 
   // Track the first chronological message for entrance delay
   const firstMessageId = messages.length > 0 ? messages[0].id : null;
