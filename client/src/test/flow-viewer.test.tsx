@@ -8,7 +8,7 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { flowRegistry, getFlowById } from "@/lib/flow-inspector/registry";
+import { flowRegistry, getFlowById } from "@/lib/bilko-flow/definitions/registry";
 
 // ── Flow registry unit tests ─────────────────────────────
 

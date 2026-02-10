@@ -53,7 +53,7 @@ import {
   useFlowExecution,
   useFlowDefinition,
   useFlowChat,
-} from "@/lib/flow-engine";
+} from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { useVoice } from "@/contexts/voice-context";

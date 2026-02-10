@@ -1,6 +1,7 @@
 /**
- * LLM Client — The core primitive for all LLM interactions.
+ * Bilko Flow API — LLM Client
  *
+ * The core primitive for all LLM interactions.
  * chatJSON<T>() is the muscle: send messages, get typed JSON back.
  * Handles request formatting, error handling, and JSON extraction.
  * Every flow step that talks to Gemini goes through here.

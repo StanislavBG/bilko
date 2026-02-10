@@ -1,5 +1,5 @@
 /**
- * Flow Registry
+ * Bilko Flow API — Flow Registry
  *
  * All inspectable PER-002 flows are registered here.
  * Each entry describes the flow's steps, prompts, and I/O schemas.
@@ -18,7 +18,7 @@
  * ═══════════════════════════════════════════════════════════
  */
 
-import type { FlowDefinition } from "./types";
+import type { FlowDefinition } from "../types";
 import { validateRegistry } from "./validate";
 
 const allFlows: FlowDefinition[] = [
