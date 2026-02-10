@@ -28,15 +28,27 @@ import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
 
 export function FlowChat() {
   const { messages, activeOwner, messageDirection, setMessageDirection } = useFlowChat();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [settledIds, setSettledIds] = useState<Set<string>>(new Set());
 
   const isBottomUp = messageDirection === "bottom-up";
 
-  // Auto-scroll to bottom when new messages arrive
+  // Default (top-down): newest messages at top, old ones pushed down
+  // Bottom-up: traditional chat — oldest at top, newest at bottom
+  const displayMessages = isBottomUp ? messages : [...messages].reverse();
+
+  // Track the first chronological message for entrance delay
+  const firstMessageId = messages.length > 0 ? messages[0].id : null;
+
+  // Auto-scroll: to top in top-down mode, to bottom in bottom-up mode
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages.length, settledIds.size]);
+    if (isBottomUp) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    } else {
+      scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [messages.length, settledIds.size, isBottomUp]);
 
   const handleSettled = (msgId: string) => {
     setSettledIds((prev) => new Set(prev).add(msgId));
@@ -54,19 +66,19 @@ export function FlowChat() {
           <button
             onClick={toggleDirection}
             className="p-1 rounded hover:bg-foreground/10 transition-colors"
-            title={messageDirection === "top-down" ? "Switch to bottom-up messages" : "Switch to top-down messages"}
+            title={isBottomUp ? "Switch to newest-first" : "Switch to classic chat order"}
           >
-            {messageDirection === "top-down" ? (
-              <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/50" />
-            ) : (
+            {isBottomUp ? (
               <ArrowUp className="h-3.5 w-3.5 text-muted-foreground/50" />
+            ) : (
+              <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/50" />
             )}
           </button>
         </div>
       </div>
 
       {/* Message list — only messages, no options */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto" ref={scrollRef}>
         <div className={`flex flex-col min-h-full ${isBottomUp ? "justify-end" : ""}`}>
           <div
             role="log"
@@ -74,16 +86,17 @@ export function FlowChat() {
             aria-live="polite"
             className="max-w-3xl mx-auto w-full px-4 py-6 space-y-5"
           >
-            {messages.map((msg, i) => {
+            {displayMessages.map((msg, i) => {
               const isSettled = settledIds.has(msg.id);
-              const prevMsg = i > 0 ? messages[i - 1] : undefined;
+              const prevMsg = i > 0 ? displayMessages[i - 1] : undefined;
               const isGrouped = isSameSpeaker(msg, prevMsg);
+              const isFirst = msg.id === firstMessageId;
 
               return (
                 <MessageRenderer
                   key={msg.id}
                   message={msg}
-                  isFirst={i === 0}
+                  isFirst={isFirst}
                   isSettled={isSettled}
                   isGrouped={isGrouped}
                   onSettled={() => handleSettled(msg.id)}
