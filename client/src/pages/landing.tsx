@@ -31,7 +31,7 @@ import { useLocation } from "wouter";
 import { GlobalHeader } from "@/components/global-header";
 import { FlowChat } from "@/components/flow-chat";
 import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
-import { FakeGameFlow } from "@/components/fake-game-flow";
+import { NewsletterFlow } from "@/components/newsletter-flow";
 import {
   AiConsultationFlow,
   RECURSIVE_INTERVIEWER_CONFIG,
@@ -104,7 +104,7 @@ const FLOW_TO_MODE: Record<string, LearningModeId> = {
   "linkedin-strategist": "linkedin",
   "socratic-architect": "socratic",
   "work-with-me": "work-with-me",
-  "fake-game": "fake-game",
+  "test-newsletter": "test-newsletter",
 };
 
 // ── Subflow ID mapping ──────────────────────────────────
@@ -117,7 +117,7 @@ const MODE_TO_OWNER: Record<string, string> = {
   linkedin: "linkedin-strategist",
   socratic: "socratic-architect",
   "work-with-me": "work-with-me",
-  "fake-game": "fake-game",
+  "test-newsletter": "test-newsletter",
 };
 
 // ── LLM greeting prompts ────────────────────────────────
@@ -704,7 +704,7 @@ function RightPanelContent({
       {mode === "linkedin" && <LinkedInStrategistFlow onComplete={onComplete} />}
       {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} onComplete={onComplete} />}
       {mode === "work-with-me" && <WorkWithMeFlow onComplete={onComplete} />}
-      {mode === "fake-game" && <FakeGameFlow onComplete={onComplete} />}
+      {mode === "test-newsletter" && <NewsletterFlow onComplete={onComplete} />}
     </div>
   );
 }
