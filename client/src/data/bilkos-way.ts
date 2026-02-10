@@ -48,8 +48,8 @@ export const thinkingVideos: Video[] = [
   },
   {
     id: "video-ttdWPDmBN_4",
-    title: "Thinking Video 4",
-    description: "A curated thinking video from Bilko's collection",
+    title: "Agentic Engineering",
+    description: "Exploring the principles and practices of building agentic AI systems",
     youtubeId: "ttdWPDmBN_4",
     youtubeUrl: "https://www.youtube.com/watch?v=ttdWPDmBN_4",
     creator: "Unknown",
@@ -57,8 +57,8 @@ export const thinkingVideos: Video[] = [
   },
   {
     id: "video-A8_nNYLTXEQ",
-    title: "Thinking Video 5",
-    description: "A curated thinking video from Bilko's collection",
+    title: "Think with AI",
+    description: "How to think alongside AI and leverage it as a cognitive partner",
     youtubeId: "A8_nNYLTXEQ",
     youtubeUrl: "https://www.youtube.com/watch?v=A8_nNYLTXEQ",
     creator: "Unknown",
