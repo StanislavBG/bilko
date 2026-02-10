@@ -193,10 +193,10 @@ Defined in `shared/models/`:
 | `/` (auth) | `Landing` (skipWelcome) | Same canvas, skips greeting |
 | `/academy` | `Academy` | AI learning center with levels and content |
 | `/academy/:levelId` | `Academy` | Specific learning level |
-| `/flows` | `FlowExplorer` | Browse all registered PER-002 flows |
+| `/flows` | `FlowExplorer` | Bilko Workflows — build and inspect in-platform flows (PER-002) |
 | `/flows/:flowId` | `FlowDetail` | Inspect flow: DAG, step-through, execution history |
 | `/projects/:projectId?` | `Projects` | Project listing and details |
-| `/workflows` | `AgenticWorkflows` | n8n workflow management |
+| `/workflows` | `N8nWorkflows` | N8N Workflows — n8n workflow management |
 | `/memory` | `MemoryExplorer` | View communication traces |
 | `/rules` | `RulesExplorer` | Browse rule catalog (admin) |
 

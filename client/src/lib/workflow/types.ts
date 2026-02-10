@@ -1,5 +1,5 @@
 /**
- * Agentic Workflow Framework - Types
+ * Bilko Workflow Framework - Types
  *
  * A simplified flow system for building dynamic, agentic experiences.
  * Inspired by n8n but focused on user-facing conversational flows.

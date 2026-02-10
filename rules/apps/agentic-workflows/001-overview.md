@@ -1,4 +1,4 @@
-# APP-WORKFLOWS-001: Agentic Workflows Page
+# APP-WORKFLOWS-001: N8N Workflows Page
 
 **Version**: 1.1.0  
 **Priority**: HIGH  
@@ -7,7 +7,7 @@
 
 ## Purpose
 
-Defines the Agentic Workflows page structure and behavior. This page is the primary interface for viewing and managing n8n-hosted AI agent workflows.
+Defines the N8N Workflows page structure and behavior. This page is the primary interface for viewing and managing n8n-hosted AI agent workflows.
 
 ## Page Structure
 

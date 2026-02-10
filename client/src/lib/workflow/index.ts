@@ -1,5 +1,5 @@
 /**
- * Agentic Workflow Framework
+ * Bilko Workflow Framework
  *
  * A simplified flow system for building dynamic, agentic experiences.
  */
