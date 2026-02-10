@@ -36,8 +36,8 @@ export { chat, chatJSON, jsonPrompt, LLMError, LLMParseError } from "./llm/clien
 export type { ChatMessage, TokenUsage, LLMResult, LLMOptions } from "./llm/client";
 
 // ── HTTP API Helpers ────────────────────────────────────────
-export { apiPost, apiGet, validateVideos, searchYouTube, APIError } from "./llm/api";
-export type { VideoCandidate } from "./llm/api";
+export { apiPost, apiGet, validateVideos, searchYouTube, generateImage, generateImages, generateVideo, generateVideos, APIError } from "./llm/api";
+export type { VideoCandidate, ImageGenerationResult, VideoGenerationResult } from "./llm/api";
 
 // ── Flow Execution Runtime ──────────────────────────────────
 export { useFlowExecution, useExecutionStore } from "./runtime/use-flow-execution";

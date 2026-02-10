@@ -117,6 +117,123 @@ export async function searchYouTube(
   }
 }
 
+// ── Image Generation (Nano Banana) ──────────────────────────────────
+
+export interface ImageGenerationResult {
+  imageBase64: string;
+  mimeType: string;
+  textResponse?: string;
+  model: string;
+}
+
+/**
+ * Generate a single image using Nano Banana (Gemini native image generation).
+ */
+export async function generateImage(
+  prompt: string,
+  options?: {
+    aspectRatio?: "1:1" | "16:9" | "9:16" | "4:3" | "3:4";
+    model?: string;
+    referenceImageBase64?: string;
+    signal?: AbortSignal;
+  },
+): Promise<ImageGenerationResult> {
+  return apiPost<ImageGenerationResult>("/api/llm/generate-image", {
+    prompt,
+    aspectRatio: options?.aspectRatio,
+    model: options?.model,
+    referenceImageBase64: options?.referenceImageBase64,
+  }, { signal: options?.signal });
+}
+
+/**
+ * Generate multiple images in parallel using Nano Banana.
+ * Returns array of results (null for failed generations).
+ */
+export async function generateImages(
+  prompts: Array<{
+    prompt: string;
+    aspectRatio?: "1:1" | "16:9" | "9:16" | "4:3" | "3:4";
+    model?: string;
+  }>,
+  options?: { signal?: AbortSignal },
+): Promise<(ImageGenerationResult | null)[]> {
+  const result = await apiPost<{ images: (ImageGenerationResult | null)[] }>(
+    "/api/llm/generate-images",
+    {
+      requests: prompts.map((p) => ({
+        prompt: p.prompt,
+        aspectRatio: p.aspectRatio,
+        model: p.model,
+      })),
+    },
+    { signal: options?.signal },
+  );
+  return result.images;
+}
+
+// ── Video Generation (Veo) ──────────────────────────────────────────
+
+export interface VideoGenerationResult {
+  videos: Array<{
+    videoBase64: string;
+    mimeType: string;
+    durationSeconds: number;
+  }>;
+  model: string;
+}
+
+/**
+ * Generate a single video using Veo.
+ * Note: This is an async operation and may take up to 5 minutes.
+ */
+export async function generateVideo(
+  prompt: string,
+  options?: {
+    durationSeconds?: 5 | 6 | 7 | 8;
+    aspectRatio?: "16:9" | "9:16";
+    model?: string;
+    referenceImageBase64?: string;
+    signal?: AbortSignal;
+  },
+): Promise<VideoGenerationResult> {
+  return apiPost<VideoGenerationResult>("/api/llm/generate-video", {
+    prompt,
+    durationSeconds: options?.durationSeconds,
+    aspectRatio: options?.aspectRatio,
+    model: options?.model,
+    referenceImageBase64: options?.referenceImageBase64,
+  }, { signal: options?.signal });
+}
+
+/**
+ * Generate multiple videos sequentially using Veo.
+ * Returns array of results (null for failed generations).
+ */
+export async function generateVideos(
+  prompts: Array<{
+    prompt: string;
+    durationSeconds?: 5 | 6 | 7 | 8;
+    aspectRatio?: "16:9" | "9:16";
+    model?: string;
+  }>,
+  options?: { signal?: AbortSignal },
+): Promise<(VideoGenerationResult | null)[]> {
+  const result = await apiPost<{ videos: (VideoGenerationResult | null)[] }>(
+    "/api/llm/generate-videos",
+    {
+      requests: prompts.map((p) => ({
+        prompt: p.prompt,
+        durationSeconds: p.durationSeconds,
+        aspectRatio: p.aspectRatio,
+        model: p.model,
+      })),
+    },
+    { signal: options?.signal },
+  );
+  return result.videos;
+}
+
 /**
  * API-specific error with status and endpoint.
  */

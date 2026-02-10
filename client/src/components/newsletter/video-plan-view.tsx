@@ -9,9 +9,9 @@
  * Runway, Pika, or similar video generation models.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, Video, Camera, Clock, Palette, ArrowRightLeft } from "lucide-react";
+import { Copy, Check, Video, Camera, Clock, Palette, ArrowRightLeft, Play, Download } from "lucide-react";
 
 export interface VideoPromptScene {
   sceneNumber: number;
@@ -29,7 +29,19 @@ export interface VideoPromptsData {
   productionNotes: string;
 }
 
-export function VideoPlanView({ data }: { data: VideoPromptsData }) {
+interface GeneratedVideo {
+  videoBase64: string;
+  mimeType: string;
+  durationSeconds: number;
+}
+
+export function VideoPlanView({
+  data,
+  generatedVideos,
+}: {
+  data: VideoPromptsData;
+  generatedVideos?: (GeneratedVideo | null)[];
+}) {
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedScene, setCopiedScene] = useState<number | null>(null);
 
@@ -146,9 +158,50 @@ export function VideoPlanView({ data }: { data: VideoPromptsData }) {
                 <ArrowRightLeft className="h-3 w-3" /> {scene.transitionType}
               </span>
             </div>
+
+            {/* Generated Video Preview */}
+            {generatedVideos?.[scene.sceneNumber - 1] && (() => {
+              const video = generatedVideos[scene.sceneNumber - 1]!;
+              const videoUrl = `data:${video.mimeType};base64,${video.videoBase64}`;
+              return (
+                <div className="rounded-md overflow-hidden border border-violet-500/20 bg-black">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-500/10 border-b border-violet-500/20">
+                    <Play className="h-3 w-3 text-violet-500" />
+                    <span className="text-[10px] font-medium text-violet-500">
+                      AI Generated Video — {video.durationSeconds}s
+                    </span>
+                    <a
+                      href={videoUrl}
+                      download={`scene-${scene.sceneNumber}-${new Date().toISOString().slice(0, 10)}.mp4`}
+                      className="ml-auto"
+                    >
+                      <Download className="h-3 w-3 text-violet-500/60 hover:text-violet-500" />
+                    </a>
+                  </div>
+                  <video
+                    src={videoUrl}
+                    controls
+                    className="w-full aspect-video"
+                    preload="metadata"
+                  />
+                </div>
+              );
+            })()}
           </div>
         ))}
       </div>
+
+      {/* Combined Video Download (if any videos generated) */}
+      {generatedVideos && generatedVideos.some(Boolean) && (
+        <div className="rounded-lg border border-violet-500/30 p-4 bg-violet-500/5 text-center">
+          <p className="text-xs text-violet-500 font-medium mb-1">
+            {generatedVideos.filter(Boolean).length} of {data.scenes.length} video clips generated with Veo
+          </p>
+          <p className="text-[10px] text-muted-foreground">
+            Download individual clips from each scene above
+          </p>
+        </div>
+      )}
 
       {/* Extension Technique */}
       <div className="rounded-lg border border-dashed border-violet-500/30 p-4 space-y-2 bg-violet-500/5">
