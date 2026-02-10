@@ -5,6 +5,7 @@ import { registerOrchestratorRoutes } from "./orchestrator";
 import { registerRulesRoutes } from "./rules/routes";
 import { registerWorkflowRoutes } from "./workflows/routes";
 import { registerImageRoutes } from "./images/routes";
+import { registerUploadRoutes } from "./uploads/routes";
 import { registerComponentRoutes } from "./components/routes";
 import { registerProjectRoutes } from "./projects/routes";
 import { getAllEndpoints } from "./endpoint-registry";
@@ -30,6 +31,9 @@ export async function registerRoutes(
   
   // Image processing routes (branding, etc.)
   registerImageRoutes(app);
+
+  // File upload routes (Bilko's Way media: video, infographic, PDF)
+  registerUploadRoutes(app);
 
   // Component definitions catalog (step type descriptions)
   registerComponentRoutes(app);
