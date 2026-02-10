@@ -46,6 +46,24 @@ export const thinkingVideos: Video[] = [
     creator: "Unknown",
     tags: ["Future", "Trends", "AI"],
   },
+  {
+    id: "video-ttdWPDmBN_4",
+    title: "Thinking Video 4",
+    description: "A curated thinking video from Bilko's collection",
+    youtubeId: "ttdWPDmBN_4",
+    youtubeUrl: "https://www.youtube.com/watch?v=ttdWPDmBN_4",
+    creator: "Unknown",
+    tags: ["Thinking"],
+  },
+  {
+    id: "video-A8_nNYLTXEQ",
+    title: "Thinking Video 5",
+    description: "A curated thinking video from Bilko's collection",
+    youtubeId: "A8_nNYLTXEQ",
+    youtubeUrl: "https://www.youtube.com/watch?v=A8_nNYLTXEQ",
+    creator: "Unknown",
+    tags: ["Thinking"],
+  },
 ];
 
 export const writeUps: WriteUp[] = [
