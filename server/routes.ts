@@ -11,6 +11,7 @@ import { registerProjectRoutes } from "./projects/routes";
 import { getAllEndpoints } from "./endpoint-registry";
 import llmRoutes from "./llm/routes";
 import webProxyRoutes from "./web-proxy/routes";
+import bilkoFlowRoutes from "./bilko-flow/routes";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -46,6 +47,9 @@ export async function registerRoutes(
 
   // Web proxy routes for Work With Me flow (page fetching + structure extraction)
   app.use("/api/web-proxy", webProxyRoutes);
+
+  // bilko-flow integration routes (DEMO workflow engine test)
+  app.use("/api/bilko-flow", bilkoFlowRoutes);
 
   // Endpoint registry for UI info icons
   app.get("/api/endpoints", (_req, res) => {
