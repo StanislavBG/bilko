@@ -4,10 +4,15 @@
  * Exposes the bilko-flow deterministic workflow engine as API endpoints
  * within the Bilko web application.
  *
+ * All flows (newsletter, work-with-me, ai-consultation, recursive-interviewer,
+ * linkedin-strategist, socratic-architect) are registered as bilko-flow DSL
+ * workflows and seeded into the in-memory store on first request.
+ *
  * Endpoints:
- *   POST /api/bilko-flow/demo/run     — Execute the DEMO newsletter workflow
- *   GET  /api/bilko-flow/demo/status   — Check status and see results
- *   POST /api/bilko-flow/demo/test     — Dry-run validation (no execution)
+ *   POST /api/bilko-flow/demo/run     — Execute a workflow by ID (default: newsletter)
+ *   GET  /api/bilko-flow/demo/status   — Check status and list all registered workflows
+ *   POST /api/bilko-flow/demo/test     — Dry-run validation & compilation
+ *   GET  /api/bilko-flow/workflows     — List all registered workflow definitions
  */
 
 import { Router, Request, Response } from "express";
@@ -15,10 +20,15 @@ import { createAppContext } from "bilko-flow/dist/server";
 import { compileWorkflow } from "bilko-flow/dist/dsl/compiler";
 import { validateWorkflow } from "bilko-flow/dist/dsl/validator";
 import type { Run } from "bilko-flow/dist/domain/run";
-import type { Workflow } from "bilko-flow/dist/domain/workflow";
+import type { Workflow, CreateWorkflowInput } from "bilko-flow/dist/domain/workflow";
 import type { TenantScope } from "bilko-flow/dist/domain/account";
 import { registerLLMStepHandler } from "./llm-step-handler";
 import { createNewsletterWorkflowInput } from "./newsletter-workflow";
+import { createWorkWithMeWorkflowInput } from "./work-with-me-workflow";
+import { createAiConsultationWorkflowInput } from "./ai-consultation-workflow";
+import { createRecursiveInterviewerWorkflowInput } from "./recursive-interviewer-workflow";
+import { createLinkedInStrategistWorkflowInput } from "./linkedin-strategist-workflow";
+import { createSocraticArchitectWorkflowInput } from "./socratic-architect-workflow";
 
 const router = Router();
 
@@ -27,20 +37,34 @@ const router = Router();
 const bfContext = createAppContext();
 registerLLMStepHandler();
 
-// Track the seeded workflow ID and tenant scope
-let seededWorkflowId: string | null = null;
+// Track seeded state and tenant scope
+let seeded = false;
+const seededWorkflowIds: string[] = [];
 const TENANT_SCOPE: TenantScope = {
   accountId: "",
   projectId: "",
   environmentId: "",
 };
 
+/** All workflow factories keyed by their runtime ID */
+const WORKFLOW_REGISTRY: Array<{
+  id: string;
+  factory: (a: string, p: string, e: string) => CreateWorkflowInput;
+}> = [
+  { id: "demo-newsletter", factory: createNewsletterWorkflowInput },
+  { id: "work-with-me", factory: createWorkWithMeWorkflowInput },
+  { id: "ai-consultation", factory: createAiConsultationWorkflowInput },
+  { id: "recursive-interviewer", factory: createRecursiveInterviewerWorkflowInput },
+  { id: "linkedin-strategist", factory: createLinkedInStrategistWorkflowInput },
+  { id: "socratic-architect", factory: createSocraticArchitectWorkflowInput },
+];
+
 /**
- * Initialize: seed account + project + environment + workflow into bilko-flow's store.
+ * Initialize: seed account + project + environment + ALL workflows into bilko-flow's store.
  * Called lazily on first request.
  */
-async function ensureSeeded(): Promise<string> {
-  if (seededWorkflowId) return seededWorkflowId;
+async function ensureSeeded(): Promise<void> {
+  if (seeded) return;
 
   const { store } = bfContext;
 
@@ -57,7 +81,7 @@ async function ensureSeeded(): Promise<string> {
   const project = await store.projects.create({
     id: "bilko-gym-project",
     accountId: account.id,
-    name: "Demo Flows",
+    name: "Bilko Flows",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
@@ -77,30 +101,30 @@ async function ensureSeeded(): Promise<string> {
   TENANT_SCOPE.projectId = project.id;
   TENANT_SCOPE.environmentId = environment.id;
 
-  // Create the newsletter workflow
-  const workflowInput = createNewsletterWorkflowInput(
-    account.id,
-    project.id,
-    environment.id,
-  );
+  // Seed all workflows
+  for (const { id, factory } of WORKFLOW_REGISTRY) {
+    const workflowInput = factory(account.id, project.id, environment.id);
 
-  const workflow = await store.workflows.create({
-    ...workflowInput,
-    id: "demo-newsletter",
-    version: 1,
-    specVersion: "1.0.0",
-    status: "active" as any,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    steps: workflowInput.steps.map((s) => ({
-      ...s,
-      workflowId: "demo-newsletter",
-    })),
-  } as Workflow);
+    const workflow = await store.workflows.create({
+      ...workflowInput,
+      id,
+      version: 1,
+      specVersion: "1.0.0",
+      status: "active" as any,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      steps: workflowInput.steps.map((s) => ({
+        ...s,
+        workflowId: id,
+      })),
+    } as Workflow);
 
-  seededWorkflowId = workflow.id;
-  console.log(`[bilko-flow] Seeded DEMO workflow: ${workflow.name} (${workflow.id})`);
-  return seededWorkflowId;
+    seededWorkflowIds.push(workflow.id);
+    console.log(`[bilko-flow] Seeded workflow: ${workflow.name} (${workflow.id})`);
+  }
+
+  seeded = true;
+  console.log(`[bilko-flow] All ${seededWorkflowIds.length} workflows seeded`);
 }
 
 // ── Routes ──────────────────────────────────────────────────────────
@@ -108,14 +132,16 @@ async function ensureSeeded(): Promise<string> {
 /**
  * POST /api/bilko-flow/demo/run
  *
- * Execute the DEMO newsletter workflow through bilko-flow's engine.
+ * Execute a workflow through bilko-flow's engine.
+ * Accepts optional ?workflowId= query param (defaults to "demo-newsletter").
  * Returns the full run result with step outputs, provenance, and timing.
  */
-router.post("/demo/run", async (_req: Request, res: Response) => {
+router.post("/demo/run", async (req: Request, res: Response) => {
   try {
-    const workflowId = await ensureSeeded();
+    await ensureSeeded();
+    const workflowId = (req.query.workflowId as string) || "demo-newsletter";
 
-    console.log("[bilko-flow] Starting DEMO workflow execution...");
+    console.log(`[bilko-flow] Starting workflow execution: ${workflowId}...`);
     const startTime = Date.now();
 
     // Create and execute a run
@@ -133,7 +159,7 @@ router.post("/demo/run", async (_req: Request, res: Response) => {
 
     const durationMs = Date.now() - startTime;
     console.log(
-      `[bilko-flow] DEMO workflow ${completedRun.status} in ${durationMs}ms`,
+      `[bilko-flow] Workflow ${workflowId} ${completedRun.status} in ${durationMs}ms`,
     );
 
     // Extract the interesting outputs from each step
@@ -150,6 +176,7 @@ router.post("/demo/run", async (_req: Request, res: Response) => {
     res.json({
       success: completedRun.status === "succeeded",
       runId: completedRun.id,
+      workflowId,
       status: completedRun.status,
       durationMs,
       determinismGrade: completedRun.determinismGrade,
@@ -157,7 +184,7 @@ router.post("/demo/run", async (_req: Request, res: Response) => {
       error: completedRun.error,
     });
   } catch (error) {
-    console.error("[bilko-flow] DEMO workflow error:", error);
+    console.error("[bilko-flow] Workflow execution error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: message });
   }
@@ -166,13 +193,14 @@ router.post("/demo/run", async (_req: Request, res: Response) => {
 /**
  * POST /api/bilko-flow/demo/test
  *
- * Dry-run: validate and compile the DEMO workflow without executing it.
- * Tests that the workflow definition passes bilko-flow's DSL validation
- * and compiles into a valid execution plan.
+ * Dry-run: validate and compile a workflow without executing it.
+ * Accepts optional ?workflowId= query param (defaults to "demo-newsletter").
  */
-router.post("/demo/test", async (_req: Request, res: Response) => {
+router.post("/demo/test", async (req: Request, res: Response) => {
   try {
-    const workflowId = await ensureSeeded();
+    await ensureSeeded();
+    const workflowId = (req.query.workflowId as string) || "demo-newsletter";
+
     const workflow = await bfContext.store.workflows.getById(
       workflowId,
       TENANT_SCOPE.accountId,
@@ -181,7 +209,7 @@ router.post("/demo/test", async (_req: Request, res: Response) => {
     );
 
     if (!workflow) {
-      res.status(404).json({ error: "Workflow not found" });
+      res.status(404).json({ error: `Workflow "${workflowId}" not found` });
       return;
     }
 
@@ -214,7 +242,7 @@ router.post("/demo/test", async (_req: Request, res: Response) => {
       })),
     });
   } catch (error) {
-    console.error("[bilko-flow] DEMO test error:", error);
+    console.error("[bilko-flow] Test error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: message });
   }
@@ -224,42 +252,87 @@ router.post("/demo/test", async (_req: Request, res: Response) => {
  * GET /api/bilko-flow/demo/status
  *
  * Returns the current state of the bilko-flow integration:
- * whether it's initialized, the workflow definition, and recent run history.
+ * whether it's initialized and the list of all registered workflows.
  */
 router.get("/demo/status", async (_req: Request, res: Response) => {
   try {
-    const initialized = seededWorkflowId !== null;
-    let workflow = null;
+    await ensureSeeded();
 
-    if (initialized) {
-      workflow = await bfContext.store.workflows.getById(
-        seededWorkflowId!,
+    const workflows = [];
+    for (const id of seededWorkflowIds) {
+      const workflow = await bfContext.store.workflows.getById(
+        id,
         TENANT_SCOPE.accountId,
         TENANT_SCOPE.projectId,
         TENANT_SCOPE.environmentId,
       );
+      if (workflow) {
+        workflows.push({
+          id: workflow.id,
+          name: workflow.name,
+          description: workflow.description,
+          version: workflow.version,
+          status: workflow.status,
+          stepCount: workflow.steps.length,
+          steps: workflow.steps.map((s) => ({
+            id: s.id,
+            name: s.name,
+            type: s.type,
+          })),
+        });
+      }
     }
 
     res.json({
-      initialized,
-      workflowId: seededWorkflowId,
-      workflow: workflow
-        ? {
-            name: workflow.name,
-            description: workflow.description,
-            version: workflow.version,
-            status: workflow.status,
-            stepCount: workflow.steps.length,
-            steps: workflow.steps.map((s) => ({
-              id: s.id,
-              name: s.name,
-              type: s.type,
-            })),
-          }
-        : null,
+      initialized: seeded,
+      workflowCount: workflows.length,
+      workflows,
       engine: "bilko-flow@0.1.0",
       store: "in-memory",
     });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+/**
+ * GET /api/bilko-flow/workflows
+ *
+ * List all registered workflow definitions with their steps and metadata.
+ */
+router.get("/workflows", async (_req: Request, res: Response) => {
+  try {
+    await ensureSeeded();
+
+    const workflows = [];
+    for (const id of seededWorkflowIds) {
+      const workflow = await bfContext.store.workflows.getById(
+        id,
+        TENANT_SCOPE.accountId,
+        TENANT_SCOPE.projectId,
+        TENANT_SCOPE.environmentId,
+      );
+      if (workflow) {
+        workflows.push({
+          id: workflow.id,
+          name: workflow.name,
+          description: workflow.description,
+          stepCount: workflow.steps.length,
+          entryStepId: workflow.entryStepId,
+          determinism: workflow.determinism,
+          steps: workflow.steps.map((s) => ({
+            id: s.id,
+            name: s.name,
+            type: s.type,
+            description: s.description,
+            dependsOn: s.dependsOn,
+          })),
+        });
+      }
+    }
+
+    res.json({ workflows });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: message });
