@@ -1,34 +1,34 @@
-import { LogOut, Eye, EyeOff, Wrench, Volume2, VolumeX, RotateCcw, PanelLeft } from "lucide-react";
+/**
+ * Global Header — The only UI element that crosses application boundaries.
+ *
+ * All global controls are accessed exclusively through their PI contracts
+ * via useGlobalControl(id). No direct context access to individual providers.
+ */
+
+import { LogOut, Eye, EyeOff, Wrench, Volume2, VolumeX, RotateCcw, PanelLeft, Moon, Sun } from "lucide-react";
 import { Link } from "wouter";
-import { useViewMode } from "@/contexts/view-mode-context";
-import { useVoice } from "@/contexts/voice-context";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { useSidebar } from "@/components/ui/sidebar";
 import { DebugButton } from "@/components/debug-panel";
-import { queryClient } from "@/lib/queryClient";
+import { useGlobalControls } from "@/lib/global-controls";
 
 interface GlobalHeaderProps {
   variant?: "authenticated" | "landing";
 }
 
 export function GlobalHeader({ variant = "authenticated" }: GlobalHeaderProps) {
-  // Landing page header (for non-authenticated users)
   if (variant === "landing") {
     return <LandingHeader />;
   }
-
-  // Authenticated user header - needs ViewMode and Sidebar context
   return <AuthenticatedHeader />;
 }
 
 function LandingHeader() {
-  const { toggleSidebar, toggleHidden, hidden, isMobile } = useSidebar();
-  // Desktop: toggle hide (completely hides nav system); Mobile: toggle sidebar sheet
-  const handleNavToggle = isMobile ? toggleSidebar : toggleHidden;
-  const navLabel = hidden ? "Show navigation" : "Hide navigation";
+  const controls = useGlobalControls();
+  const nav = controls["PI-NAV-TOGGLE"];
+  const theme = controls["PI-THEME"];
+  const navLabel = nav.state.hidden ? "Show navigation" : "Hide navigation";
 
   return (
     <header className="h-14 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center gap-3 px-4 fixed top-0 left-0 right-0 z-50">
@@ -42,7 +42,7 @@ function LandingHeader() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={handleNavToggle}
+              onClick={nav.actions.toggle}
               data-testid="button-explore-site"
             >
               <PanelLeft className="h-4 w-4" />
@@ -53,7 +53,7 @@ function LandingHeader() {
         </Tooltip>
         <ToolsMenu />
         <DebugButton />
-        <ThemeToggle />
+        <PIThemeToggle theme={theme} />
         <Button variant="ghost" size="sm" asChild>
           <a href="/api/auth/login">Sign In</a>
         </Button>
@@ -62,41 +62,93 @@ function LandingHeader() {
   );
 }
 
-const TTS_TEST_PHRASE = "Hello! This is Bilko's Mental Gym testing text-to-speech. Can you hear me?";
+function AuthenticatedHeader() {
+  const controls = useGlobalControls();
+  const nav = controls["PI-NAV-TOGGLE"];
+  const viewMode = controls["PI-VIEW-MODE"];
+  const theme = controls["PI-THEME"];
+  const navLabel = nav.state.hidden ? "Show navigation" : "Hide navigation";
 
-/**
- * Clears all client-side session state for a fresh start.
- * Clears: sessionStorage (conversation), localStorage (voice, execution history),
- * and React Query cache. Does NOT log the user out.
- */
-function resetSession() {
-  // Clear sessionStorage (conversation state)
-  sessionStorage.removeItem("bilko-conversation");
-
-  // Clear localStorage items (keep theme + voice preferences)
-  // Voice preference is a user setting, not session state — preserve it
-  // so Bilko's greeting TTS and mic auto-start work after reset.
-  localStorage.removeItem("bilko-execution-history");
-
-  // Clear all React Query cache
-  queryClient.clear();
-
-  // Reload the page for a clean start
-  window.location.href = "/";
+  return (
+    <header className="h-11 shrink-0 border-b bg-sidebar flex items-center gap-2 px-2" data-testid="global-header">
+      <Link href="/" className="font-semibold text-sm shrink-0 hover:opacity-80 transition-opacity cursor-pointer" data-testid="logo-text">
+        AI School
+      </Link>
+      <div className="flex-1" />
+      <div className="flex items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={nav.actions.toggle}
+              data-testid="button-sidebar-toggle"
+            >
+              <PanelLeft className="h-4 w-4" />
+              <span className="sr-only">{navLabel}</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{navLabel}</TooltipContent>
+        </Tooltip>
+        {viewMode.state.canToggleViewMode && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={viewMode.actions.toggleViewMode}
+                data-testid="button-toggle-view-mode"
+              >
+                {viewMode.state.isViewingAsUser ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
+                <span className="sr-only">
+                  {viewMode.state.isViewingAsUser ? "Exit user view" : "View as user"}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {viewMode.state.isViewingAsUser ? "Exit user view" : "View as user"}
+            </TooltipContent>
+          </Tooltip>
+        )}
+        <ToolsMenu />
+        <DebugButton />
+        <PIThemeToggle theme={theme} />
+        <Button variant="ghost" size="icon" asChild data-testid="button-logout">
+          <a href="/api/auth/logout">
+            <LogOut className="h-4 w-4" />
+            <span className="sr-only">Sign out</span>
+          </a>
+        </Button>
+      </div>
+    </header>
+  );
 }
 
-function ToolsMenu() {
-  const { speak, stopSpeaking, isSpeaking, ttsSupported, ttsUnlocked } = useVoice();
+// ── Theme toggle driven by PI-THEME ─────────────────────
 
-  const handleTestTTS = () => {
-    if (isSpeaking) {
-      stopSpeaking();
-      console.info("[TTS] Test stopped by user");
-    } else {
-      console.info("[TTS] Test triggered from tools menu");
-      speak(TTS_TEST_PHRASE);
-    }
-  };
+function PIThemeToggle({ theme }: { theme: ReturnType<typeof useGlobalControls>["PI-THEME"] }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={theme.actions.toggle}
+      data-testid="button-theme-toggle"
+    >
+      <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+      <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+      <span className="sr-only">Toggle theme</span>
+    </Button>
+  );
+}
+
+// ── Tools menu driven by PI-SESSION ─────────────────────
+
+function ToolsMenu() {
+  const session = useGlobalControls()["PI-SESSION"];
 
   return (
     <Popover>
@@ -117,21 +169,21 @@ function ToolsMenu() {
           variant="ghost"
           size="sm"
           className="w-full justify-start gap-2 text-xs"
-          onClick={handleTestTTS}
+          onClick={session.actions.testTTS}
         >
-          {isSpeaking ? (
+          {session.state.isSpeaking ? (
             <VolumeX className="h-3.5 w-3.5 text-red-500" />
           ) : (
             <Volume2 className="h-3.5 w-3.5" />
           )}
-          {isSpeaking ? "Stop TTS" : "Test TTS"}
-          {!ttsSupported && (
+          {session.state.isSpeaking ? "Stop TTS" : "Test TTS"}
+          {!session.state.ttsSupported && (
             <span className="ml-auto text-[10px] text-red-400">unsupported</span>
           )}
-          {ttsSupported && !ttsUnlocked && (
+          {session.state.ttsSupported && !session.state.ttsUnlocked && (
             <span className="ml-auto text-[10px] text-amber-400">locked</span>
           )}
-          {ttsSupported && ttsUnlocked && (
+          {session.state.ttsSupported && session.state.ttsUnlocked && (
             <span className="ml-auto text-[10px] text-emerald-400">OpenAI</span>
           )}
         </Button>
@@ -139,7 +191,7 @@ function ToolsMenu() {
           variant="ghost"
           size="sm"
           className="w-full justify-start gap-2 text-xs text-amber-600 dark:text-amber-400"
-          onClick={resetSession}
+          onClick={session.actions.resetSession}
           data-testid="button-reset-session"
         >
           <RotateCcw className="h-3.5 w-3.5" />
@@ -148,71 +200,5 @@ function ToolsMenu() {
         </Button>
       </PopoverContent>
     </Popover>
-  );
-}
-
-function AuthenticatedHeader() {
-  const { isViewingAsUser, toggleViewMode, canToggleViewMode } = useViewMode();
-  const { toggleSidebar, toggleHidden, hidden, isMobile } = useSidebar();
-  // Desktop: toggle hide (completely hides nav system); Mobile: toggle sidebar sheet
-  const handleNavToggle = isMobile ? toggleSidebar : toggleHidden;
-  const navLabel = hidden ? "Show navigation" : "Hide navigation";
-
-  return (
-    <header className="h-11 shrink-0 border-b bg-sidebar flex items-center gap-2 px-2" data-testid="global-header">
-      <Link href="/" className="font-semibold text-sm shrink-0 hover:opacity-80 transition-opacity cursor-pointer" data-testid="logo-text">
-        AI School
-      </Link>
-      <div className="flex-1" />
-      <div className="flex items-center gap-1">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleNavToggle}
-              data-testid="button-sidebar-toggle"
-            >
-              <PanelLeft className="h-4 w-4" />
-              <span className="sr-only">{navLabel}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{navLabel}</TooltipContent>
-        </Tooltip>
-        {canToggleViewMode && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleViewMode}
-                data-testid="button-toggle-view-mode"
-              >
-                {isViewingAsUser ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-                <span className="sr-only">
-                  {isViewingAsUser ? "Exit user view" : "View as user"}
-                </span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {isViewingAsUser ? "Exit user view" : "View as user"}
-            </TooltipContent>
-          </Tooltip>
-        )}
-        <ToolsMenu />
-        <DebugButton />
-        <ThemeToggle />
-        <Button variant="ghost" size="icon" asChild data-testid="button-logout">
-          <a href="/api/auth/logout">
-            <LogOut className="h-4 w-4" />
-            <span className="sr-only">Sign out</span>
-          </a>
-        </Button>
-      </div>
-    </header>
   );
 }
