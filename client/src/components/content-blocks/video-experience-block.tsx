@@ -8,7 +8,6 @@
  * - Q&A chat panel (grounded strictly on transcript)
  *
  * Uses chat() (flow engine primitive) for all LLM calls.
- * Uses useVoice().speak() for TTS announcements via common interface.
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -29,7 +28,6 @@ import {
 } from "lucide-react";
 import { chat } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
-import { useVoice } from "@/contexts/voice-context";
 import type { VideoExperienceBlock } from "./types";
 
 // ── Internal types ────────────────────────────────────────
@@ -44,7 +42,6 @@ interface TranscriptMessage {
 // ── Component ─────────────────────────────────────────────
 
 export function VideoExperienceRenderer({ block }: { block: VideoExperienceBlock }) {
-  const { speak } = useVoice();
   const [videoError, setVideoError] = useState(false);
 
   // Summary panel state
@@ -107,12 +104,11 @@ Note: This is an AI-generated summary based on the video metadata. Watch the ful
       ]);
       setSummary(result.data);
       setSummaryState("ready");
-      speak("Summary is ready.", "Aoede");
     } catch (err) {
       console.error("[VideoExperience] Summary error:", err);
       setSummaryState("error");
     }
-  }, [block.title, block.description, block.creator, speak]);
+  }, [block.title, block.description, block.creator]);
 
   // ── Load transcript ───────────────────────────────────
 

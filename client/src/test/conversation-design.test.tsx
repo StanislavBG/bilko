@@ -17,7 +17,6 @@ import {
   stripTurnEndKeyword,
   TURN_END_KEYWORDS,
 } from "@/contexts/conversation-design-context";
-import { VoiceProvider } from "@/contexts/voice-context";
 import type { ReactNode } from "react";
 
 beforeEach(() => {
@@ -28,9 +27,7 @@ beforeEach(() => {
 
 function DesignWrapper({ children }: { children: ReactNode }) {
   return (
-    <VoiceProvider>
-      <ConversationDesignProvider>{children}</ConversationDesignProvider>
-    </VoiceProvider>
+    <ConversationDesignProvider>{children}</ConversationDesignProvider>
   );
 }
 
@@ -132,18 +129,13 @@ describe("Conversation Design: provider requirement", () => {
   it("useConversationDesign requires provider", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    // Wrap in VoiceProvider but NOT ConversationDesignProvider
     function BadComponent() {
       useConversationDesign();
       return null;
     }
 
     expect(() =>
-      render(
-        <VoiceProvider>
-          <BadComponent />
-        </VoiceProvider>,
-      ),
+      render(<BadComponent />),
     ).toThrow("useConversationDesign must be used within a ConversationDesignProvider");
 
     spy.mockRestore();

@@ -55,7 +55,6 @@ import type { VideoCandidate } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
-import { useVoice } from "@/contexts/voice-context";
 import { VideoRenderer } from "@/components/content-blocks";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
@@ -180,17 +179,15 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
   const { definition: flowDef } = useFlowDefinition("video-discovery");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("video-discovery", "Video Discovery");
   const { pushMessage } = useFlowChat();
-  const { speak } = useVoice();
 
   // Get our agent identity for chat messages
   const agent = getFlowAgent("video");
 
   // ── Push agent message to chat ──────────────────────────
-  const pushAgentMessage = useCallback((text: string, speech?: string) => {
+  const pushAgentMessage = useCallback((text: string) => {
     pushMessage(OWNER_ID, {
       speaker: "agent",
       text,
-      speech: speech ?? text,
       agentName: agent?.chatName ?? "YoutubeExpert",
       agentDisplayName: agent?.name ?? "YouTube Librarian",
       agentAccent: agent?.accentColor ?? "text-red-500",
@@ -204,7 +201,7 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
     didGreet.current = true;
     // Push the agent's greeting to the chat (we own it now)
     if (agent) {
-      pushAgentMessage(agent.greeting, agent.greetingSpeech);
+      pushAgentMessage(agent.greeting);
     }
   }, [agent, pushAgentMessage]);
 
@@ -340,16 +337,15 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
       setLastResult(`Found ${fetched.length} topics to explore`);
       setFlowState("select-topic");
 
-      // Push status to chat + speak
+      // Push status to chat
       const statusText = `I found ${fetched.length} topics. Pick one that interests you, or type your own.`;
       pushAgentMessage(statusText);
-      speak(statusText, "Aoede");
     } catch (err) {
       console.error("Topic generation error:", err);
       setError(err instanceof Error ? err.message : "Failed to generate topics.");
       setFlowState("error");
     }
-  }, [trackStep, speak, pushAgentMessage]);
+  }, [trackStep, pushAgentMessage]);
 
   // Auto-start on mount
   useEffect(() => {
@@ -395,16 +391,15 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
       setLastResult(`Topic: ${topic}`);
       setFlowState("select-question");
 
-      // Push status to chat + speak
+      // Push status to chat
       const statusText = "If you had one question to be answered, what would it be?";
       pushAgentMessage(statusText);
-      speak(statusText, "Aoede");
     } catch (err) {
       console.error("Question generation error:", err);
       setError(err instanceof Error ? err.message : "Failed to generate questions.");
       setFlowState("error");
     }
-  }, [trackStep, speak, pushAgentMessage]);
+  }, [trackStep, pushAgentMessage]);
 
   // ── Step 4: Handle question selection ──────────────────────────────
 
@@ -470,16 +465,15 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
       setLastResult(`Found ${foundVideos.data.length} videos`);
       setFlowState("select-video");
 
-      // Push status to chat + speak
+      // Push status to chat
       const statusText = `Found ${foundVideos.data.length} videos. Pick one to watch.`;
       pushAgentMessage(statusText);
-      speak(statusText, "Aoede");
     } catch (err) {
       console.error("Video search error:", err);
       setError(err instanceof Error ? err.message : "Failed to search for videos.");
       setFlowState("error");
     }
-  }, [trackStep, speak, pushAgentMessage]);
+  }, [trackStep, pushAgentMessage]);
 
   // ── Step 6: Handle video selection ─────────────────────────────────
 
@@ -501,7 +495,6 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
 
     setLastResult(`${selectedTopic} → ${video.title}`);
     setFlowState("watching");
-    speak(`Loading ${video.title} by ${video.creator}.`, "Aoede");
   };
 
   // ── Reset ──────────────────────────────────────────────────────────

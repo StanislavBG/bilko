@@ -70,11 +70,11 @@ Only truly global services belong at the root provider level:
 
 | Global (App.tsx root) | App-scoped (inside app's tree) |
 |----------------------|-------------------------------|
-| Auth / session | Voice / TTS (Landing) |
-| Theme | Conversation design (Landing) |
-| Sidebar state | Flow bus / flow chat (Landing) |
-| React Query client | Navigation collapse (Academy) |
-| Tooltip provider | Global controls / Cost PI (Flows) |
+| Auth / session | Conversation design (Landing) |
+| Theme | Flow bus / flow chat (Landing) |
+| Sidebar state | Navigation collapse (Academy) |
+| React Query client | Global controls / Cost PI (Flows) |
+| Tooltip provider | |
 
 **Test**: If a context is consumed by only one app (or one app and its children), it belongs inside that app's tree.
 
@@ -132,7 +132,7 @@ When an app crashes:
 Every app MUST:
 - Clean up `setInterval` / `setTimeout` in `useEffect` return
 - Cancel in-flight API requests on unmount (via AbortController or React Query)
-- Stop any audio/TTS playback on unmount
+- Stop any audio playback on unmount
 - Remove any document-level event listeners on unmount
 
 **DO**: Use React cleanup functions in all effects
@@ -188,7 +188,6 @@ import { LinkedInStrategistFlow } from "@/components/linkedin-strategist-flow";
 
 ```tsx
 // BAD: App.tsx has providers for one page's features
-<VoiceProvider>          {/* Only Landing uses this */}
 <FlowBusProvider>        {/* Only Landing uses this */}
 <NavigationProvider>     {/* Only Academy uses this */}
   <Router />

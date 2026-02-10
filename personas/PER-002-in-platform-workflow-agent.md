@@ -55,7 +55,7 @@ The steel frame ensures every flow is inspectable, observable, and structurally 
 │  Client (React)                                               │
 │  ┌─────────────────────────────────────────────────────┐     │
 │  │  Conversational Canvas                               │     │
-│  │  - BilkoMessage (typewriter + TTS)                   │     │
+│  │  - BilkoMessage (typewriter)                          │     │
 │  │  - ConversationCanvas (turn-based layout engine)     │     │
 │  │  - Option cards as user responses                    │     │
 │  └──────────────┬──────────────────────────────────────┘     │
@@ -143,13 +143,13 @@ The execution store:
 
 | Type | What | Rendered As |
 |---|---|---|
-| `bilko` | Bilko speaks | Typewriter text + TTS audio |
+| `bilko` | Bilko speaks | Typewriter text |
 | `user-choice` | User responds | Option cards (clickable + voice) |
 | `content` | Experience renders | Full component below the conversation |
 
 ### Conversation Flow
 
-1. Bilko greets (typewriter + TTS)
+1. Bilko greets (typewriter)
 2. Bilko asks a question
 3. Option cards appear as user's response choices
 4. User clicks or speaks a choice
@@ -158,9 +158,7 @@ The execution store:
 
 ### Voice Integration
 
-- `useVoice()` — global context for STT (speech-to-text) and TTS (text-to-speech)
-- `useVoiceCommands(id, options, onMatch)` — register page-level voice commands
-- `speak(text)` — Bilko speaks aloud via Gemini TTS (`/api/llm/tts`)
+- `useConversationDesign()` — turn-taking and floor management context
 - Mic preference persists in localStorage (`bilko-voice-enabled`)
 - Every clickable option MUST have `voiceTriggers` (ARCH-005 C3)
 
@@ -348,7 +346,7 @@ Before shipping a new agentic flow:
 ### v2.0.0 (2026-02-07)
 - **BREAKING**: Steel frame compliance now mandatory (ARCH-005)
 - Added conversational canvas pattern (BilkoMessage, ConversationCanvas, turn types)
-- Added TTS via `speak()` — Bilko speaks aloud
+- Added typewriter animation for Bilko's voice
 - Added execution store contract (`useFlowExecution`, `trackStep`)
 - Added Flow Inspector integration section
 - Updated architecture diagram to reflect inspector, execution store, and canvas
