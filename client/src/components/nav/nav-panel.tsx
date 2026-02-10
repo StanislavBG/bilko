@@ -4,7 +4,7 @@
  * The universal building block for L2/L3/L4 navigation.
  * Handles: header, scrollable item list, collapse/expand toggle.
  *
- * Used across academy (levels, dictionary, video), rules, projects.
+ * Used across rules, projects, bilko's way, and other pages.
  */
 
 import { Button } from "@/components/ui/button";

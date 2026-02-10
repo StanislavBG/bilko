@@ -29,7 +29,7 @@ import { useConversationDesign } from "@/contexts/conversation-design-context";
 import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
 
 const GEMINI_VOICES = ["Kore", "Puck", "Charon", "Fenrir", "Aoede", "Leda", "Orus", "Zephyr"];
-const TTS_TEST_PHRASE = "Bilko Bibitkov AI Academy";
+const TTS_TEST_PHRASE = "Bilko Bibitkov Mental Gym";
 
 // ── Main FlowChat component ─────────────────────────────
 

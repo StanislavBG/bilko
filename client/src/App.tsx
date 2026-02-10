@@ -19,7 +19,6 @@ import Projects from "@/pages/projects";
 import N8nWorkflows from "@/pages/n8n-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
 import RulesExplorer from "@/pages/rules-explorer";
-import Academy from "@/pages/academy";
 import FlowExplorer from "@/pages/flow-explorer";
 import FlowDetail from "@/pages/flow-detail";
 import BilkosWay from "@/pages/bilkos-way";
@@ -71,9 +70,7 @@ function AuthenticatedApp() {
                 <main className="flex-1 flex overflow-hidden">
                   <Switch>
                     <Route path="/" component={MainFlow} />
-                    <Route path="/academy" component={Academy} />
-                    <Route path="/academy/:levelId" component={Academy} />
-                    <Route path="/projects/:projectId?" component={Projects} />
+<Route path="/projects/:projectId?" component={Projects} />
                     <Route path="/bilkos-way" component={BilkosWay} />
                     {isAuth && <Route path="/workflows" component={N8nWorkflows} />}
                     {isAuth && <Route path="/memory" component={MemoryExplorer} />}

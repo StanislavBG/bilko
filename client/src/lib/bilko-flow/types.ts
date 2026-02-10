@@ -55,7 +55,7 @@ export interface FlowDefinition {
   description: string;
   version: string;
   /** Where this flow is used */
-  location: "landing" | "academy" | "admin";
+  location: "landing" | "admin";
   /** The React component that renders this flow */
   componentPath: string;
   /** Steps (order in array is irrelevant — graph is defined by dependsOn) */

@@ -38,14 +38,6 @@ export const applicationRegistry: readonly ApplicationDefinition[] = [
     description: "Landing screen powered by agentic workflow — the main entry point for every visitor.",
   },
   {
-    id: "academy",
-    name: "AI School",
-    basePath: "/academy",
-    agentic: false,
-    access: "public",
-    description: "AI learning center with levels, tutorials, and content browsing.",
-  },
-  {
     id: "projects",
     name: "Bilko's Projects",
     basePath: "/projects",
