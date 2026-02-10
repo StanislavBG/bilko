@@ -1,3 +1,16 @@
+/**
+ * Application root — ARCH-007 compliant provider hierarchy.
+ *
+ * Global (hub-level) providers:  Auth, Theme, Sidebar, ViewMode,
+ *   GlobalControls, QueryClient, Tooltip, Debug, Toaster.
+ *
+ * App-scoped providers (inside their own page tree):
+ *   - Landing: VoiceProvider, ConversationDesignProvider, FlowBusProvider, FlowChatProvider
+ *   - Academy: NavigationProvider
+ *
+ * Every route is wrapped in an AppErrorBoundary (ARCH-007 I4).
+ */
+
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -6,9 +19,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
-import { NavigationProvider } from "@/contexts/navigation-context";
 import { VoiceProvider } from "@/contexts/voice-context";
 import { ConversationDesignProvider } from "@/contexts/conversation-design-context";
+import { NavigationProvider } from "@/contexts/navigation-context";
 import { useAuth } from "@/hooks/use-auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
@@ -26,17 +39,39 @@ import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DebugProvider } from "@/contexts/debug-context";
 import { GlobalControlsProvider } from "@/lib/global-controls";
+import { AppErrorBoundary } from "@/components/app-error-boundary";
 
-/** Landing content wrapped in flow providers — standalone, auth-agnostic */
+// ── App-scoped wrappers (ARCH-007 I3: context scoping) ──────────
+
+/** Landing — owns Voice, ConversationDesign, FlowBus, FlowChat */
 function MainFlow() {
   return (
-    <FlowBusProvider>
-      <FlowChatProvider voiceDefaultOn>
-        <LandingContent />
-      </FlowChatProvider>
-    </FlowBusProvider>
+    <AppErrorBoundary appName="Landing">
+      <VoiceProvider>
+        <ConversationDesignProvider>
+          <FlowBusProvider>
+            <FlowChatProvider voiceDefaultOn>
+              <LandingContent />
+            </FlowChatProvider>
+          </FlowBusProvider>
+        </ConversationDesignProvider>
+      </VoiceProvider>
+    </AppErrorBoundary>
   );
 }
+
+/** Academy — owns NavigationProvider (multi-level collapse) */
+function AcademyApp() {
+  return (
+    <AppErrorBoundary appName="Academy">
+      <NavigationProvider>
+        <Academy />
+      </NavigationProvider>
+    </AppErrorBoundary>
+  );
+}
+
+// ── Hub shell ────────────────────────────────────────────────────
 
 function AuthenticatedApp() {
   const { user, isLoading, isAuthenticated } = useAuth();
@@ -82,12 +117,14 @@ function AuthenticatedApp() {
                 </main>
               </div>
             </div>
-          </GlobalControlsProvider>
-        </NavigationProvider>
+          </div>
+        </GlobalControlsProvider>
       </SidebarProvider>
     </ViewModeProvider>
   );
 }
+
+// ── Root — only truly global (hub-level) providers ───────────────
 
 function App() {
   return (
@@ -95,12 +132,8 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider defaultTheme="system" storageKey="bilko-ui-theme">
           <TooltipProvider>
-            <VoiceProvider>
-              <ConversationDesignProvider>
-                <Toaster />
-                <AuthenticatedApp />
-              </ConversationDesignProvider>
-            </VoiceProvider>
+            <Toaster />
+            <AuthenticatedApp />
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>
