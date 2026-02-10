@@ -132,7 +132,8 @@
       "crossReferences": [
         "DATA-002",
         "INT-002",
-        "INT-003"
+        "INT-003",
+        "ARCH-007"
       ],
       "description": "System architecture including orchestration layer, agent coordination, and system boundaries."
     },
@@ -230,7 +231,7 @@
       "path": "rules/hub/001-layout.md",
       "partition": "hub",
       "priority": "HIGH",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "triggers": [
         "hub",
         "layout",
@@ -244,7 +245,8 @@
         "UI-001"
       ],
       "crossReferences": [
-        "UI-001"
+        "UI-001",
+        "ARCH-007"
       ],
       "description": "Defines the Application Hub shell layout structure."
     },
@@ -792,6 +794,44 @@
       ],
       "description": "Central registry of all n8n workflows with artifact paths."
     },
+    "ARCH-007": {
+      "id": "ARCH-007",
+      "title": "Application Isolation",
+      "path": "rules/architecture/007-application-isolation.md",
+      "partition": "architecture",
+      "priority": "CRITICAL",
+      "version": "1.0.0",
+      "triggers": [
+        "isolation",
+        "sandbox",
+        "app boundary",
+        "cross-app",
+        "import boundary",
+        "context scoping",
+        "error boundary",
+        "state firewall",
+        "kill switch",
+        "app independence",
+        "spaghetti",
+        "coupling",
+        "provider",
+        "god provider",
+        "clean lifecycle",
+        "app structure"
+      ],
+      "dependencies": [
+        "ARCH-000",
+        "ARCH-003",
+        "HUB-001"
+      ],
+      "crossReferences": [
+        "ARCH-005",
+        "HUB-001",
+        "HUB-002",
+        "UI-001"
+      ],
+      "description": "Non-negotiable isolation invariants for applications. iPhone sandbox model: each app is independent, the hub survives any app failure, apps never import from each other."
+    },
     "ENV-004": {
       "id": "ENV-004",
       "title": "n8n Self-Hosting Setup Guide",
@@ -921,6 +961,12 @@
         "partitions": [
           "architecture",
           "integration"
+        ]
+      },
+      {
+        "pattern": "isolation|sandbox|app boundary|cross-app|import boundary|coupling|spaghetti|context scoping|error boundary|kill switch",
+        "partitions": [
+          "architecture"
         ]
       },
       {
