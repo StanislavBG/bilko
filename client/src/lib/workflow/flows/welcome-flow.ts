@@ -53,6 +53,13 @@ export const LEARNING_MODES = [
     icon: "Handshake",
     voiceTriggers: ["work with me", "guide", "help me", "walk me through", "assist", "task"],
   },
+  {
+    id: "fake-game",
+    label: "Brain Teaser Game",
+    description: "A quick brain-teaser — play a neuroscientist-recommended cognitive challenge against an AI opponent",
+    icon: "Gamepad2",
+    voiceTriggers: ["game", "brain teaser", "play", "challenge", "puzzle"],
+  },
 ] as const;
 
 export type LearningModeId = typeof LEARNING_MODES[number]["id"];
