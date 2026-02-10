@@ -9,6 +9,8 @@
  */
 
 import { useFlowBus, type FlowStatus, type FlowRegistration } from "@/contexts/flow-bus-context";
+import { getFlowById } from "@/lib/bilko-flow";
+import type { FlowPhase } from "@/lib/bilko-flow";
 import { Activity, RotateCcw, Check } from "lucide-react";
 
 const STATUS_DOT: Record<FlowStatus, string> = {
@@ -25,47 +27,50 @@ const STATUS_LABEL: Record<FlowStatus, string> = {
   error: "Error",
 };
 
-// ── Known phase sequences per flow type ─────────────────
-// These are the ordered phases for the mini progress dots.
-// Falls back to just showing the current phase if flow ID is unknown.
+// ── Phase resolution from flow registry ─────────────────
+// Reads phases from FlowDefinition.phases (the single source of truth).
+// Falls back gracefully if the flow has no phases defined.
 
-const PHASE_SEQUENCES: Record<string, string[]> = {
-  "ai-consultation":       ["intro", "setup", "questioning", "analyzing", "complete"],
-  "recursive-interviewer":  ["intro", "setup", "questioning", "analyzing", "complete"],
-  "linkedin-strategist":    ["intro", "goal", "setup", "conversation", "analyzing", "complete"],
-  "socratic-architect":     ["intro", "setup", "questioning", "analyzing", "complete"],
-  "video-discovery":        ["researching-topics", "select-topic", "ready"],
-};
+function getFlowPhases(flowId: string): FlowPhase[] | null {
+  const def = getFlowById(flowId);
+  return def?.phases ?? null;
+}
 
-// Short labels for the phase dots
-const PHASE_SHORT: Record<string, string> = {
-  "intro": "Start",
-  "setup": "Setup",
-  "questioning": "Interview",
-  "analyzing": "Analyzing",
-  "complete": "Done",
-  "researching-topics": "Research",
-  "select-topic": "Pick Topic",
-  "ready": "Watch",
-  "goal": "Goal",
-  "conversation": "Conversation",
-};
+function getPhaseLabel(phases: FlowPhase[], phaseId: string): string {
+  const found = phases.find((p) => p.id === phaseId);
+  return found?.label ?? phaseId;
+}
+
+/** Find the index of the phase matching the current bus phase.
+ *  Also checks if the phase sits "between" declared phases
+ *  (i.e. it belongs to a phase's stepIds but isn't the phase's own id). */
+function findPhaseIndex(phases: FlowPhase[], currentPhase: string): number {
+  // 1. Exact match on phase id
+  const exact = phases.findIndex((p) => p.id === currentPhase);
+  if (exact >= 0) return exact;
+
+  // 2. Check if the current phase matches a stepId inside a phase group
+  for (let i = 0; i < phases.length; i++) {
+    if (phases[i].stepIds.includes(currentPhase)) return i;
+  }
+
+  return -1;
+}
 
 function MiniFlowProgress({ flow }: { flow: FlowRegistration }) {
-  const phases = PHASE_SEQUENCES[flow.id];
+  const phases = getFlowPhases(flow.id);
   if (!phases || !flow.phase) return null;
 
-  const currentIdx = phases.indexOf(flow.phase);
+  const currentIdx = findPhaseIndex(phases, flow.phase);
 
   return (
     <div className="flex items-center gap-1 px-1">
       {phases.map((phase, i) => {
         const isActive = i === currentIdx;
         const isDone = i < currentIdx;
-        const label = PHASE_SHORT[phase] ?? phase;
 
         return (
-          <div key={phase} className="flex items-center gap-1">
+          <div key={phase.id} className="flex items-center gap-1">
             {/* Connector line between dots */}
             {i > 0 && (
               <div
@@ -90,7 +95,7 @@ function MiniFlowProgress({ flow }: { flow: FlowRegistration }) {
                 px-1.5 py-0.5 rounded text-[10px] font-medium bg-popover text-popover-foreground
                 border border-border shadow-sm whitespace-nowrap opacity-0
                 group-hover:opacity-100 transition-opacity pointer-events-none">
-                {label}
+                {phase.label}
               </span>
             </div>
           </div>
@@ -141,7 +146,12 @@ export function FlowStatusIndicator({ onReset }: FlowStatusIndicatorProps) {
             {flow.phase && (
               <>
                 <span className="text-muted-foreground/40 text-xs">|</span>
-                <span className="text-xs font-mono text-muted-foreground">{flow.phase}</span>
+                <span className="text-xs font-mono text-muted-foreground">
+                  {(() => {
+                    const phases = getFlowPhases(flow.id);
+                    return phases ? getPhaseLabel(phases, flow.phase) : flow.phase;
+                  })()}
+                </span>
               </>
             )}
 
@@ -166,20 +176,19 @@ export function FlowStatusIndicator({ onReset }: FlowStatusIndicatorProps) {
 // ── Banner stepper — large horizontal step visualization ──
 
 function BannerStepper({ flow }: { flow: FlowRegistration }) {
-  const phases = PHASE_SEQUENCES[flow.id];
+  const phases = getFlowPhases(flow.id);
   if (!phases || !flow.phase) return null;
 
-  const currentIdx = phases.indexOf(flow.phase);
+  const currentIdx = findPhaseIndex(phases, flow.phase);
 
   return (
     <div className="flex items-start w-full">
       {phases.map((phase, i) => {
         const isActive = i === currentIdx;
         const isDone = i < currentIdx;
-        const label = PHASE_SHORT[phase] ?? phase;
 
         return (
-          <div key={phase} className="flex items-start flex-1 last:flex-initial">
+          <div key={phase.id} className="flex items-start flex-1 last:flex-initial">
             {/* Step circle + label column */}
             <div className="flex flex-col items-center gap-2 min-w-[56px]">
               <div
@@ -203,7 +212,7 @@ function BannerStepper({ flow }: { flow: FlowRegistration }) {
                       : "text-muted-foreground/60"
                 }`}
               >
-                {label}
+                {phase.label}
               </span>
             </div>
 
@@ -242,8 +251,8 @@ export function FlowProgressBanner({ onReset }: FlowProgressBannerProps) {
 
   return (
     <div
-      className="shrink-0 border-b border-border bg-background/95 backdrop-blur-sm
-        px-6 py-4 animate-in fade-in slide-in-from-top-2 duration-300"
+      className="shrink-0 border-t border-border bg-background/95 backdrop-blur-sm
+        px-6 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300"
     >
       {activeFlows.map((flow) => (
         <div key={flow.id} className="space-y-4">
@@ -262,7 +271,10 @@ export function FlowProgressBanner({ onReset }: FlowProgressBannerProps) {
               <>
                 <span className="text-muted-foreground/40">·</span>
                 <span className="text-xs text-muted-foreground">
-                  {PHASE_SHORT[flow.phase] ?? flow.phase}
+                  {(() => {
+                    const phases = getFlowPhases(flow.id);
+                    return phases ? getPhaseLabel(phases, flow.phase) : flow.phase;
+                  })()}
                 </span>
               </>
             )}
