@@ -1,9 +1,10 @@
 /**
- * Flow Inspector Types
+ * Bilko Flow API — Core Type Definitions
  *
- * Defines the schema for inspectable PER-002 flows.
- * Each flow definition describes its steps, prompts, inputs, and outputs
- * so the inspector can visualize and replay them.
+ * Foundation types for all flow operations: definitions, steps,
+ * execution traces, and schema descriptions.
+ *
+ * Every other module in bilko-flow depends on these types.
  */
 
 export type StepType = "llm" | "user-input" | "transform" | "validate" | "display" | "chat";

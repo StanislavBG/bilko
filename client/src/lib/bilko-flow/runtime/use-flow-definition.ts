@@ -1,12 +1,12 @@
 /**
- * Flow Definition Bridge — useFlowDefinition
+ * Bilko Flow API — Flow Definition Bridge
  *
  * Connects flow implementation components to their registry definitions.
  * Ensures flow components stay consistent with ARCH-005 steel frame
  * by providing runtime access to the validated FlowDefinition.
  *
  * This bridge enforces the separation between:
- * 1. Framework templates (flow-inspector: types, validation, registry)
+ * 1. Framework templates (definitions: types, validation, registry)
  * 2. Flow implementation (flow components: execution logic)
  * 3. UX rendering (component JSX output)
  *
@@ -17,8 +17,8 @@
  */
 
 import { useRef } from "react";
-import { getFlowById } from "@/lib/flow-inspector/registry";
-import type { FlowDefinition, FlowStep } from "@/lib/flow-inspector/types";
+import { getFlowById } from "../definitions/registry";
+import type { FlowDefinition, FlowStep } from "../types";
 
 export interface FlowDefinitionBridge {
   /** The validated FlowDefinition from the registry, or null if not found */
@@ -57,7 +57,7 @@ export function useFlowDefinition(flowId: string): FlowDefinitionBridge {
     warnedRef.current = true;
     console.warn(
       `[flow-bridge] Flow "${flowId}" not found in validated registry. ` +
-      `Ensure it is registered in flow-inspector/registry.ts and passes ARCH-005 validation.`
+      `Ensure it is registered in bilko-flow/definitions/registry.ts and passes ARCH-005 validation.`
     );
   }
 

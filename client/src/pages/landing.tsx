@@ -40,7 +40,7 @@ import { LinkedInStrategistFlow } from "@/components/linkedin-strategist-flow";
 import { WorkWithMeFlow } from "@/components/work-with-me-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
-import { chat, useFlowExecution, FlowChatProvider, useFlowChat } from "@/lib/flow-engine";
+import { chat, useFlowExecution, FlowChatProvider, useFlowChat } from "@/lib/bilko-flow";
 import { Button } from "@/components/ui/button";
 import {
   Play,
@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
-import { flowRegistry, activeFlowIds } from "@/lib/flow-inspector/registry";
+import { flowRegistry, activeFlowIds } from "@/lib/bilko-flow/definitions/registry";
 import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
 import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";

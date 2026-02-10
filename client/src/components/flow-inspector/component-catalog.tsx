@@ -26,8 +26,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { ComponentDefinition } from "@shared/component-definitions";
-import { STEP_TYPE_CONFIG } from "@/lib/flow-inspector/step-type-config";
-import type { StepType } from "@/lib/flow-inspector/types";
+import { STEP_TYPE_CONFIG } from "@/lib/bilko-flow/inspector/step-type-config";
+import type { StepType } from "@/lib/bilko-flow/types";
 
 // ── Main Component ──────────────────────────────────────────
 

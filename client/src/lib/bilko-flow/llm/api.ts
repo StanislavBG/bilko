@@ -1,8 +1,8 @@
 /**
- * API Client — Typed wrappers for backend API calls.
+ * Bilko Flow API — HTTP Client & Domain Helpers
  *
  * General-purpose `apiPost<T>()` and `apiGet<T>()` for any endpoint,
- * plus domain-specific helpers like `validateVideos()`.
+ * plus domain-specific helpers like `validateVideos()` and `searchYouTube()`.
  */
 
 /**
