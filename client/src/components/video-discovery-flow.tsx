@@ -179,7 +179,7 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
   const recognitionRef = useRef<any>(null);
   const hasStarted = useRef(false);
 
-  const { trackStep, resolveUserInput } = useFlowExecution("video-discovery");
+  const { trackStep, resolveUserInput, execution } = useFlowExecution("video-discovery");
   const { definition: flowDef } = useFlowDefinition("video-discovery");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("video-discovery", "Video Discovery");
   const { pushMessage } = useFlowChat();
@@ -211,59 +211,20 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
 
   // ── StepTracker state ──────────────────────────────────────────────
 
+  // Derive tracker steps from flow definition + execution state (single source of truth)
   const trackerSteps = useMemo<TrackerStep[]>(() => {
-    const stateToSteps: Record<FlowState, TrackerStep[]> = {
-      "generating-topics": [
-        { id: "topic", label: "Topic", status: "active" },
-        { id: "question", label: "Question", status: "pending" },
-        { id: "search", label: "Search", status: "pending" },
-        { id: "watch", label: "Watch", status: "pending" },
-      ],
-      "select-topic": [
-        { id: "topic", label: "Topic", status: "active" },
-        { id: "question", label: "Question", status: "pending" },
-        { id: "search", label: "Search", status: "pending" },
-        { id: "watch", label: "Watch", status: "pending" },
-      ],
-      "generating-questions": [
-        { id: "topic", label: "Topic", status: "complete" },
-        { id: "question", label: "Question", status: "active" },
-        { id: "search", label: "Search", status: "pending" },
-        { id: "watch", label: "Watch", status: "pending" },
-      ],
-      "select-question": [
-        { id: "topic", label: "Topic", status: "complete" },
-        { id: "question", label: "Question", status: "active" },
-        { id: "search", label: "Search", status: "pending" },
-        { id: "watch", label: "Watch", status: "pending" },
-      ],
-      "searching-videos": [
-        { id: "topic", label: "Topic", status: "complete" },
-        { id: "question", label: "Question", status: "complete" },
-        { id: "search", label: "Search", status: "active" },
-        { id: "watch", label: "Watch", status: "pending" },
-      ],
-      "select-video": [
-        { id: "topic", label: "Topic", status: "complete" },
-        { id: "question", label: "Question", status: "complete" },
-        { id: "search", label: "Search", status: "complete" },
-        { id: "watch", label: "Watch", status: "pending" },
-      ],
-      "watching": [
-        { id: "topic", label: "Topic", status: "complete" },
-        { id: "question", label: "Question", status: "complete" },
-        { id: "search", label: "Search", status: "complete" },
-        { id: "watch", label: "Watch", status: "active" },
-      ],
-      "error": [
-        { id: "topic", label: "Topic", status: "error" },
-        { id: "question", label: "Question", status: "pending" },
-        { id: "search", label: "Search", status: "pending" },
-        { id: "watch", label: "Watch", status: "pending" },
-      ],
-    };
-    return stateToSteps[flowState];
-  }, [flowState]);
+    if (!flowDef) return [];
+    return flowDef.steps.map((step) => {
+      const exec = execution.steps[step.id];
+      let status: TrackerStep["status"] = "pending";
+      if (exec) {
+        if (exec.status === "running") status = "active";
+        else if (exec.status === "success") status = "complete";
+        else if (exec.status === "error") status = "error";
+      }
+      return { id: step.id, label: step.name, status };
+    });
+  }, [flowDef, execution.steps]);
 
   const trackerActivity = useMemo<string | undefined>(() => {
     switch (flowState) {
