@@ -80,9 +80,9 @@ function SidebarProvider({
 
   // Hidden state — completely hides the nav system (separate from collapse)
   const [_hidden, _setHidden] = React.useState(() => {
-    if (typeof document === "undefined") return false
+    if (typeof document === "undefined") return true
     const match = document.cookie.match(new RegExp(`(^| )${SIDEBAR_HIDDEN_COOKIE}=([^;]+)`))
-    return match ? match[2] === "true" : false
+    return match ? match[2] === "true" : true
   })
 
   const setHidden = React.useCallback((value: boolean) => {

@@ -31,6 +31,7 @@ import { useLocation } from "wouter";
 import { GlobalHeader } from "@/components/global-header";
 import { FlowChat } from "@/components/flow-chat";
 import { VideoDiscoveryFlow } from "@/components/video-discovery-flow";
+import { FakeGameFlow } from "@/components/fake-game-flow";
 import {
   AiConsultationFlow,
   RECURSIVE_INTERVIEWER_CONFIG,
@@ -47,6 +48,7 @@ import {
   Sparkles,
   ArrowLeft,
   Compass,
+  Gamepad2,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
@@ -71,6 +73,7 @@ interface ModeOption {
 
 const iconMap: Record<string, ReactNode> = {
   Play: <Play className="h-6 w-6" />,
+  Gamepad2: <Gamepad2 className="h-6 w-6" />,
 };
 
 /** Menu items — only ACTIVE flows from the registry (excludes bilko-main and standby) */
@@ -101,6 +104,7 @@ const FLOW_TO_MODE: Record<string, LearningModeId> = {
   "linkedin-strategist": "linkedin",
   "socratic-architect": "socratic",
   "work-with-me": "work-with-me",
+  "fake-game": "fake-game",
 };
 
 // ── Subflow ID mapping ──────────────────────────────────
@@ -113,6 +117,7 @@ const MODE_TO_OWNER: Record<string, string> = {
   linkedin: "linkedin-strategist",
   socratic: "socratic-architect",
   "work-with-me": "work-with-me",
+  "fake-game": "fake-game",
 };
 
 // ── LLM greeting prompts ────────────────────────────────
@@ -145,15 +150,20 @@ const GREETING_RETURN_PROMPT = bilkoSystemPrompt(
 
 You'll be given what they did and a brief summary. Use it to:
 1. Acknowledge what they just accomplished (briefly — one sentence)
-2. Ask what they want to do next
+2. Match your energy to the mood implied by the summary. If the summary mentions a mood or emotional state (e.g. "energized", "challenged", "humbled"), tune your tone accordingly:
+   - Energized/triumphant → high energy, celebrate with them
+   - Focused/determined → steady, encouraging, forward-looking
+   - Challenged/motivated → supportive, "you're building something here"
+   - Humbled/curious → warm, reassuring, "that's how you grow"
+3. Ask what they want to do next
 
 Available options:
 ${activeFlowDescriptions}
 - Explore the Site: Browse the full AI School navigation
 
 Rules:
-- 2-3 sentences max. Keep it warm and energetic.
-- Reference what they just did — show you were paying attention.
+- 2-3 sentences max. Keep it warm and match the energy.
+- Reference what they just did AND how it seems to have gone — show you were paying attention.
 - End with a question about what's next.
 - Plain text only. No formatting, no markdown, no JSON.`,
 );
@@ -415,6 +425,21 @@ export function LandingContent() {
           return { recycleContext };
         },
       ).then(() => {
+        // ── receive-experience step (external-input) ──
+        // Track the external-input node that captures the experience data
+        // for mood-aware greeting on the next loop iteration.
+        if (summary) {
+          trackStep(
+            `receive-experience-${Date.now()}`,
+            { source: "subflow-exit" },
+            async () => ({
+              experienceSummary: summary,
+              mood: "inferred-from-summary",
+              sourceFlow: modeLabel,
+            }),
+          );
+        }
+
         // ── Recycle to HEAD: re-run greeting with summary context ──
         if (summary) {
           runGreeting({ modeLabel, summary });
@@ -660,6 +685,7 @@ function RightPanelContent({
       {mode === "linkedin" && <LinkedInStrategistFlow onComplete={onComplete} />}
       {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} onComplete={onComplete} />}
       {mode === "work-with-me" && <WorkWithMeFlow onComplete={onComplete} />}
+      {mode === "fake-game" && <FakeGameFlow onComplete={onComplete} />}
     </div>
   );
 }

@@ -77,6 +77,14 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
     greetingSpeech: "Tell me what you need to get done. I'll walk you through it step by step.",
     accentColor: "text-orange-500",
   },
+  "fake-game": {
+    name: "Brain Coach",
+    chatName: "BrainCoach",
+    personality: "An enthusiastic brain training coach who makes cognitive challenges feel like play.",
+    greeting: "Time for a brain workout! I'm picking a neuroscientist-approved challenge for you.",
+    greetingSpeech: "Time for a brain workout! I'm picking a neuroscientist-approved challenge for you.",
+    accentColor: "text-pink-500",
+  },
 };
 
 /** Maps flow registry IDs to their corresponding agent key */
@@ -87,6 +95,7 @@ const FLOW_ID_ALIASES: Record<string, string> = {
   "linkedin-strategist": "linkedin",
   "socratic-architect": "socratic",
   "work-with-me": "work-with-me",
+  "fake-game": "fake-game",
 };
 
 /**

@@ -7,7 +7,7 @@
  * Every other module in bilko-flow depends on these types.
  */
 
-export type StepType = "llm" | "user-input" | "transform" | "validate" | "display" | "chat";
+export type StepType = "llm" | "user-input" | "transform" | "validate" | "display" | "chat" | "external-input";
 export type StepStatus = "idle" | "running" | "success" | "error" | "skipped";
 
 /** A single step in a flow */
