@@ -216,5 +216,5 @@ useEffect(() => {
 - HUB-003: Nested Navigation Pattern (desktop layout, collapsible behavior)
 - UI-005: Minimal Design Principles (sizing, aesthetics)
 - HUB-001: Hub Layout (primary sidebar)
-- APP-WORKFLOWS-001: Agentic Workflows (uses D6, D7 patterns)
+- APP-WORKFLOWS-001: N8N Workflows (uses D6, D7 patterns)
 - HUB-004: Unified Navigation Structure (NavItem interface, navigation data)

@@ -16,7 +16,7 @@ import { LandingContent } from "@/pages/landing";
 import { FlowBusProvider } from "@/contexts/flow-bus-context";
 import { FlowChatProvider } from "@/lib/flow-engine";
 import Projects from "@/pages/projects";
-import AgenticWorkflows from "@/pages/agentic-workflows";
+import N8nWorkflows from "@/pages/n8n-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
 import RulesExplorer from "@/pages/rules-explorer";
 import Academy from "@/pages/academy";
@@ -73,7 +73,7 @@ function AuthenticatedApp() {
                   <Route path="/academy/:levelId" component={Academy} />
                   <Route path="/projects/:projectId?" component={Projects} />
                   <Route path="/bilkos-way" component={BilkosWay} />
-                  {isAuth && <Route path="/workflows" component={AgenticWorkflows} />}
+                  {isAuth && <Route path="/workflows" component={N8nWorkflows} />}
                   {isAuth && <Route path="/memory" component={MemoryExplorer} />}
                   {isAuth && <Route path="/rules" component={RulesExplorer} />}
                   {isAuth && <Route path="/flows/:flowId" component={FlowDetail} />}

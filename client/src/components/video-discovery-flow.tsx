@@ -1,5 +1,5 @@
 /**
- * Video Discovery Flow - Agentic workflow for finding learning videos
+ * Video Discovery Flow - In-platform workflow for finding learning videos
  *
  * Chat ownership: This flow owns the chat (claimed by landing.tsx on handoff).
  * It pushes its own agent messages to the chat directly via useFlowChat().

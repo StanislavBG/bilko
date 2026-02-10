@@ -12,7 +12,7 @@ export interface NavItem {
 export const navigationItems: NavItem[] = [
   {
     id: "home",
-    title: "Home",
+    title: "Dynamic Learning",
     url: "/",
     icon: Home,
     adminOnly: false,
@@ -40,7 +40,7 @@ export const navigationItems: NavItem[] = [
   },
   {
     id: "workflows",
-    title: "Agentic Workflows",
+    title: "N8N Workflows",
     url: "/workflows",
     icon: Workflow,
     adminOnly: true,
@@ -54,7 +54,7 @@ export const navigationItems: NavItem[] = [
   },
   {
     id: "flows",
-    title: "Flow Explorer",
+    title: "Bilko Workflows",
     url: "/flows",
     icon: Sparkles,
     adminOnly: true,

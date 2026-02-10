@@ -77,9 +77,9 @@ describe("FlowExplorer page", () => {
     render(<FlowExplorer />);
 
     // Header should show
-    expect(screen.getByText("Flow Explorer")).toBeInTheDocument();
+    expect(screen.getByText("Bilko Workflows")).toBeInTheDocument();
     expect(
-      screen.getByText(/Inspect and debug in-platform agentic workflows/),
+      screen.getByText(/Build and inspect in-platform workflows/),
     ).toBeInTheDocument();
 
     // Should show the "All" filter badge with count

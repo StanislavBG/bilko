@@ -749,7 +749,7 @@ interface SelectedExecution {
   status: string;
 }
 
-export default function AgenticWorkflows() {
+export default function N8nWorkflows() {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowDefinition | null>(null);
@@ -865,7 +865,7 @@ export default function AgenticWorkflows() {
     mutationFn: async (workflowId: string) => {
       const response = await apiRequest("POST", `/api/n8n/workflows/${workflowId}/execute`, {
         action: "execute",
-        payload: { message: "Test from Agentic Workflows UI", timestamp: new Date().toISOString() },
+        payload: { message: "Test from N8N Workflows UI", timestamp: new Date().toISOString() },
       });
       return response.json();
     },
@@ -1095,7 +1095,7 @@ export default function AgenticWorkflows() {
           /* Mobile: Show workflow list as cards. Desktop: Prompt to select from nav */
           <div className="space-y-4">
             <div className="md:hidden">
-              <h2 className="text-lg font-semibold mb-4" data-testid="text-workflows-heading">Agentic Workflows</h2>
+              <h2 className="text-lg font-semibold mb-4" data-testid="text-workflows-heading">N8N Workflows</h2>
               {isLoading ? (
                 <div className="space-y-3" data-testid="status-loading-workflows-mobile">
                   <Skeleton className="h-20 w-full" />
