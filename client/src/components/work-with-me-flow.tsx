@@ -25,9 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Loader2,
   CheckCircle2,
-  Circle,
   ArrowRight,
   ExternalLink,
   MousePointerClick,
@@ -39,13 +37,13 @@ import {
   List,
   Image,
   Navigation,
-  AlertCircle,
   ChevronRight,
   RotateCcw,
   Compass,
   Target,
   Handshake,
 } from "lucide-react";
+import { StepTracker, type TrackerStep } from "@/components/ui/step-tracker";
 import {
   chatJSON,
   jsonPrompt,
@@ -119,13 +117,6 @@ interface PageGuidance {
   currentStepContext: string;
   guidanceItems: GuidanceItem[];
   nextAction: string;
-}
-
-interface WorkflowStep {
-  id: string;
-  name: string;
-  status: "pending" | "active" | "complete" | "error";
-  detail?: string;
 }
 
 // ── Prompts ────────────────────────────────────────────────
@@ -299,7 +290,7 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
   const [highlightedElement, setHighlightedElement] = useState<string | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
-  const { trackStep, resolveUserInput } = useFlowExecution("work-with-me");
+  const { trackStep, resolveUserInput, execution, reset: resetExecution } = useFlowExecution("work-with-me");
   const { definition: flowDef } = useFlowDefinition("work-with-me");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(
     "work-with-me",
@@ -328,21 +319,32 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
     }
   }, [agent, pushAgentMessage]);
 
-  const [steps, setSteps] = useState<WorkflowStep[]>([
-    { id: "objective", name: "Set Your Goal", status: "active" },
-    { id: "research", name: "Find the Steps", status: "pending" },
-    { id: "guide", name: "Follow the Guide", status: "pending" },
-  ]);
+  // Derive tracker steps from flow definition + execution state (single source of truth)
+  const trackerSteps = useMemo<TrackerStep[]>(() => {
+    if (!flowDef) return [];
+    return flowDef.steps.map((step) => {
+      const exec = execution.steps[step.id];
+      let status: TrackerStep["status"] = "pending";
+      if (exec) {
+        if (exec.status === "running") status = "active";
+        else if (exec.status === "success") status = "complete";
+        else if (exec.status === "error") status = "error";
+      }
+      return { id: step.id, label: step.name, status };
+    });
+  }, [flowDef, execution.steps]);
 
-  const updateStep = (
-    stepId: string,
-    status: WorkflowStep["status"],
-    detail?: string,
-  ) => {
-    setSteps((prev) =>
-      prev.map((s) => (s.id === stepId ? { ...s, status, detail } : s)),
-    );
-  };
+  const trackerActivity = useMemo<string | undefined>(() => {
+    switch (phase) {
+      case "objective-input": return "Enter your objective to get started";
+      case "researching": return statusMessage;
+      case "select-step": return research ? `${research.steps.length} steps found — pick one` : "Pick a step";
+      case "fetching-page": return `Loading ${selectedStep?.title ?? "page"}...`;
+      case "analyzing": return statusMessage;
+      case "guided-view": return pageStructure ? `Viewing: ${pageStructure.title}` : undefined;
+      case "error": return error ?? "Something went wrong";
+    }
+  }, [phase, statusMessage, research, selectedStep, pageStructure, error]);
 
   // Sync phase to flow bus
   useEffect(() => {
@@ -385,8 +387,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
     resolveUserInput("objective-input", { objective: objective.trim() });
     setPhase("researching");
     setError(null);
-    updateStep("objective", "complete", objective.trim());
-    updateStep("research", "active", "Researching your task...");
 
     try {
       const { data: result } = await trackStep(
@@ -405,15 +405,12 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
       );
 
       setResearch(result.data);
-      updateStep("research", "complete", `${result.data.steps.length} steps found`);
-      updateStep("guide", "active", "Pick a step to start");
       setPhase("select-step");
     } catch (err) {
       console.error("Research error:", err);
       setError(
         err instanceof Error ? err.message : "Failed to research your task.",
       );
-      updateStep("research", "error", "Something went wrong");
       setPhase("error");
     }
   }, [objective, trackStep, resolveUserInput]);
@@ -430,7 +427,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
 
       // Fetch the page
       setPhase("fetching-page");
-      updateStep("guide", "active", `Loading ${step.title}...`);
 
       try {
         const page = await trackStep(
@@ -443,7 +439,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
 
         // Now analyze the page
         setPhase("analyzing");
-        updateStep("guide", "active", "Reading the page...");
 
         const guidancePrompt = makeGuidancePrompt(
           objective,
@@ -464,8 +459,8 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
         );
 
         setGuidance(guidanceResult.data);
+        resolveUserInput("guided-view", { pageTitle: page.data.title });
         setPhase("guided-view");
-        updateStep("guide", "active", `Viewing: ${page.data.title}`);
       } catch (err) {
         console.error("Page fetch/analyze error:", err);
         setError(
@@ -487,7 +482,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
       setPageStructure(null);
       setHighlightedElement(null);
       setPhase("fetching-page");
-      updateStep("guide", "active", "Following link...");
 
       try {
         const page = await apiPost<PageStructure>("/api/web-proxy/fetch", {
@@ -496,7 +490,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
         setPageStructure(page);
 
         setPhase("analyzing");
-        updateStep("guide", "active", "Reading the new page...");
 
         const guidancePrompt = makeGuidancePrompt(objective, selectedStep, page);
         const { data: guidanceResult } = await chatJSON<PageGuidance>(
@@ -508,7 +501,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
 
         setGuidance(guidanceResult);
         setPhase("guided-view");
-        updateStep("guide", "active", `Viewing: ${page.title}`);
       } catch (err) {
         console.error("Navigation error:", err);
         setError(
@@ -531,7 +523,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
     setGuidance(null);
     setHighlightedElement(null);
     setPhase("select-step");
-    updateStep("guide", "active", "Pick your next step");
 
     if (selectedStep) {
       const summaryText = `Completed step ${selectedStep.stepNumber}: ${selectedStep.title}`;
@@ -552,12 +543,8 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
     setError(null);
     setHighlightedElement(null);
     setCompletedSteps(new Set());
-    setSteps([
-      { id: "objective", name: "Set Your Goal", status: "active" },
-      { id: "research", name: "Find the Steps", status: "pending" },
-      { id: "guide", name: "Follow the Guide", status: "pending" },
-    ]);
-  }, []);
+    resetExecution();
+  }, [resetExecution]);
 
   // ── Build element lookup for highlighting ────────────────
 
@@ -577,69 +564,8 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
 
   return (
     <div className="space-y-6">
-      {/* Progress tracker */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Handshake className="h-5 w-5 text-primary" />
-            Work With Me
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Tell me what you need to do online — I'll find the steps and guide
-            you through each website.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {steps.map((step, index) => (
-              <div key={step.id} className="flex items-center gap-3">
-                {step.status === "pending" && (
-                  <Circle className="h-5 w-5 text-muted-foreground" />
-                )}
-                {step.status === "active" && (
-                  <Loader2 className="h-5 w-5 text-primary animate-spin" />
-                )}
-                {step.status === "complete" && (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                )}
-                {step.status === "error" && (
-                  <AlertCircle className="h-5 w-5 text-red-500" />
-                )}
-                <div className="flex-1">
-                  <p
-                    className={`text-sm font-medium ${
-                      step.status === "pending"
-                        ? "text-muted-foreground"
-                        : step.status === "error"
-                          ? "text-red-500"
-                          : ""
-                    }`}
-                  >
-                    {step.name}
-                  </p>
-                  {step.detail && (
-                    <p className="text-xs text-muted-foreground">
-                      {step.detail}
-                    </p>
-                  )}
-                </div>
-                <Badge
-                  variant={
-                    step.status === "complete"
-                      ? "default"
-                      : step.status === "active"
-                        ? "secondary"
-                        : "outline"
-                  }
-                  className="text-xs"
-                >
-                  {index + 1}/3
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Progress tracker — derived from flow definition + execution state */}
+      <StepTracker steps={trackerSteps} activity={trackerActivity} />
 
       {/* Phase 1: Objective input */}
       {phase === "objective-input" && (
@@ -1143,7 +1069,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
                 setGuidance(null);
                 setHighlightedElement(null);
                 setPhase("select-step");
-                updateStep("guide", "active", "Pick a step");
               }}
             >
               Back to steps
