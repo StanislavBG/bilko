@@ -1,0 +1,139 @@
+{
+  "id": "football-video-pipeline",
+  "name": "[FVP] Football Video Pipeline",
+  "version": "1.0.0",
+  "webhookPath": "football-video-pipeline",
+  "description": "AI-powered research, curation, and video content generation pipeline for European football news. Five-phase workflow: News Hound discovers topics, Deep Diver verifies, Journalist summarizes, Video Architect scripts, Image Stylist creates prompts.",
+  "category": "content",
+
+  "triggers": {
+    "webhook": true,
+    "schedule": { "cron": "0 0 * * *" }
+  },
+
+  "rateLimits": {
+    "betweenSteps": { "amount": 15, "unit": "seconds" },
+    "httpRetry": { "enabled": true, "maxTries": 5, "waitMs": 5000 },
+    "batching": { "batchSize": 1, "intervalMs": 15000 }
+  },
+
+  "gemini": {
+    "model": "gemini-2.5-flash",
+    "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+    "userAgent": "Mozilla/5.0 (compatible; BilkoBibitkov/1.0; +https://bilkobibitkov.replit.app)"
+  },
+
+  "steps": [
+    {
+      "id": "news-hound",
+      "name": "News Hound",
+      "type": "gemini",
+      "description": "Discovers top 3 viral European football topics via web search",
+      "prompt": "Perform a deep web search for European football news from the last 24 hours. Focus on data-heavy stories: match scores, confirmed transfers, contract details (salary/years), and advanced statistics. Identify the 3 most viral topics based on engagement and volume of coverage. Output ONLY a JSON object with this exact structure: {\"topics\": [{\"title\": \"...\", \"category\": \"scores|transfers|stats\", \"keyDataPoints\": [\"...\"], \"estimatedEngagement\": \"high|medium\"}]}",
+      "promptInputs": {
+        "exclusion": {
+          "source": "webhook",
+          "path": "body.recentTopics",
+          "formatCode": "items.length > 0 ? '\\nDo NOT repeat any of these recently covered topics: ' + items.map(t => t.headline).join('; ') : ''",
+          "append": true
+        }
+      },
+      "temperature": 0.3,
+      "maxTokens": 2048,
+      "outputKey": "topics",
+      "outputSlice": 3,
+      "validation": {
+        "required": ["topics"],
+        "minCount": { "topics": 1 }
+      }
+    },
+    {
+      "id": "deep-diver",
+      "name": "Deep Diver",
+      "type": "gemini",
+      "description": "Verifies each topic with 3-5 additional high-authority sources",
+      "prompt": "For each of these 3 European football topics, find 3-5 additional high-authority sources (e.g., Sky Sports, Fabrizio Romano, The Athletic, BBC Sport, ESPN) to verify the data points. Topics:\n{topicList}\n\nFor each topic, list the verified data points and sources. Output as JSON: {\"verifiedTopics\": [{\"title\": \"...\", \"sources\": [{\"name\": \"...\", \"url\": \"...\", \"keyFact\": \"...\"}], \"verifiedDataPoints\": [\"...\"]}]}",
+      "promptInputs": {
+        "topicList": {
+          "source": "previous",
+          "path": "topics",
+          "formatCode": "items.map((t, i) => (i+1) + '. ' + t.title).join('\\n')"
+        }
+      },
+      "temperature": 0.2,
+      "maxTokens": 4096,
+      "outputKey": "verifiedTopics",
+      "validation": {
+        "required": ["verifiedTopics"],
+        "minCount": { "verifiedTopics": 1 }
+      }
+    },
+    {
+      "id": "journalist",
+      "name": "Journalist",
+      "type": "gemini",
+      "description": "Writes 150-word journalistic summaries with data tables per topic",
+      "prompt": "You are a professional sports journalist. For each of these 3 football topics, write a journalistic summary. Each summary must be EXACTLY 150 words, objective yet engaging. Include a markdown table of key data (scores, contract figures, or stats) within each summary. Topics with verified data:\n{topicDetails}\n\nOutput as JSON: {\"summaries\": [{\"title\": \"...\", \"summary\": \"...\", \"dataTable\": \"...\", \"category\": \"scores|transfers|stats\"}]}",
+      "promptInputs": {
+        "topicDetails": {
+          "source": "previous",
+          "path": "verifiedTopics",
+          "formatCode": "items.map((t, i) => { const sources = (t.sources || []).map(s => s.name + ': ' + s.keyFact).join('; '); const data = (t.verifiedDataPoints || []).join(', '); return 'Topic ' + (i+1) + ': ' + t.title + '. Sources: ' + sources + '. Data: ' + data; }).join('\\n')"
+        }
+      },
+      "temperature": 0.4,
+      "maxTokens": 4096,
+      "outputKey": "summaries",
+      "milestoneCallback": {
+        "name": "research-complete",
+        "status": "in_progress",
+        "fields": ["summaries"]
+      },
+      "validation": {
+        "required": ["summaries"],
+        "minCount": { "summaries": 1 }
+      }
+    },
+    {
+      "id": "video-architect",
+      "name": "Video Architect",
+      "type": "gemini",
+      "description": "Creates a 65-second video script with intro + 3 news segments",
+      "prompt": "You are a video content architect. Review these 3 curated football topics and create a script for a 65-second video.\n\nStructure:\n- Segment 1 (Intro): 5 seconds. Text for a Headline Slide listing all 3 topic titles.\n- Segments 2-4 (News): 20 seconds each. For each topic provide:\n  - A spoken script of exactly 50-60 words (to fit ~20 seconds)\n  - Three Scene Descriptions for an image generator that visualize the data/action\n\nTopics:\n{summaryText}\n\nOutput as JSON: {\"videoScript\": {\"totalDuration\": 65, \"segments\": [{\"id\": \"intro\", \"duration\": 5, \"type\": \"headline\", \"text\": \"...\", \"spokenScript\": \"Here are today top 3 football stories...\"},{\"id\": \"topic1\", \"duration\": 20, \"type\": \"news\", \"title\": \"...\", \"spokenScript\": \"...\", \"wordCount\": 55, \"sceneDescriptions\": [\"...\", \"...\", \"...\"]},{\"id\": \"topic2\", \"duration\": 20, \"type\": \"news\", \"title\": \"...\", \"spokenScript\": \"...\", \"wordCount\": 55, \"sceneDescriptions\": [\"...\", \"...\", \"...\"]},{\"id\": \"topic3\", \"duration\": 20, \"type\": \"news\", \"title\": \"...\", \"spokenScript\": \"...\", \"wordCount\": 55, \"sceneDescriptions\": [\"...\", \"...\", \"...\"]}]}}",
+      "promptInputs": {
+        "summaryText": {
+          "source": "previous",
+          "path": "summaries",
+          "formatCode": "items.map((s, i) => 'Topic ' + (i+1) + ': ' + s.title + '\\nSummary: ' + s.summary).join('\\n\\n')"
+        }
+      },
+      "temperature": 0.5,
+      "maxTokens": 4096,
+      "outputKey": "videoScript",
+      "validation": {
+        "required": ["videoScript"]
+      }
+    },
+    {
+      "id": "image-stylist",
+      "name": "Image Stylist",
+      "type": "gemini",
+      "description": "Converts scene descriptions to hyper-realistic image generation prompts",
+      "prompt": "You are an expert image prompt engineer. Take these scene descriptions from a football news video and rewrite each one as a high-quality prompt for an AI image generator. Style: Hyper-realistic sports photography, 8k resolution, dramatic stadium lighting, motion blur. Ensure the descriptions avoid real player names (use descriptive appearance instead for content safety). Each prompt should be detailed (30-50 words).\n\nScene descriptions:\n{sceneText}\n\nOutput as JSON: {\"imagePrompts\": [{\"segmentId\": \"...\", \"sceneIndex\": 0, \"originalDescription\": \"...\", \"imagePrompt\": \"...\", \"style\": \"hyper-realistic sports photography\"}]}",
+      "promptInputs": {
+        "sceneText": {
+          "source": "previous",
+          "path": "videoScript",
+          "formatCode": "(() => { const scenes = []; if (items && items.segments) { items.segments.forEach(seg => { if (seg.sceneDescriptions) { seg.sceneDescriptions.forEach((desc, i) => { scenes.push({ segmentId: seg.id, sceneIndex: i, description: desc }); }); } }); } return scenes.map((s, i) => (i+1) + '. [' + s.segmentId + '] ' + s.description).join('\\n'); })()"
+        }
+      },
+      "temperature": 0.6,
+      "maxTokens": 4096,
+      "outputKey": "imagePrompts",
+      "validation": {
+        "required": ["imagePrompts"],
+        "minCount": { "imagePrompts": 1 }
+      }
+    }
+  ]
+}
