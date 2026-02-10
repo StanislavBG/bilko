@@ -20,9 +20,7 @@ import remarkGfm from "remark-gfm";
 import { useViewMode } from "@/contexts/view-mode-context";
 import { writeUps, getWriteUpById, thinkingVideos, type WriteUp, type Video as VideoType } from "@/data/bilkos-way";
 
-type NavItem = { id: string; label: string; shortLabel: string; section?: "writeups" | "videos"; isGroupHeader?: boolean };
-
-const VIDEOS_HEADER_ID = "__videos_header__";
+type SectionId = "writeups" | "videos";
 
 interface TopicMedia {
   topicId: string;
@@ -564,66 +562,97 @@ function VideoDetail({
 // ─── Main page ───────────────────────────────────────────────
 
 export default function BilkosWay() {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // L2: section selection (Write-ups / Videos)
+  const [selectedSection, setSelectedSection] = useState<SectionId | null>(null);
+  const [isSectionCollapsed, setIsSectionCollapsed] = useState(false);
 
-  const selectedWriteUp = selectedId ? getWriteUpById(selectedId) : null;
-  const selectedVideo = selectedId
-    ? thinkingVideos.find((v) => v.id === selectedId)
+  // L3: item selection within the section
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [isItemCollapsed, setIsItemCollapsed] = useState(false);
+
+  const selectedWriteUp = selectedItemId ? getWriteUpById(selectedItemId) : null;
+  const selectedVideo = selectedItemId
+    ? thinkingVideos.find((v) => v.id === selectedItemId)
     : null;
 
-  const navItems: NavItem[] = [
-    ...writeUps.map((w) => ({
-      id: w.id,
-      label: w.title,
-      shortLabel: w.title.charAt(0),
-      section: "writeups" as const,
-    })),
-    {
-      id: VIDEOS_HEADER_ID,
-      label: "Videos",
-      shortLabel: "—",
-      section: "videos" as const,
-      isGroupHeader: true,
-    },
-    ...thinkingVideos.map((v) => ({
-      id: v.id,
-      label: v.title,
-      shortLabel: v.title.charAt(0),
-      section: "videos" as const,
-    })),
+  // L2 items: sections
+  const sectionItems = [
+    { id: "writeups" as const, label: "Write-ups", shortLabel: "W" },
+    { id: "videos" as const, label: "Videos", shortLabel: "V" },
   ];
+
+  // L3 items: depends on selected section
+  const itemNavItems = selectedSection === "writeups"
+    ? writeUps.map((w) => ({
+        id: w.id,
+        label: w.title,
+        shortLabel: w.title.charAt(0),
+      }))
+    : selectedSection === "videos"
+    ? thinkingVideos.map((v) => ({
+        id: v.id,
+        label: v.title,
+        shortLabel: v.title.charAt(0),
+      }))
+    : [];
+
+  const handleSectionSelect = (id: string) => {
+    setSelectedSection(id as SectionId);
+    setSelectedItemId(null); // Reset L3 on L2 change
+  };
 
   return (
     <>
+      {/* L2: Section nav */}
       <NavPanel
         header="Bilko's Way"
-        items={navItems}
-        selectedId={selectedId}
-        onSelect={(id) => setSelectedId(id)}
-        isCollapsed={false}
-        onToggleCollapse={() => {}}
-        expandedWidth="min-w-[12rem] max-w-[14rem]"
-        collapsedWidth="min-w-12 max-w-12"
+        items={sectionItems}
+        selectedId={selectedSection}
+        onSelect={handleSectionSelect}
+        isCollapsed={isSectionCollapsed}
+        onToggleCollapse={() => setIsSectionCollapsed(!isSectionCollapsed)}
+        expandedWidth="min-w-[9rem] max-w-[10rem]"
+        collapsedWidth="min-w-10 max-w-10"
         bg="bg-muted/20"
-        testId="writeup-nav"
+        testId="section-nav"
       />
+
+      {/* L3: Items within section (conditional) */}
+      {selectedSection && (
+        <NavPanel
+          header={selectedSection === "writeups" ? "Write-ups" : "Videos"}
+          items={itemNavItems}
+          selectedId={selectedItemId}
+          onSelect={(id) => setSelectedItemId(id)}
+          isCollapsed={isItemCollapsed}
+          onToggleCollapse={() => setIsItemCollapsed(!isItemCollapsed)}
+          expandedWidth="min-w-[12rem] max-w-[14rem]"
+          collapsedWidth="min-w-10 max-w-10"
+          bg="bg-muted/10"
+          testId="item-nav"
+        />
+      )}
 
       <PageContent>
         {selectedWriteUp ? (
           <WriteUpDetail
             writeUp={selectedWriteUp}
-            onBack={() => setSelectedId(null)}
+            onBack={() => setSelectedItemId(null)}
           />
         ) : selectedVideo ? (
           <VideoDetail
             video={selectedVideo}
-            onBack={() => setSelectedId(null)}
+            onBack={() => setSelectedItemId(null)}
           />
         ) : (
           <>
             {/* Desktop: prompt to select */}
             <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground bg-background">
-              <p className="text-sm">Select a write-up or video</p>
+              <p className="text-sm">
+                {selectedSection
+                  ? `Select ${selectedSection === "writeups" ? "a write-up" : "a video"}`
+                  : "Select a section"}
+              </p>
             </div>
             {/* Mobile: show cards */}
             <div className="md:hidden flex-1 p-4 overflow-auto">
@@ -637,38 +666,91 @@ export default function BilkosWay() {
                 Write-ups on the development environment and the progression
                 of agentic development.
               </p>
-              <div className="space-y-3">
-                {writeUps.map((w) => (
-                  <Card
-                    key={w.id}
-                    className="p-4 cursor-pointer hover-elevate"
-                    onClick={() => setSelectedId(w.id)}
-                    data-testid={`card-writeup-${w.id}`}
-                  >
-                    <div className="font-medium text-sm">{w.title}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {w.subtitle}
-                    </div>
-                  </Card>
-                ))}
-              </div>
 
-              <h3 className="text-md font-semibold mt-6 mb-3">Thinking Videos</h3>
-              <div className="space-y-3">
-                {thinkingVideos.map((v) => (
+              {/* Mobile section cards when no section selected */}
+              {!selectedSection && (
+                <div className="space-y-3">
                   <Card
-                    key={v.id}
                     className="p-4 cursor-pointer hover-elevate"
-                    onClick={() => setSelectedId(v.id)}
-                    data-testid={`card-video-${v.id}`}
+                    onClick={() => setSelectedSection("writeups")}
+                    data-testid="card-section-writeups"
                   >
-                    <div className="font-medium text-sm">{v.title}</div>
+                    <div className="font-medium text-sm">Write-ups</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      {v.description}
+                      {writeUps.length} articles
                     </div>
                   </Card>
-                ))}
-              </div>
+                  <Card
+                    className="p-4 cursor-pointer hover-elevate"
+                    onClick={() => setSelectedSection("videos")}
+                    data-testid="card-section-videos"
+                  >
+                    <div className="font-medium text-sm">Videos</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      {thinkingVideos.length} videos
+                    </div>
+                  </Card>
+                </div>
+              )}
+
+              {/* Mobile item cards when section selected */}
+              {selectedSection === "writeups" && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedSection(null)}
+                    className="gap-1 mb-3"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Back
+                  </Button>
+                  <div className="space-y-3">
+                    {writeUps.map((w) => (
+                      <Card
+                        key={w.id}
+                        className="p-4 cursor-pointer hover-elevate"
+                        onClick={() => setSelectedItemId(w.id)}
+                        data-testid={`card-writeup-${w.id}`}
+                      >
+                        <div className="font-medium text-sm">{w.title}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {w.subtitle}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {selectedSection === "videos" && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedSection(null)}
+                    className="gap-1 mb-3"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Back
+                  </Button>
+                  <div className="space-y-3">
+                    {thinkingVideos.map((v) => (
+                      <Card
+                        key={v.id}
+                        className="p-4 cursor-pointer hover-elevate"
+                        onClick={() => setSelectedItemId(v.id)}
+                        data-testid={`card-video-${v.id}`}
+                      >
+                        <div className="font-medium text-sm">{v.title}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {v.description}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </>
         )}
