@@ -20,6 +20,7 @@ import {
   chatJSON,
   jsonPrompt,
   useFlowExecution,
+  useFlowDefinition,
   useFlowChat,
 } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
@@ -161,7 +162,8 @@ export function FakeGameFlow({ onComplete }: { onComplete?: (summary?: string) =
   const [statusMessage, setStatusMessage] = useState(SELECTING_MESSAGES[0]);
   const hasStarted = useRef(false);
 
-  const { trackStep } = useFlowExecution("fake-game");
+  const { trackStep, execution } = useFlowExecution("fake-game");
+  const { definition: flowDef } = useFlowDefinition("fake-game");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("fake-game", "Brain Teaser Game");
   const { pushMessage } = useFlowChat();
 
@@ -191,38 +193,21 @@ export function FakeGameFlow({ onComplete }: { onComplete?: (summary?: string) =
     }
   }, [agent, pushAgentMessage]);
 
-  // ── StepTracker state ──────────────────────────────────────────────
+  // ── StepTracker state — derived from flow definition + execution ──
 
   const trackerSteps = useMemo<TrackerStep[]>(() => {
-    const map: Record<FlowState, TrackerStep[]> = {
-      "selecting-game": [
-        { id: "game", label: "Game", status: "active" },
-        { id: "play", label: "Play", status: "pending" },
-        { id: "summary", label: "Summary", status: "pending" },
-      ],
-      "simulating": [
-        { id: "game", label: "Game", status: "complete" },
-        { id: "play", label: "Play", status: "active" },
-        { id: "summary", label: "Summary", status: "pending" },
-      ],
-      "summarizing": [
-        { id: "game", label: "Game", status: "complete" },
-        { id: "play", label: "Play", status: "complete" },
-        { id: "summary", label: "Summary", status: "active" },
-      ],
-      "done": [
-        { id: "game", label: "Game", status: "complete" },
-        { id: "play", label: "Play", status: "complete" },
-        { id: "summary", label: "Summary", status: "complete" },
-      ],
-      "error": [
-        { id: "game", label: "Game", status: "error" },
-        { id: "play", label: "Play", status: "pending" },
-        { id: "summary", label: "Summary", status: "pending" },
-      ],
-    };
-    return map[flowState];
-  }, [flowState]);
+    if (!flowDef) return [];
+    return flowDef.steps.map((step) => {
+      const exec = execution.steps[step.id];
+      let status: TrackerStep["status"] = "pending";
+      if (exec) {
+        if (exec.status === "running") status = "active";
+        else if (exec.status === "success") status = "complete";
+        else if (exec.status === "error") status = "error";
+      }
+      return { id: step.id, label: step.name, status };
+    });
+  }, [flowDef, execution.steps]);
 
   const trackerActivity = useMemo<string | undefined>(() => {
     switch (flowState) {
