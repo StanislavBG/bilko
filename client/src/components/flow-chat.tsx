@@ -173,7 +173,7 @@ function BilkoMessageView({
   onSettled: () => void;
 }) {
   const textClass =
-    "text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight leading-tight text-foreground";
+    "text-base md:text-lg font-bold tracking-tight leading-snug text-foreground";
 
   if (isSettled) {
     return (
@@ -224,13 +224,13 @@ function AgentMessageView({
 }) {
   const colors = getAgentColors(message.agentName ?? "");
   const textClass =
-    "text-xl md:text-2xl lg:text-3xl font-semibold tracking-tight leading-tight text-foreground";
+    "text-sm md:text-base font-semibold tracking-tight leading-snug text-foreground";
 
   const frameClass = `
-    border-l-[3px] ${colors.border}
+    border-l-2 ${colors.border}
     ${colors.surface} rounded-r-lg
-    pl-4 pr-4 py-3 ml-2
-    ${isGrouped ? "-mt-3" : ""}
+    pl-3 pr-3 py-2 ml-1
+    ${isGrouped ? "-mt-2" : ""}
     animate-in fade-in slide-in-from-left-2 duration-300
   `;
 
