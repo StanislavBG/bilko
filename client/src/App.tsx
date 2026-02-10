@@ -26,6 +26,7 @@ import BilkosWay from "@/pages/bilkos-way";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DebugProvider } from "@/contexts/debug-context";
+import { GlobalControlsProvider } from "@/lib/global-controls";
 
 /** Landing content wrapped in flow providers — standalone, auth-agnostic */
 function MainFlow() {
@@ -62,27 +63,29 @@ function AuthenticatedApp() {
     <ViewModeProvider>
       <SidebarProvider defaultOpen={false}>
         <NavigationProvider>
-          <div className="flex flex-col h-screen w-full">
-            <GlobalHeader variant={isAuth ? "authenticated" : "landing"} />
-            <div className={`flex flex-1 overflow-hidden${isAuth ? "" : " pt-14"}`}>
-              <AppSidebar />
-              <main className="flex-1 flex overflow-hidden">
-                <Switch>
-                  <Route path="/" component={MainFlow} />
-                  <Route path="/academy" component={Academy} />
-                  <Route path="/academy/:levelId" component={Academy} />
-                  <Route path="/projects/:projectId?" component={Projects} />
-                  <Route path="/bilkos-way" component={BilkosWay} />
-                  {isAuth && <Route path="/workflows" component={AgenticWorkflows} />}
-                  {isAuth && <Route path="/memory" component={MemoryExplorer} />}
-                  {isAuth && <Route path="/rules" component={RulesExplorer} />}
-                  {isAuth && <Route path="/flows/:flowId" component={FlowDetail} />}
-                  {isAuth && <Route path="/flows" component={FlowExplorer} />}
-                  <Route component={NotFound} />
-                </Switch>
-              </main>
+          <GlobalControlsProvider>
+            <div className="flex flex-col h-screen w-full">
+              <GlobalHeader variant={isAuth ? "authenticated" : "landing"} />
+              <div className={`flex flex-1 overflow-hidden${isAuth ? "" : " pt-14"}`}>
+                <AppSidebar />
+                <main className="flex-1 flex overflow-hidden">
+                  <Switch>
+                    <Route path="/" component={MainFlow} />
+                    <Route path="/academy" component={Academy} />
+                    <Route path="/academy/:levelId" component={Academy} />
+                    <Route path="/projects/:projectId?" component={Projects} />
+                    <Route path="/bilkos-way" component={BilkosWay} />
+                    {isAuth && <Route path="/workflows" component={AgenticWorkflows} />}
+                    {isAuth && <Route path="/memory" component={MemoryExplorer} />}
+                    {isAuth && <Route path="/rules" component={RulesExplorer} />}
+                    {isAuth && <Route path="/flows/:flowId" component={FlowDetail} />}
+                    {isAuth && <Route path="/flows" component={FlowExplorer} />}
+                    <Route component={NotFound} />
+                  </Switch>
+                </main>
+              </div>
             </div>
-          </div>
+          </GlobalControlsProvider>
         </NavigationProvider>
       </SidebarProvider>
     </ViewModeProvider>

@@ -40,32 +40,13 @@ import {
   getExecutionHistory,
   subscribe as storeSubscribe,
 } from "@/lib/flow-engine/execution-store";
+import { useGlobalControl } from "@/lib/global-controls";
 import type { FlowDefinition, FlowExecution, StepExecution } from "@/lib/flow-inspector/types";
 import type { MutationResult } from "@/lib/flow-engine/flow-mutations";
-
-// ── Cost estimation (rough Gemini Flash pricing) ─────────
-const COST_PER_1K_INPUT = 0.00015;
-const COST_PER_1K_OUTPUT = 0.0006;
-
-function estimateCost(steps: Record<string, StepExecution>): number {
-  let cost = 0;
-  for (const step of Object.values(steps)) {
-    if (step.usage) {
-      cost += (step.usage.promptTokens / 1000) * COST_PER_1K_INPUT;
-      cost += (step.usage.completionTokens / 1000) * COST_PER_1K_OUTPUT;
-    }
-  }
-  return cost;
-}
 
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
-}
-
-function formatCost(cost: number): string {
-  if (cost < 0.001) return "<$0.001";
-  return `$${cost.toFixed(4)}`;
 }
 
 // ── Main component ───────────────────────────────────────
@@ -157,18 +138,21 @@ export default function FlowDetail() {
     setStepThroughIdx(null);
   }, []);
 
+  // Cost PI — all cost computation goes through the global control contract
+  const costPI = useGlobalControl("PI-COST");
+
   // Execution stats
   const stats = useMemo(() => {
     if (!execution) return null;
     const steps = Object.values(execution.steps);
     const totalTokens = steps.reduce((sum, s) => sum + (s.usage?.totalTokens ?? 0), 0);
     const totalDuration = steps.reduce((sum, s) => sum + (s.durationMs ?? 0), 0);
-    const cost = estimateCost(execution.steps);
+    const cost = costPI.actions.estimateCost(execution.steps);
     const completed = steps.filter((s) => s.status === "success").length;
     const errored = steps.filter((s) => s.status === "error").length;
     const running = steps.filter((s) => s.status === "running").length;
     return { totalTokens, totalDuration, cost, completed, errored, running, total: steps.length };
-  }, [execution]);
+  }, [execution, costPI]);
 
   if (!match || !flow) {
     return (
@@ -330,7 +314,7 @@ export default function FlowDetail() {
             {stats.cost > 0 && (
               <span className="flex items-center gap-1">
                 <DollarSign className="h-3 w-3" />
-                {formatCost(stats.cost)}
+                {costPI.actions.formatCost(stats.cost)}
               </span>
             )}
           </div>
