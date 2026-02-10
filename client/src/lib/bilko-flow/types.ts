@@ -48,6 +48,17 @@ export interface FlowOutput {
   description: string;
 }
 
+/** User-facing phase group for progress display.
+ *  Maps bus-published phase IDs to short labels and registry step ranges. */
+export interface FlowPhase {
+  /** Phase ID as published to FlowBus (e.g. "researching-topics") */
+  id: string;
+  /** Short user-facing label (e.g. "Research") */
+  label: string;
+  /** Registry step IDs covered by this phase */
+  stepIds: string[];
+}
+
 /** A complete inspectable flow definition */
 export interface FlowDefinition {
   id: string;
@@ -68,6 +79,9 @@ export interface FlowDefinition {
   icon?: string;
   /** Voice trigger keywords for voice-based selection */
   voiceTriggers?: string[];
+  /** User-facing phase groups for progress stepper display.
+   *  Each phase maps a bus-published phase ID → short label + covered steps. */
+  phases?: FlowPhase[];
 }
 
 /** Runtime execution data captured from a step */

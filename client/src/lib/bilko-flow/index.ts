@@ -25,6 +25,7 @@ export type {
   FlowStep,
   SchemaField,
   FlowOutput,
+  FlowPhase,
   FlowDefinition,
   StepExecution,
   FlowExecution,
