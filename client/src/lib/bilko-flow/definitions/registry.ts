@@ -165,6 +165,32 @@ const allFlows: FlowDefinition[] = [
         ],
         dependsOn: ["run-subflow"],
       },
+      {
+        id: "receive-experience",
+        name: "Receive Sub-Flow Experience",
+        type: "external-input",
+        subtype: "flow-output",
+        description:
+          "Receives the experience summary from a completed sub-flow (e.g. fake-game). This external-input node injects mood and context data into the greeting node's next iteration, allowing Bilko to adjust tone and references based on what the user just experienced.",
+        outputSchema: [
+          {
+            name: "experienceSummary",
+            type: "string",
+            description: "A narrative summary of the user's experience in the sub-flow (e.g. game result, video watched)",
+          },
+          {
+            name: "mood",
+            type: "string",
+            description: "The inferred mood/energy level from the experience (e.g. 'energized', 'relaxed', 'challenged', 'amused')",
+          },
+          {
+            name: "sourceFlow",
+            type: "string",
+            description: "The ID of the sub-flow that produced this experience",
+          },
+        ],
+        dependsOn: ["summarize-and-recycle"],
+      },
     ],
   },
 
@@ -390,6 +416,152 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           },
         ],
         dependsOn: ["select-video"],
+      },
+    ],
+  },
+
+  // ── ACTIVE — TEST: Fake Game ─────────────────────────────
+  // Minimal troubleshooting flow. Picks a brain-teaser game,
+  // generates a fake play-through summary, then produces an
+  // experience summary that feeds back into bilko-main.
+  {
+    id: "fake-game",
+    name: "Brain Teaser Game",
+    description:
+      "A quick brain-teaser game — Bilko picks a neuroscientist-recommended cognitive challenge, simulates a round between you and an AI opponent, and reports the experience.",
+    version: "1.0.0",
+    location: "landing",
+    componentPath: "client/src/components/fake-game-flow.tsx",
+    tags: ["landing", "game", "brain-teaser", "test", "troubleshooting"],
+    icon: "Gamepad2",
+    voiceTriggers: ["game", "brain teaser", "play", "challenge", "puzzle"],
+    output: {
+      name: "experienceSummary",
+      type: "object",
+      description: "The experience summary from the fake game session, including game name, result, and mood",
+    },
+    steps: [
+      {
+        id: "select-game",
+        name: "Research & Select Brain Teaser",
+        type: "llm",
+        description:
+          "Acts as a cognitive science researcher to identify brain-teaser games that neuroscientists recommend for positive cognitive effects — working memory, pattern recognition, mental flexibility, and creative problem-solving. Selects one at random from the curated set.",
+        prompt: `You are a cognitive neuroscience researcher specializing in brain training and neuroplasticity. Your expertise spans peer-reviewed studies on games that produce measurable positive cognitive outcomes.
+
+INPUT: You are given a request to recommend a single brain-teaser game for a user session.
+
+MISSION: Research and select ONE brain-teaser game from the category of games that neuroscientists have validated as beneficial for cognitive health. These include games that exercise:
+- Working memory (e.g. N-back variants, memory matrix)
+- Pattern recognition (e.g. Set, Raven's matrices)
+- Mental flexibility (e.g. Wisconsin card sort variants, task-switching games)
+- Creative problem-solving (e.g. lateral thinking puzzles, insight problems)
+- Processing speed (e.g. speed matching, visual search)
+
+Pick ONE game at random from your knowledge. Provide the game name, a brief description of how it works, which cognitive domain it exercises, and why neuroscientists consider it beneficial.
+
+Return ONLY valid JSON:
+{"game":{"name":"...","description":"...","cognitiveDomain":"...","whyBeneficial":"...","difficulty":"easy|medium|hard"}}
+
+Rules: name max 5 words, description max 30 words, cognitiveDomain max 4 words, whyBeneficial max 25 words. No markdown.`,
+        userMessage: "Select a random neuroscientist-recommended brain teaser game for me to play.",
+        model: "gemini-2.5-flash",
+        inputSchema: [],
+        outputSchema: [
+          {
+            name: "game",
+            type: "object",
+            description: "The selected brain-teaser game with name, description, cognitiveDomain, whyBeneficial, and difficulty",
+          },
+        ],
+        dependsOn: [],
+      },
+      {
+        id: "generate-game-summary",
+        name: "Simulate Game Round",
+        type: "llm",
+        description:
+          "Given the selected brain-teaser game, generates a short fictional summary of a game session between the user and an AI opponent. The result is randomized — sometimes the user wins, sometimes the AI does, with varying scores and memorable moments.",
+        prompt: `You are a witty sports commentator narrating a brain-teaser game between a human player and an AI opponent named "Cortex".
+
+INPUT: You will be given a brain-teaser game with its name, description, and difficulty level.
+
+MISSION: Generate a short, entertaining play-by-play summary of a fictional game round. Include:
+1. A brief setup (what the game looked like at the start)
+2. 2-3 key moments during play (turning points, clever moves, mistakes)
+3. The final result — randomly pick a winner (user wins ~60% of the time for positive experience)
+4. A memorable highlight moment
+
+Make it feel real and fun. The tone should be light and encouraging — win or lose, the user should feel like they got a good brain workout.
+
+Return ONLY valid JSON:
+{"gameSummary":{"setup":"...","keyMoments":["...","..."],"winner":"user|cortex","userScore":N,"aiScore":N,"highlight":"...","duration":"Xm Ys"}}
+
+Rules: setup max 25 words, each keyMoment max 20 words, highlight max 20 words. No markdown.`,
+        userMessage: 'Simulate a round of "{gameName}" ({gameDescription}) at {difficulty} difficulty between the user and AI opponent Cortex.',
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "game",
+            type: "object",
+            description: "The selected brain-teaser game from the previous step",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "gameSummary",
+            type: "object",
+            description: "The simulated game summary with setup, keyMoments, winner, scores, highlight, and duration",
+          },
+        ],
+        dependsOn: ["select-game"],
+      },
+      {
+        id: "experience-summary",
+        name: "Generate Experience Summary",
+        type: "llm",
+        description:
+          "Takes the game selection and simulated game summary and distills them into a concise experience summary. This summary is the flow's output — it feeds back into bilko-main's greeting node to adjust Bilko's mood and conversation tone for the next interaction.",
+        prompt: `You are an experience designer summarizing a brain-training session for a coaching AI that will use this summary to personalize its next interaction.
+
+INPUT: You will receive the game details and the simulated game summary including winner, scores, and highlights.
+
+MISSION: Create a concise experience summary that captures:
+1. What game was played and what cognitive skill it exercised
+2. How the session went (who won, by how much, key moment)
+3. An inferred mood/energy level based on the outcome:
+   - User won decisively → "energized", "triumphant"
+   - User won narrowly → "focused", "determined"
+   - User lost but close → "challenged", "motivated"
+   - User lost decisively → "humbled", "curious"
+4. A one-line takeaway the coaching AI can reference
+
+Return ONLY valid JSON:
+{"experience":{"gameName":"...","cognitiveDomain":"...","outcome":"win|loss","summary":"...","mood":"...","takeaway":"..."}}
+
+Rules: summary max 40 words, takeaway max 15 words, mood is a single word. No markdown.`,
+        userMessage: 'Create an experience summary for the {gameName} session. Result: {winner} won {userScore}-{aiScore}. Highlight: {highlight}',
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          {
+            name: "game",
+            type: "object",
+            description: "The selected brain-teaser game",
+          },
+          {
+            name: "gameSummary",
+            type: "object",
+            description: "The simulated game round results",
+          },
+        ],
+        outputSchema: [
+          {
+            name: "experience",
+            type: "object",
+            description: "The experience summary with gameName, cognitiveDomain, outcome, summary, mood, and takeaway",
+          },
+        ],
+        dependsOn: ["generate-game-summary"],
       },
     ],
   },
@@ -1031,7 +1203,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
 export const flowRegistry: FlowDefinition[] = validateRegistry(allFlows);
 
 /** Get only the active (non-standby) flows for the landing page */
-export const activeFlowIds = new Set(["bilko-main", "video-discovery"]);
+export const activeFlowIds = new Set(["bilko-main", "video-discovery", "fake-game"]);
 
 export function getFlowById(id: string): FlowDefinition | undefined {
   return flowRegistry.find((f) => f.id === id);

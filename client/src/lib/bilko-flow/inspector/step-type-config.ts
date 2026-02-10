@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Monitor,
   MessageSquare,
+  PlugZap,
 } from "lucide-react";
 import type { StepType } from "../types";
 
@@ -105,5 +106,15 @@ export const STEP_TYPE_CONFIG: Record<StepType, StepTypeVisuals> = {
     accent: "border-emerald-500/30",
     border: "border-emerald-500/40",
     categoryLabel: "Chat",
+  },
+  "external-input": {
+    icon: PlugZap,
+    label: "External Input",
+    shortLabel: "Ext-In",
+    color: "text-amber-500",
+    bg: "bg-amber-500/10",
+    accent: "border-amber-500/30",
+    border: "border-amber-500/40",
+    categoryLabel: "External",
   },
 };
