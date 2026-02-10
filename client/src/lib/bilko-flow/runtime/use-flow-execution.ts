@@ -18,6 +18,7 @@ import type { TokenUsage } from "../llm/client";
 import {
   setExecution as storeExecution,
   getExecution as storeGetExecution,
+  clearLiveExecution as storeClearLive,
   subscribe as storeSubscribe,
 } from "./execution-store";
 
@@ -154,6 +155,14 @@ export function useFlowExecution(flowId: string): UseFlowExecutionReturn {
   useEffect(() => {
     storeExecution(flowId, execution);
   }, [flowId, execution]);
+
+  // Clean up live execution from the store when this hook unmounts
+  // (e.g. user navigates away from Dynamic Learning).
+  useEffect(() => {
+    return () => {
+      storeClearLive(flowId);
+    };
+  }, [flowId]);
 
   return {
     execution,
