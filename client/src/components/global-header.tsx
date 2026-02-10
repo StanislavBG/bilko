@@ -5,7 +5,7 @@
  * via useGlobalControl(id). No direct context access to individual providers.
  */
 
-import { LogOut, Eye, EyeOff, Wrench, Volume2, VolumeX, RotateCcw, PanelLeft, Moon, Sun } from "lucide-react";
+import { LogOut, Eye, EyeOff, Wrench, RotateCcw, PanelLeft, Moon, Sun } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -165,28 +165,6 @@ function ToolsMenu() {
       </Tooltip>
       <PopoverContent align="end" className="w-56 p-2">
         <p className="text-xs font-medium text-muted-foreground px-2 py-1">Dev Tools</p>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2 text-xs"
-          onClick={session.actions.testTTS}
-        >
-          {session.state.isSpeaking ? (
-            <VolumeX className="h-3.5 w-3.5 text-red-500" />
-          ) : (
-            <Volume2 className="h-3.5 w-3.5" />
-          )}
-          {session.state.isSpeaking ? "Stop TTS" : "Test TTS"}
-          {!session.state.ttsSupported && (
-            <span className="ml-auto text-[10px] text-red-400">unsupported</span>
-          )}
-          {session.state.ttsSupported && !session.state.ttsUnlocked && (
-            <span className="ml-auto text-[10px] text-amber-400">locked</span>
-          )}
-          {session.state.ttsSupported && session.state.ttsUnlocked && (
-            <span className="ml-auto text-[10px] text-emerald-400">OpenAI</span>
-          )}
-        </Button>
         <Button
           variant="ghost"
           size="sm"

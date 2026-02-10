@@ -1,7 +1,7 @@
 /**
  * Global Voice Context — TTS only.
  *
- * Manages Gemini TTS via /api/tts/speak.
+ * Manages Gemini TTS via /api/llm/tts.
  * STT (browser SpeechRecognition) has been removed.
  */
 
@@ -51,12 +51,12 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const processingQueueRef = useRef(false);
   const processQueueRef = useRef<() => void>(() => {});
 
-  // ── Check if Gemini TTS is available on mount ──
+  // ── Check if Gemini TTS is available on mount (via LLM models endpoint) ──
   useEffect(() => {
-    fetch("/api/tts/status")
+    fetch("/api/llm/models")
       .then((r) => r.json())
       .then((data) => {
-        if (data.available) {
+        if (data.ttsAvailable) {
           console.info("[TTS] Gemini TTS available — using server-side TTS");
           ttsSupportedRef.current = true;
           setTtsSupported(true);
@@ -65,7 +65,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {
-        console.warn("[TTS] Could not reach TTS status endpoint");
+        console.warn("[TTS] Could not reach LLM models endpoint");
       });
   }, []);
 
@@ -122,7 +122,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     const selectedVoice = voice || "Kore";
     console.info(`[TTS:Gemini] Speaking (${selectedVoice}): "${preview}" (${text.split(/\s+/).length} words)`);
 
-    const response = await fetch("/api/tts/speak", {
+    const response = await fetch("/api/llm/tts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, voice: selectedVoice }),

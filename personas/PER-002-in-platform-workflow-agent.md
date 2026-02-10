@@ -160,7 +160,7 @@ The execution store:
 
 - `useVoice()` — global context for STT (speech-to-text) and TTS (text-to-speech)
 - `useVoiceCommands(id, options, onMatch)` — register page-level voice commands
-- `speak(text)` — Bilko speaks aloud via OpenAI TTS (`/api/tts/speak`)
+- `speak(text)` — Bilko speaks aloud via Gemini TTS (`/api/llm/tts`)
 - Mic preference persists in localStorage (`bilko-voice-enabled`)
 - Every clickable option MUST have `voiceTriggers` (ARCH-005 C3)
 

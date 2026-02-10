@@ -73,7 +73,7 @@ bilko/
 - **Database**: PostgreSQL + Drizzle ORM
 - **Auth**: Replit Auth
 - **LLM**: Gemini 2.5 Flash via OpenAI-compatible endpoint (`openai` package)
-- **Voice (TTS)**: OpenAI TTS (`tts-1`) via `/api/tts/speak`
+- **Voice (TTS)**: Gemini 2.5 Flash TTS via `/api/llm/tts`
 - **Voice (STT)**: Web Speech API via VoiceContext
 - **Build**: Vite + esbuild
 - **External Integration**: n8n (workflow automation)
