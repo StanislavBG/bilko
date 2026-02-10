@@ -41,10 +41,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { chatJSON, jsonPrompt, useFlowExecution, useFlowDefinition, useFlowChat } from "@/lib/bilko-flow";
-import { useVoice } from "@/contexts/voice-context";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
-import { VoiceStatusBar } from "@/components/voice-status-bar";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
 // ── Config type ──────────────────────────────────────────
@@ -653,7 +651,6 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
 
   const { trackStep, resolveUserInput } = useFlowExecution(c.flowId);
   const { definition: flowDef } = useFlowDefinition(c.flowId);
-  const { speak } = useVoice();
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(c.flowId, c.title);
   const { pushMessage } = useFlowChat();
 
@@ -667,11 +664,10 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
   const agent = getFlowAgent(modeIdMap[c.flowId] ?? c.flowId);
 
   // Push agent message to chat (we own it during execution)
-  const pushAgentMessage = useCallback((text: string, speech?: string) => {
+  const pushAgentMessage = useCallback((text: string) => {
     pushMessage(c.flowId, {
       speaker: "agent",
       text,
-      speech: speech ?? text,
       agentName: agent?.chatName,
       agentDisplayName: agent?.name,
       agentAccent: agent?.accentColor,
@@ -684,7 +680,7 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
     if (didGreet.current) return;
     didGreet.current = true;
     if (agent) {
-      pushAgentMessage(agent.greeting, agent.greetingSpeech);
+      pushAgentMessage(agent.greeting);
     }
   }, [agent, pushAgentMessage]);
 
@@ -755,7 +751,6 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
         setCurrentQuestion(turn.nextQuestion);
         setCurrentContext(turn.questionContext || "");
         setQuestionsRemaining(turn.questionsRemaining ?? 5);
-        await speak(turn.nextQuestion, "Puck");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to start consultation");
@@ -763,7 +758,7 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
       setIsThinking(false);
       inputRef.current?.focus();
     }
-  }, [trackStep, speak]);
+  }, [trackStep]);
 
   const startConsultation = useCallback(() => {
     if (c.presets && c.presets.length > 0) {
@@ -842,7 +837,6 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
         setCurrentQuestion(nextTurn.nextQuestion);
         setCurrentContext(nextTurn.questionContext || "");
         setQuestionsRemaining(nextTurn.questionsRemaining ?? 1);
-        await speak(nextTurn.nextQuestion, "Puck");
         inputRef.current?.focus();
       }
     } catch (e) {
@@ -851,7 +845,7 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
     } finally {
       setIsThinking(false);
     }
-  }, [userInput, isThinking, currentQuestion, currentContext, qaPairs, trackStep, resolveUserInput, speak]);
+  }, [userInput, isThinking, currentQuestion, currentContext, qaPairs, trackStep, resolveUserInput]);
 
   // ── Analysis ────────────────────────────────────────────
 
@@ -887,16 +881,12 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
         pushAgentMessage(`I've analyzed your responses. ${analysis.summary}`);
         // Also send to FlowBus for activity logging
         busSend("main", "summary", { summary: analysis.summary });
-        await speak(
-          `I've analyzed your responses. ${analysis.summary}`,
-          "Puck",
-        );
       } catch (e) {
         setError(e instanceof Error ? e.message : "Analysis failed");
         setPhase("questioning");
       }
     },
-    [trackStep, speak, busSend, pushAgentMessage],
+    [trackStep, busSend, pushAgentMessage],
   );
 
   // ── Reset ───────────────────────────────────────────────
@@ -1271,8 +1261,6 @@ export function AiConsultationFlow({ config, onComplete }: { config?: Consultati
                     Press Enter to send
                   </p>
                 </div>
-                {/* Unified voice status — same component as the chat panel */}
-                <VoiceStatusBar />
               </div>
             )}
           </div>

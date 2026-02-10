@@ -5,7 +5,7 @@
  *   GlobalControls, QueryClient, Tooltip, Debug, Toaster.
  *
  * App-scoped providers (inside their own page tree):
- *   - Landing: VoiceProvider, ConversationDesignProvider, FlowBusProvider, FlowChatProvider
+ *   - Landing: ConversationDesignProvider, FlowBusProvider, FlowChatProvider
  *   - Academy: NavigationProvider
  *
  * Every route is wrapped in an AppErrorBoundary (ARCH-007 I4).
@@ -19,7 +19,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { ViewModeProvider } from "@/contexts/view-mode-context";
-import { VoiceProvider } from "@/contexts/voice-context";
 import { ConversationDesignProvider } from "@/contexts/conversation-design-context";
 import { NavigationProvider } from "@/contexts/navigation-context";
 import { useAuth } from "@/hooks/use-auth";
@@ -43,19 +42,17 @@ import { AppErrorBoundary } from "@/components/app-error-boundary";
 
 // ── App-scoped wrappers (ARCH-007 I3: context scoping) ──────────
 
-/** Landing — owns Voice, ConversationDesign, FlowBus, FlowChat */
+/** Landing — owns ConversationDesign, FlowBus, FlowChat */
 function MainFlow() {
   return (
     <AppErrorBoundary appName="Landing">
-      <VoiceProvider>
-        <ConversationDesignProvider>
-          <FlowBusProvider>
-            <FlowChatProvider voiceDefaultOn>
-              <LandingContent />
-            </FlowChatProvider>
-          </FlowBusProvider>
-        </ConversationDesignProvider>
-      </VoiceProvider>
+      <ConversationDesignProvider>
+        <FlowBusProvider>
+          <FlowChatProvider>
+            <LandingContent />
+          </FlowChatProvider>
+        </FlowBusProvider>
+      </ConversationDesignProvider>
     </AppErrorBoundary>
   );
 }
@@ -117,8 +114,8 @@ function AuthenticatedApp() {
                 </main>
               </div>
             </div>
-          </div>
-        </GlobalControlsProvider>
+          </GlobalControlsProvider>
+        </NavigationProvider>
       </SidebarProvider>
     </ViewModeProvider>
   );

@@ -129,7 +129,7 @@ export function GlobalControlsProvider({ children }: { children: ReactNode }) {
     () => ({
       id: "PI-SESSION",
       label: "Session",
-      state: { isSpeaking: false },
+      state: {},
       actions: { resetSession },
     }),
     [resetSession],

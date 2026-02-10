@@ -41,7 +41,7 @@ export async function registerRoutes(
   // Project unfurl and image proxy routes
   registerProjectRoutes(app);
 
-  // LLM proxy routes (chat, models, TTS, video validation, YouTube search)
+  // LLM proxy routes (chat, models, video validation, YouTube search)
   app.use("/api/llm", llmRoutes);
 
   // Web proxy routes for Work With Me flow (page fetching + structure extraction)

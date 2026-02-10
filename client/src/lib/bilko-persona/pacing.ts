@@ -35,6 +35,3 @@ export const ENTRANCE_DELAY_MS = 600;
 /** Typewriter speed: ms per word */
 export const TYPEWRITER_SPEED_MS = 70;
 
-/** Brief pause after TTS ends before unmuting mic (ms) */
-export const POST_TTS_BUFFER_MS = 300;
-

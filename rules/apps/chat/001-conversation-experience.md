@@ -17,8 +17,7 @@ This is the most important user-facing surface. Every deviation from these direc
 Applies to:
 - The `ConversationCanvas` component and all turn renderers
 - All agent turns (Bilko, sub-agents, user)
-- Voice input/output (STT, TTS)
-- The `VoiceStatusBar` and mic behavior
+- Voice input (STT)
 - Agent speaker identity (badges, labels, borders)
 
 Does NOT apply to:
@@ -83,81 +82,25 @@ The conversation canvas renders typed content blocks and text turns. It does not
 
 The conversation supports multiple specialist agents, each with a distinct identity and voice.
 
-- Each agent defined in `FLOW_AGENTS` has: `name`, `chatName`, `personality`, `accentColor`, and a TTS voice assignment
-- When an agent takes the floor, their identity badge, border color, and voice change
+- Each agent defined in `FLOW_AGENTS` has: `name`, `chatName`, `personality`, `accentColor`
+- When an agent takes the floor, their identity badge and border color change
 - Bilko is the host — always introduces and hands off to agents
 - Agents do not speak over each other; floor control is sequential
 - Handoff between agents is explicit (system turn with from/to)
-- DO: Give each agent a visually and audibly distinct identity
-- DON'T: Have multiple agents share the same voice
+- DO: Give each agent a visually distinct identity
 - DON'T: Switch agents silently — always show a handoff
 
-### D6: Per-Agent Voice Assignment
+### D6: Microphone Default On
 
-**Status: FEATURE** — Not yet implemented. Currently all agents use the same hardcoded "onyx" voice.
-
-Every agent MUST have a distinct TTS voice. Voice is part of an agent's identity, not a global setting.
-
-Agent voice configuration:
-
-```typescript
-interface FlowAgent {
-  name: string;
-  chatName: string;
-  personality: string;
-  greeting: string;
-  greetingSpeech?: string;
-  accentColor: string;
-  voice: string;            // TTS voice ID (e.g., "onyx", "nova", "alloy", "echo", "fable", "shimmer")
-}
-```
-
-- Bilko's default voice: configurable (default `"onyx"`)
-- Each sub-agent gets a different voice from the available TTS voice pool
-- The system MUST NOT use the same voice for two different agents in the same conversation
-- Voice mapping is stored in the agent definition, not hardcoded in the TTS call
-
-### D7: Microphone Default On
-
-Voice is central to the experience. The microphone should default to **on** for returning users.
+Voice input is part of the experience. The microphone should default to **on** for returning users.
 
 - First visit: Mic is off (browser requires user gesture for permission)
 - After user grants permission and enables mic: persist `bilko-voice-enabled = true`
 - On subsequent visits: Auto-start listening when the page loads (if permission was previously granted)
-- The mic auto-mutes during TTS playback (echo cancellation) and resumes after
-- The `VoiceStatusBar` is always visible when voice is active, showing conversation state
 - DO: Default to mic-on for returning users who previously enabled it
-- DO: Show clear visual feedback of mic state (listening, muted, speaking)
+- DO: Show clear visual feedback of mic state (listening, muted)
 - DON'T: Require users to re-enable the mic on every visit
 - DON'T: Start the mic without prior user consent (respect browser permission model)
-
-### D8: Voice Configuration in User Settings
-
-**Status: FEATURE** — Not yet implemented. Voice settings UI does not exist yet.
-
-Users must be able to configure voice preferences. This is not hardcoded.
-
-Required settings:
-- **Bilko's voice**: Select from available TTS voices (default: `"onyx"`)
-- **Agent voices**: Override default voice assignments per agent
-- **TTS speed**: Playback speed adjustment (0.75x — 1.5x, default 1.0x)
-- **Auto-listen**: Toggle mic auto-start on page load (default: on after first grant)
-- **Silence timeout**: How long to wait after user stops speaking before processing (default: 1500ms)
-
-Storage:
-- Voice preferences stored in `localStorage` under `bilko-voice-settings`
-- Settings UI accessible from the global header (gear icon or dedicated voice settings)
-- Changes apply immediately — no page reload required
-
-```typescript
-interface VoiceSettings {
-  bilkoVoice: string;                    // Default TTS voice for Bilko
-  agentVoiceOverrides: Record<string, string>;  // chatName → voice ID
-  ttsSpeed: number;                      // 0.75 to 1.5
-  autoListen: boolean;                   // Auto-start mic on load
-  silenceTimeout: number;                // ms before processing silence
-}
-```
 
 ### D9: Flow Step Visibility
 
@@ -172,7 +115,7 @@ The user must always know where they are in a flow.
 
 ### D10: Bilko Speaks First
 
-Every conversation starts with Bilko. The first turn is always a `bilko` type turn with typewriter text and optional TTS. No other agent or system message may precede the host's opening.
+Every conversation starts with Bilko. The first turn is always a `bilko` type turn with typewriter text. No other agent or system message may precede the host's opening.
 
 ### D11: Options Are Responses
 
@@ -195,8 +138,7 @@ When a user makes a choice, Bilko responds contextually before the experience re
 | Unlabeled agent messages | User can't tell who is speaking | Always show agent badge with display name |
 | Giant text in chat turns | Conversation becomes unreadable, feels like a presentation | Use body-scale text; reserve large type for landing hero only |
 | Widgets embedded in chat | Breaks the conversational flow, confuses the reading surface | Use content blocks (ARCH-006) for structured data |
-| Same voice for all agents | Agents become indistinguishable by ear | Assign unique TTS voice per agent |
-| Hardcoded voice settings | Users can't customize their experience | Store in localStorage, expose in settings UI |
+| Hidden flow progression | User doesn't know where they are or what's next | Show step indicators and progress |
 | Hidden flow progression | User doesn't know where they are or what's next | Show step indicators and progress |
 | Mic off by default for returning users | Voice-first experience requires mic to be ready | Auto-start mic if previously granted |
 | Silent agent handoffs | User doesn't know a different specialist took over | Show explicit handoff system turn |
@@ -225,10 +167,8 @@ Flow Execution Engine
   │     ├── STT → transcript → voice handler matching
   │     └── Click → option selection → flow advancement
   │
-  └── VoiceContext manages floor control
-        ├── Mic muted during TTS
-        ├── Agent voice selected from FlowAgent.voice
-        └── Settings applied from VoiceSettings
+  └── ConversationDesignContext manages floor control
+        └── Mic managed via conversation turn state
 ```
 
 ---
