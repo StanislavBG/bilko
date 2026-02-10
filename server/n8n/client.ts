@@ -261,8 +261,26 @@ export function createN8nClient(): N8nClient | null {
 }
 
 export function buildWorkflowNodes(
-  definition: WorkflowDefinition
+  definition: WorkflowDefinition,
+  options?: { upToStep?: string; troubleshoot?: boolean; useManifest?: boolean }
 ): { nodes: N8nNode[]; connections: Record<string, unknown> } {
+  // Try manifest-based builder first (if opted in or manifest exists)
+  if (options?.useManifest !== false) {
+    const { loadManifest, buildFromManifest } = require("./incremental-builder");
+    const manifest = loadManifest(definition.id);
+    if (manifest) {
+      const result = buildFromManifest(manifest, {
+        upToStep: options?.upToStep,
+        troubleshoot: options?.troubleshoot
+      });
+      if (result.nodes.length > 0) {
+        log.info(`Built ${definition.id} from manifest (${result.stepsBuilt.length} steps: ${result.stepsBuilt.join(", ")})`);
+        return { nodes: result.nodes, connections: result.connections };
+      }
+    }
+  }
+
+  // Fallback to hardcoded builders
   if (definition.id === "echo-test") {
     return buildEchoTestNodes(definition.webhookPath || "bilko-echo-test");
   }

@@ -421,7 +421,8 @@ export function registerWorkflowRoutes(app: Express): void {
       }
 
       const { buildWorkflowNodes } = await import("../n8n/client");
-      const { nodes, connections } = buildWorkflowNodes(workflow);
+      const { upToStep, troubleshoot, useManifest } = req.body || {};
+      const { nodes, connections } = buildWorkflowNodes(workflow, { upToStep, troubleshoot, useManifest });
 
       if (nodes.length === 0) {
         return res.status(400).json({ error: `No local node definitions for '${workflowId}'` });
@@ -539,6 +540,73 @@ export function registerWorkflowRoutes(app: Express): void {
           retryable: false,
         },
       });
+    }
+  });
+
+  // ─── Manifest-driven workflow development ──────────
+
+  // List available manifests
+  app.get("/api/n8n/manifests", (_req: Request, res: Response) => {
+    const { listManifests, loadManifest } = require("../n8n/incremental-builder");
+    const ids = listManifests();
+    const manifests = ids.map((id: string) => {
+      const m = loadManifest(id);
+      return m ? { id: m.id, name: m.name, version: m.version, category: m.category, stepCount: m.steps.length, steps: m.steps.map((s: { id: string; name: string; type: string }) => ({ id: s.id, name: s.name, type: s.type })) } : null;
+    }).filter(Boolean);
+    res.json({ manifests });
+  });
+
+  // Get a single manifest
+  app.get("/api/n8n/manifests/:id", (req: Request, res: Response) => {
+    const { loadManifest } = require("../n8n/incremental-builder");
+    const manifest = loadManifest(req.params.id);
+    if (!manifest) {
+      return res.status(404).json({ error: "Manifest not found" });
+    }
+    res.json(manifest);
+  });
+
+  // Preview generated nodes (dry run — does not push)
+  app.post("/api/n8n/manifests/:id/preview", (req: Request, res: Response) => {
+    const { loadManifest, buildFromManifest } = require("../n8n/incremental-builder");
+    const manifest = loadManifest(req.params.id);
+    if (!manifest) {
+      return res.status(404).json({ error: "Manifest not found" });
+    }
+    const { upToStep, troubleshoot } = req.body || {};
+    const result = buildFromManifest(manifest, { upToStep, troubleshoot });
+    res.json({
+      stepsBuilt: result.stepsBuilt,
+      nodeCount: result.nodes.length,
+      nodeNames: result.nodes.map((n: { name: string }) => n.name),
+      connections: result.connections
+    });
+  });
+
+  // Validate step traces against manifest rules
+  app.post("/api/n8n/manifests/:id/validate", async (req: Request, res: Response) => {
+    try {
+      const { validateStepTraces } = require("../n8n/step-validator");
+      const { upToStep } = req.body || {};
+
+      // Get recent traces for this workflow
+      const traces = await orchestratorStorage.getRecentTraces(50);
+      const workflowTraces = traces
+        .filter((t: { workflowId: string; sourceService: string }) => t.workflowId === req.params.id && t.sourceService === "n8n")
+        .map((t: { action: string | null; overallStatus: string; responsePayload: unknown }) => ({
+          action: t.action,
+          overallStatus: t.overallStatus,
+          responsePayload: t.responsePayload
+        }));
+
+      const report = validateStepTraces(req.params.id, workflowTraces, { upToStep });
+      if (!report) {
+        return res.status(404).json({ error: "Manifest not found for validation" });
+      }
+      res.json(report);
+    } catch (error) {
+      log.error("Validate error", error);
+      res.status(500).json({ error: error instanceof Error ? error.message : "Internal error" });
     }
   });
 

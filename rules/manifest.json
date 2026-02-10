@@ -696,7 +696,7 @@
     },
     "APP-WORKFLOWS-001": {
       "id": "APP-WORKFLOWS-001",
-      "title": "Agentic Workflows Page",
+      "title": "N8N Workflows Page",
       "path": "rules/apps/agentic-workflows/001-overview.md",
       "partition": "apps",
       "priority": "HIGH",
@@ -722,7 +722,7 @@
         "DATA-002",
         "HUB-003"
       ],
-      "description": "Agentic Workflows page with stack-based category/workflow navigation, execution history, and mobile carousel."
+      "description": "N8N Workflows page with stack-based category/workflow navigation, execution history, and mobile carousel."
     },
     "APP-RULES-001": {
       "id": "APP-RULES-001",
