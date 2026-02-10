@@ -127,6 +127,12 @@ export function clearHistory(flowId: string): void {
   notify();
 }
 
+/** Clear the live (in-progress) execution for a flow. */
+export function clearLiveExecution(flowId: string): void {
+  liveExecutions.delete(flowId);
+  notify();
+}
+
 /** Subscribe to execution changes. Returns unsubscribe. */
 export function subscribe(listener: Listener): () => void {
   listeners.add(listener);

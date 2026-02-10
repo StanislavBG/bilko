@@ -41,6 +41,7 @@ import { WorkWithMeFlow } from "@/components/work-with-me-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 import { chat, useFlowExecution, FlowChatProvider, useFlowChat } from "@/lib/bilko-flow";
+import { useVoice } from "@/contexts/voice-context";
 import { Button } from "@/components/ui/button";
 import {
   Play,
@@ -208,14 +209,36 @@ function ExperienceBack({ onBack }: { onBack: () => void }) {
 export function LandingContent() {
   const { pushMessage, clearMessages, claimChat, releaseChat } = useFlowChat();
   const { trackStep, resolveUserInput } = useFlowExecution("bilko-main");
+  const { stopSpeaking } = useVoice();
+  const { userTurnDone } = useConversationDesign();
   const [, navigate] = useLocation();
   const sidebarCtx = useSidebarSafe();
 
   const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
   const [greetingLoading, setGreetingLoading] = useState(false);
 
+  // AbortController for in-flight LLM calls — aborted on unmount
+  const abortRef = useRef<AbortController>(new AbortController());
+
   // Track completed activity summaries for Bilko's recursive learning
   const activityLogRef = useRef<Array<{ modeId: string; modeLabel: string; summary: string }>>([]);
+
+  // ── App-switch teardown ──────────────────────────────────
+  // When the user navigates away from Dynamic Learning,
+  // immediately halt all flow activity — like swapping apps on iPhone.
+  useEffect(() => {
+    return () => {
+      // 1. Abort any in-flight LLM requests
+      abortRef.current.abort();
+
+      // 2. Stop TTS immediately (drains queue + halts playback)
+      stopSpeaking();
+
+      // 3. Reset conversation floor to idle so other apps start clean
+      userTurnDone();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Greeting Node (HEAD) — reusable, context-aware ──
   //
@@ -254,14 +277,16 @@ export function LandingContent() {
                     { role: "system", content: systemPrompt },
                     { role: "user", content: userMessage },
                   ],
-                  { temperature: 0.9 },
+                  { temperature: 0.9, signal: abortRef.current.signal },
                 ),
                 new Promise<never>((_, reject) =>
                   setTimeout(() => reject(new Error("greeting timeout")), 5000),
                 ),
               ]);
               text = result.data.trim() || fallback;
-            } catch {
+            } catch (err) {
+              // If aborted (user navigated away), bail out entirely
+              if (abortRef.current.signal.aborted) return { greeting: "" };
               text = fallback;
             }
 
@@ -270,7 +295,10 @@ export function LandingContent() {
         );
 
         // Step 2: greeting-chat (chat) — publish to FlowChat panel
+        // If aborted (user navigated away), skip publishing
         const greetingText = greetingResult.greeting;
+        if (!greetingText || abortRef.current.signal.aborted) return;
+
         await trackStep(
           isReturn ? `greeting-chat-return-${Date.now()}` : "greeting-chat",
           { greeting: greetingText },
@@ -284,6 +312,9 @@ export function LandingContent() {
           },
         );
       } catch {
+        // If aborted (user navigated away), don't push fallback
+        if (abortRef.current.signal.aborted) return;
+
         // If the entire greeting flow fails, push the fallback directly
         pushMessage(OWNER_ID, {
           speaker: "bilko",

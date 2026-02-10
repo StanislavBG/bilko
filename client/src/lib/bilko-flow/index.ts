@@ -43,7 +43,7 @@ export { useFlowExecution, useExecutionStore } from "./runtime/use-flow-executio
 export type { TrackStepResult, UseFlowExecutionReturn } from "./runtime/use-flow-execution";
 
 // ── Execution Store ─────────────────────────────────────────
-export { getExecutionHistory, getHistoricalExecution, clearHistory } from "./runtime/execution-store";
+export { getExecutionHistory, getHistoricalExecution, clearHistory, clearLiveExecution } from "./runtime/execution-store";
 
 // ── Flow Chat ───────────────────────────────────────────────
 export { FlowChatProvider, useFlowChat } from "./runtime/flow-chat";
