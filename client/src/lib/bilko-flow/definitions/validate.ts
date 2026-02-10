@@ -220,6 +220,18 @@ function validateStepTypeContract(
     case "chat":
       // chat steps: push a message to the chat panel. No hard schema requirements.
       break;
+
+    case "external-input":
+      // external-input steps: receive data from outside the flow (e.g. output of another flow).
+      // outputSchema is REQUIRED — downstream steps need to know the shape of injected data.
+      if (!step.outputSchema || step.outputSchema.length === 0) {
+        e(
+          "external-input-contract",
+          `External-input step "${step.id}" must have a non-empty outputSchema`,
+          step.id,
+        );
+      }
+      break;
   }
 }
 
