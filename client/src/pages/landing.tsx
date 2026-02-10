@@ -40,7 +40,7 @@ import { LinkedInStrategistFlow } from "@/components/linkedin-strategist-flow";
 import { WorkWithMeFlow } from "@/components/work-with-me-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
-import { chat, useFlowExecution, FlowChatProvider, useFlowChat } from "@/lib/flow-engine";
+import { chat, useFlowExecution, FlowChatProvider, useFlowChat } from "@/lib/bilko-flow";
 import { Button } from "@/components/ui/button";
 import {
   Play,
@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
-import { flowRegistry, activeFlowIds } from "@/lib/flow-inspector/registry";
+import { flowRegistry, activeFlowIds } from "@/lib/bilko-flow/definitions/registry";
 import { FlowBusProvider, useFlowBus } from "@/contexts/flow-bus-context";
 import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
@@ -535,16 +535,16 @@ export function LandingContent() {
   }, [clearMessages, navigate, releaseChat]);
 
   return (
-    <div className="flex flex-1 overflow-hidden">
+    <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
       {/* Left panel: Flow Chat — messages only, no options */}
-      <div className="w-full lg:w-[420px] xl:w-[480px] shrink-0 lg:border-r border-border flex flex-col bg-background">
+      <div className="w-full lg:w-[420px] xl:w-[480px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
         <FlowChat />
         {/* Flow status pinned to bottom of chat panel */}
         <FlowStatusIndicator onReset={handleReset} />
       </div>
 
       {/* Right panel: Agent delivery surface — interactive content */}
-      <div className="hidden lg:flex flex-1 overflow-auto">
+      <div className="flex flex-1 overflow-auto min-h-0">
         {selectedMode ? (
           <div className="flex-1 max-w-4xl mx-auto px-6 py-6 w-full">
             <ExperienceBack onBack={handleBack} />

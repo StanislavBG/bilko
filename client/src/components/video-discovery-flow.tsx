@@ -50,8 +50,8 @@ import {
   useFlowExecution,
   useFlowDefinition,
   useFlowChat,
-} from "@/lib/flow-engine";
-import type { VideoCandidate } from "@/lib/flow-engine";
+} from "@/lib/bilko-flow";
+import type { VideoCandidate } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";

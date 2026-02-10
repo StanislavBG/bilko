@@ -9,8 +9,8 @@ import {
   ChevronRight,
   Package,
 } from "lucide-react";
-import type { FlowDefinition, StepType } from "@/lib/flow-inspector/types";
-import { STEP_TYPE_CONFIG } from "@/lib/flow-inspector/step-type-config";
+import type { FlowDefinition, StepType } from "@/lib/bilko-flow/types";
+import { STEP_TYPE_CONFIG } from "@/lib/bilko-flow/inspector/step-type-config";
 
 interface FlowCardProps {
   flow: FlowDefinition;

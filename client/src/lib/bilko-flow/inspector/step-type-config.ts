@@ -1,16 +1,9 @@
 /**
- * Canonical Step Type Visual Configuration
+ * Bilko Flow API — Step Type Visual Configuration
  *
  * Single source of truth for step type icons, colors, labels, and styling.
  * All flow-inspector components import from here instead of defining
  * their own TYPE_CONFIG maps.
- *
- * Consolidates 5 previously-duplicated TYPE_CONFIG definitions from:
- * - flow-canvas.tsx
- * - flow-card.tsx
- * - step-node.tsx
- * - step-detail.tsx
- * - component-catalog.tsx (as TYPE_STYLE)
  */
 
 import {
@@ -21,7 +14,7 @@ import {
   Monitor,
   MessageSquare,
 } from "lucide-react";
-import type { StepType } from "./types";
+import type { StepType } from "../types";
 
 export interface StepTypeVisuals {
   /** Lucide icon component */

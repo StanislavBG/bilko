@@ -1,12 +1,12 @@
 /**
- * Flow Steel Frame Validator — ARCH-005
+ * Bilko Flow API — ARCH-005 Steel Frame Validator
  *
  * Enforces all structural invariants (I1–I7) and step type contracts
  * at application startup. Flows that fail validation are logged with
  * specific errors and excluded from the registry.
  */
 
-import type { FlowDefinition, FlowStep, StepType } from "./types";
+import type { FlowDefinition, FlowStep, StepType } from "../types";
 
 export interface FlowValidationError {
   flowId: string;

@@ -14,7 +14,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalHeader } from "@/components/global-header";
 import { LandingContent } from "@/pages/landing";
 import { FlowBusProvider } from "@/contexts/flow-bus-context";
-import { FlowChatProvider } from "@/lib/flow-engine";
+import { FlowChatProvider } from "@/lib/bilko-flow";
 import Projects from "@/pages/projects";
 import N8nWorkflows from "@/pages/n8n-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
@@ -26,6 +26,7 @@ import BilkosWay from "@/pages/bilkos-way";
 import NotFound from "@/pages/not-found";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DebugProvider } from "@/contexts/debug-context";
+import { GlobalControlsProvider } from "@/lib/global-controls";
 
 /** Landing content wrapped in flow providers — standalone, auth-agnostic */
 function MainFlow() {
@@ -82,7 +83,7 @@ function AuthenticatedApp() {
                 </Switch>
               </main>
             </div>
-          </div>
+          </GlobalControlsProvider>
         </NavigationProvider>
       </SidebarProvider>
     </ViewModeProvider>

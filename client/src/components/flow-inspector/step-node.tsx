@@ -12,8 +12,8 @@ import {
   XCircle,
   SkipForward,
 } from "lucide-react";
-import type { FlowStep, StepStatus } from "@/lib/flow-inspector/types";
-import { STEP_TYPE_CONFIG } from "@/lib/flow-inspector/step-type-config";
+import type { FlowStep, StepStatus } from "@/lib/bilko-flow/types";
+import { STEP_TYPE_CONFIG } from "@/lib/bilko-flow/inspector/step-type-config";
 
 const STATUS_ICON: Record<StepStatus, typeof Circle> = {
   idle: Circle,

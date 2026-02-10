@@ -28,8 +28,8 @@ import type {
   FlowStep,
   FlowDefinition,
   StepExecution,
-} from "@/lib/flow-inspector/types";
-import { STEP_TYPE_CONFIG } from "@/lib/flow-inspector/step-type-config";
+} from "@/lib/bilko-flow/types";
+import { STEP_TYPE_CONFIG } from "@/lib/bilko-flow/inspector/step-type-config";
 
 // ── Props ────────────────────────────────────────────────
 
