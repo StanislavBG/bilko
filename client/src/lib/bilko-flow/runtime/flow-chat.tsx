@@ -20,9 +20,9 @@
  * - Rejected messages are logged in development for debugging
  *
  * Message direction:
- * - "top-down" (default): messages start at the top, new ones push below
+ * - "top-down" (default, always): newest messages at top, arrow-down icon
  * - "bottom-up": messages gravity-stick to the bottom (iMessage style)
- * - Stored in localStorage, configurable by the user
+ * - Toggleable within a session, always resets to "top-down" on reload
  *
  * This is part of the flow framework per ARCH-005 C1-C4:
  * - C1: Bilko speaks first (flow greeting step pushes to chat)
@@ -75,7 +75,6 @@ export type PushMessageFn = (ownerId: string, msg: PushMessageParams) => boolean
 // ── Constants ────────────────────────────────────────────
 
 const DEFAULT_OWNER = "bilko-main";
-const DIRECTION_STORAGE_KEY = "bilko-chat-direction";
 
 /** Speakers that bypass ownership checks */
 const BYPASS_SPEAKERS: Set<FlowChatMessage["speaker"]> = new Set(["user", "system"]);
@@ -113,12 +112,8 @@ function generateId(): string {
 }
 
 function loadDirection(): MessageDirection {
-  try {
-    const stored = localStorage.getItem(DIRECTION_STORAGE_KEY);
-    if (stored === "top-down" || stored === "bottom-up") return stored;
-  } catch {
-    // localStorage unavailable
-  }
+  // Always start with "top-down" (newest messages on top, arrow-down icon).
+  // The user can toggle within a session, but it resets on reload.
   return "top-down";
 }
 
@@ -188,11 +183,6 @@ export function FlowChatProvider({
 
   const setMessageDirection = useCallback((dir: MessageDirection) => {
     setMessageDirectionState(dir);
-    try {
-      localStorage.setItem(DIRECTION_STORAGE_KEY, dir);
-    } catch {
-      // localStorage unavailable
-    }
   }, []);
 
   return (
