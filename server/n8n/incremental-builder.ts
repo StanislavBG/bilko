@@ -184,7 +184,9 @@ export function buildFromManifest(
       forkNode(connections, parseName, cbName);
     }
 
-    // ── Milestone callback (production mode) ──
+    // ── Milestone callback + Wait node ──
+    // Order matters: hardcoded FVP forks as [callback, wait] from Parse node.
+    // Milestone callback goes first, wait second, matching production layout.
     if (step.milestoneCallback) {
       const cbName = `Callback ${capitalize(step.milestoneCallback.name)}`;
       nodes.push({
@@ -200,12 +202,31 @@ export function buildFromManifest(
           jsonBody: milestoneCbBody(manifest.id, step)
         }
       });
+      // First branch: callback (dead-end)
       forkNode(connections, parseName, cbName);
       connections[cbName] = { main: [] };
-    }
 
-    // ── Wait node between steps (D11 rate limit) ──
-    if (!isLast && rateLimits.betweenSteps.amount > 0) {
+      // Second branch: wait (continues main flow)
+      if (!isLast && rateLimits.betweenSteps.amount > 0) {
+        const waitName = `Wait After ${step.name}`;
+        x += STEP_X;
+        nodes.push({
+          name: waitName,
+          type: "n8n-nodes-base.wait",
+          typeVersion: 1,
+          position: [x, Y],
+          parameters: {
+            amount: rateLimits.betweenSteps.amount,
+            unit: rateLimits.betweenSteps.unit
+          }
+        });
+        forkNode(connections, parseName, waitName);
+        lastNode = waitName;
+      } else {
+        lastNode = parseName;
+      }
+    } else if (!isLast && rateLimits.betweenSteps.amount > 0) {
+      // No milestone — simple sequential wait
       const waitName = `Wait After ${step.name}`;
       x += STEP_X;
       nodes.push({
@@ -432,40 +453,89 @@ function genFinalOutputCode(steps: ManifestStep[], manifest: WorkflowManifest): 
   lines.push(`const input = $input.first().json;`);
 
   // Collect outputs from each step's parse node
-  const fields: string[] = [];
+  const outputKeys: string[] = [];
   for (const step of steps) {
     if (step.outputKey) {
       const parseName = `Parse ${step.name}`;
       lines.push(`const ${step.outputKey} = $('${parseName}').first().json.${step.outputKey};`);
-      fields.push(step.outputKey);
+      outputKeys.push(step.outputKey);
     }
   }
 
-  // Build structured output
-  lines.push(`const output = {`);
-  lines.push(`  success: true,`);
-  lines.push(`  data: {`);
-  lines.push(`    pipeline: ${JSON.stringify(manifest.id)},`);
-  for (const field of fields) {
-    lines.push(`    ${field},`);
-  }
-  // Source headline for dedup (from first step with summaries or titles)
-  const firstTextStep = steps.find(s => s.outputKey === "summaries") || steps[0];
-  if (firstTextStep.outputKey === "summaries") {
-    lines.push(`    sourceHeadline: (summaries && summaries[0]) ? summaries[0].title : 'European Football Daily Video'`);
-  } else if (firstTextStep.outputKey === "topics") {
-    lines.push(`    sourceHeadline: (topics && topics[0]) ? topics[0].title : 'European Football Daily Video'`);
-  }
-  lines.push(`  },`);
-  lines.push(`  metadata: {`);
-  lines.push(`    workflowId: ${JSON.stringify(manifest.id)},`);
-  lines.push(`    manifestVersion: ${JSON.stringify(manifest.version)},`);
-  lines.push(`    stepsCompleted: ${steps.length},`);
-  lines.push(`    executedAt: new Date().toISOString()`);
-  lines.push(`  }`);
-  lines.push(`};`);
-  lines.push(`return [{ json: output }];`);
+  // Match production FVP output structure: nested phases + timingTable
+  const hasSummaries = outputKeys.includes("summaries");
+  const hasVideoScript = outputKeys.includes("videoScript");
+  const hasImagePrompts = outputKeys.includes("imagePrompts");
 
+  if (hasSummaries && hasVideoScript && hasImagePrompts) {
+    // Full FVP pipeline — match hardcoded nested structure exactly
+    lines.push(`// Build timing table matching production FVP output`);
+    lines.push(`const timingTable = [`);
+    lines.push(`  { segment: 'Intro', duration: '5s', visuals: 'Headline Slide', audio: 'Here are today\\'s top 3 football stories...' }`);
+    lines.push(`];`);
+    lines.push(`const categories = ['Detailed summary with stats/scores', 'Transfer details and contract figures', 'Tactical breakdown or match analysis'];`);
+    lines.push(`(summaries || []).forEach((s, i) => {`);
+    lines.push(`  timingTable.push({`);
+    lines.push(`    segment: 'Topic ' + (i+1) + ': ' + (s.title || 'TBD'),`);
+    lines.push(`    duration: '20s',`);
+    lines.push(`    visuals: '3 Images (6.6s each)',`);
+    lines.push(`    audio: categories[i] || s.category || 'News summary'`);
+    lines.push(`  });`);
+    lines.push(`});`);
+    lines.push(`// Map image prompts to segments`);
+    lines.push(`const segmentImages = {};`);
+    lines.push(`(imagePrompts || []).forEach(ip => {`);
+    lines.push(`  if (!segmentImages[ip.segmentId]) segmentImages[ip.segmentId] = [];`);
+    lines.push(`  segmentImages[ip.segmentId].push(ip);`);
+    lines.push(`});`);
+    lines.push(`const output = {`);
+    lines.push(`  success: true,`);
+    lines.push(`  data: {`);
+    lines.push(`    pipeline: ${JSON.stringify(manifest.id)},`);
+    lines.push(`    researchPhase: {`);
+    lines.push(`      topicCount: (summaries || []).length,`);
+    lines.push(`      summaries: summaries || []`);
+    lines.push(`    },`);
+    lines.push(`    videoPhase: {`);
+    lines.push(`      totalDuration: 65,`);
+    lines.push(`      script: videoScript,`);
+    lines.push(`      imagePrompts: imagePrompts || [],`);
+    lines.push(`      segmentImages: segmentImages`);
+    lines.push(`    },`);
+    lines.push(`    timingTable: timingTable,`);
+    lines.push(`    sourceHeadline: (summaries && summaries[0]) ? summaries[0].title : 'European Football Daily Video'`);
+    lines.push(`  },`);
+    lines.push(`  metadata: {`);
+    lines.push(`    workflowId: ${JSON.stringify(manifest.id)},`);
+    lines.push(`    executedAt: new Date().toISOString()`);
+    lines.push(`  }`);
+    lines.push(`};`);
+  } else {
+    // Partial build or non-FVP — flat output with whatever steps are built
+    lines.push(`const output = {`);
+    lines.push(`  success: true,`);
+    lines.push(`  data: {`);
+    lines.push(`    pipeline: ${JSON.stringify(manifest.id)},`);
+    for (const field of outputKeys) {
+      lines.push(`    ${field},`);
+    }
+    const headlineStep = steps.find(s => s.outputKey === "summaries") || steps.find(s => s.outputKey === "topics");
+    if (headlineStep?.outputKey === "summaries") {
+      lines.push(`    sourceHeadline: (summaries && summaries[0]) ? summaries[0].title : 'Bilko Pipeline Output'`);
+    } else if (headlineStep?.outputKey === "topics") {
+      lines.push(`    sourceHeadline: (topics && topics[0]) ? topics[0].title : 'Bilko Pipeline Output'`);
+    }
+    lines.push(`  },`);
+    lines.push(`  metadata: {`);
+    lines.push(`    workflowId: ${JSON.stringify(manifest.id)},`);
+    lines.push(`    manifestVersion: ${JSON.stringify(manifest.version)},`);
+    lines.push(`    stepsCompleted: ${steps.length},`);
+    lines.push(`    executedAt: new Date().toISOString()`);
+    lines.push(`  }`);
+    lines.push(`};`);
+  }
+
+  lines.push(`return [{ json: output }];`);
   return lines.join("\n");
 }
 
@@ -473,9 +543,19 @@ function genFinalOutputCode(steps: ManifestStep[], manifest: WorkflowManifest): 
 
 function milestoneCbBody(workflowId: string, step: ManifestStep): string {
   const cb = step.milestoneCallback!;
-  const fieldsExpr = cb.fields
-    ? cb.fields.map(f => `"${f}": {{ JSON.stringify($json.${f}) }}`).join(",\n    ")
-    : `"stepOutput": {{ JSON.stringify($json) }}`;
+
+  // Match production FVP callback shape: topicCount + topic title array
+  // (not full objects — downstream code expects this compact format)
+  let outputExpr: string;
+  if (cb.fields && cb.fields.length === 1 && cb.fields[0] === "summaries") {
+    // FVP research-complete callback: send count + title array
+    outputExpr = `"topicCount": {{ $json.summaries.length }},
+    "topics": {{ JSON.stringify($json.summaries.map(s => s.title)) }}`;
+  } else if (cb.fields) {
+    outputExpr = cb.fields.map(f => `"${f}": {{ JSON.stringify($json.${f}) }}`).join(",\n    ");
+  } else {
+    outputExpr = `"stepOutput": {{ JSON.stringify($json) }}`;
+  }
 
   return `={
   "workflowId": "${workflowId}",
@@ -483,7 +563,7 @@ function milestoneCbBody(workflowId: string, step: ManifestStep): string {
   "stepIndex": 1,
   "traceId": "{{ $('Webhook').first().json.body?.traceId || $('Webhook').first().json.traceId || 'trace_' + $execution.id }}",
   "output": {
-    ${fieldsExpr}
+    ${outputExpr}
   },
   "executionId": "{{ $execution.id }}",
   "status": "${cb.status}"
