@@ -32,7 +32,6 @@ import Projects from "@/pages/projects";
 import N8nWorkflows from "@/pages/n8n-workflows";
 import MemoryExplorer from "@/pages/memory-explorer";
 import RulesExplorer from "@/pages/rules-explorer";
-import Academy from "@/pages/academy";
 import FlowExplorer from "@/pages/flow-explorer";
 import FlowDetail from "@/pages/flow-detail";
 import BilkosWay from "@/pages/bilkos-way";
@@ -97,52 +96,26 @@ function AuthenticatedApp() {
   return (
     <ViewModeProvider>
       <SidebarProvider defaultOpen={false}>
-        <GlobalControlsProvider>
-          <div className="flex flex-col h-screen w-full">
-            <GlobalHeader variant={isAuth ? "authenticated" : "landing"} />
-            <div className={`flex flex-1 overflow-hidden${isAuth ? "" : " pt-14"}`}>
-              <AppSidebar />
-              <main className="flex-1 flex overflow-hidden">
-                <Switch>
-                  <Route path="/" component={MainFlow} />
-                  <Route path="/academy" component={AcademyApp} />
-                  <Route path="/academy/:levelId" component={AcademyApp} />
-                  <Route path="/projects/:projectId?">
-                    {() => <AppErrorBoundary appName="Projects"><Projects /></AppErrorBoundary>}
-                  </Route>
-                  <Route path="/bilkos-way">
-                    {() => <AppErrorBoundary appName="Bilko's Way"><BilkosWay /></AppErrorBoundary>}
-                  </Route>
-                  {isAuth && (
-                    <Route path="/workflows">
-                      {() => <AppErrorBoundary appName="Workflows"><N8nWorkflows /></AppErrorBoundary>}
-                    </Route>
-                  )}
-                  {isAuth && (
-                    <Route path="/memory">
-                      {() => <AppErrorBoundary appName="Memory"><MemoryExplorer /></AppErrorBoundary>}
-                    </Route>
-                  )}
-                  {isAuth && (
-                    <Route path="/rules">
-                      {() => <AppErrorBoundary appName="Rules"><RulesExplorer /></AppErrorBoundary>}
-                    </Route>
-                  )}
-                  {isAuth && (
-                    <Route path="/flows/:flowId">
-                      {() => <AppErrorBoundary appName="Flow Detail"><FlowDetail /></AppErrorBoundary>}
-                    </Route>
-                  )}
-                  {isAuth && (
-                    <Route path="/flows">
-                      {() => <AppErrorBoundary appName="Flow Explorer"><FlowExplorer /></AppErrorBoundary>}
-                    </Route>
-                  )}
-                  <Route>
-                    {() => <AppErrorBoundary appName="Not Found"><NotFound /></AppErrorBoundary>}
-                  </Route>
-                </Switch>
-              </main>
+        <NavigationProvider>
+          <GlobalControlsProvider>
+            <div className="flex flex-col h-screen w-full">
+              <GlobalHeader variant={isAuth ? "authenticated" : "landing"} />
+              <div className={`flex flex-1 overflow-hidden${isAuth ? "" : " pt-14"}`}>
+                <AppSidebar />
+                <main className="flex-1 flex overflow-hidden">
+                  <Switch>
+                    <Route path="/" component={MainFlow} />
+<Route path="/projects/:projectId?" component={Projects} />
+                    <Route path="/bilkos-way" component={BilkosWay} />
+                    {isAuth && <Route path="/workflows" component={N8nWorkflows} />}
+                    {isAuth && <Route path="/memory" component={MemoryExplorer} />}
+                    {isAuth && <Route path="/rules" component={RulesExplorer} />}
+                    {isAuth && <Route path="/flows/:flowId" component={FlowDetail} />}
+                    {isAuth && <Route path="/flows" component={FlowExplorer} />}
+                    <Route component={NotFound} />
+                  </Switch>
+                </main>
+              </div>
             </div>
           </div>
         </GlobalControlsProvider>

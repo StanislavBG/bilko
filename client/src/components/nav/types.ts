@@ -3,7 +3,7 @@
  *
  * Data shapes for the reusable multi-level navigation system.
  * These types unify the L2/L3/L4 nav patterns across
- * academy, rules, projects, and any future pages.
+ * rules, projects, bilko's way, and any future pages.
  */
 
 import type { ComponentType } from "react";
