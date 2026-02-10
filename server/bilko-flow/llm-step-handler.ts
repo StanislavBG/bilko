@@ -13,6 +13,8 @@ import { registerStepHandler } from "bilko-flow/dist/engine/step-runner";
 import type { CompiledStep } from "bilko-flow/dist/dsl/compiler";
 import type { StepExecutionContext } from "bilko-flow/dist/engine/step-runner";
 import { chat } from "../llm/index";
+import { generateImage, generateImages } from "../llm/image-generation";
+import { generateVideo, generateVideos } from "../llm/video-generation";
 
 /**
  * Resolve {{path.to.value}} template placeholders from upstream outputs.
@@ -128,4 +130,162 @@ export function registerLLMStepHandler(): void {
   });
 
   console.log("[bilko-flow] Registered ai.generate-text step handler (Gemini bridge)");
+
+  // ── ai.generate-image step handler (Nano Banana) ──────────────
+  registerStepHandler({
+    type: "ai.generate-image",
+    async execute(
+      step: CompiledStep,
+      context: StepExecutionContext,
+    ): Promise<{ outputs: Record<string, unknown> }> {
+      const inputs = step.inputs as Record<string, unknown>;
+
+      let prompt: string;
+      if (inputs.promptTemplate) {
+        prompt = interpolateTemplate(
+          inputs.promptTemplate as string,
+          context.upstreamOutputs,
+        );
+      } else {
+        prompt = (inputs.prompt as string) ?? "";
+      }
+
+      const aspectRatio = (inputs.aspectRatio as string) ?? "16:9";
+      const model = inputs.model as string | undefined;
+
+      console.log(
+        `[bilko-flow] Step "${step.name}" (${step.id}) generating image with Nano Banana`,
+      );
+
+      // Check if this is a batch request (multiple prompts)
+      if (inputs.prompts || inputs.promptsTemplate) {
+        let prompts: string[];
+        if (inputs.promptsTemplate) {
+          const resolved = interpolateTemplate(
+            inputs.promptsTemplate as string,
+            context.upstreamOutputs,
+          );
+          prompts = JSON.parse(resolved);
+        } else {
+          prompts = inputs.prompts as string[];
+        }
+
+        const results = await generateImages(
+          prompts.map((p) => ({ prompt: p, aspectRatio: aspectRatio as any, model })),
+        );
+
+        const images = results.map((r) =>
+          r ? { imageBase64: r.imageBase64, mimeType: r.mimeType, textResponse: r.textResponse } : null,
+        );
+
+        console.log(
+          `[bilko-flow] Step "${step.id}" generated ${images.filter(Boolean).length}/${prompts.length} images`,
+        );
+
+        return { outputs: { images } };
+      }
+
+      // Single image generation
+      const result = await generateImage({ prompt, aspectRatio: aspectRatio as any, model });
+
+      console.log(`[bilko-flow] Step "${step.id}" image generated successfully`);
+
+      return {
+        outputs: {
+          imageBase64: result.imageBase64,
+          mimeType: result.mimeType,
+          textResponse: result.textResponse,
+          model: result.model,
+        },
+      };
+    },
+  });
+
+  console.log("[bilko-flow] Registered ai.generate-image step handler (Nano Banana)");
+
+  // ── ai.generate-video step handler (Veo) ──────────────────────
+  registerStepHandler({
+    type: "ai.generate-video",
+    async execute(
+      step: CompiledStep,
+      context: StepExecutionContext,
+    ): Promise<{ outputs: Record<string, unknown> }> {
+      const inputs = step.inputs as Record<string, unknown>;
+
+      let prompt: string;
+      if (inputs.promptTemplate) {
+        prompt = interpolateTemplate(
+          inputs.promptTemplate as string,
+          context.upstreamOutputs,
+        );
+      } else {
+        prompt = (inputs.prompt as string) ?? "";
+      }
+
+      const durationSeconds = (inputs.durationSeconds as number) ?? 8;
+      const aspectRatio = (inputs.aspectRatio as string) ?? "16:9";
+      const model = inputs.model as string | undefined;
+
+      console.log(
+        `[bilko-flow] Step "${step.name}" (${step.id}) generating video with Veo`,
+      );
+
+      // Check for batch request
+      if (inputs.prompts || inputs.promptsTemplate) {
+        let prompts: string[];
+        if (inputs.promptsTemplate) {
+          const resolved = interpolateTemplate(
+            inputs.promptsTemplate as string,
+            context.upstreamOutputs,
+          );
+          prompts = JSON.parse(resolved);
+        } else {
+          prompts = inputs.prompts as string[];
+        }
+
+        const results = await generateVideos(
+          prompts.map((p) => ({
+            prompt: p,
+            durationSeconds: durationSeconds as any,
+            aspectRatio: aspectRatio as any,
+            model,
+          })),
+        );
+
+        const videos = results.map((r) =>
+          r && r.videos.length > 0
+            ? { videoBase64: r.videos[0].videoBase64, mimeType: r.videos[0].mimeType, durationSeconds: r.videos[0].durationSeconds }
+            : null,
+        );
+
+        console.log(
+          `[bilko-flow] Step "${step.id}" generated ${videos.filter(Boolean).length}/${prompts.length} videos`,
+        );
+
+        return { outputs: { videos } };
+      }
+
+      // Single video
+      const result = await generateVideo({
+        prompt,
+        durationSeconds: durationSeconds as any,
+        aspectRatio: aspectRatio as any,
+        model,
+      });
+
+      const video = result.videos[0];
+      console.log(`[bilko-flow] Step "${step.id}" video generated successfully`);
+
+      return {
+        outputs: {
+          videoBase64: video?.videoBase64 ?? "",
+          mimeType: video?.mimeType ?? "video/mp4",
+          durationSeconds: video?.durationSeconds ?? durationSeconds,
+          model: result.model,
+        },
+      };
+    },
+  });
+
+  console.log("[bilko-flow] Registered ai.generate-video step handler (Veo)");
 }

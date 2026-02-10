@@ -7,6 +7,8 @@
 
 import { Router, Request, Response } from "express";
 import { chat, AVAILABLE_MODELS, type ChatRequest } from "./index";
+import { generateImage, generateImages, type ImageGenerationRequest } from "./image-generation";
+import { generateVideo, generateVideos, type VideoGenerationRequest } from "./video-generation";
 
 const router = Router();
 
@@ -102,6 +104,137 @@ router.post("/validate-videos", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Video validation error:", error);
     res.status(500).json({ error: "Failed to validate videos" });
+  }
+});
+
+// ── Image Generation (Nano Banana) ──────────────────────────────────
+
+router.post("/generate-image", async (req: Request, res: Response) => {
+  try {
+    const { prompt, model, aspectRatio, referenceImageBase64, referenceImageMimeType } =
+      req.body as ImageGenerationRequest;
+
+    if (!prompt) {
+      res.status(400).json({ error: "prompt is required" });
+      return;
+    }
+
+    const result = await generateImage({
+      prompt,
+      model,
+      aspectRatio,
+      referenceImageBase64,
+      referenceImageMimeType,
+    });
+
+    res.json({
+      imageBase64: result.imageBase64,
+      mimeType: result.mimeType,
+      textResponse: result.textResponse,
+      model: result.model,
+    });
+  } catch (error) {
+    console.error("Image generation error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+router.post("/generate-images", async (req: Request, res: Response) => {
+  try {
+    const { requests } = req.body as { requests: ImageGenerationRequest[] };
+
+    if (!Array.isArray(requests) || requests.length === 0) {
+      res.status(400).json({ error: "requests array is required" });
+      return;
+    }
+
+    if (requests.length > 8) {
+      res.status(400).json({ error: "Maximum 8 images per batch" });
+      return;
+    }
+
+    const results = await generateImages(requests);
+
+    res.json({
+      images: results.map((r) =>
+        r
+          ? {
+              imageBase64: r.imageBase64,
+              mimeType: r.mimeType,
+              textResponse: r.textResponse,
+              model: r.model,
+            }
+          : null,
+      ),
+    });
+  } catch (error) {
+    console.error("Batch image generation error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// ── Video Generation (Veo) ─────────────────────────────────────────
+
+router.post("/generate-video", async (req: Request, res: Response) => {
+  try {
+    const { prompt, model, durationSeconds, aspectRatio, referenceImageBase64, referenceImageMimeType } =
+      req.body as VideoGenerationRequest;
+
+    if (!prompt) {
+      res.status(400).json({ error: "prompt is required" });
+      return;
+    }
+
+    const result = await generateVideo({
+      prompt,
+      model,
+      durationSeconds,
+      aspectRatio,
+      referenceImageBase64,
+      referenceImageMimeType,
+    });
+
+    res.json({
+      videos: result.videos,
+      model: result.model,
+      operationName: result.operationName,
+    });
+  } catch (error) {
+    console.error("Video generation error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+router.post("/generate-videos", async (req: Request, res: Response) => {
+  try {
+    const { requests } = req.body as { requests: VideoGenerationRequest[] };
+
+    if (!Array.isArray(requests) || requests.length === 0) {
+      res.status(400).json({ error: "requests array is required" });
+      return;
+    }
+
+    if (requests.length > 4) {
+      res.status(400).json({ error: "Maximum 4 videos per batch" });
+      return;
+    }
+
+    const results = await generateVideos(requests);
+
+    res.json({
+      videos: results.map((r) =>
+        r
+          ? { videos: r.videos, model: r.model }
+          : null,
+      ),
+    });
+  } catch (error) {
+    console.error("Batch video generation error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: message });
   }
 });
 

@@ -69,12 +69,19 @@ const TRANSITION_CLASSES: Record<string, string> = {
   "zoom": "animate-in zoom-in-95 duration-500",
 };
 
+interface SceneImage {
+  imageBase64: string;
+  mimeType: string;
+}
+
 export function SlideshowPlayer({
   storyboard,
   narrative,
+  sceneImages,
 }: {
   storyboard: StoryboardData;
   narrative: NarrativeData;
+  sceneImages?: (SceneImage | null)[];
 }) {
   const [playerState, setPlayerState] = useState<PlayerState>("idle");
   const [currentScene, setCurrentScene] = useState(0);
@@ -231,6 +238,10 @@ export function SlideshowPlayer({
   const scene = scenes[currentScene];
   const gradient = SCENE_GRADIENTS[currentScene % SCENE_GRADIENTS.length];
   const transition = scene ? TRANSITION_CLASSES[scene.transitionIn] ?? TRANSITION_CLASSES["fade-in"] : "";
+  const currentImage = sceneImages?.[currentScene];
+  const currentImageUrl = currentImage
+    ? `data:${currentImage.mimeType};base64,${currentImage.imageBase64}`
+    : null;
 
   const downloadScript = useCallback(() => {
     const scriptText = [
@@ -270,30 +281,53 @@ export function SlideshowPlayer({
         {scene ? (
           <div
             key={sceneKey}
-            className={`absolute inset-0 bg-gradient-to-br ${gradient} flex flex-col justify-end p-6 ${transition}`}
+            className={`absolute inset-0 flex flex-col justify-end p-6 ${transition}`}
+            style={currentImageUrl ? undefined : undefined}
           >
+            {/* AI-generated scene image background */}
+            {currentImageUrl ? (
+              <img
+                src={currentImageUrl}
+                alt={scene.headline}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div className={`absolute inset-0 bg-gradient-to-br ${gradient}`} />
+            )}
+
+            {/* Dark overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30" />
+
             {/* Scene number badge */}
-            <div className="absolute top-4 left-4 flex items-center gap-2">
-              <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded">
+            <div className="absolute top-4 left-4 flex items-center gap-2 z-10">
+              <span className="text-[10px] font-bold bg-white/20 backdrop-blur-sm text-white px-2 py-0.5 rounded">
                 {scene.sceneNumber}/{scenes.length}
               </span>
               <span className="text-[10px] text-white/50">{scene.durationSec}s</span>
+              {currentImageUrl && (
+                <span className="text-[9px] text-white/40 bg-white/10 backdrop-blur-sm px-1.5 py-0.5 rounded">AI Image</span>
+              )}
             </div>
 
             {/* Visual style indicator */}
-            <div className="absolute top-4 right-4">
+            <div className="absolute top-4 right-4 z-10">
               <span className="text-[10px] text-white/40 italic">{scene.visualStyle}</span>
             </div>
 
-            {/* Image description as cinematic frame text */}
-            <div className="flex-1 flex items-center justify-center px-8">
-              <p className="text-center text-white/60 text-sm italic leading-relaxed max-w-md">
-                {scene.imageDescription}
-              </p>
-            </div>
+            {/* Image description as cinematic frame text (only when no AI image) */}
+            {!currentImageUrl && (
+              <div className="flex-1 flex items-center justify-center px-8 z-10">
+                <p className="text-center text-white/60 text-sm italic leading-relaxed max-w-md">
+                  {scene.imageDescription}
+                </p>
+              </div>
+            )}
+
+            {/* Spacer when image is present */}
+            {currentImageUrl && <div className="flex-1" />}
 
             {/* Headline overlay */}
-            <div className="space-y-2">
+            <div className="space-y-2 z-10 relative">
               <h3 className="text-lg font-bold text-white drop-shadow-lg leading-tight">
                 {scene.headline}
               </h3>
@@ -407,20 +441,38 @@ export function SlideshowPlayer({
 
       {/* Scene thumbnails */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {scenes.map((s, i) => (
-          <button
-            key={i}
-            onClick={() => goToScene(i)}
-            className={`shrink-0 w-20 rounded-md p-1.5 text-left transition-colors border ${
-              i === currentScene
-                ? "border-green-500 bg-green-500/10"
-                : "border-border bg-muted/30 hover:bg-muted/50"
-            }`}
-          >
-            <p className="text-[9px] font-bold truncate">{s.headline}</p>
-            <p className="text-[8px] text-muted-foreground">{s.durationSec}s</p>
-          </button>
-        ))}
+        {scenes.map((s, i) => {
+          const thumbImage = sceneImages?.[i];
+          const thumbUrl = thumbImage
+            ? `data:${thumbImage.mimeType};base64,${thumbImage.imageBase64}`
+            : null;
+          return (
+            <button
+              key={i}
+              onClick={() => goToScene(i)}
+              className={`shrink-0 w-20 rounded-md overflow-hidden text-left transition-colors border ${
+                i === currentScene
+                  ? "border-green-500 bg-green-500/10"
+                  : "border-border bg-muted/30 hover:bg-muted/50"
+              }`}
+            >
+              {thumbUrl ? (
+                <div className="relative h-10">
+                  <img src={thumbUrl} alt={s.headline} className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40" />
+                  <div className="absolute bottom-0 left-0 right-0 p-1">
+                    <p className="text-[8px] font-bold text-white truncate drop-shadow">{s.headline}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-1.5">
+                  <p className="text-[9px] font-bold truncate">{s.headline}</p>
+                  <p className="text-[8px] text-muted-foreground">{s.durationSec}s</p>
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

@@ -431,19 +431,19 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
   // The full media pipeline. Discovers stories, writes articles,
   // then branches into parallel production of:
   //   1. Newsletter summary
-  //   2. Infographic (ranked stories)
-  //   3. Slideshow video (image sequence + TTS narration)
-  //   4. AI video plan (Veo-optimized prompts)
-  // 8-step DAG with 3 parallel branch points.
+  //   2. Cinematic infographic (Nano Banana AI image + data overlay)
+  //   3. Slideshow video (AI-generated scene images + TTS narration)
+  //   4. AI video clips (Veo-generated 7-8 second videos)
+  // 12-step DAG with image/video generation phases.
   {
     id: "test-newsletter",
     name: "European Football Newsletter",
     description:
-      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces 4 outputs in parallel: a newsletter, a bold infographic (1 main + 2 supporting stories), a 60-second slideshow video with TTS narration, and a Veo-optimized AI video production plan.",
-    version: "2.0.0",
+      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana, emphasizing scores & transfer fees), slideshow with AI-generated scene images, and Veo-generated 7-8 second video clips.",
+    version: "3.0.0",
     location: "landing",
     componentPath: "client/src/components/newsletter-flow.tsx",
-    tags: ["landing", "newsletter", "football", "european", "infographic", "video", "media-pipeline"],
+    tags: ["landing", "newsletter", "football", "european", "infographic", "video", "media-pipeline", "nano-banana", "veo"],
     icon: "Newspaper",
     voiceTriggers: ["newsletter", "football", "news", "newspaper", "daily", "infographic", "video"],
     phases: [
@@ -452,11 +452,13 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
       { id: "summarizing", label: "Rank & Summarize", stepIds: ["newsletter-summary", "rank-stories"] },
       { id: "producing", label: "Produce", stepIds: ["design-infographic", "create-narrative"] },
       { id: "assembling", label: "Assemble", stepIds: ["generate-storyboard", "generate-video-prompts"] },
+      { id: "generating-images", label: "Generate Images", stepIds: ["generate-infographic-image", "generate-scene-images"] },
+      { id: "generating-videos", label: "Generate Videos", stepIds: ["generate-video-clips"] },
     ],
     output: {
       name: "mediaPackage",
       type: "object",
-      description: "The complete media package: newsletter summary, infographic data, slideshow storyboard, and AI video prompts",
+      description: "The complete media package: newsletter, cinematic AI infographic image, slideshow with AI scene images, and Veo video clips",
     },
     steps: [
       {
@@ -537,15 +539,15 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         name: "Design Infographic",
         type: "llm",
         description:
-          "Creates structured infographic data from ranked stories — title, stat callouts, layout, colors. Runs in parallel with create-narrative.",
-        prompt: "Design an infographic layout with title, mainStory (60% space), 2 supporting cards.",
-        userMessage: "Design a sports infographic for the ranked stories.",
+          "Creates structured infographic data emphasizing SCORES, TRANSFER FEES, and NUMERICAL DATA from ranked stories — plus a rich imagePrompt for Nano Banana cinematic wallpaper generation. Runs in parallel with create-narrative.",
+        prompt: "Design an infographic layout with title, mainStory (60% space), 2 supporting cards, and a cinematic imagePrompt for AI image generation emphasizing scores and transfer fees.",
+        userMessage: "Design a sports infographic for the ranked stories with scores and transfer fee emphasis.",
         model: "gemini-2.5-flash",
         inputSchema: [
           { name: "ranked", type: "object", description: "Ranked stories with main + supporting" },
         ],
         outputSchema: [
-          { name: "infographic", type: "object", description: "Infographic data with title, mainStory, supportingStories, colors" },
+          { name: "infographic", type: "object", description: "Infographic data with title, mainStory, supportingStories, colors, imagePrompt for Nano Banana" },
         ],
         dependsOn: ["rank-stories"],
         parallel: true,
@@ -605,6 +607,62 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         ],
         dependsOn: ["create-narrative"],
         parallel: true,
+      },
+      // ── Image Generation Phase (Nano Banana) ──
+      {
+        id: "generate-infographic-image",
+        name: "Generate Infographic Image",
+        type: "llm",
+        description:
+          "Generates a cinematic wallpaper-style infographic image using Nano Banana (Gemini native image gen). Focuses on scores, transfer fees, and dramatic football visuals with stat callouts.",
+        prompt: "Generate a cinematic infographic image for European football with scores and transfer fee emphasis.",
+        userMessage: "Generate the infographic hero image with Nano Banana.",
+        model: "gemini-2.5-flash-preview-image-generation",
+        inputSchema: [
+          { name: "infographic", type: "object", description: "Infographic data with imagePrompt" },
+        ],
+        outputSchema: [
+          { name: "imageBase64", type: "string", description: "Base64-encoded cinematic infographic image" },
+          { name: "mimeType", type: "string", description: "Image MIME type (image/png)" },
+        ],
+        dependsOn: ["design-infographic", "generate-storyboard"],
+        parallel: true,
+      },
+      {
+        id: "generate-scene-images",
+        name: "Generate Scene Images",
+        type: "llm",
+        description:
+          "Generates cinematic AI images for each storyboard scene using Nano Banana. Each image focuses on one key event with dramatic football visuals.",
+        prompt: "Generate cinematic scene images for each storyboard scene, one per key football event.",
+        userMessage: "Generate AI images for the slideshow scenes.",
+        model: "gemini-2.5-flash-preview-image-generation",
+        inputSchema: [
+          { name: "storyboard", type: "object", description: "Storyboard with scene image descriptions" },
+        ],
+        outputSchema: [
+          { name: "images", type: "array", description: "Array of generated scene images (base64)" },
+        ],
+        dependsOn: ["generate-storyboard"],
+        parallel: true,
+      },
+      // ── Video Generation Phase (Veo) ──
+      {
+        id: "generate-video-clips",
+        name: "Generate Video Clips",
+        type: "llm",
+        description:
+          "Generates 7-8 second AI video clips using Veo for each scene prompt. Creates cinematic football footage from the video prompts.",
+        prompt: "Generate 7-8 second video clips using Veo for each scene in the video production plan.",
+        userMessage: "Generate AI video clips with Veo.",
+        model: "veo-3.0-generate-preview",
+        inputSchema: [
+          { name: "videoPrompts", type: "object", description: "Veo-optimized scene prompts" },
+        ],
+        outputSchema: [
+          { name: "videos", type: "array", description: "Array of generated video clips (base64 MP4)" },
+        ],
+        dependsOn: ["generate-video-prompts"],
       },
     ],
   },

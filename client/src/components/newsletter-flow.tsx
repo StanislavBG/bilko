@@ -1,7 +1,7 @@
 /**
- * Newsletter + Infographic + Video Flow — The full media pipeline.
+ * Newsletter + Infographic + Video Flow — The full media pipeline v3.
  *
- * 8-step DAG with parallel branches:
+ * 12-step DAG with parallel branches + AI image/video generation:
  *
  *   discover-stories (root)
  *          │
@@ -15,20 +15,26 @@
  *             │         │
  *      design-      create-
  *     infographic   narrative
- *                      │
- *                ┌─────┴─────┐
- *                │           │
- *           generate-    generate-
- *          storyboard   video-prompts
+ *          │            │
+ *          │       ┌────┴────┐
+ *          │       │         │
+ *          │  storyboard  video-prompts
+ *          │       │         │
+ *     ┌────┴───┐   │         │
+ *     │        │   │         │
+ * infographic scene-    video-clips
+ *   image    images     (Veo 3)
+ *  (Nano     (Nano
+ *  Banana)   Banana)
  *
  * Outputs:
- *   1. Newsletter     — 3 articles with image descriptions
- *   2. Infographic    — Bold editorial infographic (1 main + 2 supporting)
- *   3. Slideshow Video — Image sequence with TTS narration (~60s)
- *   4. AI Video Plan   — Veo-optimized prompts for real video generation (~30s)
+ *   1. Newsletter      — 3 articles with image descriptions
+ *   2. Infographic     — Cinematic AI wallpaper (Nano Banana) + score overlays
+ *   3. Slideshow Video — AI scene images (Nano Banana) + TTS narration (~60s)
+ *   4. AI Video Clips  — Veo-generated 7-8 second cinematic clips
  *
+ * Models: Nano Banana (image gen) + Veo 3 (video gen) + Gemini 2.5 Flash (text)
  * Auto-starts immediately when rendered.
- * This is the true test of the bilko-flow library.
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
@@ -45,6 +51,8 @@ import {
   Film,
   Video,
   Trophy,
+  Wand2,
+  Clapperboard,
 } from "lucide-react";
 import {
   chatJSON,
@@ -52,7 +60,11 @@ import {
   useFlowExecution,
   useFlowDefinition,
   useFlowChat,
+  generateImage,
+  generateImages,
+  generateVideo,
 } from "@/lib/bilko-flow";
+import type { ImageGenerationResult } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
@@ -72,6 +84,8 @@ type FlowState =
   | "ranking"
   | "producing"
   | "assembling"
+  | "generating-images"
+  | "generating-videos"
   | "done"
   | "error";
 
@@ -206,24 +220,28 @@ Rules: keyStat max 6 chars (e.g. "47M", "3-0"), statLabel max 8 words. whyMain m
 
 function designInfographicPrompt(ranked: RankedStories): string {
   return bilkoSystemPrompt(
-    `You are a data visualization designer creating a sports infographic layout.
+    `You are a data visualization designer creating a sports infographic layout focused on SCORES, TRANSFER FEES, and NUMERICAL DATA.
 
 INPUT: Ranked stories:
 MAIN: "${ranked.main.headline}" (${ranked.main.league}) — Stat: ${ranked.main.keyStat} (${ranked.main.statLabel})
 SUPPORTING 1: "${ranked.supporting[0]?.headline}" (${ranked.supporting[0]?.league})
 SUPPORTING 2: "${ranked.supporting[1]?.headline}" (${ranked.supporting[1]?.league})
 
-MISSION: Design a structured infographic data model with:
+MISSION: Design a structured infographic data model that EMPHASIZES numerical football data:
 1. A bold title for the infographic edition
 2. A subtitle (date + leagues covered)
-3. The MAIN story section with headline, stat callout, summary, league, and an accent color hex code matching the league/team
-4. Two supporting story sections with headline, stat, statLabel, summary, league
-5. Footer text and edition identifier
+3. The MAIN story section with headline, a BIG stat callout (match score like "3-1", transfer fee like "€85M", or stat like "47 goals"), summary, league, and an accent color hex code
+4. Two supporting story sections — each MUST have a prominent numerical stat (score, fee, percentage, ranking)
+5. An imagePrompt field: a DETAILED prompt for generating a cinematic wallpaper-style infographic image.
+   The imagePrompt should describe: dramatic stadium lighting, team colors, overlaid score/stat typography,
+   cinematic depth of field, dark moody atmosphere, editorial photo quality, football action frozen in time.
+   Make it RICH in visual detail — this will be used to generate an actual AI image.
+6. Footer text and edition identifier
 
 Return ONLY valid JSON:
-{"infographic":{"title":"...","subtitle":"...","mainStory":{"headline":"...","stat":"...","statLabel":"...","summary":"...","league":"...","accentColor":"#16a34a"},"supportingStories":[{"headline":"...","stat":"...","statLabel":"...","summary":"...","league":"..."},{"headline":"...","stat":"...","statLabel":"...","summary":"...","league":"..."}],"footer":"European Football Daily","edition":"..."}}
+{"infographic":{"title":"...","subtitle":"...","imagePrompt":"...","mainStory":{"headline":"...","stat":"...","statLabel":"...","summary":"...","league":"...","accentColor":"#16a34a"},"supportingStories":[{"headline":"...","stat":"...","statLabel":"...","summary":"...","league":"..."},{"headline":"...","stat":"...","statLabel":"...","summary":"...","league":"..."}],"footer":"European Football Daily","edition":"..."}}
 
-Rules: title max 8 words, subtitle max 12 words, summary max 25 words each. accentColor must be a valid hex. No markdown.`,
+Rules: title max 8 words, subtitle max 12 words, summary max 25 words each. accentColor must be a valid hex. imagePrompt must be 40-80 words, cinematic and visually rich. No markdown.`,
   );
 }
 
@@ -342,6 +360,18 @@ const STATUS_MESSAGES: Record<string, string[]> = {
     "Generating AI video prompts...",
     "Crafting Veo-optimized scene descriptions...",
   ],
+  "generating-images": [
+    "Generating cinematic infographic with Nano Banana...",
+    "Creating wallpaper-style soccer visuals...",
+    "Rendering scene images for slideshow...",
+    "AI is painting the stadium atmosphere...",
+  ],
+  "generating-videos": [
+    "Generating 8-second video clips with Veo...",
+    "Creating cinematic football footage...",
+    "Rendering AI video sequences...",
+    "Building the final video package...",
+  ],
 };
 
 // ── Tab config ───────────────────────────────────────────────────────
@@ -366,6 +396,10 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
   const [narrative, setNarrative] = useState<NarrativeData | null>(null);
   const [storyboard, setStoryboard] = useState<StoryboardData | null>(null);
   const [videoPrompts, setVideoPrompts] = useState<VideoPromptsData | null>(null);
+  // Generated media (Nano Banana + Veo)
+  const [infographicImage, setInfographicImage] = useState<ImageGenerationResult | null>(null);
+  const [sceneImages, setSceneImages] = useState<(ImageGenerationResult | null)[] | null>(null);
+  const [sceneVideos, setSceneVideos] = useState<Array<{ videoBase64: string; mimeType: string; durationSeconds: number } | null> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState(STATUS_MESSAGES.discovering[0]);
   const [activeTab, setActiveTab] = useState<OutputTab>("newsletter");
@@ -608,11 +642,99 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
       setVideoPrompts(videoPromptsData);
 
       pushAgentMessage(
-        `Full media package complete: Newsletter, Infographic, ${storyboardData.scenes.length}-scene Slideshow Video, and ${videoPromptsData.scenes.length}-scene AI Video plan. Check all four tabs.`,
+        `Storyboard and video prompts ready. Now generating cinematic images with Nano Banana...`,
+      );
+
+      // ═══ Step 9: Generate Images with Nano Banana ═══
+      // Infographic image + scene images in parallel
+      setFlowState("generating-images");
+
+      const infographicImagePrompt = (infographicData as InfographicData & { imagePrompt?: string }).imagePrompt
+        ?? `Cinematic European football infographic wallpaper. Dark moody stadium atmosphere with dramatic lighting. Bold overlaid score typography showing "${infographicData.mainStory.stat}" in large neon text. ${infographicData.mainStory.league} team colors. Editorial photo quality, depth of field, smoke effects. Scores and transfer fees highlighted with glowing callouts. Wallpaper aspect ratio, ultra-detailed, photorealistic.`;
+
+      const sceneImagePrompts = storyboardData.scenes.map((scene) =>
+        `Cinematic sports news visual: ${scene.imageDescription}. Style: ${scene.visualStyle}. Dark atmospheric lighting, editorial photography quality, dramatic composition, European football, stadium atmosphere, 16:9 aspect ratio, ultra-detailed.`,
+      );
+
+      const [infographicImgResult, ...sceneImgResults] = await Promise.allSettled([
+        // Infographic hero image
+        trackStep(
+          "generate-infographic-image",
+          { prompt: infographicImagePrompt },
+          () => generateImage(infographicImagePrompt, { aspectRatio: "16:9" }),
+        ).catch((err) => {
+          console.warn("Infographic image generation failed:", err);
+          return null;
+        }),
+        // Scene images for slideshow
+        ...sceneImagePrompts.map((prompt, i) =>
+          trackStep(
+            `generate-scene-image-${i + 1}`,
+            { prompt, sceneNumber: i + 1 },
+            () => generateImage(prompt, { aspectRatio: "16:9" }),
+          ).catch((err) => {
+            console.warn(`Scene image ${i + 1} generation failed:`, err);
+            return null;
+          }),
+        ),
+      ]);
+
+      // Extract results (null-safe)
+      const infographicImgData = infographicImgResult.status === "fulfilled" && infographicImgResult.value
+        ? (infographicImgResult.value as { data: ImageGenerationResult }).data ?? infographicImgResult.value
+        : null;
+      setInfographicImage(infographicImgData as ImageGenerationResult | null);
+
+      const sceneImgData = sceneImgResults.map((r) => {
+        if (r.status === "fulfilled" && r.value) {
+          const val = r.value as { data: ImageGenerationResult } | null;
+          return val?.data ?? val;
+        }
+        return null;
+      });
+      setSceneImages(sceneImgData as (ImageGenerationResult | null)[]);
+
+      const imgCount = [infographicImgData, ...sceneImgData].filter(Boolean).length;
+      pushAgentMessage(
+        `Generated ${imgCount} cinematic images. Now generating video clips with Veo...`,
+      );
+
+      // ═══ Step 10: Generate Video Clips with Veo ═══
+      setFlowState("generating-videos");
+
+      const videoClipResults = await Promise.allSettled(
+        videoPromptsData.scenes.map((scene, i) =>
+          trackStep(
+            `generate-video-clip-${i + 1}`,
+            { prompt: scene.veoPrompt, sceneNumber: i + 1 },
+            () => generateVideo(scene.veoPrompt, {
+              durationSeconds: Math.min(8, Math.max(5, scene.durationSec)) as 5 | 6 | 7 | 8,
+              aspectRatio: "16:9",
+            }),
+          ).catch((err) => {
+            console.warn(`Video clip ${i + 1} generation failed:`, err);
+            return null;
+          }),
+        ),
+      );
+
+      const videoClips = videoClipResults.map((r) => {
+        if (r.status === "fulfilled" && r.value) {
+          const val = r.value as { data: { videos: Array<{ videoBase64: string; mimeType: string; durationSeconds: number }> } } | null;
+          const firstVideo = val?.data?.videos?.[0];
+          return firstVideo ?? null;
+        }
+        return null;
+      });
+      setSceneVideos(videoClips);
+
+      const videoCount = videoClips.filter(Boolean).length;
+      pushAgentMessage(
+        `Full media package complete: Newsletter, Cinematic Infographic${infographicImgData ? " (AI image)" : ""}, ${storyboardData.scenes.length}-scene Slideshow${imgCount > 1 ? " with AI visuals" : ""}, and ${videoCount > 0 ? `${videoCount} AI video clips` : `${videoPromptsData.scenes.length}-scene video plan`}. Check all four tabs.`,
       );
 
       // Send summary to FlowBus for activity logging
-      const exitSummary = `Read "${nl.editionTitle}" covering ${nl.leaguesCovered.join(", ")}. Top story: ${nl.topStory}. Mood: ${nl.mood}. ${nl.takeaway}. Also generated infographic, slideshow video, and AI video plan.`;
+      const exitSummary = `Read "${nl.editionTitle}" covering ${nl.leaguesCovered.join(", ")}. Top story: ${nl.topStory}. Mood: ${nl.mood}. ${nl.takeaway}. Generated cinematic infographic, ${imgCount} AI images, and ${videoCount} AI video clips.`;
       busSend("main", "summary", { summary: exitSummary });
 
       setFlowState("done");
@@ -711,6 +833,9 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     setNarrative(null);
     setStoryboard(null);
     setVideoPrompts(null);
+    setInfographicImage(null);
+    setSceneImages(null);
+    setSceneVideos(null);
     setError(null);
     setActiveTab("newsletter");
     setTimeout(() => {
@@ -729,6 +854,8 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     ranking: Trophy,
     producing: BarChart3,
     assembling: Film,
+    "generating-images": Wand2,
+    "generating-videos": Clapperboard,
   };
 
   const loadingTitles: Record<string, string> = {
@@ -738,15 +865,19 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     ranking: "Ranking by Newsworthiness",
     producing: "Producing Infographic & Narrative",
     assembling: "Assembling Video Assets",
+    "generating-images": "Generating Cinematic Images",
+    "generating-videos": "Generating Video Clips",
   };
 
   const progressWidths: Record<string, string> = {
-    discovering: "15%",
-    writing: "30%",
-    summarizing: "45%",
-    ranking: "55%",
-    producing: "70%",
-    assembling: "85%",
+    discovering: "10%",
+    writing: "20%",
+    summarizing: "30%",
+    ranking: "40%",
+    producing: "50%",
+    assembling: "60%",
+    "generating-images": "75%",
+    "generating-videos": "90%",
   };
 
   // ── Render ─────────────────────────────────────────────────────────
@@ -885,21 +1016,21 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
             {/* Infographic Tab */}
             {activeTab === "infographic" && infographic && (
               <div className="animate-in fade-in duration-300">
-                <InfographicView data={infographic} />
+                <InfographicView data={infographic} generatedImage={infographicImage ?? undefined} />
               </div>
             )}
 
             {/* Slideshow Video Tab */}
             {activeTab === "slideshow" && storyboard && narrative && (
               <div className="animate-in fade-in duration-300">
-                <SlideshowPlayer storyboard={storyboard} narrative={narrative} />
+                <SlideshowPlayer storyboard={storyboard} narrative={narrative} sceneImages={sceneImages ?? undefined} />
               </div>
             )}
 
             {/* AI Video Tab */}
             {activeTab === "ai-video" && videoPrompts && (
               <div className="animate-in fade-in duration-300">
-                <VideoPlanView data={videoPrompts} />
+                <VideoPlanView data={videoPrompts} generatedVideos={sceneVideos ?? undefined} />
               </div>
             )}
           </div>
