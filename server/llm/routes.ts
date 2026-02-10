@@ -1,16 +1,39 @@
 /**
  * LLM API Routes
  *
- * POST /api/llm/chat - Send a chat request to an LLM
- * GET /api/llm/models - List available models
+ * POST /api/llm/chat  - Send a chat request to an LLM
+ * GET  /api/llm/models - List available models (includes ttsAvailable flag)
+ * POST /api/llm/tts   - Text-to-speech via Gemini TTS
  */
 
 import { Router, Request, Response } from "express";
+import { GoogleGenAI } from "@google/genai";
 import { chat, AVAILABLE_MODELS, type ChatRequest } from "./index";
+import {
+  parseSampleRate,
+  isRawPcm,
+  hasWavHeader,
+  swapEndian16,
+  pcmToWav,
+  GEMINI_VOICES,
+  DEFAULT_VOICE,
+} from "./audio-utils.js";
 
 const router = Router();
 
-// List available models
+// ── Gemini TTS client (lazy singleton) ───────────────────
+
+let _ttsClient: GoogleGenAI | null = null;
+
+function getTtsClient(): GoogleGenAI | null {
+  if (_ttsClient) return _ttsClient;
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  _ttsClient = new GoogleGenAI({ apiKey });
+  return _ttsClient;
+}
+
+// List available models + TTS availability
 router.get("/models", (_req: Request, res: Response) => {
   res.json({
     models: AVAILABLE_MODELS.map(m => ({
@@ -19,6 +42,7 @@ router.get("/models", (_req: Request, res: Response) => {
       provider: m.provider,
       description: m.description,
     })),
+    ttsAvailable: getTtsClient() !== null,
   });
 });
 
@@ -241,6 +265,96 @@ router.post("/youtube-search", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("YouTube search error:", error);
     res.status(500).json({ error: "Failed to search YouTube" });
+  }
+});
+
+// ── Text-to-Speech via Gemini TTS ────────────────────────
+
+router.post("/tts", async (req: Request, res: Response) => {
+  try {
+    const client = getTtsClient();
+    if (!client) {
+      res.status(503).json({ error: "TTS service unavailable — GEMINI_API_KEY not configured" });
+      return;
+    }
+
+    const { text, voice = DEFAULT_VOICE } = req.body;
+
+    if (!text || typeof text !== "string") {
+      res.status(400).json({ error: "text is required" });
+      return;
+    }
+
+    const input = text.slice(0, 4000);
+    const safeVoice = GEMINI_VOICES.includes(voice as any) ? voice : DEFAULT_VOICE;
+
+    const response = await client.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: input }] }],
+      config: {
+        responseModalities: ["AUDIO"],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: {
+              voiceName: safeVoice,
+            },
+          },
+        },
+      },
+    });
+
+    const audioPart = response.candidates?.[0]?.content?.parts?.[0];
+    if (!audioPart?.inlineData?.data) {
+      console.error("[TTS] No audio data in Gemini response");
+      res.status(500).json({ error: "No audio data in Gemini response" });
+      return;
+    }
+
+    const mimeType = audioPart.inlineData.mimeType || "audio/L16;rate=24000";
+    const rawBuffer = Buffer.from(audioPart.inlineData.data, "base64");
+
+    if (rawBuffer.length === 0) {
+      res.status(500).json({ error: "Gemini returned empty audio data" });
+      return;
+    }
+
+    let audioBuffer: Buffer;
+    let contentType: string;
+
+    if (hasWavHeader(rawBuffer)) {
+      audioBuffer = rawBuffer;
+      contentType = "audio/wav";
+    } else if (isRawPcm(mimeType)) {
+      const sampleRate = parseSampleRate(mimeType);
+      const isL16 = mimeType.toLowerCase().startsWith("audio/l16");
+      const pcmData = isL16 ? swapEndian16(rawBuffer) : rawBuffer;
+      audioBuffer = pcmToWav(pcmData, sampleRate);
+      contentType = "audio/wav";
+    } else if (mimeType.includes("wav")) {
+      audioBuffer = pcmToWav(rawBuffer, parseSampleRate(mimeType));
+      contentType = "audio/wav";
+    } else {
+      const knownPassthrough = ["audio/mpeg", "audio/mp3", "audio/ogg", "audio/webm", "audio/aac"];
+      const baseMime = mimeType.split(";")[0].toLowerCase().trim();
+      if (knownPassthrough.includes(baseMime)) {
+        audioBuffer = rawBuffer;
+        contentType = baseMime;
+      } else {
+        audioBuffer = pcmToWav(rawBuffer, parseSampleRate(mimeType));
+        contentType = "audio/wav";
+      }
+    }
+
+    res.set({
+      "Content-Type": contentType,
+      "Content-Length": String(audioBuffer.length),
+      "Cache-Control": "no-store",
+    });
+    res.send(audioBuffer);
+  } catch (error) {
+    console.error("[TTS] Gemini TTS error:", error);
+    const message = error instanceof Error ? error.message : "Unknown TTS error";
+    res.status(500).json({ error: message });
   }
 });
 

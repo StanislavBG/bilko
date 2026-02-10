@@ -9,7 +9,6 @@ import { registerComponentRoutes } from "./components/routes";
 import { registerProjectRoutes } from "./projects/routes";
 import { getAllEndpoints } from "./endpoint-registry";
 import llmRoutes from "./llm/routes";
-import ttsRoutes from "./tts/routes";
 import webProxyRoutes from "./web-proxy/routes";
 
 export async function registerRoutes(
@@ -38,11 +37,8 @@ export async function registerRoutes(
   // Project unfurl and image proxy routes
   registerProjectRoutes(app);
 
-  // LLM proxy routes for PromptPlayground
+  // LLM proxy routes (chat, models, TTS, video validation, YouTube search)
   app.use("/api/llm", llmRoutes);
-
-  // TTS routes (Gemini Text-to-Speech)
-  app.use("/api/tts", ttsRoutes);
 
   // Web proxy routes for Work With Me flow (page fetching + structure extraction)
   app.use("/api/web-proxy", webProxyRoutes);
