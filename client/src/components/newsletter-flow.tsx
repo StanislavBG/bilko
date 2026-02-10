@@ -1,24 +1,51 @@
 /**
- * Newsletter Flow — TEST / Troubleshooting flow
+ * Newsletter + Infographic + Video Flow — The full media pipeline.
  *
- * Minimal 3-step LLM flow for testing the flow architecture:
- *   Step 1: discover-stories       — LLM discovers 3 trending European football stories
- *   Step 2: write-articles         — LLM writes 3 articles with image descriptions
- *   Step 3: newsletter-summary     — LLM distills the session into an experience summary
+ * 8-step DAG with parallel branches:
  *
- * Inspired by the [EFD] European Football Daily n8n workflow
- * that generates cinematic infographics with stat overlays.
+ *   discover-stories (root)
+ *          │
+ *    write-articles
+ *          │
+ *     ┌────┴────┐
+ *     │         │
+ *  newsletter  rank-stories
+ *  -summary        │
+ *             ┌────┴────┐
+ *             │         │
+ *      design-      create-
+ *     infographic   narrative
+ *                      │
+ *                ┌─────┴─────┐
+ *                │           │
+ *           generate-    generate-
+ *          storyboard   video-prompts
  *
- * The experience summary is returned via onComplete() so bilko-main can
- * adjust its greeting mood on the next loop iteration.
+ * Outputs:
+ *   1. Newsletter     — 3 articles with image descriptions
+ *   2. Infographic    — Bold editorial infographic (1 main + 2 supporting)
+ *   3. Slideshow Video — Image sequence with TTS narration (~60s)
+ *   4. AI Video Plan   — Veo-optimized prompts for real video generation (~30s)
  *
  * Auto-starts immediately when rendered.
+ * This is the true test of the bilko-flow library.
  */
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { StepTracker, type TrackerStep } from "@/components/ui/step-tracker";
-import { Newspaper, PenLine, Image, RotateCcw, Sparkles, Download } from "lucide-react";
+import {
+  Newspaper,
+  PenLine,
+  Image,
+  RotateCcw,
+  Sparkles,
+  Download,
+  BarChart3,
+  Film,
+  Video,
+  Trophy,
+} from "lucide-react";
 import {
   chatJSON,
   jsonPrompt,
@@ -29,6 +56,9 @@ import {
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
+import { InfographicView, type InfographicData } from "@/components/newsletter/infographic-view";
+import { SlideshowPlayer, type StoryboardData, type NarrativeData } from "@/components/newsletter/slideshow-player";
+import { VideoPlanView, type VideoPromptsData } from "@/components/newsletter/video-plan-view";
 
 // ── Owner ID — must match what landing.tsx uses for claimChat ──
 const OWNER_ID = "test-newsletter";
@@ -39,8 +69,13 @@ type FlowState =
   | "discovering"
   | "writing"
   | "summarizing"
+  | "ranking"
+  | "producing"
+  | "assembling"
   | "done"
   | "error";
+
+type OutputTab = "newsletter" | "infographic" | "slideshow" | "ai-video";
 
 interface Story {
   headline: string;
@@ -62,6 +97,27 @@ interface NewsletterResult {
   leaguesCovered: string[];
   mood: string;
   takeaway: string;
+}
+
+interface RankedStories {
+  main: {
+    headline: string;
+    article: string;
+    imageDescription: string;
+    league: string;
+    whyMain: string;
+    keyStat: string;
+    statLabel: string;
+  };
+  supporting: Array<{
+    headline: string;
+    article: string;
+    imageDescription: string;
+    league: string;
+    keyStat: string;
+    statLabel: string;
+  }>;
+  rankingRationale: string;
 }
 
 // ── Prompts ──────────────────────────────────────────────────────────
@@ -127,34 +183,192 @@ Rules: editionTitle max 8 words, topStory max 20 words, mood is a single word, t
   );
 }
 
+function rankStoriesPrompt(articles: Article[], stories: Story[]): string {
+  return bilkoSystemPrompt(
+    `You are a news editor ranking stories by importance and visual impact for an infographic and video production.
+
+INPUT: 3 European football articles:
+${articles.map((a, i) => `${i + 1}. "${a.headline}" (${a.league}) — ${a.article}\nImage: ${a.imageDescription}\nKey stat: ${stories[i]?.keyStat ?? "N/A"}`).join("\n\n")}
+
+MISSION: Rank the stories from most to least newsworthy. The #1 story becomes the MAIN story for the infographic (60% visual space) and video lead. Stories #2 and #3 become supporting stories.
+
+Consider: breaking news value, statistical significance, visual potential, emotional impact.
+
+For the main story, extract or create a bold stat number (e.g. "47M", "3-0", "12th", "98%") and a short stat label.
+For each supporting story, also extract a stat number and label.
+
+Return ONLY valid JSON:
+{"ranked":{"main":{"headline":"...","article":"...","imageDescription":"...","league":"...","whyMain":"...","keyStat":"...","statLabel":"..."},"supporting":[{"headline":"...","article":"...","imageDescription":"...","league":"...","keyStat":"...","statLabel":"..."},{"headline":"...","article":"...","imageDescription":"...","league":"...","keyStat":"...","statLabel":"..."}],"rankingRationale":"..."}}
+
+Rules: keyStat max 6 chars (e.g. "47M", "3-0"), statLabel max 8 words. whyMain max 20 words. No markdown.`,
+  );
+}
+
+function designInfographicPrompt(ranked: RankedStories): string {
+  return bilkoSystemPrompt(
+    `You are a data visualization designer creating a sports infographic layout.
+
+INPUT: Ranked stories:
+MAIN: "${ranked.main.headline}" (${ranked.main.league}) — Stat: ${ranked.main.keyStat} (${ranked.main.statLabel})
+SUPPORTING 1: "${ranked.supporting[0]?.headline}" (${ranked.supporting[0]?.league})
+SUPPORTING 2: "${ranked.supporting[1]?.headline}" (${ranked.supporting[1]?.league})
+
+MISSION: Design a structured infographic data model with:
+1. A bold title for the infographic edition
+2. A subtitle (date + leagues covered)
+3. The MAIN story section with headline, stat callout, summary, league, and an accent color hex code matching the league/team
+4. Two supporting story sections with headline, stat, statLabel, summary, league
+5. Footer text and edition identifier
+
+Return ONLY valid JSON:
+{"infographic":{"title":"...","subtitle":"...","mainStory":{"headline":"...","stat":"...","statLabel":"...","summary":"...","league":"...","accentColor":"#16a34a"},"supportingStories":[{"headline":"...","stat":"...","statLabel":"...","summary":"...","league":"..."},{"headline":"...","stat":"...","statLabel":"...","summary":"...","league":"..."}],"footer":"European Football Daily","edition":"..."}}
+
+Rules: title max 8 words, subtitle max 12 words, summary max 25 words each. accentColor must be a valid hex. No markdown.`,
+  );
+}
+
+function createNarrativePrompt(ranked: RankedStories): string {
+  return bilkoSystemPrompt(
+    `You are a sports TV narrator creating a 60-second video script for a European football news bulletin.
+
+INPUT: Ranked stories:
+MAIN: "${ranked.main.headline}" (${ranked.main.league}) — ${ranked.main.article}
+SUPPORTING 1: "${ranked.supporting[0]?.headline}" (${ranked.supporting[0]?.league}) — ${ranked.supporting[0]?.article}
+SUPPORTING 2: "${ranked.supporting[1]?.headline}" (${ranked.supporting[1]?.league}) — ${ranked.supporting[1]?.article}
+
+MISSION: Write a broadcast-style narration script:
+- Intro (10 seconds): Hook the viewer + edition intro. Short, punchy, sets the tone.
+- Main story (20 seconds): Dramatic telling with the key stat. This is the lead.
+- Supporting story 1 (15 seconds): Quick coverage with a hook opening.
+- Supporting story 2 (15 seconds): Quick coverage closing the bulletin.
+
+Total: ~60 seconds. Write for SPOKEN delivery — short sentences, dramatic pauses marked with "...", natural rhythm. Each segment's narration should be 2-4 sentences.
+
+Return ONLY valid JSON:
+{"narrative":{"intro":{"text":"...","durationSec":10},"segments":[{"storyIndex":0,"headline":"...","narration":"...","durationSec":20},{"storyIndex":1,"headline":"...","narration":"...","durationSec":15},{"storyIndex":2,"headline":"...","narration":"...","durationSec":15}],"totalDurationSec":60}}
+
+Rules: intro text max 30 words. Each narration max 50 words. No markdown.`,
+  );
+}
+
+function generateStoryboardPrompt(
+  narrative: NarrativeData,
+  ranked: RankedStories,
+): string {
+  return bilkoSystemPrompt(
+    `You are a video storyboard artist creating a visual shot list for a sports news video.
+
+INPUT: A 60-second narrative with ${narrative.segments.length + 1} segments:
+INTRO (${narrative.intro.durationSec}s): "${narrative.intro.text}"
+${narrative.segments.map((s) => `SEGMENT ${s.storyIndex + 1} (${s.durationSec}s): "${s.narration}"`).join("\n")}
+
+Visual context:
+MAIN: ${ranked.main.imageDescription}
+SUPPORT 1: ${ranked.supporting[0]?.imageDescription}
+SUPPORT 2: ${ranked.supporting[1]?.imageDescription}
+
+MISSION: For each narrative segment (intro + 3 stories = 4 scenes), create:
+1. A detailed image description (what the viewer sees — cinematic, editorial quality)
+2. A visual style note (color palette, mood, composition approach)
+3. Transition types (fade-in, dissolve, slide-left, slide-up, zoom)
+4. The narration text that plays over this scene
+
+Return ONLY valid JSON:
+{"storyboard":{"scenes":[{"sceneNumber":1,"headline":"Intro","imageDescription":"...","visualStyle":"...","durationSec":10,"narrationText":"...","transitionIn":"fade-in","transitionOut":"dissolve"},{"sceneNumber":2,"headline":"...","imageDescription":"...","visualStyle":"...","durationSec":20,"narrationText":"...","transitionIn":"dissolve","transitionOut":"dissolve"},{"sceneNumber":3,...},{"sceneNumber":4,...}]}}
+
+Rules: exactly 4 scenes. imageDescription max 40 words, visualStyle max 15 words. transitionIn/Out must be one of: fade-in, dissolve, slide-left, slide-up, zoom. No markdown.`,
+  );
+}
+
+function generateVideoPromptsPrompt(
+  narrative: NarrativeData,
+  ranked: RankedStories,
+): string {
+  return bilkoSystemPrompt(
+    `You are an AI video production expert who creates prompts optimized for Google Veo and similar video generation models.
+
+INPUT: A 60-second sports news narrative:
+MAIN STORY: "${ranked.main.headline}" — ${ranked.main.imageDescription}
+SUPPORT 1: "${ranked.supporting[0]?.headline}" — ${ranked.supporting[0]?.imageDescription}
+SUPPORT 2: "${ranked.supporting[1]?.headline}" — ${ranked.supporting[1]?.imageDescription}
+
+MISSION: Create Veo-optimized video generation prompts for a ~30 second AI-generated video (10s per story). Each prompt should:
+- Be a rich natural language scene description (Veo understands cinematic language)
+- Include camera movement (dolly, pan, tracking shot, aerial, etc.)
+- Specify lighting and mood
+- Be designed for 8-10 second clip generation
+
+EXTENSION TECHNIQUES (explain one that works best):
+- Multi-clip chaining: Generate 3 sequential clips with consistent style tokens
+- Prompt continuation: End each prompt with motion that the next prompt picks up
+- Style anchoring: Use identical style suffixes across all prompts for visual continuity
+- Keyframe bridging: Describe the last frame of clip A as the first frame of clip B
+
+Return ONLY valid JSON:
+{"videoPrompts":{"scenes":[{"sceneNumber":1,"headline":"...","veoPrompt":"...","durationSec":10,"cameraMovement":"...","visualMood":"...","transitionType":"cut"},{"sceneNumber":2,...},{"sceneNumber":3,...}],"extensionTechnique":"...","productionNotes":"..."}}
+
+Rules: exactly 3 scenes (one per story). veoPrompt max 60 words. extensionTechnique max 80 words. productionNotes max 40 words. No markdown.`,
+  );
+}
+
 // ── Status messages ──────────────────────────────────────────────────
 
-const DISCOVERING_MESSAGES = [
-  "Scanning European football headlines...",
-  "Checking the Premier League, La Liga, Serie A...",
-  "Finding the top 3 stories for you...",
-];
+const STATUS_MESSAGES: Record<string, string[]> = {
+  discovering: [
+    "Scanning European football headlines...",
+    "Checking the Premier League, La Liga, Serie A...",
+    "Finding the top 3 stories for you...",
+  ],
+  writing: [
+    "Writing your newsletter articles...",
+    "Crafting the headlines and image descriptions...",
+    "Putting the edition together...",
+  ],
+  summarizing: [
+    "Wrapping up today's edition...",
+    "Distilling the key takeaways...",
+  ],
+  ranking: [
+    "Ranking stories by newsworthiness...",
+    "Identifying the lead story for infographic and video...",
+  ],
+  producing: [
+    "Designing the infographic layout...",
+    "Writing the video narrative script...",
+    "Creating visual compositions...",
+  ],
+  assembling: [
+    "Building the video storyboard...",
+    "Generating AI video prompts...",
+    "Crafting Veo-optimized scene descriptions...",
+  ],
+};
 
-const WRITING_MESSAGES = [
-  "Writing your newsletter articles...",
-  "Crafting the headlines and image descriptions...",
-  "Putting the edition together...",
-];
+// ── Tab config ───────────────────────────────────────────────────────
 
-const SUMMARIZING_MESSAGES = [
-  "Wrapping up today's edition...",
-  "Distilling the key takeaways...",
+const TABS: { id: OutputTab; label: string; icon: typeof Newspaper }[] = [
+  { id: "newsletter", label: "Newsletter", icon: Newspaper },
+  { id: "infographic", label: "Infographic", icon: BarChart3 },
+  { id: "slideshow", label: "Slideshow Video", icon: Film },
+  { id: "ai-video", label: "AI Video", icon: Video },
 ];
 
 // ── Component ────────────────────────────────────────────────────────
 
 export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
+  // ── Flow state ──
   const [flowState, setFlowState] = useState<FlowState>("discovering");
   const [stories, setStories] = useState<Story[] | null>(null);
   const [articles, setArticles] = useState<Article[] | null>(null);
   const [newsletter, setNewsletter] = useState<NewsletterResult | null>(null);
+  const [ranked, setRanked] = useState<RankedStories | null>(null);
+  const [infographic, setInfographic] = useState<InfographicData | null>(null);
+  const [narrative, setNarrative] = useState<NarrativeData | null>(null);
+  const [storyboard, setStoryboard] = useState<StoryboardData | null>(null);
+  const [videoPrompts, setVideoPrompts] = useState<VideoPromptsData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState(DISCOVERING_MESSAGES[0]);
+  const [statusMessage, setStatusMessage] = useState(STATUS_MESSAGES.discovering[0]);
+  const [activeTab, setActiveTab] = useState<OutputTab>("newsletter");
   const hasStarted = useRef(false);
 
   const { trackStep, execution } = useFlowExecution("test-newsletter");
@@ -205,41 +419,32 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
   }, [flowDef, execution.steps]);
 
   const trackerActivity = useMemo<string | undefined>(() => {
-    switch (flowState) {
-      case "discovering":
-      case "writing":
-      case "summarizing":
-        return statusMessage;
-      case "done":
-        return newsletter
-          ? `${newsletter.editionTitle} — ${newsletter.mood}`
-          : "Edition complete";
-      case "error":
-        return error ?? "Something went wrong";
+    if (flowState === "done") {
+      return newsletter
+        ? `${newsletter.editionTitle} — Newsletter + Infographic + 2 Videos`
+        : "Complete";
     }
+    if (flowState === "error") {
+      return error ?? "Something went wrong";
+    }
+    return statusMessage;
   }, [flowState, statusMessage, newsletter, error]);
 
   // Sync flowState to flow bus
   useEffect(() => {
-    const statusMap: Record<FlowState, "running" | "complete" | "error"> = {
-      "discovering": "running",
-      "writing": "running",
-      "summarizing": "running",
-      "done": "complete",
-      "error": "error",
-    };
-    setBusStatus(statusMap[flowState], flowState);
+    setBusStatus(
+      flowState === "done" ? "complete" : flowState === "error" ? "error" : "running",
+      flowState,
+    );
   }, [flowState, setBusStatus]);
 
   // Rotate status messages during loading states
   useEffect(() => {
-    let messages: string[];
-    if (flowState === "discovering") messages = DISCOVERING_MESSAGES;
-    else if (flowState === "writing") messages = WRITING_MESSAGES;
-    else if (flowState === "summarizing") messages = SUMMARIZING_MESSAGES;
-    else return;
+    const messages = STATUS_MESSAGES[flowState];
+    if (!messages) return;
 
     let index = 0;
+    setStatusMessage(messages[0]);
     const interval = setInterval(() => {
       index = (index + 1) % messages.length;
       setStatusMessage(messages[index]);
@@ -252,10 +457,9 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
   const runFlow = useCallback(async () => {
     setFlowState("discovering");
     setError(null);
-    setStatusMessage(DISCOVERING_MESSAGES[0]);
 
     try {
-      // Step 1: discover-stories (LLM)
+      // ═══ Step 1: discover-stories (LLM) ═══
       const { data: storiesResult } = await trackStep(
         "discover-stories",
         { request: "Discover 3 European football stories" },
@@ -271,12 +475,11 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
       const discoveredStories = storiesResult.data.stories;
       setStories(discoveredStories);
       pushAgentMessage(
-        `Found 3 stories for today's edition: ${discoveredStories.map((s) => `"${s.headline}" (${s.league})`).join(", ")}. Writing the articles now.`,
+        `Found 3 stories: ${discoveredStories.map((s) => `"${s.headline}"`).join(", ")}. Writing the full edition now.`,
       );
 
-      // Step 2: write-articles (LLM)
+      // ═══ Step 2: write-articles (LLM) ═══
       setFlowState("writing");
-      setStatusMessage(WRITING_MESSAGES[0]);
 
       const { data: articlesResult } = await trackStep(
         "write-articles",
@@ -292,33 +495,124 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
 
       const writtenArticles = articlesResult.data.articles;
       setArticles(writtenArticles);
+      pushAgentMessage("Articles written. Now producing the full media package — newsletter, infographic, and two video formats.");
+
+      // ═══ Steps 3+4 PARALLEL: newsletter-summary + rank-stories ═══
+      setFlowState("summarizing");
+
+      const [summaryResult, rankResult] = await Promise.all([
+        // Step 3: newsletter-summary (LLM)
+        trackStep(
+          "newsletter-summary",
+          { articles: writtenArticles },
+          () =>
+            chatJSON<{ newsletter: NewsletterResult }>(
+              jsonPrompt(
+                newsletterSummaryPrompt(writtenArticles),
+                "Create a newsletter experience summary for today's European football edition.",
+              ),
+            ),
+        ),
+        // Step 4: rank-stories (LLM)
+        trackStep(
+          "rank-stories",
+          { articles: writtenArticles, stories: discoveredStories },
+          () =>
+            chatJSON<{ ranked: RankedStories }>(
+              jsonPrompt(
+                rankStoriesPrompt(writtenArticles, discoveredStories),
+                "Rank the 3 stories by newsworthiness for infographic and video production.",
+              ),
+            ),
+        ),
+      ]);
+
+      const nl = summaryResult.data.data.newsletter;
+      setNewsletter(nl);
+
+      const rankedStories = rankResult.data.data.ranked;
+      setRanked(rankedStories);
+      pushAgentMessage(`Lead story: "${rankedStories.main.headline}" — ${rankedStories.rankingRationale}`);
+
+      // ═══ Steps 5+6 PARALLEL: design-infographic + create-narrative ═══
+      setFlowState("producing");
+
+      const [infographicResult, narrativeResult] = await Promise.all([
+        // Step 5: design-infographic (LLM)
+        trackStep(
+          "design-infographic",
+          { ranked: rankedStories },
+          () =>
+            chatJSON<{ infographic: InfographicData }>(
+              jsonPrompt(
+                designInfographicPrompt(rankedStories),
+                "Design a sports infographic layout for the ranked stories.",
+              ),
+            ),
+        ),
+        // Step 6: create-narrative (LLM)
+        trackStep(
+          "create-narrative",
+          { ranked: rankedStories },
+          () =>
+            chatJSON<{ narrative: NarrativeData }>(
+              jsonPrompt(
+                createNarrativePrompt(rankedStories),
+                "Write a 60-second broadcast narration script for the ranked stories.",
+              ),
+            ),
+        ),
+      ]);
+
+      const infographicData = infographicResult.data.data.infographic;
+      setInfographic(infographicData);
+
+      const narrativeData = narrativeResult.data.data.narrative;
+      setNarrative(narrativeData);
+      pushAgentMessage(`Infographic designed. Narrative scripted at ${narrativeData.totalDurationSec}s. Building storyboard and AI video prompts.`);
+
+      // ═══ Steps 7+8 PARALLEL: generate-storyboard + generate-video-prompts ═══
+      setFlowState("assembling");
+
+      const [storyboardResult, videoPromptsResult] = await Promise.all([
+        // Step 7: generate-storyboard (LLM)
+        trackStep(
+          "generate-storyboard",
+          { narrative: narrativeData, ranked: rankedStories },
+          () =>
+            chatJSON<{ storyboard: StoryboardData }>(
+              jsonPrompt(
+                generateStoryboardPrompt(narrativeData, rankedStories),
+                "Create a visual storyboard for the video slideshow.",
+              ),
+            ),
+        ),
+        // Step 8: generate-video-prompts (LLM)
+        trackStep(
+          "generate-video-prompts",
+          { narrative: narrativeData, ranked: rankedStories },
+          () =>
+            chatJSON<{ videoPrompts: VideoPromptsData }>(
+              jsonPrompt(
+                generateVideoPromptsPrompt(narrativeData, rankedStories),
+                "Generate Veo-optimized video prompts for AI video generation.",
+              ),
+            ),
+        ),
+      ]);
+
+      const storyboardData = storyboardResult.data.data.storyboard;
+      setStoryboard(storyboardData);
+
+      const videoPromptsData = videoPromptsResult.data.data.videoPrompts;
+      setVideoPrompts(videoPromptsData);
 
       pushAgentMessage(
-        `All 3 articles are written with image descriptions. Let me wrap up today's edition.`,
+        `Full media package complete: Newsletter, Infographic, ${storyboardData.scenes.length}-scene Slideshow Video, and ${videoPromptsData.scenes.length}-scene AI Video plan. Check all four tabs.`,
       );
-
-      // Step 3: newsletter-summary (LLM)
-      setFlowState("summarizing");
-      setStatusMessage(SUMMARIZING_MESSAGES[0]);
-
-      const { data: summaryResult } = await trackStep(
-        "newsletter-summary",
-        { articles: writtenArticles },
-        () =>
-          chatJSON<{ newsletter: NewsletterResult }>(
-            jsonPrompt(
-              newsletterSummaryPrompt(writtenArticles),
-              "Create a newsletter experience summary for today's European football edition.",
-            ),
-          ),
-      );
-
-      const nl = summaryResult.data.newsletter;
-      setNewsletter(nl);
-      pushAgentMessage(`${nl.editionTitle} — ${nl.takeaway}`);
 
       // Send summary to FlowBus for activity logging
-      const exitSummary = `Read "${nl.editionTitle}" covering ${nl.leaguesCovered.join(", ")}. Top story: ${nl.topStory}. Mood: ${nl.mood}. ${nl.takeaway}`;
+      const exitSummary = `Read "${nl.editionTitle}" covering ${nl.leaguesCovered.join(", ")}. Top story: ${nl.topStory}. Mood: ${nl.mood}. ${nl.takeaway}. Also generated infographic, slideshow video, and AI video plan.`;
       busSend("main", "summary", { summary: exitSummary });
 
       setFlowState("done");
@@ -373,26 +667,19 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
 </head>
 <body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
   <div style="max-width:640px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;margin-top:24px;margin-bottom:24px;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-    <!-- Header -->
     <div style="background:#16a34a;color:#fff;padding:32px 24px;text-align:center;">
       <h1 style="margin:0 0 4px;font-size:26px;">${newsletter.editionTitle}</h1>
       <p style="margin:0;font-size:14px;opacity:0.85;">${today}</p>
       <p style="margin:8px 0 0;font-size:13px;opacity:0.7;">${newsletter.leaguesCovered.join(" &middot; ")}</p>
     </div>
-
-    <!-- Articles -->
     <div style="padding:24px;">
       ${articleBlocks}
-
-      <!-- Summary -->
       <div style="background:#f0fdf4;border-radius:8px;padding:16px;margin-top:8px;">
         <p style="margin:0 0 4px;font-size:14px;font-weight:600;">Top Story</p>
         <p style="margin:0 0 8px;font-size:14px;color:#333;">${newsletter.topStory}</p>
         <p style="margin:0;font-size:13px;color:#666;">${newsletter.takeaway}</p>
       </div>
     </div>
-
-    <!-- Footer -->
     <div style="padding:16px 24px;text-align:center;border-top:1px solid #e5e5e5;">
       <p style="margin:0;font-size:12px;color:#999;">European Football Newsletter &middot; Powered by Bilko's Mental Gym</p>
     </div>
@@ -419,13 +706,48 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     setStories(null);
     setArticles(null);
     setNewsletter(null);
+    setRanked(null);
+    setInfographic(null);
+    setNarrative(null);
+    setStoryboard(null);
+    setVideoPrompts(null);
     setError(null);
+    setActiveTab("newsletter");
     setTimeout(() => {
       hasStarted.current = true;
       didGreet.current = true;
       runFlow();
     }, 0);
   }, [runFlow]);
+
+  // ── Loading screen helper ───────────────────────────────────────────
+
+  const loadingIcons: Record<string, typeof Newspaper> = {
+    discovering: Newspaper,
+    writing: PenLine,
+    summarizing: Sparkles,
+    ranking: Trophy,
+    producing: BarChart3,
+    assembling: Film,
+  };
+
+  const loadingTitles: Record<string, string> = {
+    discovering: "Discovering Today's Stories",
+    writing: "Writing the Articles",
+    summarizing: "Summarizing & Ranking",
+    ranking: "Ranking by Newsworthiness",
+    producing: "Producing Infographic & Narrative",
+    assembling: "Assembling Video Assets",
+  };
+
+  const progressWidths: Record<string, string> = {
+    discovering: "15%",
+    writing: "30%",
+    summarizing: "45%",
+    ranking: "55%",
+    producing: "70%",
+    assembling: "85%",
+  };
 
   // ── Render ─────────────────────────────────────────────────────────
 
@@ -436,127 +758,154 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
         activity={trackerActivity}
       />
 
-      {/* ── LOADING: Discovering stories ────────────────────── */}
-      {flowState === "discovering" && (
+      {/* ── LOADING states ────────────────────────────────────── */}
+      {flowState !== "done" && flowState !== "error" && (
         <div className="flex flex-col items-center justify-center py-16 px-4">
           <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-6">
-            <Newspaper className="h-8 w-8 text-green-500 animate-pulse" />
+            {(() => {
+              const Icon = loadingIcons[flowState] ?? Newspaper;
+              return <Icon className="h-8 w-8 text-green-500 animate-pulse" />;
+            })()}
           </div>
           <h2 className="text-xl font-semibold text-center mb-2">
-            Discovering Today's Stories
+            {loadingTitles[flowState] ?? "Processing..."}
           </h2>
+          {stories && flowState === "writing" && (
+            <p className="text-sm text-muted-foreground text-center max-w-md mb-2">
+              {stories.map((s) => s.headline).join(" · ")}
+            </p>
+          )}
           <p className="text-muted-foreground text-center max-w-md mb-6">
             {statusMessage}
           </p>
           <div className="w-48 bg-muted rounded-full h-1.5 overflow-hidden">
-            <div className="bg-green-500 h-full rounded-full animate-pulse" style={{ width: "40%" }} />
+            <div
+              className="bg-green-500 h-full rounded-full transition-all duration-500"
+              style={{ width: progressWidths[flowState] ?? "50%" }}
+            />
           </div>
         </div>
       )}
 
-      {/* ── LOADING: Writing articles ──────────────────────── */}
-      {flowState === "writing" && stories && (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-6">
-            <PenLine className="h-8 w-8 text-green-500 animate-pulse" />
-          </div>
-          <h2 className="text-xl font-semibold text-center mb-2">
-            Writing the Articles
-          </h2>
-          <p className="text-sm text-muted-foreground text-center max-w-md mb-2">
-            {stories.map((s) => s.headline).join(" · ")}
-          </p>
-          <p className="text-muted-foreground text-center max-w-md mb-6">
-            {statusMessage}
-          </p>
-          <div className="w-48 bg-muted rounded-full h-1.5 overflow-hidden">
-            <div className="bg-green-500 h-full rounded-full animate-pulse" style={{ width: "60%" }} />
-          </div>
-        </div>
-      )}
-
-      {/* ── LOADING: Summarizing ─────────────────────────── */}
-      {flowState === "summarizing" && (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-6">
-            <Sparkles className="h-8 w-8 text-green-500 animate-pulse" />
-          </div>
-          <h2 className="text-xl font-semibold text-center mb-2">
-            Wrapping Up the Edition
-          </h2>
-          <p className="text-muted-foreground text-center max-w-md mb-6">
-            {statusMessage}
-          </p>
-          <div className="w-48 bg-muted rounded-full h-1.5 overflow-hidden">
-            <div className="bg-green-500 h-full rounded-full animate-pulse" style={{ width: "85%" }} />
-          </div>
-        </div>
-      )}
-
-      {/* ── DONE: Newsletter card ──────────────────────────── */}
+      {/* ── DONE: Tabbed output display ──────────────────────── */}
       {flowState === "done" && newsletter && articles && (
-        <div className="space-y-6">
-          {/* Edition header */}
-          <div className="rounded-xl border-2 border-border p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
-                <Newspaper className="h-6 w-6 text-green-500" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold">{newsletter.editionTitle}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {newsletter.leaguesCovered.join(" · ")}
-                </p>
-              </div>
-            </div>
+        <div className="space-y-4">
+          {/* Tab bar */}
+          <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              const isReady =
+                (tab.id === "newsletter" && !!newsletter) ||
+                (tab.id === "infographic" && !!infographic) ||
+                (tab.id === "slideshow" && !!storyboard && !!narrative) ||
+                (tab.id === "ai-video" && !!videoPrompts);
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  disabled={!isReady}
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                    isActive
+                      ? "bg-background text-foreground shadow-sm"
+                      : isReady
+                        ? "text-muted-foreground hover:text-foreground"
+                        : "text-muted-foreground/40 cursor-not-allowed"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
 
-            {/* Articles */}
-            <div className="space-y-4">
-              {articles.map((article, i) => (
-                <div key={i} className="space-y-2 pt-4 border-t border-border first:border-0 first:pt-0">
-                  <div className="flex items-start gap-3">
-                    <span className="text-xs font-bold text-green-500 bg-green-500/10 rounded px-1.5 py-0.5 mt-0.5 shrink-0">
-                      {article.league}
-                    </span>
-                    <h3 className="text-sm font-semibold leading-tight">{article.headline}</h3>
+          {/* Tab content */}
+          <div className="min-h-[300px]">
+            {/* Newsletter Tab */}
+            {activeTab === "newsletter" && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div className="rounded-xl border-2 border-border p-6 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                      <Newspaper className="h-6 w-6 text-green-500" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold">{newsletter.editionTitle}</h2>
+                      <p className="text-sm text-muted-foreground">
+                        {newsletter.leaguesCovered.join(" · ")}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-foreground/90 leading-relaxed">
-                    {article.article}
-                  </p>
-                  <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-2.5">
-                    <Image className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+
+                  <div className="space-y-4">
+                    {articles.map((article, i) => (
+                      <div key={i} className="space-y-2 pt-4 border-t border-border first:border-0 first:pt-0">
+                        <div className="flex items-start gap-3">
+                          <span className="text-xs font-bold text-green-500 bg-green-500/10 rounded px-1.5 py-0.5 mt-0.5 shrink-0">
+                            {article.league}
+                          </span>
+                          <h3 className="text-sm font-semibold leading-tight">{article.headline}</h3>
+                        </div>
+                        <p className="text-sm text-foreground/90 leading-relaxed">
+                          {article.article}
+                        </p>
+                        <div className="flex items-start gap-2 rounded-lg bg-muted/50 p-2.5">
+                          <Image className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                          <p className="text-xs text-muted-foreground italic">
+                            {article.imageDescription}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-3 border-t border-border space-y-1">
+                    <p className="text-sm font-medium">
+                      Top Story: <span className="font-normal">{newsletter.topStory}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Mood: <span className="font-medium capitalize">{newsletter.mood}</span>
+                    </p>
                     <p className="text-xs text-muted-foreground italic">
-                      {article.imageDescription}
+                      {newsletter.takeaway}
                     </p>
                   </div>
                 </div>
-              ))}
-            </div>
 
-            {/* Summary footer */}
-            <div className="pt-3 border-t border-border space-y-1">
-              <p className="text-sm font-medium">
-                Top Story: <span className="font-normal">{newsletter.topStory}</span>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Mood: <span className="font-medium capitalize">{newsletter.mood}</span>
-              </p>
-              <p className="text-xs text-muted-foreground italic">
-                {newsletter.takeaway}
-              </p>
-            </div>
+                <div className="flex justify-center">
+                  <Button variant="outline" size="sm" onClick={downloadNewsletter}>
+                    <Download className="h-3.5 w-3.5 mr-1.5" />
+                    Download Newsletter
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Infographic Tab */}
+            {activeTab === "infographic" && infographic && (
+              <div className="animate-in fade-in duration-300">
+                <InfographicView data={infographic} />
+              </div>
+            )}
+
+            {/* Slideshow Video Tab */}
+            {activeTab === "slideshow" && storyboard && narrative && (
+              <div className="animate-in fade-in duration-300">
+                <SlideshowPlayer storyboard={storyboard} narrative={narrative} />
+              </div>
+            )}
+
+            {/* AI Video Tab */}
+            {activeTab === "ai-video" && videoPrompts && (
+              <div className="animate-in fade-in duration-300">
+                <VideoPlanView data={videoPrompts} />
+              </div>
+            )}
           </div>
 
           {/* Actions */}
-          <div className="flex justify-center gap-3 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={downloadNewsletter}
-            >
-              <Download className="h-3.5 w-3.5 mr-1.5" />
-              Download
-            </Button>
+          <div className="flex justify-center gap-3 flex-wrap pt-2">
             <Button
               variant="ghost"
               size="sm"
@@ -571,7 +920,7 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const exitSummary = `Read "${newsletter.editionTitle}" covering ${newsletter.leaguesCovered.join(", ")}. Top story: ${newsletter.topStory}. Mood: ${newsletter.mood}. ${newsletter.takeaway}`;
+                  const exitSummary = `Read "${newsletter.editionTitle}" covering ${newsletter.leaguesCovered.join(", ")}. Top story: ${newsletter.topStory}. Mood: ${newsletter.mood}. ${newsletter.takeaway}. Full media package: infographic, slideshow video, AI video plan.`;
                   onComplete(exitSummary);
                 }}
               >
