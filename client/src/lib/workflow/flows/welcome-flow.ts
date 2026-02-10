@@ -54,11 +54,11 @@ export const LEARNING_MODES = [
     voiceTriggers: ["work with me", "guide", "help me", "walk me through", "assist", "task"],
   },
   {
-    id: "fake-game",
-    label: "Brain Teaser Game",
-    description: "A quick brain-teaser — play a neuroscientist-recommended cognitive challenge against an AI opponent",
-    icon: "Gamepad2",
-    voiceTriggers: ["game", "brain teaser", "play", "challenge", "puzzle"],
+    id: "test-newsletter",
+    label: "Football Newsletter",
+    description: "A daily European football newspaper — 3 trending stories, articles, and cinematic image descriptions",
+    icon: "Newspaper",
+    voiceTriggers: ["newsletter", "football", "news", "newspaper", "daily"],
   },
 ] as const;
 
