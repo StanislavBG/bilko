@@ -2,7 +2,7 @@
  * PromptPlayground - Interactive LLM chat component
  *
  * A reusable component for running prompts against various LLM models.
- * Used in Academy quests, model comparisons, and other AI exercises.
+ * Used in model comparisons and other AI exercises.
  */
 
 import { useState, useEffect } from "react";

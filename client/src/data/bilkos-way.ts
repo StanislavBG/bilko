@@ -1,3 +1,13 @@
+export interface Video {
+  id: string;
+  title: string;
+  description: string;
+  youtubeId: string;
+  youtubeUrl: string;
+  creator: string;
+  tags?: string[];
+}
+
 export interface WriteUp {
   id: string;
   title: string;
@@ -8,6 +18,36 @@ export interface WriteUp {
   keyTakeaways: string[];
 }
 
+export const thinkingVideos: Video[] = [
+  {
+    id: "video-3lPnN8omdPA",
+    title: "The AI Revolution",
+    description: "A deep exploration of how AI is transforming our world and what it means for humanity",
+    youtubeId: "3lPnN8omdPA",
+    youtubeUrl: "https://www.youtube.com/watch?v=3lPnN8omdPA",
+    creator: "Unknown",
+    tags: ["AI", "Future", "Society"],
+  },
+  {
+    id: "video-ivVPJhYM8Ng",
+    title: "Understanding Intelligence",
+    description: "What does it really mean for machines to be intelligent?",
+    youtubeId: "ivVPJhYM8Ng",
+    youtubeUrl: "https://www.youtube.com/watch?v=ivVPJhYM8Ng",
+    creator: "Unknown",
+    tags: ["Intelligence", "Philosophy", "AI"],
+  },
+  {
+    id: "video-wv779vmyPVY",
+    title: "The Future of AI",
+    description: "Exploring the possibilities and challenges ahead",
+    youtubeId: "wv779vmyPVY",
+    youtubeUrl: "https://www.youtube.com/watch?v=wv779vmyPVY",
+    creator: "Unknown",
+    tags: ["Future", "Trends", "AI"],
+  },
+];
+
 export const writeUps: WriteUp[] = [
   {
     id: "the-development-environment",
@@ -15,7 +55,7 @@ export const writeUps: WriteUp[] = [
     subtitle: "Replit, Git, and Claude Code — the three tools that built this project",
     category: "environment",
     order: 0,
-    content: `Imagine you're building a treehouse. You need three things: a place to build it, a way to remember what you did, and a helper who's really good at construction. That's exactly what Replit, Git, and Claude are for Bilko's AI School.
+    content: `Imagine you're building a treehouse. You need three things: a place to build it, a way to remember what you did, and a helper who's really good at construction. That's exactly what Replit, Git, and Claude are for Bilko's Mental Gym.
 
 ## Replit — Your Workshop
 
@@ -121,7 +161,7 @@ The background layer (n8n) hosts PER-001 agents: scheduled workflows that run au
 
 The simplest interaction with AI. You type a question or instruction, you get a response. Like texting a knowledgeable friend. Each conversation starts fresh — the AI doesn't remember previous conversations.
 
-Technically, a prompt is a single input → output exchange with zero memory. This is \`chatJSON<T>()\` in its simplest form — one call to Gemini, one structured response. No state persists between calls. No tools are invoked. The LLM is a pure function: \`f(prompt) → response\`. In Bilko's project, the Prompt Playground (interactive quests in the Academy) operates at this level.
+Technically, a prompt is a single input → output exchange with zero memory. This is \`chatJSON<T>()\` in its simplest form — one call to Gemini, one structured response. No state persists between calls. No tools are invoked. The LLM is a pure function: \`f(prompt) → response\`. In Bilko's project, the Prompt Playground operates at this level.
 
 **Everyday examples:** ChatGPT conversations, asking Siri a question, a calculator.
 
@@ -147,7 +187,7 @@ In Bilko's architecture, this is the n8n integration layer: webhooks trigger wor
 
 This is the frontier. AI that doesn't just respond to events, but actively pursues goals. It notices you have a busy week coming up, so it pre-orders groceries. It sees a pattern in your spending and suggests a budget adjustment. It finds an article about a topic you've been curious about and shares it before you ask.
 
-In Bilko's vision, proactive AI would: monitor Academy usage patterns and generate new content for popular topics before users ask, detect knowledge gaps from quiz results and create targeted lessons, optimize content pipelines based on engagement metrics, and self-correct when content quality drops.
+In Bilko's vision, proactive AI would: monitor usage patterns and generate new content for popular topics before users ask, detect knowledge gaps and create targeted lessons, optimize content pipelines based on engagement metrics, and self-correct when content quality drops.
 
 The architecture supports this — n8n's scheduled workflows plus the orchestrator pattern enable autonomous operation. But the governance structure (ARCH-000) requires human oversight at decision points. True proactive AI requires trust boundaries.
 
