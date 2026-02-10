@@ -406,8 +406,8 @@ function BilkoTurnView({
   compact?: boolean;
 }) {
   const textClass = compact
-    ? "text-base md:text-lg font-bold tracking-tight leading-tight text-foreground"
-    : "text-xl md:text-2xl font-bold tracking-tight leading-tight text-foreground";
+    ? "text-sm md:text-base font-bold tracking-tight leading-snug text-foreground"
+    : "text-base md:text-lg font-bold tracking-tight leading-snug text-foreground";
 
   if (isSettled) {
     return (
@@ -452,17 +452,17 @@ function AgentTurnView({
   const colors = getAgentColors(turn.agentName);
 
   const textClass = compact
-    ? "text-sm md:text-base font-semibold tracking-tight leading-tight text-foreground"
-    : "text-lg md:text-xl font-semibold tracking-tight leading-tight text-foreground";
+    ? "text-xs md:text-sm font-semibold tracking-tight leading-snug text-foreground"
+    : "text-sm md:text-base font-semibold tracking-tight leading-snug text-foreground";
 
   // Outer frame: left-border accent + subtle surface tint
   // When grouped (consecutive same agent), tighten the spacing by overriding
   // the parent's space-y gap with a negative top margin.
   const frameClass = `
-    border-l-[3px] ${colors.border}
+    border-l-2 ${colors.border}
     ${colors.surface} rounded-r-lg
-    ${compact ? "pl-3 pr-3 py-2 ml-1" : "pl-4 pr-4 py-3 ml-2"}
-    ${isGrouped ? (compact ? "-mt-3" : "-mt-5") : ""}
+    ${compact ? "pl-2 pr-2 py-1.5 ml-1" : "pl-3 pr-3 py-2 ml-1"}
+    ${isGrouped ? (compact ? "-mt-2" : "-mt-3") : ""}
     animate-in fade-in slide-in-from-left-2 duration-300
   `;
 
