@@ -191,7 +191,6 @@ import { LinkedInStrategistFlow } from "@/components/linkedin-strategist-flow";
 <VoiceProvider>          {/* Only Landing uses this */}
 <FlowBusProvider>        {/* Only Landing uses this */}
 <NavigationProvider>     {/* Only Academy uses this */}
-<GlobalControlsProvider> {/* Only FlowDetail uses this */}
   <Router />
 ```
 
@@ -234,16 +233,16 @@ When building or modifying an application, verify:
 
 The current codebase has known violations of these invariants. This section documents them for future remediation — they are not blockers for enforcing the rule on new code.
 
-| Violation | Location | Invariant | Remediation |
-|-----------|----------|-----------|-------------|
-| VoiceContext at root | `App.tsx` | I3 | Move inside Landing's tree |
-| ConversationDesignProvider at root | `App.tsx` | I3 | Move inside Landing's tree |
-| FlowBusProvider at root | `App.tsx` | I3 | Move inside Landing's tree |
-| FlowChatProvider at root | `App.tsx` | I3 | Move inside Landing's tree |
-| NavigationProvider at root | `App.tsx` | I3 | Move inside Academy's tree |
-| GlobalControlsProvider at root | `App.tsx` | I3 | Move inside FlowDetail's tree |
-| Landing hardcodes 7 subflow imports | `landing.tsx` | AP1 | Registry-driven rendering |
-| Landing's FLOW_TO_MODE mapping | `landing.tsx` | AP1 | Move to flow registry metadata |
+| Violation | Location | Invariant | Status |
+|-----------|----------|-----------|--------|
+| ~~VoiceContext at root~~ | `App.tsx` | I3 | **RESOLVED** — moved inside MainFlow |
+| ~~ConversationDesignProvider at root~~ | `App.tsx` | I3 | **RESOLVED** — moved inside MainFlow |
+| ~~FlowBusProvider at root~~ | `App.tsx` | I3 | **RESOLVED** — already inside MainFlow |
+| ~~FlowChatProvider at root~~ | `App.tsx` | I3 | **RESOLVED** — already inside MainFlow |
+| ~~NavigationProvider at root~~ | `App.tsx` | I3 | **RESOLVED** — moved inside AcademyApp |
+| ~~No error boundaries~~ | `App.tsx` | I4 | **RESOLVED** — AppErrorBoundary per route |
+| Landing hardcodes 7 subflow imports | `landing.tsx` | AP1 | Pending — registry-driven rendering |
+| Landing's FLOW_TO_MODE mapping | `landing.tsx` | AP1 | Pending — move to flow registry metadata |
 
 **Rule for existing debt**: New code MUST comply. Existing violations are documented and will be remediated incrementally. Do not use existing violations as justification for new violations.
 
