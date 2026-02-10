@@ -6,7 +6,7 @@
  * the website talking to you.
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useConversationDesign } from "@/contexts/conversation-design-context";
 import { ENTRANCE_DELAY_MS, TYPEWRITER_SPEED_MS } from "@/lib/bilko-persona/pacing";
 
@@ -35,7 +35,7 @@ export function BilkoMessage({
   const [complete, setComplete] = useState(false);
   const { bilkoStartedSpeaking, bilkoFinishedSpeaking } = useConversationDesign();
   const completeCalled = useRef(false);
-  const words = text.split(/\s+/);
+  const words = useMemo(() => text.split(/\s+/), [text]);
 
   // Start after delay
   useEffect(() => {
