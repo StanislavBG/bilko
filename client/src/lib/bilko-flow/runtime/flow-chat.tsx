@@ -1,5 +1,7 @@
 /**
- * Flow Chat — Owned message channel for flow-driven conversations.
+ * Bilko Flow API — Flow Chat
+ *
+ * Owned message channel for flow-driven conversations.
  *
  * The chat has an OWNER. Only the current owner (or user/system messages)
  * can push messages. This prevents desync when subflows are running —

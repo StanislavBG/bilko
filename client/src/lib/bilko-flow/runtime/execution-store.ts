@@ -1,6 +1,7 @@
 /**
- * Execution Store — Persistent store for flow execution traces.
+ * Bilko Flow API — Execution Store
  *
+ * Persistent store for flow execution traces.
  * When a flow runs (e.g., VideoDiscoveryFlow on the landing page),
  * its execution trace is written here. The Flow Explorer admin page
  * reads from here to display live and historical execution data.
@@ -9,7 +10,7 @@
  * Keeps the last MAX_HISTORY_PER_FLOW executions per flow.
  */
 
-import type { FlowExecution } from "@/lib/flow-inspector/types";
+import type { FlowExecution } from "../types";
 
 type Listener = () => void;
 

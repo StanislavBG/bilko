@@ -33,16 +33,16 @@ import {
   Circle,
   Sparkles,
 } from "lucide-react";
-import { getFlowById } from "@/lib/flow-inspector/registry";
+import { getFlowById } from "@/lib/bilko-flow/definitions/registry";
 import { FlowCanvas, StepDetail, CanvasBuilder } from "@/components/flow-inspector";
-import { useExecutionStore } from "@/lib/flow-engine";
+import { useExecutionStore } from "@/lib/bilko-flow";
 import {
   getExecutionHistory,
   subscribe as storeSubscribe,
-} from "@/lib/flow-engine/execution-store";
+} from "@/lib/bilko-flow/runtime/execution-store";
 import { useGlobalControl } from "@/lib/global-controls";
-import type { FlowDefinition, FlowExecution, StepExecution } from "@/lib/flow-inspector/types";
-import type { MutationResult } from "@/lib/flow-engine/flow-mutations";
+import type { FlowDefinition, FlowExecution, StepExecution } from "@/lib/bilko-flow/types";
+import type { MutationResult } from "@/lib/bilko-flow/definitions/mutations";
 
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;

@@ -1,12 +1,12 @@
 /**
- * DAG Layout Engine
+ * Bilko Flow API — DAG Layout Engine
  *
  * Computes 2D positions for flow steps based on their dependency graph.
  * Steps are arranged in columns (depth levels) left-to-right, with
  * parallel branches stacked vertically within each column.
  */
 
-import type { FlowStep } from "./types";
+import type { FlowStep } from "../types";
 
 export interface NodeLayout {
   stepId: string;

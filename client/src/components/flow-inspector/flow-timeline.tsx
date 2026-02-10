@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
 import { StepNode } from "./step-node";
-import type { FlowDefinition, StepExecution, StepStatus } from "@/lib/flow-inspector/types";
+import type { FlowDefinition, StepExecution, StepStatus } from "@/lib/bilko-flow/types";
 
 interface FlowTimelineProps {
   flow: FlowDefinition;
