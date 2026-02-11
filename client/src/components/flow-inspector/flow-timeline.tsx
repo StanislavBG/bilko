@@ -1,13 +1,17 @@
 /**
- * FlowTimeline - Vertical timeline of all steps in a flow.
- * The left panel of the inspector: shows all steps with status indicators.
+ * FlowTimeline — Thin adapter bridging FlowDefinition + StepExecution data
+ * to the unified FlowProgress component.
+ *
+ * Renders in the flow inspector left panel. Uses FlowProgress mode="full"
+ * for rich step display with sliding window support.
  */
 
+import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles } from "lucide-react";
-import { StepNode } from "./step-node";
-import type { FlowDefinition, StepExecution, StepStatus } from "@/lib/bilko-flow/types";
+import { FlowProgress, type FlowProgressStep } from "@/components/ui/flow-progress";
+import type { FlowDefinition, StepExecution } from "@/lib/bilko-flow/types";
 
 interface FlowTimelineProps {
   flow: FlowDefinition;
@@ -17,13 +21,22 @@ interface FlowTimelineProps {
 }
 
 export function FlowTimeline({ flow, selectedStepId, onSelectStep, executions }: FlowTimelineProps) {
-  const getStatus = (stepId: string): StepStatus => {
-    return executions?.[stepId]?.status ?? "idle";
-  };
+  const steps = useMemo<FlowProgressStep[]>(
+    () =>
+      flow.steps.map((step) => {
+        const exec = executions?.[step.id];
+        let status: FlowProgressStep["status"] = "pending";
+        if (exec) {
+          if (exec.status === "running") status = "active";
+          else if (exec.status === "success") status = "complete";
+          else if (exec.status === "error") status = "error";
+        }
+        return { id: step.id, label: step.name, status };
+      }),
+    [flow.steps, executions],
+  );
 
-  const completedCount = flow.steps.filter(
-    (s) => executions?.[s.id]?.status === "success"
-  ).length;
+  const completedCount = steps.filter((s) => s.status === "complete").length;
 
   return (
     <Card className="h-full flex flex-col">
@@ -38,17 +51,11 @@ export function FlowTimeline({ flow, selectedStepId, onSelectStep, executions }:
         <p className="text-xs text-muted-foreground">{flow.version}</p>
       </CardHeader>
       <CardContent className="flex-1 overflow-auto">
-        {flow.steps.map((step, index) => (
-          <StepNode
-            key={step.id}
-            step={step}
-            status={getStatus(step.id)}
-            isSelected={selectedStepId === step.id}
-            onClick={() => onSelectStep(step.id)}
-            index={index}
-            isLast={index === flow.steps.length - 1}
-          />
-        ))}
+        <FlowProgress
+          mode="compact"
+          steps={steps}
+          onStepClick={onSelectStep}
+        />
       </CardContent>
     </Card>
   );
