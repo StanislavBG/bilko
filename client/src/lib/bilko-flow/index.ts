@@ -77,5 +77,5 @@ export { computeLayout, NODE_W, NODE_H, COL_GAP, ROW_GAP, PADDING } from "./insp
 export type { NodeLayout, EdgeLayout, DAGLayout } from "./inspector/layout";
 
 // ── Inspector: Step Visuals ─────────────────────────────────
-export { STEP_TYPE_CONFIG } from "./inspector/step-type-config";
+export { STEP_TYPE_CONFIG, LLM_SUBTYPE_CONFIG, getStepVisuals } from "./inspector/step-type-config";
 export type { StepTypeVisuals } from "./inspector/step-type-config";

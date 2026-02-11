@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import type { FlowDefinition, StepExecution, StepStatus, FlowStep } from "@/lib/bilko-flow/types";
 import { computeLayout, NODE_W, NODE_H, PADDING } from "@/lib/bilko-flow/inspector/layout";
-import { STEP_TYPE_CONFIG } from "@/lib/bilko-flow/inspector/step-type-config";
+import { getStepVisuals } from "@/lib/bilko-flow/inspector/step-type-config";
 
 const STATUS_ICON: Record<StepStatus, typeof Circle> = {
   idle: Circle, running: Loader2, success: CheckCircle2, error: XCircle, skipped: SkipForward,
@@ -505,7 +505,7 @@ interface CanvasNodeProps {
 }
 
 const CanvasNode = memo(function CanvasNode({ step, x, y, status, isSelected, isHighlighted, isMultiSelected, dimmed, onClick }: CanvasNodeProps) {
-  const config = STEP_TYPE_CONFIG[step.type];
+  const config = getStepVisuals(step);
   const TypeIcon = config.icon;
   const StatusIcon = STATUS_ICON[status];
 
