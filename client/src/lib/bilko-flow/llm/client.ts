@@ -30,6 +30,7 @@ export interface LLMOptions {
   temperature?: number;
   maxTokens?: number;
   signal?: AbortSignal;
+  responseFormat?: "json_object" | "text";
 }
 
 const DEFAULT_MODEL = "gemini-2.5-flash";
@@ -49,6 +50,7 @@ export async function chat(
       model: options?.model ?? DEFAULT_MODEL,
       temperature: options?.temperature,
       maxTokens: options?.maxTokens,
+      responseFormat: options?.responseFormat,
     }),
     signal: options?.signal,
   });
@@ -89,7 +91,10 @@ export async function chatJSON<T>(
   messages: ChatMessage[],
   options?: LLMOptions,
 ): Promise<LLMResult<T>> {
-  const result = await chat(messages, options);
+  const result = await chat(messages, {
+    ...options,
+    responseFormat: options?.responseFormat ?? "json_object",
+  });
 
   try {
     const parsed = JSON.parse(result.raw) as T;

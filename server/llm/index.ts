@@ -47,6 +47,7 @@ export interface ChatRequest {
   messages: ChatMessage[];
   temperature?: number;
   maxTokens?: number;
+  responseFormat?: "json_object" | "text";
 }
 
 export interface ChatResponse {
@@ -93,17 +94,80 @@ export function getModelById(modelId: string): LLMModel | undefined {
   return AVAILABLE_MODELS.find(m => m.id === modelId);
 }
 
+/**
+ * Attempt lightweight repairs on malformed JSON from LLM output.
+ * Handles the most common LLM mistakes:
+ * - Trailing commas before } or ]
+ * - Control characters (literal newlines/tabs) inside string values
+ */
+function repairJSON(text: string): string {
+  // 1. Replace control characters inside string values.
+  //    Walk the string tracking whether we're inside a JSON string literal.
+  let result = "";
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const prev = i > 0 ? text[i - 1] : "";
+
+    if (ch === '"' && prev !== "\\") {
+      inString = !inString;
+      result += ch;
+    } else if (inString) {
+      if (ch === "\n") result += "\\n";
+      else if (ch === "\r") result += "\\r";
+      else if (ch === "\t") result += "\\t";
+      else result += ch;
+    } else {
+      result += ch;
+    }
+  }
+
+  // 2. Remove trailing commas before closing brackets/braces
+  result = result.replace(/,\s*([\]}])/g, "$1");
+
+  return result;
+}
+
 function cleanLLMResponse(text: string): string {
+  // Strip markdown code fences
   let cleaned = text.replace(/```(?:json|[\w]*)?\n?/gi, "").trim();
+
+  // Try extracting JSON object {...}
   const firstBrace = cleaned.indexOf("{");
   const lastBrace = cleaned.lastIndexOf("}");
   if (firstBrace !== -1 && lastBrace > firstBrace) {
     const candidate = cleaned.substring(firstBrace, lastBrace + 1);
+    // Try raw first
     try {
       JSON.parse(candidate);
       return candidate;
-    } catch {}
+    } catch {
+      // Try after repair
+      const repaired = repairJSON(candidate);
+      try {
+        JSON.parse(repaired);
+        return repaired;
+      } catch {}
+    }
   }
+
+  // Try extracting JSON array [...]
+  const firstBracket = cleaned.indexOf("[");
+  const lastBracket = cleaned.lastIndexOf("]");
+  if (firstBracket !== -1 && lastBracket > firstBracket) {
+    const candidate = cleaned.substring(firstBracket, lastBracket + 1);
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      const repaired = repairJSON(candidate);
+      try {
+        JSON.parse(repaired);
+        return repaired;
+      } catch {}
+    }
+  }
+
   return cleaned;
 }
 
@@ -115,6 +179,9 @@ export async function chat(request: ChatRequest): Promise<ChatResponse> {
     messages: request.messages,
     temperature: request.temperature ?? 0.7,
     max_tokens: request.maxTokens ?? 8192,
+    ...(request.responseFormat === "json_object" && {
+      response_format: { type: "json_object" as const },
+    }),
   });
 
   const raw = response.choices[0]?.message?.content || "";
