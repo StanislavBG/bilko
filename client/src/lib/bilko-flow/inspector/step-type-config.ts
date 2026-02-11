@@ -14,8 +14,10 @@ import {
   Monitor,
   MessageSquare,
   PlugZap,
+  ImageIcon,
+  Film,
 } from "lucide-react";
-import type { StepType } from "../types";
+import type { StepType, FlowStep } from "../types";
 
 export interface StepTypeVisuals {
   /** Lucide icon component */
@@ -118,3 +120,53 @@ export const STEP_TYPE_CONFIG: Record<StepType, StepTypeVisuals> = {
     categoryLabel: "External",
   },
 };
+
+/**
+ * LLM subtype visual overrides.
+ *
+ * When an LLM step has a subtype (e.g. "image", "video"), use these
+ * visuals instead of the default purple LLM config. This makes it
+ * easy to distinguish text-generation, image-generation (Nano Banana),
+ * and video-generation (Veo) nodes at a glance.
+ *
+ * Color scheme:
+ * - text:  purple (default LLM — Brain icon)
+ * - image: pink   (Nano Banana image gen — ImageIcon)
+ * - video: rose    (Veo video gen — Film icon)
+ */
+export const LLM_SUBTYPE_CONFIG: Record<string, StepTypeVisuals> = {
+  image: {
+    icon: ImageIcon,
+    label: "Image Gen",
+    shortLabel: "Image",
+    color: "text-pink-500",
+    bg: "bg-pink-500/10",
+    accent: "border-pink-500/30",
+    border: "border-pink-500/40",
+    categoryLabel: "AI Image",
+  },
+  video: {
+    icon: Film,
+    label: "Video Gen",
+    shortLabel: "Video",
+    color: "text-rose-600",
+    bg: "bg-rose-600/10",
+    accent: "border-rose-600/30",
+    border: "border-rose-600/40",
+    categoryLabel: "AI Video",
+  },
+};
+
+/**
+ * Resolve the visual config for a step, accounting for LLM subtypes.
+ *
+ * If the step is type "llm" and has a subtype that matches an entry
+ * in LLM_SUBTYPE_CONFIG, the subtype config is returned instead of
+ * the generic purple LLM visuals.
+ */
+export function getStepVisuals(step: FlowStep): StepTypeVisuals {
+  if (step.type === "llm" && step.subtype && LLM_SUBTYPE_CONFIG[step.subtype]) {
+    return LLM_SUBTYPE_CONFIG[step.subtype];
+  }
+  return STEP_TYPE_CONFIG[step.type];
+}
