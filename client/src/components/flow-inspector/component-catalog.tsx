@@ -26,7 +26,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import type { ComponentDefinition } from "@shared/component-definitions";
-import { STEP_TYPE_CONFIG } from "@/lib/bilko-flow/inspector/step-type-config";
+import { STEP_TYPE_CONFIG, resolveIcon } from "@/lib/bilko-flow/inspector/step-type-config";
 import type { StepType } from "@/lib/bilko-flow/types";
 
 // ── Main Component ──────────────────────────────────────────
@@ -76,7 +76,7 @@ export function ComponentCatalog() {
         <Separator className="my-2" />
         {components.map((comp) => {
           const style = STEP_TYPE_CONFIG[comp.type as StepType];
-          const Icon = style?.icon ?? Blocks;
+          const Icon = resolveIcon(style?.icon ?? "Blocks");
           const isActive = selectedType === comp.type;
           return (
             <button
@@ -129,7 +129,7 @@ function ComponentHome({
       <div className="grid gap-3">
         {components.map((comp) => {
           const style = STEP_TYPE_CONFIG[comp.type as StepType];
-          const Icon = style?.icon ?? Blocks;
+          const Icon = resolveIcon(style?.icon ?? "Blocks");
           return (
             <Card
               key={comp.type}
@@ -183,7 +183,7 @@ function ComponentHome({
 
 function ComponentDetail({ component }: { component: ComponentDefinition }) {
   const style = STEP_TYPE_CONFIG[component.type as StepType];
-  const Icon = style?.icon ?? Blocks;
+  const Icon = resolveIcon(style?.icon ?? "Blocks");
 
   return (
     <div className="space-y-5">
