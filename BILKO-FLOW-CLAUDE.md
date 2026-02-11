@@ -918,3 +918,51 @@ Consumers of this library include:
 - **External sites** — can import `bilko-flow/react` for progress visualization
 - **AI agents** — consume the core library's planner protocol and typed errors
 - **Production orchestrators** (Temporal, Inngest) — integrate with the DSL and storage interfaces
+
+---
+
+## Troubleshooting: AI Generation Step Failures (404 / Model Not Found)
+
+### Symptom
+
+`ai.generate-video` or `ai.generate-image` steps fail with a **404** error and an empty response body:
+
+```
+Video generation failed (404):
+```
+
+The `NonRetryableStepError` is thrown in `server/bilko-flow/llm-step-handler.ts` when the upstream Gemini API returns 404.
+
+### Root Cause: Deprecated Model Names
+
+Google periodically deprecates preview model IDs and replaces them with GA (stable) versions. When a model is shut down, the API endpoint returns **404 with an empty body** because the model route no longer exists.
+
+**Known deprecation (November 2025):**
+
+| Deprecated Model | Replacement (GA) |
+|---|---|
+| `veo-3.0-generate-preview` | `veo-3.0-generate-001` |
+| `veo-3.0-fast-generate-preview` | `veo-3.0-fast-generate-001` |
+
+### Files That Reference Model IDs
+
+Model names appear in **6 locations** across the codebase. All must be updated together:
+
+| File | What it controls |
+|---|---|
+| `server/llm/index.ts` | `AVAILABLE_MODELS` registry (model ID, name, description) |
+| `server/llm/video-generation.ts` | `DEFAULT_VIDEO_MODEL` constant + JSDoc |
+| `server/bilko-flow/llm-step-handler.ts` | Default fallback in `validate()` |
+| `server/bilko-flow/newsletter-workflow.ts` | Workflow step `inputs.model` |
+| `client/src/lib/bilko-flow/definitions/registry.ts` | Flow definition `model` field |
+
+### How to Fix
+
+1. **Identify the current GA model** — check [Google AI model docs](https://ai.google.dev/gemini-api/docs/models) or [Gemini API changelog](https://ai.google.dev/gemini-api/docs/changelog)
+2. **Search for the deprecated model string** — `grep -r "veo-3.0-generate-preview" server/ client/`
+3. **Replace all occurrences** with the GA model ID
+4. **Verify the request body format** — Google may change parameter names between preview and GA (e.g., `sampleCount` vs `numberOfVideos`, `durationSeconds` valid values)
+
+### Prevention
+
+When using preview models (`*-preview`), be aware they have a finite lifespan. Monitor the [Gemini API changelog](https://ai.google.dev/gemini-api/docs/changelog) for deprecation notices. Prefer `-001` (GA) model IDs when available.
