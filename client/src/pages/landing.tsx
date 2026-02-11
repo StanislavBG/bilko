@@ -49,6 +49,8 @@ import {
   ArrowLeft,
   Compass,
   Gamepad2,
+  Construction,
+  CheckCircle2,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
@@ -95,6 +97,14 @@ const SPECIAL_TILES: ModeOption[] = [
     icon: <Compass className="h-6 w-6" />,
   },
 ];
+
+/** Flow IDs that are still under construction */
+const UNDER_CONSTRUCTION_IDS = new Set([
+  "work-with-me",
+  "ai-consultation",
+  "recursive-interviewer",
+  "socratic-architect",
+]);
 
 /** Maps flow registry IDs to the short mode IDs used by RightPanelContent */
 const FLOW_TO_MODE: Record<string, LearningModeId> = {
@@ -641,59 +651,104 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
   );
   useScreenOptions(allScreenOptions);
 
+  const readyOptions = MODE_OPTIONS.filter((o) => !UNDER_CONSTRUCTION_IDS.has(o.id));
+  const constructionOptions = MODE_OPTIONS.filter((o) => UNDER_CONSTRUCTION_IDS.has(o.id));
+
   return (
-    <div className="flex-1 flex items-center justify-center p-8">
-      <div className="max-w-2xl w-full space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {/* Active flow tiles */}
-          {MODE_OPTIONS.map((option, i) => (
-            <button
-              key={option.id}
-              onClick={() => onSelect(option.id)}
-              className="group text-left rounded-xl border-2 border-border p-7 transition-all duration-300
-                hover:border-primary/50 hover:bg-muted/50 hover:shadow-lg hover:scale-[1.03]
-                animate-in fade-in slide-in-from-bottom-4 duration-500"
-              style={{ animationDelay: `${i * 60}ms` }}
-            >
-              <div className="flex flex-col gap-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
-                  bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
-                  {option.icon}
+    <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
+      <div className="max-w-2xl w-full space-y-8">
+        {/* ── Ready for Testing ─────────────────────────── */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>Ready for Testing</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {readyOptions.map((option, i) => (
+              <button
+                key={option.id}
+                onClick={() => onSelect(option.id)}
+                className="group text-left rounded-xl border-2 border-border p-7 transition-all duration-300
+                  hover:border-primary/50 hover:bg-muted/50 hover:shadow-lg hover:scale-[1.03]
+                  animate-in fade-in slide-in-from-bottom-4 duration-500"
+                style={{ animationDelay: `${i * 60}ms` }}
+              >
+                <div className="flex flex-col gap-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
+                    bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary">
+                    {option.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-base">{option.label}</h3>
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {option.description}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-base">{option.label}</h3>
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                    {option.description}
-                  </p>
+              </button>
+            ))}
+            {/* Special tiles (non-flow navigation) */}
+            {SPECIAL_TILES.map((tile, i) => (
+              <button
+                key={tile.id}
+                onClick={() => onSelect(tile.id)}
+                className="group text-left rounded-xl border-2 border-dashed border-primary/40 p-7 transition-all duration-300
+                  hover:border-primary hover:bg-primary/5 hover:shadow-lg hover:scale-[1.03]
+                  animate-in fade-in slide-in-from-bottom-4 duration-500"
+                style={{ animationDelay: `${(readyOptions.length + i) * 60}ms` }}
+              >
+                <div className="flex flex-col gap-4">
+                  <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
+                    bg-primary/10 text-primary group-hover:bg-primary/20">
+                    {tile.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-base">{tile.label}</h3>
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {tile.description}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
-          {/* Special tiles (non-flow navigation) */}
-          {SPECIAL_TILES.map((tile, i) => (
-            <button
-              key={tile.id}
-              onClick={() => onSelect(tile.id)}
-              className="group text-left rounded-xl border-2 border-dashed border-primary/40 p-7 transition-all duration-300
-                hover:border-primary hover:bg-primary/5 hover:shadow-lg hover:scale-[1.03]
-                animate-in fade-in slide-in-from-bottom-4 duration-500"
-              style={{ animationDelay: `${(MODE_OPTIONS.length + i) * 60}ms` }}
-            >
-              <div className="flex flex-col gap-4">
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
-                  bg-primary/10 text-primary group-hover:bg-primary/20">
-                  {tile.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-base">{tile.label}</h3>
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                    {tile.description}
-                  </p>
-                </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* ── Under Construction ────────────────────────── */}
+        {constructionOptions.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-400">
+              <Construction className="h-4 w-4" />
+              <span>Under Construction</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {constructionOptions.map((option, i) => (
+                <button
+                  key={option.id}
+                  onClick={() => onSelect(option.id)}
+                  className="group text-left rounded-xl border-2 border-dashed border-amber-400/40 p-7 transition-all duration-300
+                    hover:border-amber-400/70 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 hover:shadow-lg hover:scale-[1.03]
+                    animate-in fade-in slide-in-from-bottom-4 duration-500 opacity-80 hover:opacity-100"
+                  style={{ animationDelay: `${(readyOptions.length + SPECIAL_TILES.length + i) * 60}ms` }}
+                >
+                  <div className="flex flex-col gap-4">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
+                      bg-amber-100/50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400
+                      group-hover:bg-amber-200/60 dark:group-hover:bg-amber-900/50">
+                      {option.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base">{option.label}</h3>
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                        {option.description}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
