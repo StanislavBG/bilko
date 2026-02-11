@@ -43,7 +43,7 @@ import {
   Target,
   Handshake,
 } from "lucide-react";
-import { StepTracker, type TrackerStep } from "@/components/ui/step-tracker";
+import { FlowProgress, type FlowProgressStep } from "@/components/ui/flow-progress";
 import {
   chatJSON,
   jsonPrompt,
@@ -320,11 +320,11 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
   }, [agent, pushAgentMessage]);
 
   // Derive tracker steps from flow definition + execution state (single source of truth)
-  const trackerSteps = useMemo<TrackerStep[]>(() => {
+  const trackerSteps = useMemo<FlowProgressStep[]>(() => {
     if (!flowDef) return [];
     return flowDef.steps.map((step) => {
       const exec = execution.steps[step.id];
-      let status: TrackerStep["status"] = "pending";
+      let status: FlowProgressStep["status"] = "pending";
       if (exec) {
         if (exec.status === "running") status = "active";
         else if (exec.status === "success") status = "complete";
@@ -565,7 +565,7 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
   return (
     <div className="space-y-6">
       {/* Progress tracker — derived from flow definition + execution state */}
-      <StepTracker steps={trackerSteps} activity={trackerActivity} />
+      <FlowProgress mode="compact" steps={trackerSteps} activity={trackerActivity} />
 
       {/* Phase 1: Objective input */}
       {phase === "objective-input" && (
