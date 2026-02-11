@@ -71,7 +71,7 @@ export const AVAILABLE_MODELS: LLMModel[] = [
     outputPrice: 0,
   },
   {
-    id: "gemini-2.5-flash-preview-image-generation",
+    id: "gemini-2.5-flash-image",
     name: "Nano Banana (Image Generation)",
     provider: "google",
     description: "Gemini native image generation. Cinematic quality images from text prompts.",

@@ -617,7 +617,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates a cinematic wallpaper-style infographic image using Nano Banana (Gemini native image gen). Focuses on scores, transfer fees, and dramatic football visuals with stat callouts.",
         prompt: "Generate a cinematic infographic image for European football with scores and transfer fee emphasis.",
         userMessage: "Generate the infographic hero image with Nano Banana.",
-        model: "gemini-2.5-flash-preview-image-generation",
+        model: "gemini-2.5-flash-image",
         inputSchema: [
           { name: "infographic", type: "object", description: "Infographic data with imagePrompt" },
         ],
@@ -636,7 +636,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates cinematic AI images for each storyboard scene using Nano Banana. Each image focuses on one key event with dramatic football visuals.",
         prompt: "Generate cinematic scene images for each storyboard scene, one per key football event.",
         userMessage: "Generate AI images for the slideshow scenes.",
-        model: "gemini-2.5-flash-preview-image-generation",
+        model: "gemini-2.5-flash-image",
         inputSchema: [
           { name: "storyboard", type: "object", description: "Storyboard with scene image descriptions" },
         ],
