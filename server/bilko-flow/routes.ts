@@ -17,7 +17,7 @@
 
 import { Router, Request, Response } from "express";
 import { createAppContext } from "bilko-flow/dist/server";
-import { compileWorkflow } from "bilko-flow/dist/dsl/compiler";
+import { compileWorkflow, validateHandlers } from "bilko-flow/dist/dsl/compiler";
 import { validateWorkflow } from "bilko-flow/dist/dsl/validator";
 import type { Run } from "bilko-flow/dist/domain/run";
 import type { Workflow, CreateWorkflowInput } from "bilko-flow/dist/domain/workflow";
@@ -142,6 +142,48 @@ router.post("/demo/run", async (req: Request, res: Response) => {
     const workflowId = (req.query.workflowId as string) || "demo-newsletter";
 
     console.log(`[bilko-flow] Starting workflow execution: ${workflowId}...`);
+
+    // Pre-flight: compile and validate handler contracts before execution
+    const workflow = await bfContext.store.workflows.getById(
+      workflowId,
+      TENANT_SCOPE.accountId,
+      TENANT_SCOPE.projectId,
+      TENANT_SCOPE.environmentId,
+    );
+
+    if (!workflow) {
+      res.status(404).json({ error: `Workflow "${workflowId}" not found` });
+      return;
+    }
+
+    const compilation = compileWorkflow(workflow);
+    if (!compilation.success) {
+      console.error(`[bilko-flow] Workflow "${workflowId}" failed compilation:`, compilation.errors);
+      res.status(400).json({
+        error: "Workflow failed compilation (contract validation)",
+        details: compilation.errors,
+      });
+      return;
+    }
+
+    // Run async handler validation (model availability, input constraints)
+    if (compilation.plan) {
+      const handlerErrors = await validateHandlers(compilation.plan.steps ?? {});
+      if (handlerErrors.length > 0) {
+        console.error(`[bilko-flow] Workflow "${workflowId}" failed handler validation:`, handlerErrors);
+        res.status(400).json({
+          error: "Workflow failed pre-flight validation",
+          details: handlerErrors.map((e) => ({
+            code: e.code,
+            message: e.message,
+            stepId: e.stepId,
+            suggestedFixes: e.suggestedFixes,
+          })),
+        });
+        return;
+      }
+    }
+
     const startTime = Date.now();
 
     // Create and execute a run
@@ -213,11 +255,30 @@ router.post("/demo/test", async (req: Request, res: Response) => {
       return;
     }
 
-    // Validate
+    // Validate structure
     const validation = validateWorkflow(workflow);
 
-    // Compile
+    // Compile (includes sync handler contract validation)
     const compilation = compileWorkflow(workflow);
+
+    // Async handler validation (model availability, pre-flight checks)
+    let handlerValidation: { valid: boolean; errors: Array<{ code: string; message: string; stepId?: string }> } = {
+      valid: true,
+      errors: [],
+    };
+    if (compilation.success && compilation.plan) {
+      const handlerErrors = await validateHandlers(compilation.plan.steps ?? {});
+      if (handlerErrors.length > 0) {
+        handlerValidation = {
+          valid: false,
+          errors: handlerErrors.map((e) => ({
+            code: e.code,
+            message: e.message,
+            stepId: e.stepId,
+          })),
+        };
+      }
+    }
 
     res.json({
       workflowId: workflow.id,
@@ -234,6 +295,7 @@ router.post("/demo/test", async (req: Request, res: Response) => {
         determinism: compilation.plan?.determinismAnalysis,
         planHash: compilation.plan?.planHash,
       },
+      handlerValidation,
       steps: workflow.steps.map((s) => ({
         id: s.id,
         name: s.name,
