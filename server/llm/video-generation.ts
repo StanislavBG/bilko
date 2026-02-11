@@ -4,7 +4,7 @@
  * Uses the Gemini API's dedicated generateVideos endpoint to produce
  * 7-8 second video clips from text prompts (and optional reference images).
  *
- * Model: veo-3.0-generate-preview
+ * Model: veo-3.0-generate-001
  *
  * Unlike image generation, video generation is an async operation
  * that requires polling. This service handles the full lifecycle:
@@ -18,7 +18,7 @@ import { createLogger } from "../logger";
 const log = createLogger("video-generation");
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_VIDEO_MODEL = "veo-3.0-generate-preview";
+const DEFAULT_VIDEO_MODEL = "veo-3.0-generate-001";
 
 export interface VideoGenerationRequest {
   prompt: string;
