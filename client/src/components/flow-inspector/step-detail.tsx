@@ -29,7 +29,7 @@ import type {
   FlowDefinition,
   StepExecution,
 } from "@/lib/bilko-flow/types";
-import { STEP_TYPE_CONFIG } from "@/lib/bilko-flow/inspector/step-type-config";
+import { getStepVisuals } from "@/lib/bilko-flow/inspector/step-type-config";
 
 // ── Props ────────────────────────────────────────────────
 
@@ -42,7 +42,7 @@ interface StepDetailProps {
 // ── Component ────────────────────────────────────────────
 
 export function StepDetail({ step, flow, execution }: StepDetailProps) {
-  const config = STEP_TYPE_CONFIG[step.type];
+  const config = getStepVisuals(step);
   const Icon = config.icon;
 
   // Derive dependency context from the flow graph
@@ -184,7 +184,7 @@ export function StepDetail({ step, flow, execution }: StepDetailProps) {
           </h4>
           <div className="flex gap-2 flex-wrap">
             {deps.upstream.map((dep) => {
-              const depConfig = STEP_TYPE_CONFIG[dep.type];
+              const depConfig = getStepVisuals(dep);
               const DepIcon = depConfig.icon;
               return (
                 <div
@@ -203,7 +203,7 @@ export function StepDetail({ step, flow, execution }: StepDetailProps) {
               </div>
             )}
             {deps.downstream.map((dep) => {
-              const depConfig = STEP_TYPE_CONFIG[dep.type];
+              const depConfig = getStepVisuals(dep);
               const DepIcon = depConfig.icon;
               return (
                 <div

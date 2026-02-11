@@ -613,6 +613,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         id: "generate-infographic-image",
         name: "Generate Infographic Image",
         type: "llm",
+        subtype: "image",
         description:
           "Generates a cinematic wallpaper-style infographic image using Nano Banana (Gemini native image gen). Focuses on scores, transfer fees, and dramatic football visuals with stat callouts.",
         prompt: "Generate a cinematic infographic image for European football with scores and transfer fee emphasis.",
@@ -632,6 +633,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         id: "generate-scene-images",
         name: "Generate Scene Images",
         type: "llm",
+        subtype: "image",
         description:
           "Generates cinematic AI images for each storyboard scene using Nano Banana. Each image focuses on one key event with dramatic football visuals.",
         prompt: "Generate cinematic scene images for each storyboard scene, one per key football event.",
@@ -651,6 +653,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         id: "generate-video-clips",
         name: "Generate Video Clips",
         type: "llm",
+        subtype: "video",
         description:
           "Generates 7-8 second AI video clips using Veo for each scene prompt. Creates cinematic football footage from the video prompts.",
         prompt: "Generate 7-8 second video clips using Veo for each scene in the video production plan.",

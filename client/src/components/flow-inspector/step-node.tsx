@@ -13,7 +13,7 @@ import {
   SkipForward,
 } from "lucide-react";
 import type { FlowStep, StepStatus } from "@/lib/bilko-flow/types";
-import { STEP_TYPE_CONFIG } from "@/lib/bilko-flow/inspector/step-type-config";
+import { getStepVisuals } from "@/lib/bilko-flow/inspector/step-type-config";
 
 const STATUS_ICON: Record<StepStatus, typeof Circle> = {
   idle: Circle,
@@ -33,7 +33,7 @@ interface StepNodeProps {
 }
 
 export function StepNode({ step, status, isSelected, onClick, index, isLast }: StepNodeProps) {
-  const config = STEP_TYPE_CONFIG[step.type];
+  const config = getStepVisuals(step);
   const StatusIcon = STATUS_ICON[status];
   const TypeIcon = config.icon;
 
@@ -89,7 +89,7 @@ export function StepNode({ step, status, isSelected, onClick, index, isLast }: S
           <h4 className="text-sm font-medium flex-1">{step.name}</h4>
           <Badge variant="outline" className={cn("text-xs gap-1", config.color, config.bg)}>
             <TypeIcon className="h-3 w-3" />
-            {step.subtype ? `${config.label} \u203A ${step.subtype.charAt(0).toUpperCase() + step.subtype.slice(1)}` : config.label}
+            {config.label}
           </Badge>
           {step.parallel && (
             <Badge variant="secondary" className="text-xs">

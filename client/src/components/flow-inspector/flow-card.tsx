@@ -9,8 +9,9 @@ import {
   ChevronRight,
   Package,
 } from "lucide-react";
-import type { FlowDefinition, StepType } from "@/lib/bilko-flow/types";
-import { STEP_TYPE_CONFIG } from "@/lib/bilko-flow/inspector/step-type-config";
+import type { FlowDefinition } from "@/lib/bilko-flow/types";
+import { getStepVisuals } from "@/lib/bilko-flow/inspector/step-type-config";
+import type { StepTypeVisuals } from "@/lib/bilko-flow/inspector/step-type-config";
 
 interface FlowCardProps {
   flow: FlowDefinition;
@@ -18,10 +19,19 @@ interface FlowCardProps {
 }
 
 export function FlowCard({ flow, onClick }: FlowCardProps) {
-  const typeCounts = flow.steps.reduce<Partial<Record<StepType, number>>>((acc, step) => {
-    acc[step.type] = (acc[step.type] || 0) + 1;
-    return acc;
-  }, {});
+  // Group by visual key (type + subtype) so image/video LLM steps get their own count
+  const visualCounts: { key: string; config: StepTypeVisuals; count: number }[] = [];
+  const seen = new Map<string, number>();
+  for (const step of flow.steps) {
+    const vKey = step.type === "llm" && step.subtype ? `llm:${step.subtype}` : step.type;
+    const idx = seen.get(vKey);
+    if (idx !== undefined) {
+      visualCounts[idx].count++;
+    } else {
+      seen.set(vKey, visualCounts.length);
+      visualCounts.push({ key: vKey, config: getStepVisuals(step), count: 1 });
+    }
+  }
 
   return (
     <Card
@@ -43,14 +53,13 @@ export function FlowCard({ flow, onClick }: FlowCardProps) {
 
             {/* Step type breakdown */}
             <div className="flex items-center gap-3 mt-3">
-              {Object.entries(typeCounts).map(([type, count]) => {
-                const cfg = STEP_TYPE_CONFIG[type as StepType];
+              {visualCounts.map(({ key, config: cfg, count }) => {
                 const Icon = cfg.icon;
                 return (
                   <span
-                    key={type}
+                    key={key}
                     className="flex items-center gap-1 text-xs text-muted-foreground"
-                    title={`${count} ${cfg.shortLabel} step${count! > 1 ? "s" : ""}`}
+                    title={`${count} ${cfg.shortLabel} step${count > 1 ? "s" : ""}`}
                   >
                     <Icon className="h-3 w-3" />
                     {count}
