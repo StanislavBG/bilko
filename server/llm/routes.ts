@@ -27,7 +27,7 @@ router.get("/models", (_req: Request, res: Response) => {
 // Chat with an LLM
 router.post("/chat", async (req: Request, res: Response) => {
   try {
-    const { model, messages, temperature, maxTokens } = req.body as ChatRequest;
+    const { model, messages, temperature, maxTokens, responseFormat } = req.body as ChatRequest;
 
     if (!model) {
       res.status(400).json({ error: "model is required" });
@@ -56,6 +56,7 @@ router.post("/chat", async (req: Request, res: Response) => {
       messages,
       temperature,
       maxTokens,
+      responseFormat,
     });
 
     res.json(response);
