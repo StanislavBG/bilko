@@ -222,6 +222,16 @@ export function LandingContent() {
   // Track completed activity summaries for Bilko's recursive learning
   const activityLogRef = useRef<Array<{ modeId: string; modeLabel: string; summary: string }>>([]);
 
+  // ── Hide sidebar on landing mount ────────────────────────
+  // The landing page starts with the left nav hidden. Users can
+  // reveal it via "Explore the Site" or the header toggle button.
+  useEffect(() => {
+    if (sidebarCtx) {
+      sidebarCtx.setHidden(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── App-switch teardown ──────────────────────────────────
   // When the user navigates away from Dynamic Learning,
   // immediately halt all flow activity — like swapping apps on iPhone.
@@ -346,11 +356,15 @@ export function LandingContent() {
     (choiceId: string) => {
       // Special tiles — handle non-flow actions
       if (choiceId === "explore") {
-        // "Explore the Site" = open the sidebar navigation.
+        // "Explore the Site" = unhide the sidebar navigation.
         // Works for both auth and unauth (Landing is wrapped in SidebarProvider).
         // Never redirects to login.
         if (sidebarCtx) {
-          sidebarCtx.setOpen(true);
+          if (sidebarCtx.isMobile) {
+            sidebarCtx.setOpenMobile(true);
+          } else {
+            sidebarCtx.setHidden(false);
+          }
         }
         return;
       }
