@@ -14,7 +14,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { StepTracker, type TrackerStep } from "@/components/ui/step-tracker";
+import { FlowProgress, type FlowProgressStep } from "@/components/ui/flow-progress";
 import { Brain, Gamepad2, Trophy, RotateCcw, Sparkles } from "lucide-react";
 import {
   chatJSON,
@@ -195,11 +195,11 @@ export function FakeGameFlow({ onComplete }: { onComplete?: (summary?: string) =
 
   // ── StepTracker state — derived from flow definition + execution ──
 
-  const trackerSteps = useMemo<TrackerStep[]>(() => {
+  const trackerSteps = useMemo<FlowProgressStep[]>(() => {
     if (!flowDef) return [];
     return flowDef.steps.map((step) => {
       const exec = execution.steps[step.id];
-      let status: TrackerStep["status"] = "pending";
+      let status: FlowProgressStep["status"] = "pending";
       if (exec) {
         if (exec.status === "running") status = "active";
         else if (exec.status === "success") status = "complete";
@@ -366,7 +366,8 @@ export function FakeGameFlow({ onComplete }: { onComplete?: (summary?: string) =
 
   return (
     <div className="space-y-4">
-      <StepTracker
+      <FlowProgress
+        mode="compact"
         steps={trackerSteps}
         activity={trackerActivity}
       />
