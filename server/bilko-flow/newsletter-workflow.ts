@@ -266,7 +266,7 @@ export function createNewsletterWorkflowInput(
         promptsTemplate: "{{generate-video-prompts.videoPrompts.scenes|map:veoPrompt}}",
         durationSeconds: 8,
         aspectRatio: "16:9",
-        model: "veo-3.0-generate-preview",
+        model: "veo-3.0-generate-001",
       },
       outputs: { schema: { type: "object", properties: { videos: { type: "array" } } } },
       policy: { ...defaultPolicy, timeoutMs: 300000, maxAttempts: 1 },

@@ -658,7 +658,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates 7-8 second AI video clips using Veo for each scene prompt. Creates cinematic football footage from the video prompts.",
         prompt: "Generate 7-8 second video clips using Veo for each scene in the video production plan.",
         userMessage: "Generate AI video clips with Veo.",
-        model: "veo-3.0-generate-preview",
+        model: "veo-3.0-generate-001",
         inputSchema: [
           { name: "videoPrompts", type: "object", description: "Veo-optimized scene prompts" },
         ],
