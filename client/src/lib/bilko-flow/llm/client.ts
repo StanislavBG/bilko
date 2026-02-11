@@ -80,6 +80,11 @@ export async function chat(
  * The server already strips markdown fences and extracts JSON,
  * so this is the reliable path for structured LLM output.
  *
+ * Three-layer defense (ported from bilko-flow v1):
+ * Layer 1: response_format json_object constraint at API level
+ * Layer 2: Server-side cleanLLMResponse() + repairJSON()
+ * Layer 3: Retry with exponential backoff + corrective prompt
+ *
  * @example
  * const { data } = await chatJSON<{ topics: AITopic[] }>([
  *   { role: "system", content: "Return JSON with a topics array." },
@@ -91,25 +96,52 @@ export async function chatJSON<T>(
   messages: ChatMessage[],
   options?: LLMOptions,
 ): Promise<LLMResult<T>> {
-  const result = await chat(messages, {
-    ...options,
-    responseFormat: options?.responseFormat ?? "json_object",
-  });
+  const maxRetries = 3;
+  const backoffBaseMs = 1000;
+  let lastRaw = "";
 
-  try {
-    const parsed = JSON.parse(result.raw) as T;
-    return {
-      data: parsed,
-      raw: result.raw,
-      model: result.model,
-      usage: result.usage,
-    };
-  } catch {
-    throw new LLMParseError(
-      "Failed to parse LLM response as JSON",
-      result.raw,
-    );
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const msgs = [...messages];
+
+    // On retry, append a corrective instruction
+    if (attempt > 1) {
+      msgs.push({
+        role: "user",
+        content:
+          "Your previous response was not valid JSON. " +
+          "Please respond with ONLY a valid JSON object — no markdown fencing, " +
+          "no trailing commas, no unescaped newlines in strings. " +
+          "Ensure all string values have properly escaped special characters.",
+      });
+    }
+
+    const result = await chat(msgs, {
+      ...options,
+      responseFormat: options?.responseFormat ?? "json_object",
+    });
+
+    lastRaw = result.raw;
+
+    try {
+      const parsed = JSON.parse(result.raw) as T;
+      return {
+        data: parsed,
+        raw: result.raw,
+        model: result.model,
+        usage: result.usage,
+      };
+    } catch {
+      if (attempt < maxRetries) {
+        const delay = backoffBaseMs * Math.pow(2, attempt - 1);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
   }
+
+  throw new LLMParseError(
+    `Failed to parse LLM response as JSON after ${maxRetries} attempts`,
+    lastRaw,
+  );
 }
 
 /**
