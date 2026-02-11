@@ -214,7 +214,7 @@ export function createNewsletterWorkflowInput(
       inputs: {
         promptTemplate: "{{design-infographic.infographic.imagePrompt}}",
         aspectRatio: "16:9",
-        model: "gemini-2.5-flash-preview-image-generation",
+        model: "gemini-2.5-flash-image",
       },
       outputs: { schema: { type: "object", properties: { imageBase64: { type: "string" }, mimeType: { type: "string" } } } },
       policy: { ...defaultPolicy, timeoutMs: 120000 },
@@ -239,7 +239,7 @@ export function createNewsletterWorkflowInput(
       inputs: {
         promptsTemplate: "{{generate-storyboard.storyboard.scenes|map:imageDescription}}",
         aspectRatio: "16:9",
-        model: "gemini-2.5-flash-preview-image-generation",
+        model: "gemini-2.5-flash-image",
       },
       outputs: { schema: { type: "object", properties: { images: { type: "array" } } } },
       policy: { ...defaultPolicy, timeoutMs: 120000 },
