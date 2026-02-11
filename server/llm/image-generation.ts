@@ -4,7 +4,7 @@
  * Uses the Gemini API's native generateContent endpoint with
  * responseModalities: ["TEXT", "IMAGE"] to generate images.
  *
- * Model: gemini-2.5-flash-image (Nano Banana)
+ * Model: gemini-2.5-flash-image (Nano Banana / Gemini 2.5 Flash Image)
  *
  * This does NOT use the OpenAI-compatible endpoint — it uses the native
  * Gemini REST API directly because image generation requires the
@@ -16,7 +16,7 @@ import { createLogger } from "../logger";
 const log = createLogger("image-generation");
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-preview-image-generation";
+const DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-image";
 
 export interface ImageGenerationRequest {
   prompt: string;
