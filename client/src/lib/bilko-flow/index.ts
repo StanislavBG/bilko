@@ -79,8 +79,12 @@ export { computeLayout, NODE_W, NODE_H, COL_GAP, ROW_GAP, PADDING } from "bilko-
 export type { NodeLayout, EdgeLayout, DAGLayout } from "bilko-flow/react";
 
 // ── Inspector: Step Visuals (from bilko-flow/react) ─────────
-export { STEP_TYPE_CONFIG, LLM_SUBTYPE_CONFIG, getStepVisuals } from "bilko-flow/react";
+export { STEP_TYPE_CONFIG, LLM_SUBTYPE_CONFIG, DOMAIN_STEP_TYPE_MAP, getStepVisuals } from "bilko-flow/react";
 export type { StepTypeVisuals } from "bilko-flow/react";
+
+// ── FlowProgress Theme & Adapters (from bilko-flow/react) ───
+export { DEFAULT_FLOW_PROGRESS_THEME, mergeTheme, adaptSteps } from "bilko-flow/react";
+export type { FlowProgressTheme, FlowProgressAdapter, FlowProgressStepRenderer } from "bilko-flow/react";
 
 // ── Component Definitions (from bilko-flow/react) ───────────
 export { DEFAULT_COMPONENT_DEFINITIONS, getComponentByType } from "bilko-flow/react";

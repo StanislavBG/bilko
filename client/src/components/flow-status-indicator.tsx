@@ -10,13 +10,27 @@ import { useMemo } from "react";
 import { FlowProgress, type FlowProgressStep } from "bilko-flow/react";
 import { useFlowBus, type FlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowById } from "@/lib/bilko-flow";
-import type { FlowPhase } from "@/lib/bilko-flow";
+import type { FlowPhase, FlowDefinition } from "@/lib/bilko-flow";
 
 // ── Phase resolution from flow registry ─────────────────
 
+function getFlowDef(flowId: string): FlowDefinition | undefined {
+  return getFlowById(flowId);
+}
+
 function getFlowPhases(flowId: string): FlowPhase[] | null {
-  const def = getFlowById(flowId);
+  const def = getFlowDef(flowId);
   return def?.phases ?? null;
+}
+
+/** Derive a dominant step type from the first step in a phase */
+function getPhaseType(flowId: string, phase: FlowPhase): string | undefined {
+  const def = getFlowDef(flowId);
+  if (!def) return undefined;
+  const firstStepId = phase.stepIds[0];
+  const step = def.steps.find((s) => s.id === firstStepId);
+  if (!step) return undefined;
+  return step.subtype ? `${step.type}:${step.subtype}` : step.type;
 }
 
 function getPhaseLabel(phases: FlowPhase[], phaseId: string): string {
@@ -49,6 +63,7 @@ function toProgressSteps(flow: FlowRegistration): FlowProgressStep[] {
       : i === currentIdx
         ? "active"
         : "pending",
+    type: getPhaseType(flow.id, phase),
   }));
 }
 
