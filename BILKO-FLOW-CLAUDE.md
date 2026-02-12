@@ -866,6 +866,694 @@ npm install --save-dev @testing-library/react @testing-library/jest-dom
 
 ---
 
+## FlowProgress UX Overhaul — IMPLEMENTATION SPEC
+
+**Status**: Approved for implementation
+**Priority**: HIGH — User-facing quality-of-life improvement
+**Scope**: `src/react/flow-progress.tsx`, `src/react/types.ts`, `src/react/step-type-config.ts`
+
+### Problem Statement
+
+The current `FlowProgress` component (both modes) is visually bland and fails to communicate progress effectively. Specific issues identified from production usage:
+
+1. **No visual differentiation** — All completed steps look identical (green checkmark). No sense of what *kind* of work was done.
+2. **Invisible connectors** — Compact mode connectors are 1px tall (`h-px w-4`) — imperceptible on dark backgrounds.
+3. **Active step doesn't stand out** — 14px blue spinner is too small and subtle.
+4. **No step-type color coding** — `step-type-config.ts` defines a rich palette (purple/AI, orange/transform, blue/input, green/validate, pink/image, rose/video) that FlowProgress completely ignores.
+5. **No completion animation** — Steps silently switch from spinner to checkmark with no transition feedback.
+6. **Activity text too subtle** — `text-xs text-gray-400` is easily missed.
+7. **No progress counter** in compact mode.
+8. **Full mode progress bar is flat** — Solid green with no visual energy.
+
+### Design Philosophy: Theme-First Customization
+
+The FlowProgress component must be **deeply customizable** at the props level while shipping with **Bilko-optimized defaults**. External consumers can override any visual aspect without forking the component.
+
+#### Theme Object — `FlowProgressTheme`
+
+Add to `src/react/types.ts`:
+
+```typescript
+export interface FlowProgressTheme {
+  /** ── Step Circle (Full Mode) ────────────────────────── */
+  /** Size of step circles. Default: "w-9 h-9" */
+  circleSize?: string;
+  /** Completed circle classes. Default: "bg-green-500 text-white" */
+  circleComplete?: string;
+  /** Active circle classes. Default: "bg-green-500 text-white ring-4 ring-green-500/30 scale-110" */
+  circleActive?: string;
+  /** Error circle classes. Default: "bg-red-500 text-white" */
+  circleError?: string;
+  /** Pending circle classes. Default: "bg-gray-700 text-gray-400" */
+  circlePending?: string;
+
+  /** ── Step Icons (Compact Mode) ─────────────────────── */
+  /** Completed icon size. Default: 14 */
+  iconSize?: number;
+  /** Active icon size. Default: 14 */
+  activeIconSize?: number;
+  /** Completed icon color. Default: "text-green-500" */
+  iconComplete?: string;
+  /** Active icon color. Default: "text-blue-400" */
+  iconActive?: string;
+  /** Error icon color. Default: "text-red-500" */
+  iconError?: string;
+  /** Pending icon color. Default: "text-gray-600" */
+  iconPending?: string;
+
+  /** ── Connectors ────────────────────────────────────── */
+  /** Connector height class (compact). Default: "h-0.5" */
+  connectorHeight?: string;
+  /** Connector width class (compact). Default: "w-6" */
+  connectorWidth?: string;
+  /** Completed connector classes. Default: "bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.4)]" */
+  connectorComplete?: string;
+  /** Pending connector classes. Default: "bg-gray-700" */
+  connectorPending?: string;
+
+  /** ── Labels ────────────────────────────────────────── */
+  /** Active label classes. Default: "text-white font-bold" (compact), "text-green-400 font-bold" (full) */
+  labelActive?: string;
+  /** Completed label classes. Default: "text-gray-300" */
+  labelComplete?: string;
+  /** Pending label classes. Default: "text-gray-500" */
+  labelPending?: string;
+  /** Max label width for full mode. Default: "max-w-[80px]" */
+  labelMaxWidth?: string;
+
+  /** ── Progress Bar (Full Mode) ──────────────────────── */
+  /** Track classes. Default: "h-1.5 bg-gray-800" */
+  progressTrack?: string;
+  /** Fill classes. Default: "bg-gradient-to-r from-purple-500 via-green-500 to-emerald-400" */
+  progressFill?: string;
+
+  /** ── Activity Text ─────────────────────────────────── */
+  /** Activity text classes. Default: "text-xs text-gray-300" */
+  activityText?: string;
+  /** Show spinner prefix on activity when running. Default: true */
+  activitySpinner?: boolean;
+
+  /** ── Animations ────────────────────────────────────── */
+  /** Enable ping animation on active step. Default: true */
+  activePing?: boolean;
+  /** Enable zoom-in animation on completion. Default: true */
+  completionAnimation?: boolean;
+  /** Enable ping animation on status dot (full mode). Default: true */
+  statusDotPing?: boolean;
+  /** Enable glow on completed connectors. Default: true */
+  connectorGlow?: boolean;
+
+  /** ── Progress Counter (Compact Mode) ───────────────── */
+  /** Show "X/Y" counter at end of step chain. Default: true */
+  showCounter?: boolean;
+  /** Counter text classes. Default: "text-[10px] font-mono text-gray-500 tabular-nums" */
+  counterClass?: string;
+
+  /** ── Step Type Colors ──────────────────────────────── */
+  /** Use step-type-aware colors for completed steps. Default: true.
+   *  When true and stepType is provided, completed steps use type-specific colors
+   *  from STEP_TYPE_CONFIG. When false, all completed steps use the green defaults. */
+  useStepTypeColors?: boolean;
+  /** Override color map: stepType → { text, bg, shadow } classes */
+  stepTypeColorOverrides?: Record<string, { text: string; bg: string; shadow?: string }>;
+
+  /** ── Container ─────────────────────────────────────── */
+  /** Root container classes (full mode). Default: "rounded-lg border border-gray-700 bg-gray-900 p-4" */
+  containerFull?: string;
+  /** Root container classes (compact mode). Default: "w-full" */
+  containerCompact?: string;
+}
+```
+
+#### Props Addition
+
+Add `theme` to `FlowProgressProps`:
+
+```typescript
+export interface FlowProgressProps {
+  mode: "full" | "compact";
+  steps: FlowProgressStep[];
+  label?: string;
+  status?: "idle" | "running" | "complete" | "error";
+  activity?: string;
+  lastResult?: string;
+  onReset?: () => void;
+  onStepClick?: (stepId: string) => void;
+  className?: string;
+  /** Visual customization. All fields optional — defaults are Bilko-optimized dark theme. */
+  theme?: FlowProgressTheme;
+}
+```
+
+#### Default Theme Object
+
+```typescript
+const DEFAULT_THEME: Required<FlowProgressTheme> = {
+  circleSize: 'w-9 h-9',
+  circleComplete: 'bg-green-500 text-white',
+  circleActive: 'bg-green-500 text-white ring-4 ring-green-500/30 scale-110',
+  circleError: 'bg-red-500 text-white',
+  circlePending: 'bg-gray-700 text-gray-400',
+  iconSize: 14,
+  activeIconSize: 14,
+  iconComplete: 'text-green-500',
+  iconActive: 'text-blue-400',
+  iconError: 'text-red-500',
+  iconPending: 'text-gray-600',
+  connectorHeight: 'h-0.5',
+  connectorWidth: 'w-6',
+  connectorComplete: 'bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.4)]',
+  connectorPending: 'bg-gray-700',
+  labelActive: 'text-white font-bold',
+  labelComplete: 'text-gray-300',
+  labelPending: 'text-gray-500',
+  labelMaxWidth: 'max-w-[80px]',
+  progressTrack: 'h-1.5 bg-gray-800',
+  progressFill: 'bg-gradient-to-r from-purple-500 via-green-500 to-emerald-400',
+  activityText: 'text-xs text-gray-300',
+  activitySpinner: true,
+  activePing: true,
+  completionAnimation: true,
+  statusDotPing: true,
+  connectorGlow: true,
+  showCounter: true,
+  counterClass: 'text-[10px] font-mono text-gray-500 tabular-nums',
+  useStepTypeColors: true,
+  stepTypeColorOverrides: {},
+  containerFull: 'rounded-lg border border-gray-700 bg-gray-900 p-4',
+  containerCompact: 'w-full',
+};
+```
+
+#### Usage with Theme Merge
+
+Inside the component, merge the user's partial theme with defaults:
+
+```typescript
+function FlowProgress(props: FlowProgressProps) {
+  const { mode, className, theme: userTheme } = props;
+  const theme = useMemo(
+    () => ({ ...DEFAULT_THEME, ...userTheme }),
+    [userTheme],
+  );
+  // Pass `theme` to FullMode / CompactMode
+}
+```
+
+#### Bilko-Specific Theme (pre-configured)
+
+Bilko's adapter wrappers (`flow-status-indicator.tsx`, etc.) should import and pass a Bilko-tuned theme:
+
+```typescript
+// client/src/lib/bilko-theme.ts
+import type { FlowProgressTheme } from "bilko-flow/react";
+
+export const BILKO_FLOW_THEME: FlowProgressTheme = {
+  // Uses all defaults (which ARE Bilko-optimized) plus any Bilko-specific overrides
+  containerFull: 'rounded-xl border border-gray-700/50 bg-gray-900/80 backdrop-blur-sm p-5',
+  progressFill: 'bg-gradient-to-r from-purple-500 via-blue-500 to-emerald-400',
+  connectorComplete: 'bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.5)]',
+};
+```
+
+This lets external consumers use completely different themes (light mode, different brand colors) while Bilko's dark aesthetic is the out-of-the-box default.
+
+### Type Changes (`src/react/types.ts`)
+
+Add an optional `stepType` field to `FlowProgressStep`:
+
+```typescript
+export interface FlowProgressStep {
+  id: string;
+  label: string;
+  status: "pending" | "active" | "complete" | "error";
+  /** Optional step type for color-coding. Maps to STEP_TYPE_CONFIG / LLM_SUBTYPE_CONFIG.
+   *  When provided, completed steps show type-specific colors instead of uniform green.
+   *  Values: "llm" | "user-input" | "transform" | "validate" | "display" | "chat" | "external-input"
+   *  LLM subtypes use format "llm:image" or "llm:video" for subtype-specific colors. */
+  stepType?: string;
+}
+```
+
+This is **backward-compatible** — existing consumers that don't pass `stepType` get the same green-only behavior (graceful fallback).
+
+### Helper Function: `resolveStepColor()`
+
+Add to `flow-progress.tsx`, just after the existing helper functions:
+
+```typescript
+import { STEP_TYPE_CONFIG, LLM_SUBTYPE_CONFIG } from './step-type-config';
+
+/**
+ * Resolve the accent color for a completed step based on its type.
+ * Falls back to green-500 when stepType is not provided.
+ *
+ * @param stepType - Optional type string (e.g., "llm", "transform", "llm:video")
+ * @param variant - "text" for icon color, "bg" for background fills, "shadow" for glow effects
+ */
+function resolveStepColor(
+  stepType: string | undefined,
+  variant: 'text' | 'bg' | 'shadow',
+  overrides?: Record<string, { text: string; bg: string; shadow?: string }>,
+): string {
+  // Check overrides first
+  if (stepType && overrides?.[stepType]) {
+    const o = overrides[stepType];
+    return variant === 'text' ? o.text : variant === 'bg' ? o.bg : (o.shadow ?? 'shadow-none');
+  }
+  if (!stepType) {
+    return variant === 'text' ? 'text-green-500'
+      : variant === 'bg' ? 'bg-green-500'
+      : 'shadow-[0_0_6px_rgba(34,197,94,0.4)]';
+  }
+
+  // Handle "llm:image" or "llm:video" subtypes
+  if (stepType.startsWith('llm:')) {
+    const subtype = stepType.slice(4);
+    const config = LLM_SUBTYPE_CONFIG[subtype];
+    if (config) {
+      return variant === 'text' ? config.color
+        : variant === 'bg' ? config.accent
+        : `shadow-[0_0_6px_${extractRgba(config.color, 0.4)}]`;
+    }
+  }
+
+  const config = STEP_TYPE_CONFIG[stepType as keyof typeof STEP_TYPE_CONFIG];
+  if (config) {
+    return variant === 'text' ? config.color
+      : variant === 'bg' ? config.accent
+      : `shadow-[0_0_6px_${extractRgba(config.color, 0.4)}]`;
+  }
+
+  // Fallback: green
+  return variant === 'text' ? 'text-green-500'
+    : variant === 'bg' ? 'bg-green-500'
+    : 'shadow-[0_0_6px_rgba(34,197,94,0.4)]';
+}
+
+/** Map Tailwind color class names to rgba for shadow effects */
+const COLOR_RGBA_MAP: Record<string, string> = {
+  'text-purple-400': 'rgba(192,132,252,VAR)',
+  'text-blue-400': 'rgba(96,165,250,VAR)',
+  'text-orange-400': 'rgba(251,146,60,VAR)',
+  'text-green-400': 'rgba(74,222,128,VAR)',
+  'text-cyan-400': 'rgba(34,211,238,VAR)',
+  'text-emerald-400': 'rgba(52,211,153,VAR)',
+  'text-amber-400': 'rgba(251,191,36,VAR)',
+  'text-pink-400': 'rgba(244,114,182,VAR)',
+  'text-rose-400': 'rgba(251,113,133,VAR)',
+  'text-green-500': 'rgba(34,197,94,VAR)',
+};
+
+function extractRgba(colorClass: string, alpha: number): string {
+  const template = COLOR_RGBA_MAP[colorClass];
+  if (template) return template.replace('VAR', String(alpha));
+  return `rgba(34,197,94,${alpha})`;
+}
+```
+
+### Change 1: Compact Mode — Richer Connector Bars
+
+**File**: `src/react/flow-progress.tsx`, CompactMode connector (currently lines 459-466)
+
+**Current**:
+```tsx
+<div className={`h-px w-4 flex-shrink-0 ${step.status === 'complete' ? 'bg-green-500' : 'bg-gray-600'}`} />
+```
+
+**Replace with**:
+```tsx
+<div
+  className={`
+    h-0.5 w-6 flex-shrink-0 rounded-full transition-all duration-500
+    ${step.status === 'complete'
+      ? `bg-green-400 shadow-[0_0_4px_rgba(74,222,128,0.4)]`
+      : 'bg-gray-700'}
+  `}
+/>
+```
+
+**Also update** the ellipsis connector (currently line 399) with the same treatment:
+```tsx
+<div className="h-0.5 w-6 flex-shrink-0 rounded-full bg-gray-700" />
+```
+
+**Why**: Doubled height (1px → 2px), widened (16px → 24px), rounded ends, glow on completed segments. Creates a visible "energy trail" showing progress.
+
+### Change 2: Compact Mode — Type-Aware Step Icons
+
+**File**: `src/react/flow-progress.tsx`, CompactMode status icon section (currently lines 429-437)
+
+**Current**:
+```tsx
+{step.status === 'complete' ? (
+  <CheckCircle2 size={14} className="text-green-500 flex-shrink-0" />
+) : step.status === 'active' ? (
+  <Loader2 size={14} className="text-blue-400 animate-spin flex-shrink-0" />
+) : step.status === 'error' ? (
+  <XCircle size={14} className="text-red-500 flex-shrink-0" />
+) : (
+  <Circle size={14} className="text-gray-500 flex-shrink-0" />
+)}
+```
+
+**Replace with**:
+```tsx
+{step.status === 'complete' ? (
+  <CheckCircle2
+    size={14}
+    className={`${resolveStepColor(step.stepType, 'text')} flex-shrink-0 animate-in zoom-in-50 duration-300`}
+  />
+) : step.status === 'active' ? (
+  <span className="relative flex items-center justify-center w-4 h-4 flex-shrink-0">
+    <span className="absolute inset-0 rounded-full bg-blue-400/20 animate-ping" />
+    <Loader2 size={14} className="text-blue-400 animate-spin relative" />
+  </span>
+) : step.status === 'error' ? (
+  <XCircle size={14} className="text-red-500 flex-shrink-0" />
+) : (
+  <Circle size={14} className="text-gray-600 flex-shrink-0" />
+)}
+```
+
+**What changes**:
+- Completed steps use `resolveStepColor()` — AI steps turn purple, transforms turn orange, etc.
+- Active step gets a ping ring behind the spinner (breathing glow effect)
+- Completion triggers `animate-in zoom-in-50` (a micro scale-up)
+- Pending circles are slightly darker (`gray-600` → less visual noise)
+
+**Visual result**: The completed step trail becomes a colorful sequence — purple, purple, orange, green, pink — instead of all green. Users can see at a glance what *kind* of work was performed.
+
+### Change 3: Compact Mode — Progress Counter
+
+**File**: `src/react/flow-progress.tsx`, CompactMode, after the step chain `</div>` (after line 470)
+
+**Add** a counter inline with the last step:
+
+Inside the step chain `<div className="flex flex-wrap items-center gap-1">`, append after the `.map()`:
+
+```tsx
+{/* Progress counter */}
+{steps.length > 0 && (
+  <span className="ml-1.5 text-[10px] font-mono text-gray-500 tabular-nums select-none">
+    {steps.filter(s => s.status === 'complete').length}/{steps.length}
+  </span>
+)}
+```
+
+**Why**: Gives an instant numeric sense of completion without requiring users to count icons.
+
+### Change 4: Compact Mode — Enhanced Activity Text
+
+**File**: `src/react/flow-progress.tsx`, CompactMode activity section (currently lines 473-476)
+
+**Current**:
+```tsx
+{activity && (
+  <p className="mt-1 text-xs text-gray-400 truncate">
+    {activity}
+  </p>
+)}
+```
+
+**Replace with**:
+```tsx
+{activity && (
+  <div className="mt-1.5 flex items-center gap-1.5">
+    {status === 'running' && (
+      <Loader2 size={10} className="text-blue-400 animate-spin flex-shrink-0" />
+    )}
+    <p className="text-xs text-gray-300 truncate">{activity}</p>
+  </div>
+)}
+```
+
+**Note**: This requires adding `status` to CompactMode's destructured props:
+```typescript
+const { steps, activity, lastResult, onStepClick, status } = props;
+```
+
+**Why**: Activity text goes from `text-gray-400` (barely visible) to `text-gray-300` (readable) and gets a spinning icon prefix that visually links it to the active step.
+
+### Change 5: Full Mode — Type-Aware Step Circles (Theme-Integrated)
+
+**File**: `src/react/flow-progress.tsx`, FullMode step circle (currently lines 299-309)
+
+**Current**:
+```tsx
+className={`
+  w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium
+  transition-all duration-300
+  ${step.status === 'complete'
+    ? 'bg-green-500 text-white'
+    : step.status === 'active'
+      ? 'bg-green-500 text-white ring-4 ring-green-500/30 scale-110'
+      : step.status === 'error'
+        ? 'bg-red-500 text-white'
+        : 'bg-gray-700 text-gray-400'
+  }
+`}
+```
+
+**Replace with** (using theme properties):
+```tsx
+className={`
+  ${theme.circleSize} rounded-full flex items-center justify-center text-sm font-medium
+  transition-all duration-300
+  ${step.status === 'complete'
+    ? (theme.useStepTypeColors && step.stepType
+        ? `${resolveStepColor(step.stepType, 'bg', theme.stepTypeColorOverrides)} text-white`
+        : theme.circleComplete)
+    : step.status === 'active'
+      ? theme.circleActive
+      : step.status === 'error'
+        ? theme.circleError
+        : theme.circlePending
+  }
+`}
+```
+
+**Also update** the label color for completed steps (currently line 329):
+
+**Current**: `'text-gray-300'` for completed labels
+
+**Replace with** (using theme properties):
+```tsx
+: step.status === 'complete'
+  ? (theme.useStepTypeColors && step.stepType
+      ? resolveStepColor(step.stepType, 'text', theme.stepTypeColorOverrides)
+      : theme.labelComplete)
+  : theme.labelPending
+```
+
+**Visual result**: Full mode stepper shows a sequence like: purple circle (AI) → orange circle (Transform) → green ring (Active) → gray (Pending). The pipeline's *nature* is visible. Consumer can override via `theme.circleComplete` or `theme.stepTypeColorOverrides`.
+
+### Change 6: Full Mode — Enhanced Progress Bar
+
+**File**: `src/react/flow-progress.tsx`, FullMode progress track (currently lines 357-362)
+
+**Current**:
+```tsx
+<div className="mt-3 h-1 w-full bg-gray-700 rounded-full overflow-hidden">
+  <div
+    className="h-full bg-green-500 rounded-full transition-all duration-500"
+    style={{ width: `${progressPct}%` }}
+  />
+</div>
+```
+
+**Replace with**:
+```tsx
+<div className="mt-3 h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
+  <div
+    className="h-full rounded-full transition-all duration-700 ease-out
+      bg-gradient-to-r from-purple-500 via-green-500 to-emerald-400"
+    style={{ width: `${progressPct}%` }}
+  />
+</div>
+```
+
+**Why**: Taller (4px → 6px), gradient fill suggesting pipeline diversity, smoother easing, darker track for contrast.
+
+### Change 7: Full Mode — Connector Bars with Type Color
+
+**File**: `src/react/flow-progress.tsx`, FullMode connector bars (currently lines 342-350)
+
+**Current**:
+```tsx
+<div
+  className={`
+    h-1 flex-1 min-w-[16px] max-w-[40px] rounded-full mx-1 mt-[-20px]
+    transition-colors duration-300
+    ${step.status === 'complete' ? 'bg-green-500' : 'bg-gray-700'}
+  `}
+/>
+```
+
+**Replace with**:
+```tsx
+<div
+  className={`
+    h-1 flex-1 min-w-[16px] max-w-[40px] rounded-full mx-1 mt-[-20px]
+    transition-all duration-500
+    ${step.status === 'complete'
+      ? `${resolveStepColor(step.stepType, 'bg')} shadow-sm`
+      : 'bg-gray-700'}
+  `}
+/>
+```
+
+**Why**: Completed connector segments inherit the step's type color, creating a continuous colored trail (purple bar → orange bar → etc.) instead of uniform green.
+
+### Change 8: Full Mode — Animated Status Dot
+
+**File**: `src/react/flow-progress.tsx`, FullMode header status dot (currently line 230)
+
+**Current**:
+```tsx
+<span className={`w-2.5 h-2.5 rounded-full ${statusDotClass(status)}`} />
+```
+
+**Replace with**:
+```tsx
+<span className="relative flex h-3 w-3">
+  {status === 'running' && (
+    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+  )}
+  <span className={`relative inline-flex rounded-full h-3 w-3 ${statusDotClass(status)}`} />
+</span>
+```
+
+**Why**: Running state gets a sonar-style ping animation (like Tailwind's notification badge pattern). Dot is slightly larger (10px → 12px) for visibility.
+
+### Consumer-Side Changes (Bilko Codebase)
+
+For the step-type color coding to work, consumers must pass `stepType` when building `FlowProgressStep[]`. This is optional — the component gracefully falls back to green without it.
+
+#### Newsletter Flow (`client/src/components/newsletter-flow.tsx`)
+
+**Current** (lines 465-477):
+```typescript
+const trackerSteps = useMemo<FlowProgressStep[]>(() => {
+  if (!flowDef) return [];
+  return flowDef.steps.map((step) => {
+    const exec = execution.steps[step.id];
+    let status: FlowProgressStep["status"] = "pending";
+    if (exec) {
+      if (exec.status === "running") status = "active";
+      else if (exec.status === "success") status = "complete";
+      else if (exec.status === "error") status = "error";
+    }
+    return { id: step.id, label: step.name, status };
+  });
+}, [flowDef, execution.steps]);
+```
+
+**Change the return line to**:
+```typescript
+return {
+  id: step.id,
+  label: step.name,
+  status,
+  stepType: step.subtype ? `${step.type}:${step.subtype}` : step.type,
+};
+```
+
+This maps `FlowStep.type` + `FlowStep.subtype` into the `stepType` string that `resolveStepColor()` expects.
+
+#### Flow Status Indicator (`client/src/components/flow-status-indicator.tsx`)
+
+**Current** `toProgressSteps()` (lines 44-52):
+```typescript
+return phases.map((phase, i): FlowProgressStep => ({
+  id: phase.id,
+  label: phase.label,
+  status: i < currentIdx ? "complete" : i === currentIdx ? "active" : "pending",
+}));
+```
+
+Phases don't have step type info, so no change needed here — it will fall back to green. When phase metadata is eventually enriched with `dominantStepType`, this can be updated.
+
+#### Other Flow Components
+
+Apply the same pattern as Newsletter Flow to:
+- `client/src/components/work-with-me-flow.tsx`
+- `client/src/components/video-discovery-flow.tsx`
+- `client/src/components/fake-game-flow.tsx`
+
+### Visual Summary — Before vs After
+
+**Compact Mode — Before**:
+```
+✅ Discover ── ✅ Write ── ✅ Rank ── ⟳ Design ── ○ Assemble ── ○ Final
+Designing the infographic layout...
+```
+All green checks, invisible connectors, plain gray activity text.
+
+**Compact Mode — After**:
+```
+✅ Discover ━━ ✅ Write ━━ ✅ Rank ━━ ◉ Design ── ○ Assemble ── ○ Final  4/7
+(purple)   ✨  (purple) ✨  (orange)✨  (pulsing)     (dim)        (dim)
+⟳ Designing the infographic layout...
+```
+Color-coded checks (purple AI, orange transform), glowing connectors, ping ring on active, spinning prefix on activity, counter.
+
+**Full Mode — Before**:
+```
+● Running · Design  4/7
+  [✓]────[✓]────[✓]────[④]────[5]────[6]────[7]
+  (green) (green) (green) (green+ring) (gray)  (gray)  (gray)
+  ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░
+  Designing the infographic layout...
+```
+
+**Full Mode — After**:
+```
+◉ Running · Design  4/7     (sonar-ping status dot)
+  [✓]────[✓]────[✓]────[④]────[5]────[6]────[7]
+  (purple)(purple)(orange)(green+ring)(gray) (gray) (gray)
+  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░ (gradient bar)
+  Designing the infographic layout...
+```
+Color-coded circles and connectors, gradient progress bar, pinging status dot.
+
+### CSS Animation Dependencies
+
+The implementation uses these Tailwind/CSS features:
+- `animate-ping` — built into Tailwind (sonar ring)
+- `animate-spin` — built into Tailwind (spinner rotation)
+- `animate-pulse` — built into Tailwind (breathing glow)
+- `animate-in zoom-in-50` — from `tailwindcss-animate` plugin (scale-up on mount). If not available, replace with `transition-transform duration-300` and handle via state.
+- `shadow-[0_0_Xpx_rgba(...)]` — Tailwind arbitrary value syntax for colored glows
+- `transition-all duration-500` — smooth state transitions
+
+**If `tailwindcss-animate` is not installed**, replace `animate-in zoom-in-50 duration-300` with a simpler approach using Tailwind's built-in `scale` + `transition`:
+```tsx
+className="... transform scale-100 transition-transform duration-300"
+```
+
+### Testing Checklist
+
+After implementation, verify:
+
+- [ ] Compact mode: completed steps show type-specific colors when `stepType` is provided
+- [ ] Compact mode: completed steps show green when `stepType` is NOT provided (backward compat)
+- [ ] Compact mode: active step has visible ping ring animation
+- [ ] Compact mode: connectors are visible (2px height) and glow when completed
+- [ ] Compact mode: progress counter appears at end of step chain
+- [ ] Compact mode: activity text has spinner prefix when running
+- [ ] Full mode: completed circles use type-specific background colors
+- [ ] Full mode: connector bars inherit type color from preceding step
+- [ ] Full mode: progress bar shows gradient fill
+- [ ] Full mode: status dot pings when running
+- [ ] Full mode: active step retains green ring-4 glow + scale-110
+- [ ] Ellipsis dropdown still works correctly in both modes
+- [ ] Sliding window still activates at > 7 steps
+- [ ] No visual regression when steps have no `stepType` (pure backward compat)
+- [ ] Performance: no unnecessary re-renders from animation classes
+
+---
+
 ## Migration Path — Bilko Integration
 
 ### Completed Migrations
