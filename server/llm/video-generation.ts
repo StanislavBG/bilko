@@ -4,6 +4,12 @@
  * Uses the Gemini API's dedicated generateVideos endpoint to produce
  * 7-8 second video clips from text prompts (and optional reference images).
  *
+ * Supports:
+ *   - Text-to-video: Generate a clip from a text prompt
+ *   - Scene extension: Extend a previous Veo-generated video by ~7 seconds
+ *     using the last ~1 second as grounding context
+ *   - Image-to-video: Generate a clip grounded on a reference image
+ *
  * Model: veo-3.0-generate-001
  *
  * Unlike image generation, video generation is an async operation
@@ -28,6 +34,11 @@ export interface VideoGenerationRequest {
   /** Optional reference image to guide the video */
   referenceImageBase64?: string;
   referenceImageMimeType?: string;
+  /** Optional source video for scene extension (base64-encoded Veo-generated video).
+   *  When provided, Veo uses the last ~1 second as grounding to extend by ~7 seconds.
+   *  The response includes the merged video (original + extension). */
+  sourceVideoBase64?: string;
+  sourceVideoMimeType?: string;
 }
 
 export interface GeneratedVideo {
@@ -55,6 +66,10 @@ function getApiKey(): string {
  *
  * Returns the generated video(s) as base64-encoded data.
  * Timeout: 5 minutes (video generation can be slow).
+ *
+ * When `sourceVideoBase64` is provided, performs a scene extension:
+ * Veo extracts the last ~1 second (24 frames) of the source video as seed
+ * and generates ~7 seconds of continuation. The response is a merged video.
  */
 export async function generateVideo(
   request: VideoGenerationRequest,
@@ -63,29 +78,42 @@ export async function generateVideo(
   const model = request.model ?? DEFAULT_VIDEO_MODEL;
   const url = `${GEMINI_BASE_URL}/models/${model}:generateVideos?key=${apiKey}`;
 
-  // Build the request
+  const isExtension = !!request.sourceVideoBase64;
+
+  // Build the instance — shape differs for extension vs fresh generation
+  const instance: Record<string, unknown> = {
+    prompt: request.prompt,
+  };
+
+  if (request.sourceVideoBase64) {
+    // Scene extension: pass the source video for grounding
+    instance.video = {
+      bytesBase64Encoded: request.sourceVideoBase64,
+      mimeType: request.sourceVideoMimeType ?? "video/mp4",
+    };
+  } else if (request.referenceImageBase64) {
+    // Image-to-video: pass a reference image
+    instance.image = {
+      bytesBase64Encoded: request.referenceImageBase64,
+      mimeType: request.referenceImageMimeType ?? "image/png",
+    };
+  }
+
+  // Build the request body
   const body: Record<string, unknown> = {
-    instances: [
-      {
-        prompt: request.prompt,
-        ...(request.referenceImageBase64 && {
-          image: {
-            bytesBase64Encoded: request.referenceImageBase64,
-            mimeType: request.referenceImageMimeType ?? "image/png",
-          },
-        }),
-      },
-    ],
+    instances: [instance],
     parameters: {
       aspectRatio: request.aspectRatio ?? "16:9",
-      durationSeconds: request.durationSeconds ?? 8,
+      // Duration only applies to fresh generation, not extensions
+      ...(isExtension ? {} : { durationSeconds: request.durationSeconds ?? 8 }),
       sampleCount: 1,
     },
   };
 
-  log.info(`Submitting video generation with ${model}`, {
+  log.info(`Submitting video ${isExtension ? "extension" : "generation"} with ${model}`, {
     promptLength: request.prompt.length,
-    duration: request.durationSeconds ?? 8,
+    duration: isExtension ? "extension (~7s)" : `${request.durationSeconds ?? 8}s`,
+    hasSourceVideo: isExtension,
     hasReference: !!request.referenceImageBase64,
   });
 
@@ -99,8 +127,8 @@ export async function generateVideo(
 
   if (!submitResponse.ok) {
     const errorText = await submitResponse.text();
-    log.error(`Video generation submission failed: ${submitResponse.status}`, { error: errorText });
-    throw new Error(`Video generation failed (${submitResponse.status}): ${errorText}`);
+    log.error(`Video ${isExtension ? "extension" : "generation"} submission failed: ${submitResponse.status}`, { error: errorText });
+    throw new Error(`Video ${isExtension ? "extension" : "generation"} failed (${submitResponse.status}): ${errorText}`);
   }
 
   const operation = (await submitResponse.json()) as {
@@ -130,7 +158,7 @@ export async function generateVideo(
   }
 
   if (operation.error) {
-    throw new Error(`Video generation error: ${operation.error.message}`);
+    throw new Error(`Video ${isExtension ? "extension" : "generation"} error: ${operation.error.message}`);
   }
 
   // Poll for completion
@@ -139,7 +167,7 @@ export async function generateVideo(
     throw new Error("Video generation did not return an operation name");
   }
 
-  log.info(`Polling video generation operation: ${operationName}`);
+  log.info(`Polling video ${isExtension ? "extension" : "generation"} operation: ${operationName}`);
 
   const maxPollTime = 5 * 60 * 1000; // 5 minutes
   const pollInterval = 10_000; // 10 seconds
@@ -163,18 +191,18 @@ export async function generateVideo(
     const pollResult = (await pollResponse.json()) as typeof operation;
 
     if (pollResult.error) {
-      throw new Error(`Video generation failed: ${pollResult.error.message}`);
+      throw new Error(`Video ${isExtension ? "extension" : "generation"} failed: ${pollResult.error.message}`);
     }
 
     if (pollResult.done && pollResult.response) {
-      log.info(`Video generation completed after ${Math.round((Date.now() - startTime) / 1000)}s`);
+      log.info(`Video ${isExtension ? "extension" : "generation"} completed after ${Math.round((Date.now() - startTime) / 1000)}s`);
       return parseVideoResponse(pollResult.response, model, operationName);
     }
 
-    log.info(`Video still generating... (${Math.round((Date.now() - startTime) / 1000)}s elapsed)`);
+    log.info(`Video still ${isExtension ? "extending" : "generating"}... (${Math.round((Date.now() - startTime) / 1000)}s elapsed)`);
   }
 
-  throw new Error("Video generation timed out after 5 minutes");
+  throw new Error(`Video ${isExtension ? "extension" : "generation"} timed out after 5 minutes`);
 }
 
 function parseVideoResponse(
@@ -219,6 +247,112 @@ function parseVideoResponse(
   }
 
   return { videos, model, operationName };
+}
+
+/**
+ * Generate a continuous video by chaining Veo scene extensions.
+ *
+ * Strategy for a ~22-second continuous video:
+ *   1. Clip 1: Initial 8-second generation from the first prompt
+ *   2. Clip 2: Extend clip 1 by ~7 seconds using the second prompt
+ *      (Veo uses the last ~1 second of clip 1 as seed → returns merged ~15s video)
+ *   3. Clip 3: Extend the merged clip by ~7 seconds using the third prompt
+ *      (Veo uses the last ~1 second of merged clip → returns merged ~22s video)
+ *
+ * Each extension is sequential since it depends on the previous clip.
+ * The final result includes both the merged video and individual clip data.
+ *
+ * @param prompts Array of 3 prompts (initial + 2 extension prompts)
+ * @param options Common options for all clips
+ * @returns The final merged video and per-clip metadata
+ */
+export async function generateContinuousVideo(
+  prompts: string[],
+  options?: {
+    model?: string;
+    aspectRatio?: "16:9" | "9:16";
+    initialDurationSeconds?: 5 | 6 | 7 | 8;
+    onClipProgress?: (clipIndex: number, status: "generating" | "extending" | "done" | "error", elapsedMs: number) => void;
+  },
+): Promise<{
+  /** The final merged continuous video (all clips combined by Veo) */
+  mergedVideo: GeneratedVideo | null;
+  /** Per-clip results (null for failed clips) */
+  clips: (GeneratedVideo | null)[];
+  /** Total duration in seconds */
+  totalDurationSeconds: number;
+  model: string;
+}> {
+  if (prompts.length === 0) {
+    throw new Error("At least one prompt is required");
+  }
+
+  const model = options?.model ?? DEFAULT_VIDEO_MODEL;
+  const clips: (GeneratedVideo | null)[] = [];
+  let currentVideoBase64: string | null = null;
+  let totalDuration = 0;
+  const startTime = Date.now();
+
+  for (let i = 0; i < prompts.length; i++) {
+    const isExtension = i > 0 && currentVideoBase64 !== null;
+    const clipStart = Date.now();
+
+    try {
+      options?.onClipProgress?.(i, isExtension ? "extending" : "generating", Date.now() - startTime);
+
+      log.info(`Continuous video: ${isExtension ? "extending" : "generating"} clip ${i + 1}/${prompts.length}`);
+
+      const result = await generateVideo({
+        prompt: prompts[i],
+        model,
+        aspectRatio: options?.aspectRatio ?? "16:9",
+        // Only set duration for the initial clip
+        ...(isExtension ? {} : { durationSeconds: options?.initialDurationSeconds ?? 8 }),
+        // Pass the previous merged video for extension
+        ...(isExtension && currentVideoBase64 ? {
+          sourceVideoBase64: currentVideoBase64,
+          sourceVideoMimeType: "video/mp4",
+        } : {}),
+      });
+
+      const video = result.videos[0];
+      if (video) {
+        clips.push(video);
+        currentVideoBase64 = video.videoBase64;
+        // Extension: first clip ~8s, each extension adds ~7s
+        totalDuration = isExtension ? totalDuration + 7 : (options?.initialDurationSeconds ?? 8);
+
+        log.info(`Clip ${i + 1}/${prompts.length} complete (${Math.round((Date.now() - clipStart) / 1000)}s). Running total: ~${totalDuration}s`);
+        options?.onClipProgress?.(i, "done", Date.now() - startTime);
+      } else {
+        log.warn(`Clip ${i + 1}/${prompts.length}: no video in response`);
+        clips.push(null);
+        options?.onClipProgress?.(i, "error", Date.now() - startTime);
+        // If an intermediate clip fails, we can't extend further
+        break;
+      }
+    } catch (err) {
+      log.warn(`Clip ${i + 1}/${prompts.length} failed`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      clips.push(null);
+      options?.onClipProgress?.(i, "error", Date.now() - startTime);
+      // If an intermediate clip fails, we can't extend further
+      break;
+    }
+  }
+
+  // The last successful clip's video is the merged continuous video
+  const lastSuccessful = [...clips].reverse().find((c) => c !== null) ?? null;
+
+  log.info(`Continuous video complete: ${clips.filter(Boolean).length}/${prompts.length} clips, ~${totalDuration}s total`);
+
+  return {
+    mergedVideo: lastSuccessful,
+    clips,
+    totalDurationSeconds: totalDuration,
+    model,
+  };
 }
 
 /**

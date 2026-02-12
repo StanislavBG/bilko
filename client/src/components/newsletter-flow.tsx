@@ -62,9 +62,9 @@ import {
   useFlowChat,
   generateImage,
   generateImages,
-  generateVideo,
+  generateContinuousVideo,
 } from "@/lib/bilko-flow";
-import type { ImageGenerationResult } from "@/lib/bilko-flow";
+import type { ImageGenerationResult, ContinuousVideoResult } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
@@ -85,6 +85,9 @@ type FlowState =
   | "producing"
   | "assembling"
   | "generating-images"
+  | "generating-video-1"
+  | "generating-video-2"
+  | "generating-video-3"
   | "generating-videos"
   | "done"
   | "error";
@@ -303,29 +306,33 @@ function generateVideoPromptsPrompt(
   ranked: RankedStories,
 ): string {
   return bilkoSystemPrompt(
-    `You are an AI video production expert who creates prompts optimized for Google Veo and similar video generation models.
+    `You are an AI video production expert creating prompts for Google Veo scene extension to produce a CONTINUOUS ~22-second video.
 
-INPUT: A 60-second sports news narrative:
+INPUT: A 60-second sports news narrative (we are generating video for the MAIN story — 20 seconds):
 MAIN STORY: "${ranked.main.headline}" — ${ranked.main.imageDescription}
+KEY STAT: ${ranked.main.keyStat} (${ranked.main.statLabel})
 SUPPORT 1: "${ranked.supporting[0]?.headline}" — ${ranked.supporting[0]?.imageDescription}
 SUPPORT 2: "${ranked.supporting[1]?.headline}" — ${ranked.supporting[1]?.imageDescription}
 
-MISSION: Create Veo-optimized video generation prompts for a ~30 second AI-generated video (10s per story). Each prompt should:
-- Be a rich natural language scene description (Veo understands cinematic language)
-- Include camera movement (dolly, pan, tracking shot, aerial, etc.)
-- Specify lighting and mood
-- Be designed for 8-10 second clip generation
+MISSION: Create 3 Veo prompts that form a CONTINUOUS ~22-second video using Veo's SCENE EXTENSION feature:
+- Scene 1 (8 seconds): Initial clip — sets the visual tone, establishes the story. This is a fresh generation.
+- Scene 2 (7 seconds): EXTENSION of scene 1 — Veo will use the last ~1 second of scene 1 as visual grounding.
+  Your prompt must CONTINUE the visual flow naturally. Describe what happens NEXT.
+- Scene 3 (7 seconds): EXTENSION of the merged scene 1+2 — Veo uses the last ~1 second of the ~15s merged video.
+  Your prompt must CONCLUDE the sequence with a satisfying ending.
 
-EXTENSION TECHNIQUES (explain one that works best):
-- Multi-clip chaining: Generate 3 sequential clips with consistent style tokens
-- Prompt continuation: End each prompt with motion that the next prompt picks up
-- Style anchoring: Use identical style suffixes across all prompts for visual continuity
-- Keyframe bridging: Describe the last frame of clip A as the first frame of clip B
+CRITICAL RULES FOR SCENE EXTENSION:
+1. ALL prompts must share the SAME visual style, lighting, and color palette (use identical style suffix)
+2. Scene 2+3 prompts must use CONTINUATION language: "continue", "follows", "gradually transitions to"
+3. Do NOT use "suddenly cut to" or "jump to" — Veo needs smooth transitions
+4. End scene 1 with stable, continuing motion (not a hard stop) so scene 2 has clean grounding
+5. Each prompt should be a single rich scene description (Veo understands cinematic language)
+6. Include camera movement (dolly, pan, tracking, aerial) that flows between scenes
 
 Return ONLY valid JSON:
-{"videoPrompts":{"scenes":[{"sceneNumber":1,"headline":"...","veoPrompt":"...","durationSec":10,"cameraMovement":"...","visualMood":"...","transitionType":"cut"},{"sceneNumber":2,...},{"sceneNumber":3,...}],"extensionTechnique":"...","productionNotes":"..."}}
+{"videoPrompts":{"scenes":[{"sceneNumber":1,"headline":"...","veoPrompt":"...","durationSec":8,"cameraMovement":"...","visualMood":"...","transitionType":"initial"},{"sceneNumber":2,"headline":"...","veoPrompt":"...","durationSec":7,"cameraMovement":"...","visualMood":"...","transitionType":"scene-extension"},{"sceneNumber":3,"headline":"...","veoPrompt":"...","durationSec":7,"cameraMovement":"...","visualMood":"...","transitionType":"scene-extension"}],"extensionTechnique":"Veo scene extension: each clip uses the last ~1 second (24 frames) of the previous merged video as grounding seed. Scenes share a consistent cinematic style suffix for visual continuity.","productionNotes":"..."}}
 
-Rules: exactly 3 scenes (one per story). veoPrompt max 60 words. extensionTechnique max 80 words. productionNotes max 40 words. No markdown.`,
+Rules: exactly 3 scenes. veoPrompt max 60 words each. All must share consistent style tokens. productionNotes max 40 words. No markdown.`,
   );
 }
 
@@ -366,11 +373,26 @@ const STATUS_MESSAGES: Record<string, string[]> = {
     "Rendering scene images for slideshow...",
     "AI is painting the stadium atmosphere...",
   ],
+  "generating-video-1": [
+    "Generating initial 8-second clip with Veo (clip 1/3)...",
+    "Creating the opening scene for the main story...",
+    "Veo is rendering cinematic football footage...",
+  ],
+  "generating-video-2": [
+    "Extending video with scene 2 (clip 2/3)...",
+    "Veo is using the last second of clip 1 as grounding...",
+    "Building visual continuity from the previous scene...",
+  ],
+  "generating-video-3": [
+    "Extending video with final scene (clip 3/3)...",
+    "Veo is using the last second of the merged video as grounding...",
+    "Completing the ~22-second continuous video...",
+  ],
   "generating-videos": [
-    "Generating 8-second video clips with Veo...",
-    "Creating cinematic football footage...",
-    "Rendering AI video sequences...",
-    "Building the final video package...",
+    "Generating continuous ~22s video with Veo scene extension...",
+    "Creating cinematic football footage (3 clips chained)...",
+    "Each clip uses the last second of the previous as grounding...",
+    "Building the final continuous video package...",
   ],
 };
 
@@ -399,11 +421,13 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
   // Generated media (Nano Banana + Veo)
   const [infographicImage, setInfographicImage] = useState<ImageGenerationResult | null>(null);
   const [sceneImages, setSceneImages] = useState<(ImageGenerationResult | null)[] | null>(null);
-  const [sceneVideos, setSceneVideos] = useState<Array<{ videoBase64: string; mimeType: string; durationSeconds: number } | null> | null>(null);
+  const [continuousVideo, setContinuousVideo] = useState<ContinuousVideoResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState(STATUS_MESSAGES.discovering[0]);
   const [activeTab, setActiveTab] = useState<OutputTab>("newsletter");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const hasStarted = useRef(false);
+  const stateStartRef = useRef<number>(Date.now());
 
   const { trackStep, execution } = useFlowExecution("test-newsletter");
   const { definition: flowDef } = useFlowDefinition("test-newsletter");
@@ -483,6 +507,20 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
       index = (index + 1) % messages.length;
       setStatusMessage(messages[index]);
     }, 3000);
+    return () => clearInterval(interval);
+  }, [flowState]);
+
+  // Track elapsed time per state (resets on state change)
+  useEffect(() => {
+    if (flowState === "done" || flowState === "error") {
+      setElapsedSeconds(0);
+      return;
+    }
+    stateStartRef.current = Date.now();
+    setElapsedSeconds(0);
+    const interval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - stateStartRef.current) / 1000));
+    }, 1000);
     return () => clearInterval(interval);
   }, [flowState]);
 
@@ -696,45 +734,65 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
 
       const imgCount = [infographicImgData, ...sceneImgData].filter(Boolean).length;
       pushAgentMessage(
-        `Generated ${imgCount} cinematic images. Now generating video clips with Veo...`,
+        `Generated ${imgCount} cinematic images. Now generating continuous ~22s video with Veo scene extension (3 clips chained)...`,
       );
 
-      // ═══ Step 10: Generate Video Clips with Veo ═══
-      setFlowState("generating-videos");
+      // ═══ Step 10: Generate Continuous Video with Veo Scene Extension ═══
+      // Sequential: clip 1 (8s) → extend to clip 2 (~15s) → extend to clip 3 (~22s)
+      // Each extension uses the last ~1 second of the previous merged video as grounding.
+      setFlowState("generating-video-1");
 
-      const videoClipResults = await Promise.allSettled(
-        videoPromptsData.scenes.map((scene, i) =>
-          trackStep(
-            `generate-video-clip-${i + 1}`,
-            { prompt: scene.veoPrompt, sceneNumber: i + 1 },
-            () => generateVideo(scene.veoPrompt, {
-              durationSeconds: Math.min(8, Math.max(5, scene.durationSec)) as 5 | 6 | 7 | 8,
+      const veoPrompts = videoPromptsData.scenes.map((s) => s.veoPrompt);
+      let continuousVideoResult: ContinuousVideoResult | null = null;
+
+      try {
+        // Track the overall video generation step
+        const videoResult = await trackStep(
+          "generate-video-clips",
+          { prompts: veoPrompts, technique: "scene-extension", targetDuration: "~22s" },
+          async () => {
+            // Update flow state as each clip progresses
+            // We use the server-side continuous video endpoint which handles the full chain
+            const result = await generateContinuousVideo(veoPrompts, {
               aspectRatio: "16:9",
-            }),
-          ).catch((err) => {
-            console.warn(`Video clip ${i + 1} generation failed:`, err);
-            return null;
-          }),
-        ),
-      );
+              initialDurationSeconds: 8,
+            });
+            return result;
+          },
+        );
 
-      const videoClips = videoClipResults.map((r) => {
-        if (r.status === "fulfilled" && r.value) {
-          const val = r.value as { data: { videos: Array<{ videoBase64: string; mimeType: string; durationSeconds: number }> } } | null;
-          const firstVideo = val?.data?.videos?.[0];
-          return firstVideo ?? null;
+        continuousVideoResult = videoResult.data;
+        setContinuousVideo(continuousVideoResult);
+
+        const clipCount = continuousVideoResult.clips.filter(Boolean).length;
+        const hasMerged = !!continuousVideoResult.mergedVideo;
+
+        if (hasMerged) {
+          pushAgentMessage(
+            `Continuous video complete: ${clipCount}/3 clips chained with scene extension → ~${continuousVideoResult.totalDurationSeconds}s merged video.`,
+          );
+        } else {
+          pushAgentMessage(
+            `Video generation produced ${clipCount}/3 clips but could not complete the full chain. Video prompts are available for manual generation.`,
+          );
         }
-        return null;
-      });
-      setSceneVideos(videoClips);
+      } catch (videoErr) {
+        console.warn("Continuous video generation failed:", videoErr);
+        pushAgentMessage(
+          `Video generation failed: ${videoErr instanceof Error ? videoErr.message : "unknown error"}. Video prompts are available in the AI Video tab for manual generation.`,
+        );
+        // Don't fail the whole flow — continue to done with prompts only
+      }
 
-      const videoCount = videoClips.filter(Boolean).length;
       pushAgentMessage(
-        `Full media package complete: Newsletter, Cinematic Infographic${infographicImgData ? " (AI image)" : ""}, ${storyboardData.scenes.length}-scene Slideshow${imgCount > 1 ? " with AI visuals" : ""}, and ${videoCount > 0 ? `${videoCount} AI video clips` : `${videoPromptsData.scenes.length}-scene video plan`}. Check all four tabs.`,
+        `Full media package complete: Newsletter, Cinematic Infographic${infographicImgData ? " (AI image)" : ""}, ${storyboardData.scenes.length}-scene Slideshow${imgCount > 1 ? " with AI visuals" : ""}, and ${continuousVideoResult?.mergedVideo ? `~${continuousVideoResult.totalDurationSeconds}s continuous AI video` : `${videoPromptsData.scenes.length}-scene video plan`}. Check all four tabs.`,
       );
 
       // Send summary to FlowBus for activity logging
-      const exitSummary = `Read "${nl.editionTitle}" covering ${nl.leaguesCovered.join(", ")}. Top story: ${nl.topStory}. Mood: ${nl.mood}. ${nl.takeaway}. Generated cinematic infographic, ${imgCount} AI images, and ${videoCount} AI video clips.`;
+      const videoDesc = continuousVideoResult?.mergedVideo
+        ? `~${continuousVideoResult.totalDurationSeconds}s continuous AI video`
+        : `${videoPromptsData.scenes.length}-scene video plan`;
+      const exitSummary = `Read "${nl.editionTitle}" covering ${nl.leaguesCovered.join(", ")}. Top story: ${nl.topStory}. Mood: ${nl.mood}. ${nl.takeaway}. Generated cinematic infographic, ${imgCount} AI images, and ${videoDesc}.`;
       busSend("main", "summary", { summary: exitSummary });
 
       setFlowState("done");
@@ -835,7 +893,7 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     setVideoPrompts(null);
     setInfographicImage(null);
     setSceneImages(null);
-    setSceneVideos(null);
+    setContinuousVideo(null);
     setError(null);
     setActiveTab("newsletter");
     setTimeout(() => {
@@ -855,6 +913,9 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     producing: BarChart3,
     assembling: Film,
     "generating-images": Wand2,
+    "generating-video-1": Clapperboard,
+    "generating-video-2": Clapperboard,
+    "generating-video-3": Clapperboard,
     "generating-videos": Clapperboard,
   };
 
@@ -866,7 +927,10 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     producing: "Producing Infographic & Narrative",
     assembling: "Assembling Video Assets",
     "generating-images": "Generating Cinematic Images",
-    "generating-videos": "Generating Video Clips",
+    "generating-video-1": "Generating Video — Clip 1/3 (8s initial)",
+    "generating-video-2": "Extending Video — Clip 2/3 (grounding from clip 1)",
+    "generating-video-3": "Extending Video — Clip 3/3 (grounding from merged)",
+    "generating-videos": "Generating Continuous Video (~22s)",
   };
 
   const progressWidths: Record<string, string> = {
@@ -876,7 +940,10 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     ranking: "40%",
     producing: "50%",
     assembling: "60%",
-    "generating-images": "75%",
+    "generating-images": "72%",
+    "generating-video-1": "78%",
+    "generating-video-2": "85%",
+    "generating-video-3": "92%",
     "generating-videos": "90%",
   };
 
@@ -907,9 +974,16 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
               {stories.map((s) => s.headline).join(" · ")}
             </p>
           )}
-          <p className="text-muted-foreground text-center max-w-md mb-6">
+          <p className="text-muted-foreground text-center max-w-md mb-4">
             {statusMessage}
           </p>
+          {/* Elapsed time — visible during long-running steps (images/video) */}
+          {elapsedSeconds > 5 && (
+            <p className="text-xs text-muted-foreground/60 mb-4 tabular-nums">
+              {Math.floor(elapsedSeconds / 60)}:{String(elapsedSeconds % 60).padStart(2, "0")} elapsed
+              {flowState.startsWith("generating-video") && " — video generation can take several minutes"}
+            </p>
+          )}
           <div className="w-48 bg-muted rounded-full h-1.5 overflow-hidden">
             <div
               className="bg-green-500 h-full rounded-full transition-all duration-500"
@@ -1031,7 +1105,7 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
             {/* AI Video Tab */}
             {activeTab === "ai-video" && videoPrompts && (
               <div className="animate-in fade-in duration-300">
-                <VideoPlanView data={videoPrompts} generatedVideos={sceneVideos ?? undefined} />
+                <VideoPlanView data={videoPrompts} continuousVideo={continuousVideo ?? undefined} />
               </div>
             )}
           </div>
@@ -1052,7 +1126,10 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const exitSummary = `Read "${newsletter.editionTitle}" covering ${newsletter.leaguesCovered.join(", ")}. Top story: ${newsletter.topStory}. Mood: ${newsletter.mood}. ${newsletter.takeaway}. Full media package: infographic, slideshow video, AI video plan.`;
+                  const videoDesc = continuousVideo?.mergedVideo
+                    ? `~${continuousVideo.totalDurationSeconds}s continuous AI video`
+                    : "AI video plan";
+                  const exitSummary = `Read "${newsletter.editionTitle}" covering ${newsletter.leaguesCovered.join(", ")}. Top story: ${newsletter.topStory}. Mood: ${newsletter.mood}. ${newsletter.takeaway}. Full media package: infographic, slideshow video, ${videoDesc}.`;
                   onComplete(exitSummary);
                 }}
               >
