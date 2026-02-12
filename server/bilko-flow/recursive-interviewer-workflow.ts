@@ -13,8 +13,7 @@
  *   5. display-results       (ui.display)       — Render insights with tool recs
  */
 
-import type { Step, CreateWorkflowInput } from "bilko-flow/dist/domain/workflow";
-import type { DeterminismConfig } from "bilko-flow/dist/domain/determinism";
+import type { Step, CreateWorkflowInput, DeterminismConfig } from "bilko-flow";
 
 const determinism: DeterminismConfig = {
   targetGrade: "best-effort" as any,
@@ -158,7 +157,7 @@ No markdown. ONLY the JSON object.`,
     {
       id: "user-answers",
       name: "User Answers",
-      type: "user.text-input",
+      type: "user.text-input" as any,
       description:
         "Free-text or voice responses to each interview question.",
       dependsOn: ["first-question"],
@@ -257,7 +256,7 @@ Rules:
     {
       id: "display-results",
       name: "Display Insights",
-      type: "ui.display",
+      type: "ui.display" as any,
       description:
         "Renders confirmed insights and hidden patterns with tool recommendations.",
       dependsOn: ["analysis"],

@@ -14,8 +14,7 @@
  *   5. display-results      (ui.display)       — Render consultation results
  */
 
-import type { Step, CreateWorkflowInput } from "bilko-flow/dist/domain/workflow";
-import type { DeterminismConfig } from "bilko-flow/dist/domain/determinism";
+import type { Step, CreateWorkflowInput, DeterminismConfig } from "bilko-flow";
 
 const determinism: DeterminismConfig = {
   targetGrade: "best-effort" as any,
@@ -155,7 +154,7 @@ No markdown. ONLY the JSON object.`,
     {
       id: "user-answers",
       name: "User Answers (voice/text)",
-      type: "user.text-input",
+      type: "user.text-input" as any,
       description:
         "User provides free-text answers via keyboard or voice input. Each answer feeds back into the follow-up question step.",
       dependsOn: ["first-question"],
@@ -254,7 +253,7 @@ Rules:
     {
       id: "display-results",
       name: "Display Recommendations",
-      type: "ui.display",
+      type: "ui.display" as any,
       description:
         "Renders the final consultation results: summary, 2 obvious wins, and 2 hidden opportunities with tool suggestions and impact estimates.",
       dependsOn: ["analysis"],

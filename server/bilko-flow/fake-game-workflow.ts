@@ -10,8 +10,7 @@
  *   3. experience-summary (ai.generate-text) — Distill into experience report
  */
 
-import type { Workflow, Step, CreateWorkflowInput } from "bilko-flow/dist/domain/workflow";
-import type { DeterminismConfig } from "bilko-flow/dist/domain/determinism";
+import type { Workflow, Step, CreateWorkflowInput, DeterminismConfig } from "bilko-flow";
 
 // Determinism config: this workflow uses an external LLM API
 // so the best achievable grade is best-effort
