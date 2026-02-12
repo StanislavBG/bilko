@@ -1,18 +1,16 @@
 /**
- * FlowStatusIndicator / FlowProgressBanner — Thin adapters that bridge
- * the FlowBus context to the props-driven FlowProgress component.
+ * FlowStatusIndicator / FlowProgressBanner — Adapters that bridge
+ * FlowBusContext data to bilko-flow/react's FlowProgress component.
  *
- * FlowStatusIndicator  → compact mode (inline bottom panel)
- * FlowProgressBanner   → full mode (wide banner with numbered stepper)
- *
- * These wrappers read FlowBus state and map it to FlowProgressStep[].
- * All visual logic lives in FlowProgress.
+ * FlowStatusIndicator  → FlowProgress mode="compact" (inline bottom panel)
+ * FlowProgressBanner   → FlowProgress mode="full"    (full-width top banner)
  */
 
+import { useMemo } from "react";
+import { FlowProgress, type FlowProgressStep } from "bilko-flow/react";
 import { useFlowBus, type FlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowById } from "@/lib/bilko-flow";
 import type { FlowPhase } from "@/lib/bilko-flow";
-import { FlowProgress, type FlowProgressStep } from "@/components/ui/flow-progress";
 
 // ── Phase resolution from flow registry ─────────────────
 
@@ -35,22 +33,23 @@ function findPhaseIndex(phases: FlowPhase[], currentPhase: string): number {
   return -1;
 }
 
-/** Map FlowBus registration → FlowProgressStep[] */
+// ── Bridge: FlowRegistration → FlowProgressStep[] ──────
+
 function toProgressSteps(flow: FlowRegistration): FlowProgressStep[] {
   const phases = getFlowPhases(flow.id);
   if (!phases || !flow.phase) return [];
 
   const currentIdx = findPhaseIndex(phases, flow.phase);
 
-  return phases.map((phase, i): FlowProgressStep => {
-    const isActive = i === currentIdx;
-    const isDone = i < currentIdx;
-    return {
-      id: phase.id,
-      label: phase.label,
-      status: isActive ? "active" : isDone ? "complete" : "pending",
-    };
-  });
+  return phases.map((phase, i): FlowProgressStep => ({
+    id: phase.id,
+    label: phase.label,
+    status: i < currentIdx
+      ? "complete"
+      : i === currentIdx
+        ? "active"
+        : "pending",
+  }));
 }
 
 /** Resolve the current activity text from phase */
@@ -60,7 +59,7 @@ function resolveActivity(flow: FlowRegistration): string | undefined {
   return phases ? getPhaseLabel(phases, flow.phase) : flow.phase;
 }
 
-// ── FlowStatusIndicator (compact) ───────────────────────
+// ── Compact indicator (bottom of chat) ──────────────────
 
 interface FlowStatusIndicatorProps {
   onReset?: () => void;
@@ -69,8 +68,9 @@ interface FlowStatusIndicatorProps {
 export function FlowStatusIndicator({ onReset }: FlowStatusIndicatorProps) {
   const { flows } = useFlowBus();
 
-  const activeFlows = Array.from(flows.values()).filter(
-    (f) => f.status !== "idle",
+  const activeFlows = useMemo(
+    () => Array.from(flows.values()).filter((f) => f.status !== "idle"),
+    [flows],
   );
 
   if (activeFlows.length === 0) return null;
@@ -93,7 +93,7 @@ export function FlowStatusIndicator({ onReset }: FlowStatusIndicatorProps) {
   );
 }
 
-// ── FlowProgressBanner (full) ───────────────────────────
+// ── Full banner (top of page) ───────────────────────────
 
 interface FlowProgressBannerProps {
   onReset?: () => void;
@@ -102,15 +102,16 @@ interface FlowProgressBannerProps {
 export function FlowProgressBanner({ onReset }: FlowProgressBannerProps) {
   const { flows } = useFlowBus();
 
-  const activeFlows = Array.from(flows.values()).filter(
-    (f) => f.status !== "idle",
+  const activeFlows = useMemo(
+    () => Array.from(flows.values()).filter((f) => f.status !== "idle"),
+    [flows],
   );
 
   if (activeFlows.length === 0) return null;
 
   return (
     <div className="shrink-0 border-t border-border bg-background/95 backdrop-blur-sm
-      animate-in fade-in slide-in-from-bottom-2 duration-300">
+      px-6 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {activeFlows.map((flow) => (
         <FlowProgress
           key={flow.id}

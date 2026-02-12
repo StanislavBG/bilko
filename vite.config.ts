@@ -24,6 +24,7 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      "bilko-flow/react": path.resolve(import.meta.dirname, "node_modules", "bilko-flow", "src", "react"),
     },
   },
   root: path.resolve(import.meta.dirname, "client"),
