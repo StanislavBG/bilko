@@ -59,18 +59,24 @@ function resolveActivity(flow: FlowRegistration): string | undefined {
   return phases ? getPhaseLabel(phases, flow.phase) : flow.phase;
 }
 
-// ── Compact indicator (bottom of chat) ──────────────────
+// ── Compact indicator (under chat panel) ─────────────────
 
 interface FlowStatusIndicatorProps {
   onReset?: () => void;
+  /** Show only this flow (e.g. "bilko-main") */
+  flowId?: string;
 }
 
-export function FlowStatusIndicator({ onReset }: FlowStatusIndicatorProps) {
+export function FlowStatusIndicator({ onReset, flowId }: FlowStatusIndicatorProps) {
   const { flows } = useFlowBus();
 
   const activeFlows = useMemo(
-    () => Array.from(flows.values()).filter((f) => f.status !== "idle"),
-    [flows],
+    () => Array.from(flows.values()).filter((f) => {
+      if (f.status === "idle") return false;
+      if (flowId && f.id !== flowId) return false;
+      return true;
+    }),
+    [flows, flowId],
   );
 
   if (activeFlows.length === 0) return null;
@@ -93,18 +99,24 @@ export function FlowStatusIndicator({ onReset }: FlowStatusIndicatorProps) {
   );
 }
 
-// ── Full banner (top of page) ───────────────────────────
+// ── Full banner (under right panel) ──────────────────────
 
 interface FlowProgressBannerProps {
   onReset?: () => void;
+  /** Exclude this flow so only subflows show */
+  excludeFlowId?: string;
 }
 
-export function FlowProgressBanner({ onReset }: FlowProgressBannerProps) {
+export function FlowProgressBanner({ onReset, excludeFlowId }: FlowProgressBannerProps) {
   const { flows } = useFlowBus();
 
   const activeFlows = useMemo(
-    () => Array.from(flows.values()).filter((f) => f.status !== "idle"),
-    [flows],
+    () => Array.from(flows.values()).filter((f) => {
+      if (f.status === "idle") return false;
+      if (excludeFlowId && f.id === excludeFlowId) return false;
+      return true;
+    }),
+    [flows, excludeFlowId],
   );
 
   if (activeFlows.length === 0) return null;
