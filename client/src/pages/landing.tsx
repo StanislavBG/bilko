@@ -611,31 +611,27 @@ export function LandingContent() {
   }, [clearMessages, navigate, releaseChat]);
 
   return (
-    <main className="flex flex-col flex-1 overflow-hidden pt-14">
-      {/* Content row — chat + delivery surface */}
-      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden min-h-0">
-        {/* Left panel: Chat + MainFlow */}
-        <div className="w-full lg:w-[420px] xl:w-[480px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
-          <FlowChat />
-          <MainFlow flowId="bilko-main" onReset={handleReset} position="bottom" mode="auto" />
-        </div>
-
-        {/* Right panel: Delivery surface */}
-        <div className="flex flex-1 overflow-auto min-h-0">
-          {selectedMode ? (
-            <div className="flex-1 px-6 py-6 w-full">
-              <ExperienceBack onBack={handleBack} />
-              <RightPanelContent
-                mode={selectedMode}
-                onComplete={handleSubflowExit}
-              />
-            </div>
-          ) : (
-            <ModeSelectionGrid onSelect={handleChoice} />
-          )}
-        </div>
+    <main className="flex flex-col lg:flex-row flex-1 overflow-hidden pt-14 min-h-0">
+      {/* Left panel: MainFlow + Chat */}
+      <div className="w-full lg:w-[420px] xl:w-[480px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
+        <MainFlow flowId="bilko-main" onReset={handleReset} position="top" mode="auto" />
+        <FlowChat />
       </div>
 
+      {/* Right panel: Delivery surface */}
+      <div className="flex flex-1 overflow-auto min-h-0">
+        {selectedMode ? (
+          <div className="flex-1 px-6 py-6 w-full">
+            <ExperienceBack onBack={handleBack} />
+            <RightPanelContent
+              mode={selectedMode}
+              onComplete={handleSubflowExit}
+            />
+          </div>
+        ) : (
+          <ModeSelectionGrid onSelect={handleChoice} />
+        )}
+      </div>
     </main>
   );
 }
