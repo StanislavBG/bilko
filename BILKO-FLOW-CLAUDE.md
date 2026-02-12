@@ -130,20 +130,22 @@ bilko-flow/
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-### React Layer (to be built)
+### React Layer (FlowProgress: built; others: to be extracted)
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  react/  — Portable, self-contained UI components                │
 │                                                                  │
-│  FlowProgress  — THE first-class progress component              │
-│    ├─ mode="full"    — Footer/banner with numbered stepper       │
-│    └─ mode="compact" — Inline dot chain for tight spaces         │
+│  FlowProgress  — THE unified progress component  ✅ BUILT        │
+│    ├─ mode="full"    — Banner: numbered circles + progress track │
+│    ├─ mode="compact" — Inline: status icons + text labels        │
+│    ├─ Sliding window — [1]...[X±2]...[N] for high step counts   │
+│    ├─ Adaptive labels — full/truncated/icon based on proximity   │
+│    └─ Interactive ellipsis — dropdown to jump to hidden steps    │
 │                                                                  │
 │  FlowCanvas    — 2D DAG visualization (zoom, pan, minimap)       │
-│  StepNode      — Single step in timeline                         │
 │  StepDetail    — Rich step inspection (tabs, schema, execution)  │
-│  FlowTimeline  — Vertical step list sidebar                      │
+│  FlowTimeline  — Thin adapter → FlowProgress  ✅ MIGRATED       │
 │  FlowCard      — Summary card for flow registry grids            │
 │                                                                  │
 │  layout.ts         — DAG coordinate computation                  │
@@ -355,21 +357,41 @@ React and lucide-react are **peer dependencies** — optional for consumers who 
 
 This is the single most important UI component in the package. It shows users where a multi-step flow is in its execution.
 
+**Implementation status**: Built and deployed in Bilko at `client/src/components/ui/flow-progress.tsx`. All previous stepper/timeline components (`StepTracker`, `MiniFlowProgress`, `BannerStepper`) have been unified into this single component.
+
 ### Two Modes, One Component
 
 `<FlowProgress>` renders in two visual modes controlled by a `mode` prop:
 
 | Mode | Visual | Use Case |
 |------|--------|----------|
-| **`"full"`** | Large numbered circles (36px), phase labels below, wide connector bars, header row with flow name + status + activity | Page footer, dedicated progress section, large screens |
-| **`"compact"`** | Small dots (8px) with phase name labels inline, thin connector lines, activity text below | Inline within content, sidebars, mobile, embedded widgets |
+| **`"full"`** | Large numbered circles (36px), phase labels below, wide connector bars, header row with flow name + status + progress track + activity | Page footer, dedicated progress section, large screens |
+| **`"compact"`** | Small status icons (14px) with inline text labels, thin connector lines, activity + last result below | Inline within content, sidebars, mobile, embedded widgets |
 
-Both modes share the same data contract. The component is the same — the `mode` prop switches the visual treatment.
+Both modes share the same data contract and the same sliding window logic. The `mode` prop switches the visual treatment.
+
+### Sliding Window
+
+When the step count exceeds `2 * radius + 3` (default radius = 2, so > 7 steps), the component applies a windowing algorithm:
+
+```
+Always visible: [1] ... [X-2] [X-1] [X] [X+1] [X+2] ... [N]
+```
+
+- **Always shown**: First step, last step, active step ± `radius` neighbors
+- **Ellipsis markers**: Interactive — click to open a dropdown of hidden steps, allowing jump navigation
+- **Adaptive labels**:
+  - Active step: full text, bold
+  - Immediate neighbors (±1): full text, normal weight
+  - Distance ±2: truncated text
+  - Beyond ±2 (endpoints only): number/icon only (full mode) or icon only (compact mode)
+
+Example at step 10 of 20: `(1) Discover ... (8) (9) (10) Rank Stories (11) (12) ... (20) Final Review`
 
 ### Props Interface
 
 ```typescript
-interface FlowProgressPhase {
+interface FlowProgressStep {
   id: string;
   label: string;
   status: "pending" | "active" | "complete" | "error";
@@ -379,8 +401,8 @@ interface FlowProgressProps {
   /** Visual mode — "full" for footer/banner, "compact" for inline */
   mode: "full" | "compact";
 
-  /** The phases to display, in order */
-  phases: FlowProgressPhase[];
+  /** Steps to display, in order */
+  steps: FlowProgressStep[];
 
   /** Flow name/label (shown in "full" mode header) */
   label?: string;
@@ -397,6 +419,9 @@ interface FlowProgressProps {
   /** Called when user clicks reset/restart */
   onReset?: () => void;
 
+  /** Called when user clicks a step (from ellipsis dropdown or direct) */
+  onStepClick?: (stepId: string) => void;
+
   /** Additional CSS classes on root element */
   className?: string;
 }
@@ -408,21 +433,24 @@ The full mode renders a **footer/banner** that takes significant vertical space 
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ ● European Football Newsletter   Done · done              ↻    │
+│ ● European Football Newsletter   Running · Rank Stories  5/12 ↻│
 │                                                                 │
-│   ①────────②────────③────────④────────⑤────────⑥────────⑦      │
-│  Discover  Write   Rank &   Produce  Assemble  Generate  Generate │
-│                   Summarize                     Images    Videos  │
-│                                                                 │
+│   ①────────②────── ... ──④────────⑤────────⑥──── ... ──⑫      │
+│  Discover  Write         Rank &   Produce  Assemble     Final   │
+│                         Summarize                       Review  │
+│  ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▓▓▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  │
 │  Designing the infographic layout...                            │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-- **Header row**: Status dot (animated pulse when running), flow label (semibold), status text, current phase name, reset button (right-aligned)
-- **Stepper row**: Numbered circles (36px, `w-9 h-9`) connected by horizontal bars
+- **Header row**: Status dot (animated pulse when running), flow label (semibold), status text, active step name, `completed/total` counter, reset button
+- **Stepper row**: Numbered circles (36px, `w-9 h-9`) connected by horizontal bars, with ellipsis markers for hidden ranges
   - **Completed**: Filled with primary color, checkmark icon replaces number
   - **Active**: Green fill, `ring-4` glow, `scale-110`, green label text
+  - **Error**: Red fill with X icon
   - **Pending**: Muted background, muted number, muted label
+  - **Ellipsis**: Dashed-border circle with `...` icon, click to open dropdown
+- **Progress track**: Thin horizontal bar showing overall completion percentage
 - **Connector bars**: Fill with primary color as phases complete, muted when pending
 - **Activity text**: Below the stepper (if provided)
 
@@ -432,21 +460,62 @@ The compact mode renders an **inline strip** for tight spaces:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ ✅ Discover Stories ── ✅ Write Articles ── ✅ Newsletter       │
-│ Summary ── ✅ Rank Stories ── ○ Design Infographic ──           │
-│ ○ Create Narrative ── ○ Generate Storyboard ── ○ Generate...   │
+│ ✅ Discover ── ✅ Write ── ... ── ⟳ Rank Stories ──             │
+│ ○ Design ── ... ── ○ Final Review                               │
 │ Designing the infographic layout...                             │
+│ Newsletter Summary — 3 articles generated                       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-- **Step chain**: Status icon + label, connected by thin lines (`h-px w-4`)
+- **Step chain**: Status icon + label, connected by thin lines (`h-px w-4`), wraps at container edge
   - **Complete**: Green checkmark icon (`CheckCircle2`, 14px)
-  - **Active**: Spinning loader (`Loader2`, 14px, `animate-spin`), bold white label
+  - **Active**: Spinning loader (`Loader2`, 14px, `animate-spin`), bold foreground label
   - **Pending**: Empty circle (`Circle`, 14px, muted)
-  - **Error**: Red circle
+  - **Error**: Red X circle (`XCircle`, 14px)
+  - **Ellipsis**: `...` icon, click to open dropdown of hidden steps
 - **Connector lines**: Primary color when linking completed steps, muted otherwise
+- **Adaptive labels**: Full text for active ± 1, truncated for ± 2, hidden beyond
 - **Activity text** (line 2): Truncated, `text-xs text-muted-foreground`
 - **Last result** (line 3, optional): Green text, truncated
+
+### Ellipsis Dropdown (Progressive Disclosure)
+
+When steps are hidden behind an ellipsis, clicking the `...` marker opens a positioned dropdown:
+
+- Shows all hidden steps with their status icons and step numbers
+- Scrollable if many steps are hidden (max height 200px)
+- Click a step to invoke `onStepClick` and close the dropdown
+- Auto-closes on outside click
+
+### Context Adapter Pattern
+
+In the Bilko app, `FlowStatusIndicator` and `FlowProgressBanner` serve as thin adapters that bridge the `FlowBus` context to FlowProgress props:
+
+```tsx
+// flow-status-indicator.tsx — thin adapter
+import { FlowProgress, type FlowProgressStep } from "@/components/ui/flow-progress";
+
+export function FlowStatusIndicator({ onReset }) {
+  const { flows } = useFlowBus();
+  const activeFlows = Array.from(flows.values()).filter(f => f.status !== "idle");
+  if (activeFlows.length === 0) return null;
+
+  return activeFlows.map(flow => (
+    <FlowProgress
+      mode="compact"
+      steps={toProgressSteps(flow)}  // maps FlowBus phases → FlowProgressStep[]
+      label={flow.label}
+      status={flow.status}
+      activity={resolveActivity(flow)}
+      onReset={onReset}
+    />
+  ));
+}
+
+export function FlowProgressBanner({ onReset }) {
+  // Same pattern, mode="full"
+}
+```
 
 ### External Integration Pattern
 
@@ -455,17 +524,15 @@ For external sites (not using React contexts), the component accepts data direct
 ```tsx
 import { FlowProgress } from "bilko-flow/react";
 
-// SSE / WebSocket / polling provides live data
 function MyPage() {
-  const [phases, setPhases] = useState<FlowProgressPhase[]>([]);
+  const [steps, setSteps] = useState<FlowProgressStep[]>([]);
   const [activity, setActivity] = useState("");
 
   useEffect(() => {
     const es = new EventSource("/api/runs/abc/events");
     es.onmessage = (e) => {
       const event = JSON.parse(e.data);
-      // Map DataPlaneEvents to FlowProgressPhase[]
-      setPhases(mapEventToPhases(event));
+      setSteps(mapEventToSteps(event));
       setActivity(event.payload?.activity ?? "");
     };
     return () => es.close();
@@ -474,7 +541,7 @@ function MyPage() {
   return (
     <FlowProgress
       mode="full"
-      phases={phases}
+      steps={steps}
       label="Content Pipeline"
       status="running"
       activity={activity}
@@ -559,7 +626,7 @@ interface StepNodeProps {
 
 ### FlowTimeline
 
-**Purpose**: Vertical sidebar showing all steps in execution order.
+**Purpose**: Thin adapter wrapping `FlowProgress mode="compact"` in a Card for the flow inspector sidebar. Translates `FlowDefinition` + `StepExecution` data into `FlowProgressStep[]`.
 
 **Props**:
 ```typescript
@@ -568,9 +635,10 @@ interface FlowTimelineProps {
   selectedStepId: string | null;
   onSelectStep: (stepId: string) => void;
   executions?: Record<string, StepExecution>;
-  className?: string;
 }
 ```
+
+**Note**: FlowTimeline no longer renders `StepNode` components directly. It delegates all step rendering to `FlowProgress`, gaining sliding window and adaptive labeling for free.
 
 ### FlowCard
 
@@ -800,43 +868,23 @@ npm install --save-dev @testing-library/react @testing-library/jest-dom
 
 ## Migration Path — Bilko Integration
 
-Once the React layer is built and published, the parent project (Bilko) should:
+### Completed Migrations
 
-1. **Replace** `client/src/components/flow-inspector/*` with imports from `bilko-flow/react`
-2. **Replace** `client/src/components/flow-status-indicator.tsx` with `<FlowProgress mode="full" />` and `<FlowProgress mode="compact" />`
-3. **Replace** `client/src/components/ui/step-tracker.tsx` with `<FlowProgress mode="compact" />`
-4. **Replace** `client/src/lib/bilko-flow/inspector/*` with imports from `bilko-flow/react`
-5. **Keep** `client/src/lib/bilko-flow/runtime/*` (hooks are Bilko-specific)
-6. **Keep** `client/src/lib/bilko-flow/definitions/registry.ts` (flow definitions are Bilko-specific)
-7. **Bridge** FlowBusContext data → FlowProgress props in a thin adapter
+The following migrations have been completed in the Bilko codebase:
 
-The adapter pattern:
-```tsx
-// In Bilko: thin adapter from FlowBus context → FlowProgress props
-function FlowProgressAdapter({ mode }: { mode: "full" | "compact" }) {
-  const { flows } = useFlowBus();
-  const flow = Array.from(flows.values()).find(f => f.status !== "idle");
-  if (!flow) return null;
+1. **`StepTracker` → `FlowProgress mode="compact"`** — All 4 flow components (`newsletter-flow`, `video-discovery-flow`, `fake-game-flow`, `work-with-me-flow`) now use `FlowProgress` directly
+2. **`FlowStatusIndicator` → thin adapter** — Now delegates to `<FlowProgress mode="compact" />` internally
+3. **`FlowProgressBanner` → thin adapter** — Now delegates to `<FlowProgress mode="full" />` internally
+4. **`FlowTimeline` → thin adapter** — Now delegates to `<FlowProgress mode="compact" />` with `onStepClick` for step selection
 
-  const def = getFlowById(flow.id);
-  const phases = (def?.phases ?? []).map((p, i) => ({
-    id: p.id,
-    label: p.label,
-    status: resolvePhaseStatus(p, flow.phase, i),
-  }));
+### Remaining Migrations (when bilko-flow/react is published)
 
-  return (
-    <FlowProgress
-      mode={mode}
-      phases={phases}
-      label={flow.label}
-      status={flow.status}
-      activity={flow.phase ? getPhaseLabel(def?.phases ?? [], flow.phase) : undefined}
-      onReset={onReset}
-    />
-  );
-}
-```
+1. **Replace** `client/src/components/ui/flow-progress.tsx` with import from `bilko-flow/react`
+2. **Replace** `client/src/components/flow-inspector/*` with imports from `bilko-flow/react`
+3. **Replace** `client/src/lib/bilko-flow/inspector/*` with imports from `bilko-flow/react`
+4. **Keep** `client/src/lib/bilko-flow/runtime/*` (hooks are Bilko-specific)
+5. **Keep** `client/src/lib/bilko-flow/definitions/registry.ts` (flow definitions are Bilko-specific)
+6. **Keep** adapter wrappers (`flow-status-indicator.tsx`) that bridge FlowBus context → FlowProgress props
 
 ---
 
