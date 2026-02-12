@@ -3,7 +3,7 @@
  *
  * Shows Veo-optimized scene prompts with camera movements, visual moods,
  * duration targets, and the scene extension technique used to create a
- * continuous ~22-second AI-generated video from 3 chained clips.
+ * continuous ~20-second primary story AI video from 3 chained clips (8+6+6s).
  *
  * When a continuous video has been generated, displays the merged video
  * player prominently at the top, followed by the per-scene prompt details.

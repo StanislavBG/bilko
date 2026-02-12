@@ -31,7 +31,7 @@
  *   1. Newsletter      — 3 articles with image descriptions
  *   2. Infographic     — Cinematic AI wallpaper (Nano Banana) + score overlays
  *   3. Slideshow Video — AI scene images (Nano Banana) + TTS narration (~60s)
- *   4. AI Video Clips  — Veo-generated 7-8 second cinematic clips
+ *   4. AI Video        — Veo-generated ~20s continuous video (8+6+6) of the primary story
  *
  * Models: Nano Banana (image gen) + Veo 3 (video gen) + Gemini 2.5 Flash (text)
  * Auto-starts immediately when rendered.
@@ -315,20 +315,22 @@ function generateVideoPromptsPrompt(
   ranked: RankedStories,
 ): string {
   return bilkoSystemPrompt(
-    `You are an AI video production expert creating prompts for Google Veo scene extension to produce a CONTINUOUS ~22-second video.
+    `You are an AI video production expert creating prompts for Google Veo scene extension to produce a CONTINUOUS ~20-second video focused EXCLUSIVELY on the PRIMARY news story.
 
-INPUT: A 60-second sports news narrative (we are generating video for the MAIN story — 20 seconds):
-MAIN STORY: "${ranked.main.headline}" — ${ranked.main.imageDescription}
+INPUT — PRIMARY STORY ONLY:
+HEADLINE: "${ranked.main.headline}"
+VISUAL: ${ranked.main.imageDescription}
 KEY STAT: ${ranked.main.keyStat} (${ranked.main.statLabel})
-SUPPORT 1: "${ranked.supporting[0]?.headline}" — ${ranked.supporting[0]?.imageDescription}
-SUPPORT 2: "${ranked.supporting[1]?.headline}" — ${ranked.supporting[1]?.imageDescription}
+ARTICLE (voiceover script): ${ranked.main.article}
 
-MISSION: Create 3 Veo prompts that form a CONTINUOUS ~22-second video using Veo's SCENE EXTENSION feature:
-- Scene 1 (8 seconds): Initial clip — sets the visual tone, establishes the story. This is a fresh generation.
-- Scene 2 (7 seconds): EXTENSION of scene 1 — Veo will use the last ~1 second of scene 1 as visual grounding.
-  Your prompt must CONTINUE the visual flow naturally. Describe what happens NEXT.
-- Scene 3 (7 seconds): EXTENSION of the merged scene 1+2 — Veo uses the last ~1 second of the ~15s merged video.
-  Your prompt must CONCLUDE the sequence with a satisfying ending.
+The article text above will be used as voice-over narration. Your video visuals must match and complement this narration — the viewer will HEAR the article while SEEING your video.
+
+MISSION: Create 3 Veo prompts that form a CONTINUOUS ~20-second video using Veo's SCENE EXTENSION feature. ALL 3 scenes must depict the PRIMARY story — do NOT include supporting stories.
+- Scene 1 (8 seconds): Initial clip — establish the story's setting, mood, and key visual. Fresh generation.
+- Scene 2 (6 seconds): EXTENSION of scene 1 — develop the story visually, show the action or drama unfolding.
+  Veo uses the last ~1 second of scene 1 as visual grounding. Describe what happens NEXT.
+- Scene 3 (6 seconds): EXTENSION of the merged scene 1+2 — conclude with the emotional payoff or resolution.
+  Veo uses the last ~1 second of the ~14s merged video. CONCLUDE the sequence satisfyingly.
 
 CRITICAL RULES FOR SCENE EXTENSION:
 1. ALL prompts must share the SAME visual style, lighting, and color palette (use identical style suffix)
@@ -337,9 +339,10 @@ CRITICAL RULES FOR SCENE EXTENSION:
 4. End scene 1 with stable, continuing motion (not a hard stop) so scene 2 has clean grounding
 5. Each prompt should be a single rich scene description (Veo understands cinematic language)
 6. Include camera movement (dolly, pan, tracking, aerial) that flows between scenes
+7. Keep scenes 2+3 concise — 6 seconds of action, not 7. Tighter pacing, fewer elements per scene.
 
 Return ONLY valid JSON:
-{"videoPrompts":{"scenes":[{"sceneNumber":1,"headline":"...","veoPrompt":"...","durationSec":8,"cameraMovement":"...","visualMood":"...","transitionType":"initial"},{"sceneNumber":2,"headline":"...","veoPrompt":"...","durationSec":7,"cameraMovement":"...","visualMood":"...","transitionType":"scene-extension"},{"sceneNumber":3,"headline":"...","veoPrompt":"...","durationSec":7,"cameraMovement":"...","visualMood":"...","transitionType":"scene-extension"}],"extensionTechnique":"Veo scene extension: each clip uses the last ~1 second (24 frames) of the previous merged video as grounding seed. Scenes share a consistent cinematic style suffix for visual continuity.","productionNotes":"..."}}
+{"videoPrompts":{"scenes":[{"sceneNumber":1,"headline":"...","veoPrompt":"...","durationSec":8,"cameraMovement":"...","visualMood":"...","transitionType":"initial"},{"sceneNumber":2,"headline":"...","veoPrompt":"...","durationSec":6,"cameraMovement":"...","visualMood":"...","transitionType":"scene-extension"},{"sceneNumber":3,"headline":"...","veoPrompt":"...","durationSec":6,"cameraMovement":"...","visualMood":"...","transitionType":"scene-extension"}],"extensionTechnique":"Veo scene extension: each clip uses the last ~1 second (24 frames) of the previous merged video as grounding seed. Scenes share a consistent cinematic style suffix for visual continuity.","productionNotes":"..."}}
 
 Rules: exactly 3 scenes. veoPrompt max 60 words each. All must share consistent style tokens. productionNotes max 40 words. No markdown.`,
   );
@@ -395,10 +398,10 @@ const STATUS_MESSAGES: Record<string, string[]> = {
   "generating-video-3": [
     "Extending video with final scene (clip 3/3)...",
     "Veo is using the last second of the merged video as grounding...",
-    "Completing the ~22-second continuous video...",
+    "Completing the ~20-second continuous video...",
   ],
   "generating-videos": [
-    "Generating continuous ~22s video with Veo scene extension...",
+    "Generating continuous ~20s video with Veo scene extension...",
     "Creating cinematic football footage (3 clips chained)...",
     "Each clip uses the last second of the previous as grounding...",
     "Building the final continuous video package...",
@@ -747,7 +750,7 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
 
       const imgCount = [infographicImgData, ...sceneImgData].filter(Boolean).length;
       pushAgentMessage(
-        `Generated ${imgCount} cinematic images. Now generating continuous ~22s video with Veo scene extension (3 clips chained)...`,
+        `Generated ${imgCount} cinematic images. Now generating continuous ~20s primary story video with Veo scene extension (3 clips chained)...`,
       );
 
       // ═══ Steps 10-12: Generate Video Clips with Veo (Client-Side Sequential) ═══
@@ -1039,7 +1042,7 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     "generating-video-1": "Generating Video — Clip 1/3 (8s initial)",
     "generating-video-2": "Extending Video — Clip 2/3 (grounding from clip 1)",
     "generating-video-3": "Extending Video — Clip 3/3 (grounding from merged)",
-    "generating-videos": "Generating Continuous Video (~22s)",
+    "generating-videos": "Generating Continuous Video (~20s)",
   };
 
   const progressWidths: Record<string, string> = {

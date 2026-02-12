@@ -215,10 +215,10 @@ export async function generateVideo(
 /**
  * Generate a continuous video by chaining Veo scene extensions.
  *
- * Creates a ~22-second continuous video from 3 prompts:
+ * Creates a ~20-second continuous video from 3 prompts:
  *   - Clip 1: 8s initial generation
- *   - Clip 2: Extend by ~7s (Veo uses last ~1s of clip 1 as grounding)
- *   - Clip 3: Extend by ~7s (Veo uses last ~1s of merged clip as grounding)
+ *   - Clip 2: Extend by ~6s (Veo uses last ~1s of clip 1 as grounding)
+ *   - Clip 3: Extend by ~6s (Veo uses last ~1s of merged clip as grounding)
  *
  * Each extension returns a merged video. The final result is a single
  * continuous video plus metadata about each clip.

@@ -320,12 +320,12 @@ async function parseVideoResponse(
 /**
  * Generate a continuous video by chaining Veo scene extensions.
  *
- * Strategy for a ~22-second continuous video:
+ * Strategy for a ~20-second continuous video:
  *   1. Clip 1: Initial 8-second generation from the first prompt
- *   2. Clip 2: Extend clip 1 by ~7 seconds using the second prompt
- *      (Veo uses the last ~1 second of clip 1 as seed → returns merged ~15s video)
- *   3. Clip 3: Extend the merged clip by ~7 seconds using the third prompt
- *      (Veo uses the last ~1 second of merged clip → returns merged ~22s video)
+ *   2. Clip 2: Extend clip 1 by ~6 seconds using the second prompt
+ *      (Veo uses the last ~1 second of clip 1 as seed → returns merged ~14s video)
+ *   3. Clip 3: Extend the merged clip by ~6 seconds using the third prompt
+ *      (Veo uses the last ~1 second of merged clip → returns merged ~20s video)
  *
  * Each extension is sequential since it depends on the previous clip.
  * The final result includes both the merged video and individual clip data.

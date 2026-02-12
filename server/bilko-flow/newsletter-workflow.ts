@@ -191,10 +191,10 @@ export function createNewsletterWorkflowInput(
       id: "generate-video-prompts",
       name: "Generate Veo Scene Extension Prompts",
       type: "ai.generate-text",
-      description: "Creates 3 Veo scene extension prompts for a continuous ~22s video: Scene 1 (8s initial), Scene 2 (extend ~7s), Scene 3 (extend merged ~7s). Uses continuation language and shared style tokens for visual coherence.",
+      description: "Creates 3 Veo scene extension prompts for a continuous ~20s primary story video: Scene 1 (8s initial), Scene 2 (extend ~6s), Scene 3 (extend merged ~6s). Uses the main story article as voiceover script. Continuation language and shared style tokens for visual coherence.",
       dependsOn: ["create-narrative"],
       inputs: {
-        systemPromptTemplate: `AI video production expert. Create 3 Veo scene extension prompts (8s+7s+7s) with camera movements, continuation language, shared style tokens. Each extension uses the last ~1s of the previous merged video as grounding seed.`,
+        systemPromptTemplate: `AI video production expert. Create 3 Veo scene extension prompts (8s+6s+6s) focused on the PRIMARY story only. Visuals must complement the main story article used as voiceover. Camera movements, continuation language, shared style tokens. Each extension uses the last ~1s of the previous merged video as grounding seed.`,
         userMessageTemplate: "Generate Veo scene extension prompts for continuous video.",
         model: "gemini-2.5-flash",
         templateSources: ["create-narrative", "rank-stories"],
@@ -259,7 +259,7 @@ export function createNewsletterWorkflowInput(
       id: "generate-video-clips",
       name: "Generate Continuous Video (Scene Extension)",
       type: "ai.generate-video",
-      description: "Generates a continuous ~22s AI video using Veo scene extension: Clip 1 (8s initial) → Clip 2 (extend by ~7s using last ~1s as grounding) → Clip 3 (extend merged by ~7s). Sequential execution since each clip depends on the previous.",
+      description: "Generates a continuous ~20s primary story AI video using Veo scene extension: Clip 1 (8s initial) → Clip 2 (extend by ~6s using last ~1s as grounding) → Clip 3 (extend merged by ~6s). Sequential execution since each clip depends on the previous.",
       dependsOn: ["generate-video-prompts"],
       inputs: {
         promptsTemplate: "{{generate-video-prompts.videoPrompts.scenes|map:veoPrompt}}",
@@ -290,7 +290,7 @@ export function createNewsletterWorkflowInput(
     environmentId,
     name: "DEMO European Football Newsletter + Media Pipeline v3",
     description:
-      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana), slideshow with AI scene images, and Veo video clips. 12-step DAG with image/video generation. Powered by bilko-flow engine.",
+      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana), slideshow with AI scene images, and ~20s continuous Veo video of the primary story (8+6+6s with voiceover). 12-step DAG with image/video generation. Powered by bilko-flow engine.",
     specVersion: "1.0.0",
     determinism,
     entryStepId: "discover-stories",
