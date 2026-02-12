@@ -367,7 +367,7 @@ export function FakeGameFlow({ onComplete }: { onComplete?: (summary?: string) =
   return (
     <div className="space-y-4">
       <FlowProgress
-        mode="compact"
+        mode="auto"
         steps={trackerSteps}
         activity={trackerActivity}
       />
