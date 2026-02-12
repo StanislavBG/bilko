@@ -222,7 +222,7 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
         else if (exec.status === "success") status = "complete";
         else if (exec.status === "error") status = "error";
       }
-      return { id: step.id, label: step.name, status };
+      return { id: step.id, label: step.name, status, type: step.subtype ? `${step.type}:${step.subtype}` : step.type };
     });
   }, [flowDef, execution.steps]);
 
