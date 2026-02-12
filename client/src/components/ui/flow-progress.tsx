@@ -5,5 +5,11 @@
  * This re-export exists for backward compatibility with components
  * that import from "@/components/ui/flow-progress".
  */
-export { FlowProgress } from "bilko-flow/react";
-export type { FlowProgressStep, FlowProgressProps } from "bilko-flow/react";
+export { FlowProgress, adaptSteps } from "bilko-flow/react";
+export type {
+  FlowProgressStep,
+  FlowProgressProps,
+  FlowProgressTheme,
+  FlowProgressAdapter,
+  FlowProgressStepRenderer,
+} from "bilko-flow/react";
