@@ -76,7 +76,8 @@ export default function FlowDetail() {
   }, []);
 
   const handleApplyMutation = useCallback((result: MutationResult) => {
-    setLiveFlow(result.flow);
+    // applyMutation spreads the original flow, preserving Bilko's extra fields at runtime
+    setLiveFlow(result.flow as FlowDefinition);
     // Clear multi-selection after applying
     setMultiSelectIds(new Set());
   }, []);
