@@ -1,38 +1,28 @@
 /**
  * Bilko Flow API — Core Type Definitions
  *
- * Foundation types for all flow operations: definitions, steps,
- * execution traces, and schema descriptions.
- *
- * Every other module in bilko-flow depends on these types.
+ * Shared types are re-exported from bilko-flow/react (canonical source).
+ * Bilko-specific extensions (FlowDefinition, SchemaField, FlowOutput,
+ * FlowExecution) are defined locally.
  */
 
-export type StepType = "llm" | "user-input" | "transform" | "validate" | "display" | "chat" | "external-input";
-export type StepStatus = "idle" | "running" | "success" | "error" | "skipped";
+import type {
+  UIStepType,
+  StepStatus as LibStepStatus,
+  StepExecution as LibStepExecution,
+} from "bilko-flow/react";
 
-/** A single step in a flow */
-export interface FlowStep {
-  id: string;
-  name: string;
-  type: StepType;
-  /** Optional subtype refining the step's type (e.g. "menu", "text", "form" for user-input) */
-  subtype?: string;
-  description: string;
-  /** The system prompt (for LLM steps) */
-  prompt?: string;
-  /** The user message template (for LLM steps) */
-  userMessage?: string;
-  /** Model used */
-  model?: string;
-  /** JSON schema description of expected input */
-  inputSchema?: SchemaField[];
-  /** JSON schema description of expected output */
-  outputSchema?: SchemaField[];
-  /** IDs of steps this depends on */
-  dependsOn: string[];
-  /** Can this step run in parallel with siblings? */
-  parallel?: boolean;
-}
+// ── Shared types from bilko-flow/react ─────────────────────
+
+/** Step type alias — re-exported from bilko-flow/react's UIStepType */
+export type StepType = UIStepType;
+
+export type StepStatus = LibStepStatus;
+
+/** Identical to bilko-flow/react's StepExecution */
+export type StepExecution = LibStepExecution;
+
+// ── Bilko-specific types ───────────────────────────────────
 
 export interface SchemaField {
   name: string;
@@ -57,6 +47,30 @@ export interface FlowPhase {
   label: string;
   /** Registry step IDs covered by this phase */
   stepIds: string[];
+}
+
+/** A single step in a flow */
+export interface FlowStep {
+  id: string;
+  name: string;
+  type: StepType;
+  /** Optional subtype refining the step's type (e.g. "menu", "text", "form" for user-input) */
+  subtype?: string;
+  description: string;
+  /** The system prompt (for LLM steps) */
+  prompt?: string;
+  /** The user message template (for LLM steps) */
+  userMessage?: string;
+  /** Model used */
+  model?: string;
+  /** JSON schema description of expected input */
+  inputSchema?: SchemaField[];
+  /** JSON schema description of expected output */
+  outputSchema?: SchemaField[];
+  /** IDs of steps this depends on */
+  dependsOn: string[];
+  /** Can this step run in parallel with siblings? */
+  parallel?: boolean;
 }
 
 /** A complete inspectable flow definition */
@@ -84,26 +98,6 @@ export interface FlowDefinition {
   phases?: FlowPhase[];
   /** Canonical URL where this flow can be tested (shown on landing tiles for in-testing flows) */
   websiteUrl?: string;
-}
-
-/** Runtime execution data captured from a step */
-export interface StepExecution {
-  stepId: string;
-  status: StepStatus;
-  startedAt?: number;
-  completedAt?: number;
-  durationMs?: number;
-  input?: unknown;
-  output?: unknown;
-  error?: string;
-  /** Raw LLM response (before parsing) */
-  rawResponse?: string;
-  /** Token usage */
-  usage?: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-  };
 }
 
 /** A complete execution trace of a flow run */
