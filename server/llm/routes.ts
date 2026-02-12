@@ -9,6 +9,7 @@ import { Router, Request, Response } from "express";
 import { chat, AVAILABLE_MODELS, type ChatRequest } from "./index";
 import { generateImage, generateImages, type ImageGenerationRequest } from "./image-generation";
 import { generateVideo, generateVideos, generateContinuousVideo, type VideoGenerationRequest } from "./video-generation";
+import { concatenateVideos } from "./video-concat";
 
 const router = Router();
 
@@ -269,6 +270,33 @@ router.post("/generate-videos", async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Batch video generation error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// ── Video Concatenation (FFmpeg) ─────────────────────────────────────
+
+router.post("/concat-videos", async (req: Request, res: Response) => {
+  try {
+    const { clips } = req.body as {
+      clips: Array<{ videoBase64: string; mimeType?: string }>;
+    };
+
+    if (!Array.isArray(clips) || clips.length < 2) {
+      res.status(400).json({ error: "clips array with at least 2 entries is required" });
+      return;
+    }
+
+    if (clips.length > 5) {
+      res.status(400).json({ error: "Maximum 5 clips per concatenation" });
+      return;
+    }
+
+    const result = await concatenateVideos(clips);
+    res.json(result);
+  } catch (error) {
+    console.error("Video concatenation error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: message });
   }
