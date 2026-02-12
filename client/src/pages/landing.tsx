@@ -57,7 +57,7 @@ import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
 import { flowRegistry, activeFlowIds } from "@/lib/bilko-flow/definitions/registry";
 import { FlowBusProvider, useFlowBus, useFlowRegistration } from "@/contexts/flow-bus-context";
-import { FlowStatusIndicator } from "@/components/flow-status-indicator";
+import { FlowStatusIndicator as MainFlow } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
 import { useSidebarSafe } from "@/components/ui/sidebar";
 
@@ -611,12 +611,13 @@ export function LandingContent() {
   }, [clearMessages, navigate, releaseChat]);
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <main className="flex flex-col flex-1 overflow-hidden pt-14">
       {/* Content row — chat + delivery surface */}
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden min-h-0">
-        {/* Left panel: Chat */}
+        {/* Left panel: Chat + MainFlow */}
         <div className="w-full lg:w-[420px] xl:w-[480px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
           <FlowChat />
+          <MainFlow flowId="bilko-main" onReset={handleReset} position="bottom" mode="auto" />
         </div>
 
         {/* Right panel: Delivery surface */}
@@ -635,9 +636,7 @@ export function LandingContent() {
         </div>
       </div>
 
-      {/* Progress bar — full-width bottom, uses bilko-flow PADDING for large space */}
-      <FlowStatusIndicator flowId="bilko-main" onReset={handleReset} position="bottom" mode="auto" />
-    </div>
+    </main>
   );
 }
 
@@ -809,9 +808,7 @@ export default function Landing() {
       <FlowChatProvider>
         <div className="h-screen flex flex-col bg-background overflow-hidden">
           <GlobalHeader variant="landing" />
-          <main className="flex-1 flex overflow-hidden pt-14">
-            <LandingContent />
-          </main>
+          <LandingContent />
         </div>
       </FlowChatProvider>
     </FlowBusProvider>
