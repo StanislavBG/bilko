@@ -1,12 +1,14 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile } from "fs/promises";
+import { execSync } from "child_process";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
 const allowlist = [
   "@google/generative-ai",
   "axios",
+  "bilko-flow",
   "connect-pg-simple",
   "cors",
   "date-fns",
@@ -33,6 +35,9 @@ const allowlist = [
 ];
 
 async function buildAll() {
+  console.log("patching bilko-flow...");
+  execSync("node script/patch-bilko-flow.js", { stdio: "inherit" });
+
   await rm("dist", { recursive: true, force: true });
 
   console.log("building client...");

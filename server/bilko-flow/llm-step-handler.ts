@@ -15,9 +15,8 @@
  * resolved from upstream step outputs.
  */
 
-import { registerStepHandler, NonRetryableStepError } from "bilko-flow/dist/engine/step-runner";
-import type { CompiledStep } from "bilko-flow/dist/dsl/compiler";
-import type { StepExecutionContext, InputFieldContract } from "bilko-flow/dist/engine/step-runner";
+import { registerStepHandler, NonRetryableStepError } from "bilko-flow";
+import type { CompiledStep, StepExecutionContext, InputFieldContract } from "bilko-flow";
 import { chat, AVAILABLE_MODELS } from "../llm/index";
 import { generateImage, generateImages } from "../llm/image-generation";
 import { generateVideo, generateVideos } from "../llm/video-generation";

@@ -16,8 +16,7 @@
  *   7. display-results         (ui.display)         — Render results with copy actions
  */
 
-import type { Step, CreateWorkflowInput } from "bilko-flow/dist/domain/workflow";
-import type { DeterminismConfig } from "bilko-flow/dist/domain/determinism";
+import type { Step, CreateWorkflowInput, DeterminismConfig } from "bilko-flow";
 
 const determinism: DeterminismConfig = {
   targetGrade: "best-effort" as any,
@@ -42,7 +41,7 @@ export function createLinkedInStrategistWorkflowInput(
     {
       id: "goal-selection",
       name: "Choose Your Goal",
-      type: "user.menu-select",
+      type: "user.menu-select" as any,
       description:
         "User selects between two modes: 'Improve your LinkedIn' (exploratory conversation + description options per role) or 'Interview me based on my roles' (dynamic interview + feedback).",
       dependsOn: [],
@@ -70,7 +69,7 @@ export function createLinkedInStrategistWorkflowInput(
         schema: {
           type: "object",
           properties: {
-            goal: { type: "string", enum: ["improve", "interview"] },
+            goal: { type: "string", enum: ["improve", "interview"] } as any,
           },
         },
       },
@@ -85,7 +84,7 @@ export function createLinkedInStrategistWorkflowInput(
     {
       id: "linkedin-input",
       name: "Enter LinkedIn URL",
-      type: "user.text-input",
+      type: "user.text-input" as any,
       description:
         "User provides their LinkedIn profile URL. Validated against linkedin.com/in/ pattern.",
       dependsOn: ["goal-selection"],
@@ -230,7 +229,7 @@ No markdown. ONLY the JSON object.`,
     {
       id: "user-responses",
       name: "User Responses",
-      type: "user.text-input",
+      type: "user.text-input" as any,
       description:
         "Free-text answers to each conversation turn. Supports keyboard and voice input.",
       dependsOn: ["conversation-start"],
@@ -347,7 +346,7 @@ Be specific. Reference actual things said. No markdown. ONLY the JSON object.`,
     {
       id: "display-results",
       name: "Display Results",
-      type: "ui.display",
+      type: "ui.display" as any,
       description:
         "Improve mode: role cards with selectable description options and copy-to-clipboard. Interview mode: summary, strengths, areas to explore, and role-specific insights.",
       dependsOn: ["generate-results"],

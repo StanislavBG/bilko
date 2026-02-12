@@ -17,8 +17,7 @@
  *   6. display-results    (ui.display)         — Render personalized insights
  */
 
-import type { Step, CreateWorkflowInput } from "bilko-flow/dist/domain/workflow";
-import type { DeterminismConfig } from "bilko-flow/dist/domain/determinism";
+import type { Step, CreateWorkflowInput, DeterminismConfig } from "bilko-flow";
 
 const determinism: DeterminismConfig = {
   targetGrade: "best-effort" as any,
@@ -43,7 +42,7 @@ export function createSocraticArchitectWorkflowInput(
     {
       id: "setup",
       name: "Define Your Expert",
-      type: "user.form-input",
+      type: "user.form-input" as any,
       description:
         "User picks a preset expert (Business Coach, Career Advisor, Writing Coach, Tech Advisor, Wellness Coach) or fills in custom fields: Expert Role, Your Goal, Desired Output. Presets pre-fill all three fields and skip directly to the interview.",
       dependsOn: [],
@@ -258,7 +257,7 @@ No markdown. No explanation. ONLY the JSON object.`,
     {
       id: "user-answers",
       name: "User Answers",
-      type: "user.text-input",
+      type: "user.text-input" as any,
       description:
         "Free-text or voice responses to each Socratic question.",
       dependsOn: ["first-question"],
@@ -358,7 +357,7 @@ Rules:
     {
       id: "display-results",
       name: "Display Findings",
-      type: "ui.display",
+      type: "ui.display" as any,
       description:
         "Renders the expert's findings: summary, 2 confirmed insights (Primary Insights), and 2 unexpected discoveries (Unexpected Discoveries) with tools and impact.",
       dependsOn: ["analysis"],

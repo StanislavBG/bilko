@@ -16,8 +16,7 @@
  *   6. guided-view       (ui.display)         — Wireframe with guidance overlays
  */
 
-import type { Step, CreateWorkflowInput } from "bilko-flow/dist/domain/workflow";
-import type { DeterminismConfig } from "bilko-flow/dist/domain/determinism";
+import type { Step, CreateWorkflowInput, DeterminismConfig } from "bilko-flow";
 
 const determinism: DeterminismConfig = {
   targetGrade: "best-effort" as any,
@@ -50,7 +49,7 @@ export function createWorkWithMeWorkflowInput(
     {
       id: "objective-input",
       name: "User Enters Objective",
-      type: "user.text-input",
+      type: "user.text-input" as any,
       description:
         "User describes their goal in natural language (e.g. 'Register a business in Washington State'). Free-text input with example suggestions.",
       dependsOn: [],
@@ -150,7 +149,7 @@ Rules:
     {
       id: "select-step",
       name: "User Picks Step",
-      type: "user.menu-select",
+      type: "user.menu-select" as any,
       description:
         "Displays the step-by-step plan as cards. User picks which step to work on. Completed steps are shown with a green checkmark.",
       dependsOn: ["research-steps"],
@@ -176,7 +175,7 @@ Rules:
     {
       id: "fetch-page",
       name: "Fetch & Parse Website",
-      type: "data.http-fetch",
+      type: "data.http-fetch" as any,
       description:
         "Server-side proxy fetches the selected URL, parses the HTML with jsdom, and extracts a structured representation of the page: headings, links, buttons, form fields, paragraphs, lists, and images.",
       dependsOn: ["select-step"],
@@ -290,7 +289,7 @@ Rules: 3-5 guidance items, primary=must do, secondary=should do, info=good to kn
     {
       id: "guided-view",
       name: "Interactive Wireframe",
-      type: "ui.display",
+      type: "ui.display" as any,
       description:
         "Renders the website as a wireframe with guidance overlays. Highlighted elements have colored borders and inline tooltips. Links are clickable and navigate to the next page.",
       dependsOn: ["analyze-page"],

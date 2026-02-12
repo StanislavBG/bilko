@@ -16,12 +16,13 @@
  */
 
 import { Router, Request, Response } from "express";
-import { createAppContext } from "bilko-flow/dist/server";
-import { compileWorkflow, validateHandlers } from "bilko-flow/dist/dsl/compiler";
-import { validateWorkflow } from "bilko-flow/dist/dsl/validator";
-import type { Run } from "bilko-flow/dist/domain/run";
-import type { Workflow, CreateWorkflowInput } from "bilko-flow/dist/domain/workflow";
-import type { TenantScope } from "bilko-flow/dist/domain/account";
+import {
+  createAppContext,
+  compileWorkflow,
+  validateHandlers,
+  validateWorkflow,
+} from "bilko-flow";
+import type { Run, Workflow, CreateWorkflowInput, TenantScope } from "bilko-flow";
 import { registerLLMStepHandler } from "./llm-step-handler";
 import { createNewsletterWorkflowInput } from "./newsletter-workflow";
 import { createWorkWithMeWorkflowInput } from "./work-with-me-workflow";
@@ -146,9 +147,7 @@ router.post("/demo/run", async (req: Request, res: Response) => {
     // Pre-flight: compile and validate handler contracts before execution
     const workflow = await bfContext.store.workflows.getById(
       workflowId,
-      TENANT_SCOPE.accountId,
-      TENANT_SCOPE.projectId,
-      TENANT_SCOPE.environmentId,
+      TENANT_SCOPE,
     );
 
     if (!workflow) {
@@ -245,9 +244,7 @@ router.post("/demo/test", async (req: Request, res: Response) => {
 
     const workflow = await bfContext.store.workflows.getById(
       workflowId,
-      TENANT_SCOPE.accountId,
-      TENANT_SCOPE.projectId,
-      TENANT_SCOPE.environmentId,
+      TENANT_SCOPE,
     );
 
     if (!workflow) {
@@ -324,9 +321,7 @@ router.get("/demo/status", async (_req: Request, res: Response) => {
     for (const id of seededWorkflowIds) {
       const workflow = await bfContext.store.workflows.getById(
         id,
-        TENANT_SCOPE.accountId,
-        TENANT_SCOPE.projectId,
-        TENANT_SCOPE.environmentId,
+        TENANT_SCOPE,
       );
       if (workflow) {
         workflows.push({
@@ -371,9 +366,7 @@ router.get("/workflows", async (_req: Request, res: Response) => {
     for (const id of seededWorkflowIds) {
       const workflow = await bfContext.store.workflows.getById(
         id,
-        TENANT_SCOPE.accountId,
-        TENANT_SCOPE.projectId,
-        TENANT_SCOPE.environmentId,
+        TENANT_SCOPE,
       );
       if (workflow) {
         workflows.push({
