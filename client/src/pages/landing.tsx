@@ -614,10 +614,8 @@ export function LandingContent() {
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Content row — chat + delivery surface */}
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden min-h-0">
-        {/* Left panel: Progress bar + Chat */}
+        {/* Left panel: Chat */}
         <div className="w-full lg:w-[420px] xl:w-[480px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
-          {/* Progress bar — directly under the logo */}
-          <FlowStatusIndicator flowId="bilko-main" onReset={handleReset} position="top" />
           <FlowChat />
         </div>
 
@@ -637,6 +635,8 @@ export function LandingContent() {
         </div>
       </div>
 
+      {/* Progress bar — full-width bottom, uses bilko-flow PADDING for large space */}
+      <FlowStatusIndicator flowId="bilko-main" onReset={handleReset} position="bottom" mode="auto" />
     </div>
   );
 }

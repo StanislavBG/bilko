@@ -2,12 +2,12 @@
  * FlowStatusIndicator / FlowProgressBanner — Adapters that bridge
  * FlowBusContext data to bilko-flow/react's FlowProgress component.
  *
- * FlowStatusIndicator  → FlowProgress mode="auto"     (inline bottom panel, expands when room)
+ * FlowStatusIndicator  → FlowProgress (configurable mode)
  * FlowProgressBanner   → FlowProgress mode="expanded" (full-width top banner, rectangular cards)
  */
 
 import { useMemo } from "react";
-import { FlowProgress, type FlowProgressStep } from "bilko-flow/react";
+import { FlowProgress, PADDING, type FlowProgressStep, type FlowProgressProps } from "bilko-flow/react";
 import { useFlowBus, type FlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowById } from "@/lib/bilko-flow";
 import type { FlowPhase, FlowDefinition } from "@/lib/bilko-flow";
@@ -74,7 +74,7 @@ function resolveActivity(flow: FlowRegistration): string | undefined {
   return phases ? getPhaseLabel(phases, flow.phase) : flow.phase;
 }
 
-// ── Compact indicator (under chat panel) ─────────────────
+// ── Flow status indicator ─────────────────────────────────
 
 interface FlowStatusIndicatorProps {
   onReset?: () => void;
@@ -82,9 +82,12 @@ interface FlowStatusIndicatorProps {
   flowId?: string;
   /** Position determines border placement: "top" uses border-b, "bottom" (default) uses border-t */
   position?: "top" | "bottom";
+  /** Display mode — "compact" for tight spaces, "auto" adapts to container width.
+   *  Defaults to "compact". */
+  mode?: FlowProgressProps["mode"];
 }
 
-export function FlowStatusIndicator({ onReset, flowId, position = "bottom" }: FlowStatusIndicatorProps) {
+export function FlowStatusIndicator({ onReset, flowId, position = "bottom", mode = "compact" }: FlowStatusIndicatorProps) {
   const { flows } = useFlowBus();
 
   const activeFlows = useMemo(
@@ -99,13 +102,17 @@ export function FlowStatusIndicator({ onReset, flowId, position = "bottom" }: Fl
   if (activeFlows.length === 0) return null;
 
   const borderClass = position === "top" ? "border-b" : "border-t";
+  const isLarge = mode === "auto" || mode === "expanded" || mode === "full";
 
   return (
-    <div className={`${borderClass} border-border shrink-0 w-full`}>
+    <div
+      className={`${borderClass} border-border shrink-0 w-full ${isLarge ? "bg-background/95 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-2 duration-300" : ""}`}
+      style={isLarge ? { padding: `${PADDING / 2}px ${PADDING}px` } : undefined}
+    >
       {activeFlows.map((flow) => (
         <FlowProgress
           key={flow.id}
-          mode="compact"
+          mode={mode}
           steps={toProgressSteps(flow)}
           label={flow.label}
           status={flow.status}
