@@ -186,6 +186,9 @@ export interface VideoGenerationResult {
 /**
  * Generate a single video using Veo.
  * Note: This is an async operation and may take up to 5 minutes.
+ *
+ * Supports scene extension: pass `sourceVideoBase64` to extend a
+ * previous Veo-generated video by ~7 seconds using the last ~1 second as grounding.
  */
 export async function generateVideo(
   prompt: string,
@@ -194,6 +197,8 @@ export async function generateVideo(
     aspectRatio?: "16:9" | "9:16";
     model?: string;
     referenceImageBase64?: string;
+    /** Base64-encoded Veo-generated video to extend (scene extension) */
+    sourceVideoBase64?: string;
     signal?: AbortSignal;
   },
 ): Promise<VideoGenerationResult> {
@@ -203,6 +208,42 @@ export async function generateVideo(
     aspectRatio: options?.aspectRatio,
     model: options?.model,
     referenceImageBase64: options?.referenceImageBase64,
+    sourceVideoBase64: options?.sourceVideoBase64,
+  }, { signal: options?.signal });
+}
+
+/**
+ * Generate a continuous video by chaining Veo scene extensions.
+ *
+ * Creates a ~22-second continuous video from 3 prompts:
+ *   - Clip 1: 8s initial generation
+ *   - Clip 2: Extend by ~7s (Veo uses last ~1s of clip 1 as grounding)
+ *   - Clip 3: Extend by ~7s (Veo uses last ~1s of merged clip as grounding)
+ *
+ * Each extension returns a merged video. The final result is a single
+ * continuous video plus metadata about each clip.
+ */
+export interface ContinuousVideoResult {
+  mergedVideo: { videoBase64: string; mimeType: string; durationSeconds: number } | null;
+  clips: ({ videoBase64: string; mimeType: string; durationSeconds: number } | null)[];
+  totalDurationSeconds: number;
+  model: string;
+}
+
+export async function generateContinuousVideo(
+  prompts: string[],
+  options?: {
+    model?: string;
+    aspectRatio?: "16:9" | "9:16";
+    initialDurationSeconds?: 5 | 6 | 7 | 8;
+    signal?: AbortSignal;
+  },
+): Promise<ContinuousVideoResult> {
+  return apiPost<ContinuousVideoResult>("/api/llm/generate-continuous-video", {
+    prompts,
+    model: options?.model,
+    aspectRatio: options?.aspectRatio,
+    initialDurationSeconds: options?.initialDurationSeconds,
   }, { signal: options?.signal });
 }
 

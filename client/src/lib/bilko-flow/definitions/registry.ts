@@ -207,6 +207,7 @@ const allFlows: FlowDefinition[] = [
     tags: ["landing", "learning", "video", "youtube", "gemini"],
     icon: "Play",
     voiceTriggers: ["video", "watch", "tutorial", "show me", "recommend"],
+    websiteUrl: "https://bilkobibitkov.replit.app/",
     phases: [
       { id: "generating-topics", label: "Research", stepIds: ["generate-topics"] },
       { id: "select-topic", label: "Pick Topic", stepIds: ["select-topic", "generate-questions", "select-question"] },
@@ -439,13 +440,14 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     id: "test-newsletter",
     name: "European Football Newsletter",
     description:
-      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana, emphasizing scores & transfer fees), slideshow with AI-generated scene images, and Veo-generated 7-8 second video clips.",
-    version: "3.0.0",
+      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana, emphasizing scores & transfer fees), slideshow with AI-generated scene images, and a continuous ~22s AI video (3 Veo clips with scene extension grounding).",
+    version: "4.0.0",
     location: "landing",
     componentPath: "client/src/components/newsletter-flow.tsx",
     tags: ["landing", "newsletter", "football", "european", "infographic", "video", "media-pipeline", "nano-banana", "veo"],
     icon: "Newspaper",
     voiceTriggers: ["newsletter", "football", "news", "newspaper", "daily", "infographic", "video"],
+    websiteUrl: "https://bilkobibitkov.replit.app/",
     phases: [
       { id: "discovering", label: "Discover", stepIds: ["discover-stories"] },
       { id: "writing", label: "Write", stepIds: ["write-articles"] },
@@ -453,12 +455,12 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
       { id: "producing", label: "Produce", stepIds: ["design-infographic", "create-narrative"] },
       { id: "assembling", label: "Assemble", stepIds: ["generate-storyboard", "generate-video-prompts"] },
       { id: "generating-images", label: "Generate Images", stepIds: ["generate-infographic-image", "generate-scene-images"] },
-      { id: "generating-videos", label: "Generate Videos", stepIds: ["generate-video-clips"] },
+      { id: "generating-videos", label: "Generate Continuous Video", stepIds: ["generate-video-clips"] },
     ],
     output: {
       name: "mediaPackage",
       type: "object",
-      description: "The complete media package: newsletter, cinematic AI infographic image, slideshow with AI scene images, and Veo video clips",
+      description: "The complete media package: newsletter, cinematic AI infographic image, slideshow with AI scene images, and a continuous ~22s AI video (3 Veo clips chained via scene extension)",
     },
     steps: [
       {
@@ -591,12 +593,12 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
       },
       {
         id: "generate-video-prompts",
-        name: "Generate Video Prompts",
+        name: "Generate Veo Scene Extension Prompts",
         type: "llm",
         description:
-          "Creates Veo-optimized video generation prompts for a ~30s AI video (10s per story) with extension techniques. Runs in parallel with generate-storyboard.",
-        prompt: "Create 3 Veo-optimized scene prompts with camera movements, moods, extension technique.",
-        userMessage: "Generate Veo-optimized video prompts for AI video generation.",
+          "Creates 3 Veo-optimized prompts for a continuous ~22s AI video using scene extension: Scene 1 (8s initial), Scene 2 (extend by ~7s), Scene 3 (extend merged by ~7s). Uses continuation language and shared style tokens.",
+        prompt: "Create 3 Veo scene extension prompts (8s+7s+7s) with camera movements, continuation language, shared style tokens.",
+        userMessage: "Generate Veo scene extension prompts for continuous video generation.",
         model: "gemini-2.5-flash",
         inputSchema: [
           { name: "narrative", type: "object", description: "The narration script" },
@@ -648,22 +650,24 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         dependsOn: ["generate-storyboard"],
         parallel: true,
       },
-      // ── Video Generation Phase (Veo) ──
+      // ── Video Generation Phase (Veo Scene Extension) ──
       {
         id: "generate-video-clips",
-        name: "Generate Video Clips",
+        name: "Generate Continuous Video",
         type: "llm",
         subtype: "video",
         description:
-          "Generates 7-8 second AI video clips using Veo for each scene prompt. Creates cinematic football footage from the video prompts.",
-        prompt: "Generate 7-8 second video clips using Veo for each scene in the video production plan.",
-        userMessage: "Generate AI video clips with Veo.",
+          "Generates a continuous ~22-second AI video using Veo scene extension: Clip 1 (8s initial) → Clip 2 (extend by ~7s using last ~1s as grounding) → Clip 3 (extend merged by ~7s). Each extension is sequential since it depends on the previous clip's output.",
+        prompt: "Generate a continuous ~22-second video by chaining 3 Veo clips with scene extension grounding.",
+        userMessage: "Generate continuous AI video with Veo scene extension.",
         model: "veo-3.0-generate-001",
         inputSchema: [
-          { name: "videoPrompts", type: "object", description: "Veo-optimized scene prompts" },
+          { name: "videoPrompts", type: "object", description: "3 Veo-optimized scene prompts designed for scene extension chaining" },
         ],
         outputSchema: [
-          { name: "videos", type: "array", description: "Array of generated video clips (base64 MP4)" },
+          { name: "mergedVideo", type: "object", description: "The final merged continuous video (~22s, base64 MP4)" },
+          { name: "clips", type: "array", description: "Per-clip results (null for failed clips)" },
+          { name: "totalDurationSeconds", type: "number", description: "Total merged duration" },
         ],
         dependsOn: ["generate-video-prompts"],
       },

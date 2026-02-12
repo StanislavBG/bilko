@@ -82,6 +82,8 @@ export interface FlowDefinition {
   /** User-facing phase groups for progress stepper display.
    *  Each phase maps a bus-published phase ID → short label + covered steps. */
   phases?: FlowPhase[];
+  /** Canonical URL where this flow can be tested (shown on landing tiles for in-testing flows) */
+  websiteUrl?: string;
 }
 
 /** Runtime execution data captured from a step */
