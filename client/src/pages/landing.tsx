@@ -372,7 +372,7 @@ export function LandingContent() {
     (choiceId: string) => {
       // Special tiles — handle non-flow actions
       if (choiceId === "explore") {
-        // "Explore the Site" = unhide the sidebar navigation.
+        // "Explore the Site" = unhide AND expand the sidebar navigation.
         // Works for both auth and unauth (Landing is wrapped in SidebarProvider).
         // Never redirects to login.
         if (sidebarCtx) {
@@ -380,6 +380,7 @@ export function LandingContent() {
             sidebarCtx.setOpenMobile(true);
           } else {
             sidebarCtx.setHidden(false);
+            sidebarCtx.setOpen(true);
           }
         }
         return;
