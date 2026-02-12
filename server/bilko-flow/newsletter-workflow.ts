@@ -254,21 +254,22 @@ export function createNewsletterWorkflowInput(
         ],
       },
     },
-    // ── Video Generation Phase (Veo Scene Extension) ──
+    // ── Video Generation Phase (3 Individual Veo Clips) ──
     {
       id: "generate-video-clips",
-      name: "Generate Continuous Video (Scene Extension)",
+      name: "Generate Individual Video Clips (Veo)",
       type: "ai.generate-video",
-      description: "Generates a continuous ~20s primary story AI video using Veo scene extension: Clip 1 (8s initial) → Clip 2 (extend by ~6s using last ~1s as grounding) → Clip 3 (extend merged by ~6s). Sequential execution since each clip depends on the previous.",
+      description: "Generates 3 individual Veo clips for the primary story: Clip 1 (8s fresh) → Clip 2 (6s grounded on clip 1, using last ~2s as context) → Clip 3 (6s grounded on clip 2). Each returns a standalone clip.",
       dependsOn: ["generate-video-prompts"],
       inputs: {
         promptsTemplate: "{{generate-video-prompts.videoPrompts.scenes|map:veoPrompt}}",
-        technique: "scene-extension",
+        technique: "source-grounded-sequential",
         initialDurationSeconds: 8,
+        extensionDurationSeconds: 6,
         aspectRatio: "16:9",
         model: "veo-3.0-generate-001",
       },
-      outputs: { schema: { type: "object", properties: { mergedVideo: { type: "object" }, clips: { type: "array" }, totalDurationSeconds: { type: "number" } } } },
+      outputs: { schema: { type: "object", properties: { clips: { type: "array" }, model: { type: "string" } } } },
       policy: { ...defaultPolicy, timeoutMs: 900000, maxAttempts: 1 },
       determinism: {
         ...llmDeterminism,
@@ -282,6 +283,21 @@ export function createNewsletterWorkflowInput(
         ],
       },
     },
+    // ── Video Concatenation Phase (FFmpeg) ──
+    {
+      id: "concatenate-video-clips",
+      name: "Concatenate Video Clips (FFmpeg)",
+      type: "transform",
+      description: "Concatenates the 3 individual Veo clips (8+6+6s) into a single ~20s continuous video using server-side FFmpeg concat demuxer. Container-level copy, no re-encoding.",
+      dependsOn: ["generate-video-clips"],
+      inputs: {
+        clipsSource: "{{generate-video-clips.clips}}",
+        method: "ffmpeg-concat-demuxer",
+      },
+      outputs: { schema: { type: "object", properties: { videoBase64: { type: "string" }, mimeType: { type: "string" }, durationSeconds: { type: "number" } } } },
+      policy: { ...defaultPolicy, timeoutMs: 120000 },
+      determinism: { deterministic: true, externalDependencies: [] },
+    },
   ];
 
   return {
@@ -290,7 +306,7 @@ export function createNewsletterWorkflowInput(
     environmentId,
     name: "DEMO European Football Newsletter + Media Pipeline v3",
     description:
-      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana), slideshow with AI scene images, and ~20s continuous Veo video of the primary story (8+6+6s with voiceover). 12-step DAG with image/video generation. Powered by bilko-flow engine.",
+      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana), slideshow with AI scene images, and ~20s continuous video of the primary story (3 Veo clips 8+6+6s → FFmpeg concat, with voiceover). 13-step DAG with image/video generation. Powered by bilko-flow engine.",
     specVersion: "1.0.0",
     determinism,
     entryStepId: "discover-stories",
