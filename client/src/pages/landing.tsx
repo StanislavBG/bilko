@@ -601,16 +601,15 @@ export function LandingContent() {
   }, [clearMessages, navigate, releaseChat]);
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
-      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-        {/* Left panel: Flow Chat — messages only, no options */}
-        <div className="w-full lg:w-[420px] xl:w-[480px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
-          <FlowChat />
-          {/* Compact flow status at bottom of chat — only when banner isn't showing */}
-          {!selectedMode && <FlowStatusIndicator onReset={handleReset} />}
-        </div>
+    <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+      {/* Left panel: Flow Chat — full height, messages only */}
+      <div className="w-full lg:w-[420px] xl:w-[480px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
+        <FlowChat />
+        {!selectedMode && <FlowStatusIndicator onReset={handleReset} />}
+      </div>
 
-        {/* Right panel: Agent delivery surface — interactive content */}
+      {/* Right panel: Agent delivery surface + progress banner */}
+      <div className="flex flex-col flex-1 min-h-0">
         <div className="flex flex-1 overflow-auto min-h-0">
           {selectedMode ? (
             <div className="flex-1 max-w-4xl mx-auto px-6 py-6 w-full">
@@ -624,10 +623,10 @@ export function LandingContent() {
             <ModeSelectionGrid onSelect={handleChoice} />
           )}
         </div>
-      </div>
 
-      {/* Flow progress banner — below chat and main frame when subflow is active */}
-      {selectedMode && <FlowProgressBanner onReset={handleReset} />}
+        {/* Flow progress banner — under right panel only */}
+        {selectedMode && <FlowProgressBanner onReset={handleReset} />}
+      </div>
     </div>
   );
 }
