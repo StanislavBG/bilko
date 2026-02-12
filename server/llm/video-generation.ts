@@ -154,7 +154,7 @@ export async function generateVideo(
 
   // If immediately done (unlikely for video)
   if (operation.done && operation.response) {
-    return parseVideoResponse(operation.response, model);
+    return await parseVideoResponse(operation.response, model);
   }
 
   if (operation.error) {
@@ -169,7 +169,7 @@ export async function generateVideo(
 
   log.info(`Polling video ${isExtension ? "extension" : "generation"} operation: ${operationName}`);
 
-  const maxPollTime = 5 * 60 * 1000; // 5 minutes
+  const maxPollTime = 8 * 60 * 1000; // 8 minutes (Veo can be slow for complex scenes)
   const pollInterval = 10_000; // 10 seconds
   const startTime = Date.now();
 
@@ -196,54 +196,122 @@ export async function generateVideo(
 
     if (pollResult.done && pollResult.response) {
       log.info(`Video ${isExtension ? "extension" : "generation"} completed after ${Math.round((Date.now() - startTime) / 1000)}s`);
-      return parseVideoResponse(pollResult.response, model, operationName);
+      return await parseVideoResponse(pollResult.response, model, operationName);
     }
 
     log.info(`Video still ${isExtension ? "extending" : "generating"}... (${Math.round((Date.now() - startTime) / 1000)}s elapsed)`);
   }
 
-  throw new Error(`Video ${isExtension ? "extension" : "generation"} timed out after 5 minutes`);
+  throw new Error(`Video ${isExtension ? "extension" : "generation"} timed out after 8 minutes`);
 }
 
-function parseVideoResponse(
+/**
+ * Download video content from a Gemini API file URI.
+ * The URI requires the API key appended as a query parameter to authorize the download.
+ */
+async function downloadVideoFromUri(uri: string, apiKey: string): Promise<string> {
+  const separator = uri.includes("?") ? "&" : "?";
+  const downloadUrl = `${uri}${separator}key=${apiKey}&alt=media`;
+
+  log.info(`Downloading video from URI: ${uri.substring(0, 100)}...`);
+
+  const response = await fetch(downloadUrl, {
+    method: "GET",
+    signal: AbortSignal.timeout(120_000), // 2 min download timeout
+    redirect: "follow",
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    log.error(`Video download failed: ${response.status}`, { error: errorText, uri });
+    throw new Error(`Failed to download video (${response.status}): ${errorText}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  const base64 = Buffer.from(arrayBuffer).toString("base64");
+
+  log.info(`Video downloaded: ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB (${base64.length} chars base64)`);
+
+  return base64;
+}
+
+async function parseVideoResponse(
   response: Record<string, unknown>,
   model: string,
   operationName?: string,
-): VideoGenerationResponse {
-  // The response format can vary — handle multiple shapes
+): Promise<VideoGenerationResponse> {
   const videos: GeneratedVideo[] = [];
+  const apiKey = getApiKey();
 
-  // Shape 1: generateVideoResponse.generatedSamples
+  // Log response shape for debugging
+  const responseKeys = Object.keys(response);
+  log.info(`Parsing video response. Top-level keys: [${responseKeys.join(", ")}]`);
+
   const genResponse = response as {
     generateVideoResponse?: {
       generatedSamples?: Array<{ video?: { uri?: string; encoding?: string } }>;
     };
-    videos?: Array<{ video?: string; mimeType?: string }>;
+    videos?: Array<{ video?: string; mimeType?: string; gcsUri?: string }>;
   };
 
+  // Shape 1: generateVideoResponse.generatedSamples (Gemini API)
+  // The API returns a download URI — we must fetch the actual video bytes.
   if (genResponse.generateVideoResponse?.generatedSamples) {
-    for (const sample of genResponse.generateVideoResponse.generatedSamples) {
+    const samples = genResponse.generateVideoResponse.generatedSamples;
+    log.info(`Response shape: generateVideoResponse with ${samples.length} sample(s)`);
+    for (const sample of samples) {
       if (sample.video?.uri) {
-        videos.push({
-          videoBase64: sample.video.uri, // May need conversion from GCS URI
-          mimeType: "video/mp4",
-          durationSeconds: 8,
-        });
+        try {
+          const videoBase64 = await downloadVideoFromUri(sample.video.uri, apiKey);
+          videos.push({
+            videoBase64,
+            mimeType: "video/mp4",
+            durationSeconds: 8,
+          });
+        } catch (downloadErr) {
+          log.error(`Failed to download video from URI`, {
+            uri: sample.video.uri.substring(0, 100),
+            error: downloadErr instanceof Error ? downloadErr.message : String(downloadErr),
+          });
+        }
       }
     }
   }
 
-  // Shape 2: direct videos array
+  // Shape 2: direct videos array (may contain inline base64 or GCS URIs)
   if (genResponse.videos) {
+    log.info(`Response shape: videos array with ${genResponse.videos.length} entry/entries`);
     for (const v of genResponse.videos) {
       if (v.video) {
+        // Inline base64 data
         videos.push({
           videoBase64: v.video,
           mimeType: v.mimeType ?? "video/mp4",
           durationSeconds: 8,
         });
+      } else if (v.gcsUri) {
+        // GCS/download URI — fetch the actual video
+        try {
+          const videoBase64 = await downloadVideoFromUri(v.gcsUri, apiKey);
+          videos.push({
+            videoBase64,
+            mimeType: v.mimeType ?? "video/mp4",
+            durationSeconds: 8,
+          });
+        } catch (downloadErr) {
+          log.error(`Failed to download video from GCS URI`, {
+            uri: v.gcsUri.substring(0, 100),
+            error: downloadErr instanceof Error ? downloadErr.message : String(downloadErr),
+          });
+        }
       }
     }
+  }
+
+  if (videos.length === 0) {
+    log.warn(`No videos parsed from response. Keys: [${responseKeys.join(", ")}]. Snippet: ${JSON.stringify(response).substring(0, 500)}`);
+  } else {
+    log.info(`Parsed ${videos.length} video(s) successfully`);
   }
 
   return { videos, model, operationName };
