@@ -1,6 +1,6 @@
 /**
  * StepTracker — Thin adapter that delegates to bilko-flow/react's
- * FlowProgress in compact mode. Preserves the existing API for
+ * FlowProgress in auto mode (expands to rectangular cards when room). Preserves the existing API for
  * backward compatibility with flow components.
  */
 
@@ -19,7 +19,7 @@ export interface StepTrackerProps {
 export function StepTracker({ steps, activity, lastResult }: StepTrackerProps) {
   return (
     <FlowProgress
-      mode="compact"
+      mode="auto"
       steps={steps}
       activity={activity}
       lastResult={lastResult}
