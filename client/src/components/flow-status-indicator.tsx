@@ -65,9 +65,11 @@ interface FlowStatusIndicatorProps {
   onReset?: () => void;
   /** Show only this flow (e.g. "bilko-main") */
   flowId?: string;
+  /** Position determines border placement: "top" uses border-b, "bottom" (default) uses border-t */
+  position?: "top" | "bottom";
 }
 
-export function FlowStatusIndicator({ onReset, flowId }: FlowStatusIndicatorProps) {
+export function FlowStatusIndicator({ onReset, flowId, position = "bottom" }: FlowStatusIndicatorProps) {
   const { flows } = useFlowBus();
 
   const activeFlows = useMemo(
@@ -81,9 +83,11 @@ export function FlowStatusIndicator({ onReset, flowId }: FlowStatusIndicatorProp
 
   if (activeFlows.length === 0) return null;
 
+  const borderClass = position === "top" ? "border-b" : "border-t";
+
   return (
-    <div className="border-t border-border bg-background/95 backdrop-blur-sm
-      animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className={`${borderClass} border-border bg-background/95 backdrop-blur-sm shrink-0
+      animate-in fade-in duration-300`}>
       {activeFlows.map((flow) => (
         <FlowProgress
           key={flow.id}
