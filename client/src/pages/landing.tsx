@@ -610,15 +610,15 @@ export function LandingContent() {
   }, [clearMessages, navigate, releaseChat]);
 
   return (
-    <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-      {/* Left panel: Flow Chat — full height + main flow compact progress */}
-      <div className="w-full lg:w-[420px] xl:w-[480px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
-        <FlowChat />
-        <FlowStatusIndicator flowId="bilko-main" onReset={handleReset} />
-      </div>
+    <div className="flex flex-col flex-1 overflow-hidden">
+      {/* Content row — chat + delivery surface */}
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden min-h-0">
+        {/* Left panel: Chat */}
+        <div className="w-full lg:w-[420px] xl:w-[480px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
+          <FlowChat />
+        </div>
 
-      {/* Right panel: Agent delivery surface + subflow full progress */}
-      <div className="flex flex-col flex-1 min-h-0">
+        {/* Right panel: Delivery surface */}
         <div className="flex flex-1 overflow-auto min-h-0">
           {selectedMode ? (
             <div className="flex-1 max-w-4xl mx-auto px-6 py-6 w-full">
@@ -632,9 +632,16 @@ export function LandingContent() {
             <ModeSelectionGrid onSelect={handleChoice} />
           )}
         </div>
+      </div>
 
-        {/* Subflow full progress banner — under right panel only */}
-        {selectedMode && <FlowProgressBanner excludeFlowId="bilko-main" onReset={handleReset} />}
+      {/* Progress row — both bars aligned in a single horizontal strip */}
+      <div className="shrink-0 flex">
+        <div className="w-full lg:w-[420px] xl:w-[480px] lg:flex-none lg:border-r border-border bg-background">
+          <FlowStatusIndicator flowId="bilko-main" onReset={handleReset} />
+        </div>
+        <div className="flex-1">
+          {selectedMode && <FlowProgressBanner excludeFlowId="bilko-main" onReset={handleReset} />}
+        </div>
       </div>
     </div>
   );
