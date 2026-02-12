@@ -30,6 +30,8 @@ import type {
   CostPI,
   CostModelConfig,
   TokenUsageSummary,
+  ChatDirectionPI,
+  ChatDirectionValue,
 } from "./types";
 
 // ── Cost defaults (Gemini 2.5 Flash) ─────────────────────
@@ -177,6 +179,27 @@ export function GlobalControlsProvider({ children }: { children: ReactNode }) {
     [costConfig, costEstimate],
   );
 
+  // ── Chat Direction PI ────────────────────────
+
+  const [chatDirection, setChatDirection] = useState<ChatDirectionValue>("top-down");
+
+  const toggleChatDirection = useCallback(() => {
+    setChatDirection((prev) => (prev === "top-down" ? "bottom-up" : "top-down"));
+  }, []);
+
+  const chatDirectionPI: ChatDirectionPI = useMemo(
+    () => ({
+      id: "PI-CHAT-DIRECTION",
+      label: "Chat Direction",
+      state: { direction: chatDirection },
+      actions: {
+        toggle: toggleChatDirection,
+        setDirection: setChatDirection,
+      },
+    }),
+    [chatDirection, toggleChatDirection],
+  );
+
   // ── Assemble map ─────────────────────────────
 
   const controls: GlobalControlsMap = useMemo(
@@ -187,8 +210,9 @@ export function GlobalControlsProvider({ children }: { children: ReactNode }) {
       "PI-SESSION": sessionPI,
       "PI-NAV-TOGGLE": navTogglePI,
       "PI-COST": costPI,
+      "PI-CHAT-DIRECTION": chatDirectionPI,
     }),
-    [themePI, viewModePI, debugPI, sessionPI, navTogglePI, costPI],
+    [themePI, viewModePI, debugPI, sessionPI, navTogglePI, costPI, chatDirectionPI],
   );
 
   return (

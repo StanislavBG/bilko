@@ -5,7 +5,7 @@
  * via useGlobalControl(id). No direct context access to individual providers.
  */
 
-import { LogOut, Eye, EyeOff, Wrench, RotateCcw, PanelLeft, Moon, Sun } from "lucide-react";
+import { LogOut, Eye, EyeOff, Settings, Wrench, RotateCcw, PanelLeft, Moon, Sun, ArrowUpDown } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -51,6 +51,7 @@ function LandingHeader() {
           </TooltipTrigger>
           <TooltipContent>{navLabel}</TooltipContent>
         </Tooltip>
+        <SettingsMenu />
         <ToolsMenu />
         <DebugButton />
         <PIThemeToggle theme={theme} />
@@ -114,6 +115,7 @@ function AuthenticatedHeader() {
             </TooltipContent>
           </Tooltip>
         )}
+        <SettingsMenu />
         <ToolsMenu />
         <DebugButton />
         <PIThemeToggle theme={theme} />
@@ -142,6 +144,45 @@ function PIThemeToggle({ theme }: { theme: ReturnType<typeof useGlobalControls>[
       <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
       <span className="sr-only">Toggle theme</span>
     </Button>
+  );
+}
+
+// ── Settings menu — chat direction + preferences ─────────
+
+function SettingsMenu() {
+  const chatDir = useGlobalControls()["PI-CHAT-DIRECTION"];
+  const isBottomUp = chatDir.state.direction === "bottom-up";
+
+  return (
+    <Popover>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" data-testid="button-settings">
+              <Settings className="h-4 w-4" />
+              <span className="sr-only">Settings</span>
+            </Button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>Settings</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="w-56 p-2">
+        <p className="text-xs font-medium text-muted-foreground px-2 py-1">Chat</p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-xs"
+          onClick={chatDir.actions.toggle}
+          data-testid="button-chat-direction"
+        >
+          <ArrowUpDown className="h-3.5 w-3.5" />
+          {isBottomUp ? "Newest first" : "Classic chat order"}
+          <span className="ml-auto text-[10px] text-muted-foreground">
+            {isBottomUp ? "top-down" : "bottom-up"}
+          </span>
+        </Button>
+      </PopoverContent>
+    </Popover>
   );
 }
 

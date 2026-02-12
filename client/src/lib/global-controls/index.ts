@@ -33,6 +33,10 @@ export type {
   CostPIActions,
   CostModelConfig,
   TokenUsageSummary,
+  ChatDirectionPI,
+  ChatDirectionPIState,
+  ChatDirectionPIActions,
+  ChatDirectionValue,
 } from "./types";
 
 // Context provider and hooks

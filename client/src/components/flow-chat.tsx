@@ -5,12 +5,11 @@
  * - The chat has an activeOwner (from FlowChatContext)
  * - Only the owner can push bilko/agent messages
  * - User and system messages are always accepted
- * - This component shows the owner badge and direction toggle
+ * - This component shows the owner badge
  *
- * Message direction (configurable):
+ * Message direction (configurable via PI-CHAT-DIRECTION in Settings):
  * - "top-down" (default): messages start at the top and grow downward
  * - "bottom-up": messages gravity-stick to the bottom (iMessage style)
- * - Stored in localStorage, toggled via the direction button
  *
  * Rules:
  * - ONLY messages render here (NO options, NO interactive cards)
@@ -18,21 +17,23 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { User, ArrowRight, ArrowDown, ArrowUp } from "lucide-react";
+import { User, ArrowRight } from "lucide-react";
 import { BilkoMessage } from "@/components/bilko-message";
 import { AgentBadge, getAgentColors } from "@/components/speaker-identity";
 import { useFlowChat, type FlowChatMessage } from "@/lib/bilko-flow/runtime/flow-chat";
+import { useGlobalControl } from "@/lib/global-controls";
 import { ENTRANCE_DELAY_MS } from "@/lib/bilko-persona/pacing";
 
 // ── Main FlowChat component ─────────────────────────────
 
 export function FlowChat() {
-  const { messages, activeOwner, messageDirection, setMessageDirection } = useFlowChat();
+  const { messages } = useFlowChat();
+  const chatDir = useGlobalControl("PI-CHAT-DIRECTION");
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [settledIds, setSettledIds] = useState<Set<string>>(new Set());
 
-  const isBottomUp = messageDirection === "bottom-up";
+  const isBottomUp = chatDir.state.direction === "bottom-up";
 
   // Default (top-down): newest messages at top, old ones pushed down
   // Bottom-up: traditional chat — oldest at top, newest at bottom
@@ -57,29 +58,8 @@ export function FlowChat() {
     setSettledIds((prev) => new Set(prev).add(msgId));
   };
 
-  const toggleDirection = () => {
-    setMessageDirection(isBottomUp ? "top-down" : "bottom-up");
-  };
-
   return (
     <div className="flex flex-col h-full">
-      {/* Header bar with direction toggle */}
-      <div className="border-b border-border bg-background/95 backdrop-blur-sm">
-        <div className="px-4 py-1.5 flex items-center justify-end">
-          <button
-            onClick={toggleDirection}
-            className="p-1 rounded hover:bg-foreground/10 transition-colors"
-            title={isBottomUp ? "Switch to newest-first" : "Switch to classic chat order"}
-          >
-            {isBottomUp ? (
-              <ArrowUp className="h-3.5 w-3.5 text-muted-foreground/50" />
-            ) : (
-              <ArrowDown className="h-3.5 w-3.5 text-muted-foreground/50" />
-            )}
-          </button>
-        </div>
-      </div>
-
       {/* Message list — only messages, no options */}
       <div className="flex-1 overflow-auto" ref={scrollRef}>
         <div className={`flex flex-col min-h-full ${isBottomUp ? "justify-end" : ""}`}>
