@@ -573,7 +573,7 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
     <div className="space-y-4">
       {/* Thin StepTracker bar — always visible */}
       <FlowProgress
-        mode="compact"
+        mode="auto"
         steps={trackerSteps}
         activity={trackerActivity}
         lastResult={lastResult}

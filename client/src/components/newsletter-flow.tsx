@@ -39,7 +39,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { FlowProgress, type FlowProgressStep } from "@/components/ui/flow-progress";
+import { FlowProgress, type FlowProgressStep, type FlowProgressTheme } from "@/components/ui/flow-progress";
 import {
   Newspaper,
   PenLine,
@@ -75,6 +75,14 @@ import { DailyBriefingView } from "@/components/newsletter/daily-briefing-view";
 
 // ── Owner ID — must match what landing.tsx uses for claimChat ──
 const OWNER_ID = "test-newsletter";
+
+// ── Theme — map domain step types to colors ──
+const NEWSLETTER_THEME: Partial<FlowProgressTheme> = {
+  stepColors: {
+    "llm:image": "bg-pink-500",
+    "llm:video": "bg-rose-500",
+  },
+};
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -1053,9 +1061,10 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
   return (
     <div className="space-y-4">
       <FlowProgress
-        mode="compact"
+        mode="auto"
         steps={trackerSteps}
         activity={trackerActivity}
+        theme={NEWSLETTER_THEME}
       />
 
       {/* ── LOADING states ────────────────────────────────────── */}
