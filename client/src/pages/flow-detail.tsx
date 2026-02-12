@@ -41,8 +41,7 @@ import {
   subscribe as storeSubscribe,
 } from "@/lib/bilko-flow/runtime/execution-store";
 import { useGlobalControl } from "@/lib/global-controls";
-import type { FlowDefinition, FlowExecution, StepExecution } from "@/lib/bilko-flow/types";
-import type { MutationResult } from "@/lib/bilko-flow/definitions/mutations";
+import type { FlowDefinition, FlowExecution, StepExecution, MutationResult } from "@/lib/bilko-flow";
 
 function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
