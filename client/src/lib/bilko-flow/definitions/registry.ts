@@ -36,6 +36,12 @@ const allFlows: FlowDefinition[] = [
     location: "landing",
     componentPath: "client/src/pages/landing.tsx",
     tags: ["landing", "main", "greeting", "routing", "root", "recursive", "while-loop"],
+    phases: [
+      { id: "greeting", label: "Welcome", stepIds: ["greeting", "greeting-chat"] },
+      { id: "mode-selection", label: "Choose", stepIds: ["mode-selection"] },
+      { id: "running-subflow", label: "Experience", stepIds: ["run-subflow"] },
+      { id: "recycle", label: "Return", stepIds: ["summarize-and-recycle", "receive-experience"] },
+    ],
     output: {
       name: "recycleContext",
       type: "object",
