@@ -76,7 +76,7 @@ export async function generateVideo(
 ): Promise<VideoGenerationResponse> {
   const apiKey = getApiKey();
   const model = request.model ?? DEFAULT_VIDEO_MODEL;
-  const url = `${GEMINI_BASE_URL}/models/${model}:generateVideos?key=${apiKey}`;
+  const url = `${GEMINI_BASE_URL}/models/${model}:predictLongRunning?key=${apiKey}`;
 
   const isExtension = !!request.sourceVideoBase64;
 

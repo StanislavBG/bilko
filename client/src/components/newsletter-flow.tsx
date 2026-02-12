@@ -480,15 +480,18 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
 
   const trackerActivity = useMemo<string | undefined>(() => {
     if (flowState === "done") {
-      return newsletter
-        ? `${newsletter.editionTitle} — Newsletter + Infographic + 2 Videos`
-        : "Complete";
+      if (!newsletter) return "Complete";
+      const clipCount = continuousVideo?.clips?.filter(Boolean).length ?? 0;
+      const videoLabel = clipCount > 0
+        ? `+ ${clipCount}-clip AI Video (~${continuousVideo!.totalDurationSeconds}s)`
+        : "(video generation failed)";
+      return `${newsletter.editionTitle} — Newsletter + Infographic + Slideshow ${videoLabel}`;
     }
     if (flowState === "error") {
       return error ?? "Something went wrong";
     }
     return statusMessage;
-  }, [flowState, statusMessage, newsletter, error]);
+  }, [flowState, statusMessage, newsletter, continuousVideo, error]);
 
   // Sync flowState to flow bus
   useEffect(() => {
@@ -781,6 +784,18 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
         );
       }
 
+      // ── Mark skipped clips when clip 1 failed ──
+      if (!currentVideoBase64 && veoPrompts.length > 1) {
+        // Clip 1 failed or returned empty — mark remaining clips as skipped
+        for (const skipId of ["generate-video-clip-2", "generate-video-clip-3"]) {
+          try {
+            await trackStep(skipId, { skipped: true, reason: "Previous clip failed" }, async () => {
+              throw new Error("Skipped: previous clip failed");
+            });
+          } catch { /* expected — marks step as error */ }
+        }
+      }
+
       // ── Clip 2: Scene extension (~7s) ──
       if (currentVideoBase64 && veoPrompts.length > 1) {
         setFlowState("generating-video-2");
@@ -846,6 +861,13 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
             `Final clip extension failed. Using ${clips.filter(Boolean).length}-clip merged video.`,
           );
         }
+      } else if (veoPrompts.length > 2 && !execution.steps["generate-video-clip-3"]) {
+        // Clip 3 was skipped — mark it so flow-progress shows the failure
+        try {
+          await trackStep("generate-video-clip-3", { skipped: true, reason: "Previous clip failed" }, async () => {
+            throw new Error("Skipped: previous clip failed or returned empty");
+          });
+        } catch { /* expected — marks step as error */ }
       }
 
       // ── Assemble ContinuousVideoResult from individual clips ──
@@ -1075,6 +1097,34 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
       {/* ── DONE: Tabbed output display ──────────────────────── */}
       {flowState === "done" && newsletter && articles && (
         <div className="space-y-4">
+          {/* Actions — top of view so they're always visible */}
+          <div className="flex justify-center gap-3 flex-wrap">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={reset}
+              className="text-muted-foreground"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+              New Edition
+            </Button>
+            {onComplete && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const videoDesc = continuousVideo?.mergedVideo
+                    ? `~${continuousVideo.totalDurationSeconds}s continuous AI video`
+                    : "AI video plan";
+                  const exitSummary = `Read "${newsletter.editionTitle}" covering ${newsletter.leaguesCovered.join(", ")}. Top story: ${newsletter.topStory}. Mood: ${newsletter.mood}. ${newsletter.takeaway}. Full media package: infographic, slideshow video, ${videoDesc}.`;
+                  onComplete(exitSummary);
+                }}
+              >
+                Done
+              </Button>
+            )}
+          </div>
+
           {/* Tab bar */}
           <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
             {TABS.map((tab) => {
@@ -1202,34 +1252,6 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
               <div className="animate-in fade-in duration-300">
                 <VideoPlanView data={videoPrompts} continuousVideo={continuousVideo ?? undefined} />
               </div>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-center gap-3 flex-wrap pt-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={reset}
-              className="text-muted-foreground"
-            >
-              <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-              New Edition
-            </Button>
-            {onComplete && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const videoDesc = continuousVideo?.mergedVideo
-                    ? `~${continuousVideo.totalDurationSeconds}s continuous AI video`
-                    : "AI video plan";
-                  const exitSummary = `Read "${newsletter.editionTitle}" covering ${newsletter.leaguesCovered.join(", ")}. Top story: ${newsletter.topStory}. Mood: ${newsletter.mood}. ${newsletter.takeaway}. Full media package: infographic, slideshow video, ${videoDesc}.`;
-                  onComplete(exitSummary);
-                }}
-              >
-                Done
-              </Button>
             )}
           </div>
         </div>
