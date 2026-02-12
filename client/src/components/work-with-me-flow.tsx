@@ -565,7 +565,7 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
   return (
     <div className="space-y-6">
       {/* Progress tracker — derived from flow definition + execution state */}
-      <FlowProgress mode="compact" steps={trackerSteps} activity={trackerActivity} />
+      <FlowProgress mode="auto" steps={trackerSteps} activity={trackerActivity} />
 
       {/* Phase 1: Objective input */}
       {phase === "objective-input" && (
