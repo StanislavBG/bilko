@@ -623,7 +623,7 @@ export function LandingContent() {
         {/* Right panel: Delivery surface */}
         <div className="flex flex-1 overflow-auto min-h-0">
           {selectedMode ? (
-            <div className="flex-1 max-w-4xl mx-auto px-6 py-6 w-full">
+            <div className="flex-1 px-6 py-6 w-full">
               <ExperienceBack onBack={handleBack} />
               <RightPanelContent
                 mode={selectedMode}
@@ -673,14 +673,14 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
 
   return (
     <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
-      <div className="max-w-2xl w-full space-y-8">
+      <div className="w-full space-y-8">
         {/* ── Ready for Testing ─────────────────────────── */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="h-4 w-4" />
             <span>Ready for Testing</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
             {readyOptions.map((option, i) => (
               <button
                 key={option.id}
@@ -750,7 +750,7 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
               <Construction className="h-4 w-4" />
               <span>Under Construction</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
               {constructionOptions.map((option, i) => (
                 <button
                   key={option.id}
