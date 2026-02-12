@@ -13,7 +13,8 @@ export type GlobalControlId =
   | "PI-DEBUG"
   | "PI-SESSION"
   | "PI-NAV-TOGGLE"
-  | "PI-COST";
+  | "PI-COST"
+  | "PI-CHAT-DIRECTION";
 
 /** Base interface every Program Interface must implement */
 export interface ProgramInterface<TState, TActions> {
@@ -135,6 +136,21 @@ export interface CostPIActions {
 
 export type CostPI = ProgramInterface<CostPIState, CostPIActions>;
 
+// ── Chat Direction PI ────────────────────────────────────
+
+export type ChatDirectionValue = "top-down" | "bottom-up";
+
+export interface ChatDirectionPIState {
+  direction: ChatDirectionValue;
+}
+
+export interface ChatDirectionPIActions {
+  toggle: () => void;
+  setDirection: (dir: ChatDirectionValue) => void;
+}
+
+export type ChatDirectionPI = ProgramInterface<ChatDirectionPIState, ChatDirectionPIActions>;
+
 // ── Aggregate ─────────────────────────────────────────────
 
 /** All global control PIs as a single map, keyed by their unique ID */
@@ -145,4 +161,5 @@ export interface GlobalControlsMap {
   "PI-SESSION": SessionPI;
   "PI-NAV-TOGGLE": NavTogglePI;
   "PI-COST": CostPI;
+  "PI-CHAT-DIRECTION": ChatDirectionPI;
 }
