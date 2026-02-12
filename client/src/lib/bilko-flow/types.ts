@@ -10,6 +10,7 @@ import type {
   UIStepType,
   StepStatus as LibStepStatus,
   StepExecution as LibStepExecution,
+  FlowPhase as LibFlowPhase,
 } from "bilko-flow/react";
 
 // ── Shared types from bilko-flow/react ─────────────────────
@@ -39,15 +40,8 @@ export interface FlowOutput {
 }
 
 /** User-facing phase group for progress display.
- *  Maps bus-published phase IDs to short labels and registry step ranges. */
-export interface FlowPhase {
-  /** Phase ID as published to FlowBus (e.g. "researching-topics") */
-  id: string;
-  /** Short user-facing label (e.g. "Research") */
-  label: string;
-  /** Registry step IDs covered by this phase */
-  stepIds: string[];
-}
+ *  Re-exported from bilko-flow/react (identical shape: { id, label, stepIds }). */
+export type FlowPhase = LibFlowPhase;
 
 /** A single step in a flow */
 export interface FlowStep {
