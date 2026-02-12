@@ -190,13 +190,13 @@ export function createNewsletterWorkflowInput(
     },
     {
       id: "generate-video-prompts",
-      name: "Generate Veo Video Prompts",
+      name: "Generate Veo Scene Extension Prompts",
       type: "ai.generate-text",
-      description: "Creates Veo-optimized prompts for ~30s AI video (10s per story) with extension techniques. Parallel with generate-storyboard.",
+      description: "Creates 3 Veo scene extension prompts for a continuous ~22s video: Scene 1 (8s initial), Scene 2 (extend ~7s), Scene 3 (extend merged ~7s). Uses continuation language and shared style tokens for visual coherence.",
       dependsOn: ["create-narrative"],
       inputs: {
-        systemPromptTemplate: `AI video production expert. Create 3 Veo prompts (8-10s clips) with camera movements, moods, extension technique.`,
-        userMessageTemplate: "Generate Veo-optimized video prompts.",
+        systemPromptTemplate: `AI video production expert. Create 3 Veo scene extension prompts (8s+7s+7s) with camera movements, continuation language, shared style tokens. Each extension uses the last ~1s of the previous merged video as grounding seed.`,
+        userMessageTemplate: "Generate Veo scene extension prompts for continuous video.",
         model: "gemini-2.5-flash",
         templateSources: ["create-narrative", "rank-stories"],
       },
@@ -255,21 +255,22 @@ export function createNewsletterWorkflowInput(
         ],
       },
     },
-    // ── Video Generation Phase (Veo) ──
+    // ── Video Generation Phase (Veo Scene Extension) ──
     {
       id: "generate-video-clips",
-      name: "Generate AI Video Clips",
+      name: "Generate Continuous Video (Scene Extension)",
       type: "ai.generate-video",
-      description: "Generates 7-8 second AI video clips using Veo for each scene prompt. Creates cinematic football footage.",
+      description: "Generates a continuous ~22s AI video using Veo scene extension: Clip 1 (8s initial) → Clip 2 (extend by ~7s using last ~1s as grounding) → Clip 3 (extend merged by ~7s). Sequential execution since each clip depends on the previous.",
       dependsOn: ["generate-video-prompts"],
       inputs: {
         promptsTemplate: "{{generate-video-prompts.videoPrompts.scenes|map:veoPrompt}}",
-        durationSeconds: 8,
+        technique: "scene-extension",
+        initialDurationSeconds: 8,
         aspectRatio: "16:9",
         model: "veo-3.0-generate-001",
       },
-      outputs: { schema: { type: "object", properties: { videos: { type: "array" } } } },
-      policy: { ...defaultPolicy, timeoutMs: 300000, maxAttempts: 1 },
+      outputs: { schema: { type: "object", properties: { mergedVideo: { type: "object" }, clips: { type: "array" }, totalDurationSeconds: { type: "number" } } } },
+      policy: { ...defaultPolicy, timeoutMs: 900000, maxAttempts: 1 },
       determinism: {
         ...llmDeterminism,
         externalDependencies: [

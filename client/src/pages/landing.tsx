@@ -51,6 +51,7 @@ import {
   Gamepad2,
   Construction,
   CheckCircle2,
+  ExternalLink,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
@@ -71,6 +72,7 @@ interface ModeOption {
   label: string;
   description: string;
   icon: ReactNode;
+  websiteUrl?: string;
 }
 
 const iconMap: Record<string, ReactNode> = {
@@ -86,6 +88,7 @@ const MODE_OPTIONS: ModeOption[] = flowRegistry
     label: f.name,
     description: f.description,
     icon: f.icon ? (iconMap[f.icon] ?? <Sparkles className="h-5 w-5" />) : <Sparkles className="h-5 w-5" />,
+    websiteUrl: f.websiteUrl,
   }));
 
 /** Special tiles that aren't flows but appear in the menu */
@@ -683,6 +686,18 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
                     <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                       {option.description}
                     </p>
+                    {option.websiteUrl && (
+                      <span
+                        className="inline-flex items-center gap-1 mt-2 text-xs text-primary/70 hover:text-primary transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(option.websiteUrl, "_blank", "noopener");
+                        }}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        {option.websiteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                      </span>
+                    )}
                   </div>
                 </div>
               </button>

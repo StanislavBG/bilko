@@ -8,7 +8,7 @@
 import { Router, Request, Response } from "express";
 import { chat, AVAILABLE_MODELS, type ChatRequest } from "./index";
 import { generateImage, generateImages, type ImageGenerationRequest } from "./image-generation";
-import { generateVideo, generateVideos, type VideoGenerationRequest } from "./video-generation";
+import { generateVideo, generateVideos, generateContinuousVideo, type VideoGenerationRequest } from "./video-generation";
 
 const router = Router();
 
@@ -180,7 +180,7 @@ router.post("/generate-images", async (req: Request, res: Response) => {
 
 router.post("/generate-video", async (req: Request, res: Response) => {
   try {
-    const { prompt, model, durationSeconds, aspectRatio, referenceImageBase64, referenceImageMimeType } =
+    const { prompt, model, durationSeconds, aspectRatio, referenceImageBase64, referenceImageMimeType, sourceVideoBase64, sourceVideoMimeType } =
       req.body as VideoGenerationRequest;
 
     if (!prompt) {
@@ -195,6 +195,8 @@ router.post("/generate-video", async (req: Request, res: Response) => {
       aspectRatio,
       referenceImageBase64,
       referenceImageMimeType,
+      sourceVideoBase64,
+      sourceVideoMimeType,
     });
 
     res.json({
@@ -204,6 +206,39 @@ router.post("/generate-video", async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error("Video generation error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+router.post("/generate-continuous-video", async (req: Request, res: Response) => {
+  try {
+    const { prompts, model, aspectRatio, initialDurationSeconds } = req.body as {
+      prompts: string[];
+      model?: string;
+      aspectRatio?: "16:9" | "9:16";
+      initialDurationSeconds?: 5 | 6 | 7 | 8;
+    };
+
+    if (!Array.isArray(prompts) || prompts.length === 0) {
+      res.status(400).json({ error: "prompts array is required (1-5 prompts)" });
+      return;
+    }
+
+    if (prompts.length > 5) {
+      res.status(400).json({ error: "Maximum 5 prompts for continuous video" });
+      return;
+    }
+
+    const result = await generateContinuousVideo(prompts, {
+      model,
+      aspectRatio,
+      initialDurationSeconds,
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error("Continuous video generation error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: message });
   }
