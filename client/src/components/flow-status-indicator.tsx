@@ -8,7 +8,7 @@
 
 import { useMemo } from "react";
 import { FlowProgress, type FlowProgressStep } from "bilko-flow/react";
-import { useFlowBus, type FlowStatus, type FlowRegistration } from "@/contexts/flow-bus-context";
+import { useFlowBus, type FlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowById } from "@/lib/bilko-flow";
 import type { FlowPhase } from "@/lib/bilko-flow";
 
@@ -41,20 +41,22 @@ function toProgressSteps(flow: FlowRegistration): FlowProgressStep[] {
 
   const currentIdx = findPhaseIndex(phases, flow.phase);
 
-  return phases.map((phase, i) => ({
+  return phases.map((phase, i): FlowProgressStep => ({
     id: phase.id,
     label: phase.label,
     status: i < currentIdx
-      ? "complete" as const
+      ? "complete"
       : i === currentIdx
-        ? "active" as const
-        : "pending" as const,
+        ? "active"
+        : "pending",
   }));
 }
 
-function toFlowStatus(status: FlowStatus): "idle" | "running" | "complete" | "error" {
-  if (status === "complete") return "complete";
-  return status;
+/** Resolve the current activity text from phase */
+function resolveActivity(flow: FlowRegistration): string | undefined {
+  if (!flow.phase) return undefined;
+  const phases = getFlowPhases(flow.id);
+  return phases ? getPhaseLabel(phases, flow.phase) : flow.phase;
 }
 
 // ── Compact indicator (bottom of chat) ──────────────────
@@ -74,27 +76,19 @@ export function FlowStatusIndicator({ onReset }: FlowStatusIndicatorProps) {
   if (activeFlows.length === 0) return null;
 
   return (
-    <div className="border-t border-border bg-background/95 backdrop-blur-sm px-4 py-2.5
+    <div className="border-t border-border bg-background/95 backdrop-blur-sm
       animate-in fade-in slide-in-from-bottom-2 duration-300">
-      {activeFlows.map((flow) => {
-        const steps = toProgressSteps(flow);
-        const phases = getFlowPhases(flow.id);
-        const activity = flow.phase && phases
-          ? getPhaseLabel(phases, flow.phase)
-          : undefined;
-
-        return (
-          <FlowProgress
-            key={flow.id}
-            mode="compact"
-            steps={steps}
-            label={flow.label}
-            status={toFlowStatus(flow.status)}
-            activity={activity}
-            onReset={onReset}
-          />
-        );
-      })}
+      {activeFlows.map((flow) => (
+        <FlowProgress
+          key={flow.id}
+          mode="compact"
+          steps={toProgressSteps(flow)}
+          label={flow.label}
+          status={flow.status}
+          activity={resolveActivity(flow)}
+          onReset={onReset}
+        />
+      ))}
     </div>
   );
 }
@@ -116,29 +110,19 @@ export function FlowProgressBanner({ onReset }: FlowProgressBannerProps) {
   if (activeFlows.length === 0) return null;
 
   return (
-    <div
-      className="shrink-0 border-t border-border bg-background/95 backdrop-blur-sm
-        px-6 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300"
-    >
-      {activeFlows.map((flow) => {
-        const steps = toProgressSteps(flow);
-        const phases = getFlowPhases(flow.id);
-        const activity = flow.phase && phases
-          ? getPhaseLabel(phases, flow.phase)
-          : undefined;
-
-        return (
-          <FlowProgress
-            key={flow.id}
-            mode="full"
-            steps={steps}
-            label={flow.label}
-            status={toFlowStatus(flow.status)}
-            activity={activity}
-            onReset={onReset}
-          />
-        );
-      })}
+    <div className="shrink-0 border-t border-border bg-background/95 backdrop-blur-sm
+      px-6 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      {activeFlows.map((flow) => (
+        <FlowProgress
+          key={flow.id}
+          mode="full"
+          steps={toProgressSteps(flow)}
+          label={flow.label}
+          status={flow.status}
+          activity={resolveActivity(flow)}
+          onReset={onReset}
+        />
+      ))}
     </div>
   );
 }
