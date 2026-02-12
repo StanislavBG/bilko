@@ -12,8 +12,10 @@
  * ║  Sub-modules:                                            ║
  * ║    llm/          — LLM client (chatJSON, chat)           ║
  * ║    runtime/      — Execution tracking, chat, bridge      ║
- * ║    definitions/  — Registry, validation, mutations       ║
- * ║    inspector/    — DAG layout, step visuals              ║
+ * ║    definitions/  — Registry, validation                  ║
+ * ║                                                          ║
+ * ║  Shared modules (from bilko-flow/react):                 ║
+ * ║    Layout, step visuals, mutations, component defs       ║
  * ║                                                          ║
  * ╚══════════════════════════════════════════════════════════╝
  */
@@ -64,18 +66,22 @@ export { flowRegistry, activeFlowIds, getFlowById } from "./definitions/registry
 export { validateFlowDefinition, validateRegistry } from "./definitions/validate";
 export type { FlowValidationError } from "./definitions/validate";
 
-// ── Flow Mutations ──────────────────────────────────────────
+// ── Flow Mutations (from bilko-flow/react) ──────────────────
 export {
   applyMutation,
   generateStepId,
   createBlankStep,
-} from "./definitions/mutations";
-export type { FlowMutation, MutationResult, MutationValidationError } from "./definitions/mutations";
+} from "bilko-flow/react";
+export type { FlowMutation, MutationResult, MutationValidationError } from "bilko-flow/react";
 
-// ── Inspector: DAG Layout ───────────────────────────────────
-export { computeLayout, NODE_W, NODE_H, COL_GAP, ROW_GAP, PADDING } from "./inspector/layout";
-export type { NodeLayout, EdgeLayout, DAGLayout } from "./inspector/layout";
+// ── Inspector: DAG Layout (from bilko-flow/react) ───────────
+export { computeLayout, NODE_W, NODE_H, COL_GAP, ROW_GAP, PADDING } from "bilko-flow/react";
+export type { NodeLayout, EdgeLayout, DAGLayout } from "bilko-flow/react";
 
-// ── Inspector: Step Visuals ─────────────────────────────────
-export { STEP_TYPE_CONFIG, LLM_SUBTYPE_CONFIG, getStepVisuals } from "./inspector/step-type-config";
-export type { StepTypeVisuals } from "./inspector/step-type-config";
+// ── Inspector: Step Visuals (from bilko-flow/react) ─────────
+export { STEP_TYPE_CONFIG, LLM_SUBTYPE_CONFIG, getStepVisuals } from "bilko-flow/react";
+export type { StepTypeVisuals } from "bilko-flow/react";
+
+// ── Component Definitions (from bilko-flow/react) ───────────
+export { DEFAULT_COMPONENT_DEFINITIONS, getComponentByType } from "bilko-flow/react";
+export type { ComponentDefinition, ComponentFieldSpec, ComponentUseCase, ComponentReference } from "bilko-flow/react";
