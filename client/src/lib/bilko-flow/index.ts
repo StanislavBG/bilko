@@ -70,7 +70,7 @@ export {
   generateStepId,
   createBlankStep,
 } from "./definitions/mutations";
-export type { FlowMutation, MutationResult } from "./definitions/mutations";
+export type { FlowMutation, MutationResult, MutationValidationError } from "./definitions/mutations";
 
 // ── Inspector: DAG Layout ───────────────────────────────────
 export { computeLayout, NODE_W, NODE_H, COL_GAP, ROW_GAP, PADDING } from "./inspector/layout";
