@@ -101,12 +101,11 @@ export function FlowStatusIndicator({ onReset, flowId, position = "bottom" }: Fl
   const borderClass = position === "top" ? "border-b" : "border-t";
 
   return (
-    <div className={`${borderClass} border-border bg-background/95 backdrop-blur-sm shrink-0
-      animate-in fade-in duration-300`}>
+    <div className={`${borderClass} border-border shrink-0 w-full`}>
       {activeFlows.map((flow) => (
         <FlowProgress
           key={flow.id}
-          mode="auto"
+          mode="compact"
           steps={toProgressSteps(flow)}
           label={flow.label}
           status={flow.status}

@@ -57,7 +57,7 @@ import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
 import { flowRegistry, activeFlowIds } from "@/lib/bilko-flow/definitions/registry";
 import { FlowBusProvider, useFlowBus, useFlowRegistration } from "@/contexts/flow-bus-context";
-import { FlowStatusIndicator, FlowProgressBanner } from "@/components/flow-status-indicator";
+import { FlowStatusIndicator } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
 import { useSidebarSafe } from "@/components/ui/sidebar";
 
@@ -637,12 +637,6 @@ export function LandingContent() {
         </div>
       </div>
 
-      {/* Subflow progress row — only when a subflow is active */}
-      {selectedMode && (
-        <div className="shrink-0">
-          <FlowProgressBanner excludeFlowId="bilko-main" onReset={handleReset} />
-        </div>
-      )}
     </div>
   );
 }
