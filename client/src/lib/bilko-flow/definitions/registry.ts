@@ -446,7 +446,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     id: "test-newsletter",
     name: "European Football Newsletter",
     description:
-      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana, emphasizing scores & transfer fees), slideshow with AI-generated scene images, and a continuous ~22s AI video (3 Veo clips with scene extension grounding).",
+      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana, emphasizing scores & transfer fees), slideshow with AI-generated scene images, and a continuous ~20s AI video of the primary story (3 Veo clips: 8+6+6s with scene extension grounding, voiced by short summary).",
     version: "4.0.0",
     location: "landing",
     componentPath: "client/src/components/newsletter-flow.tsx",
@@ -467,7 +467,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     output: {
       name: "mediaPackage",
       type: "object",
-      description: "The complete media package: newsletter, cinematic AI infographic image, slideshow with AI scene images, and a continuous ~22s AI video (3 Veo clips chained via scene extension)",
+      description: "The complete media package: newsletter, cinematic AI infographic image, slideshow with AI scene images, and a continuous ~20s primary story AI video (3 Veo clips: 8+6+6s chained via scene extension)",
     },
     steps: [
       {
@@ -603,8 +603,8 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         name: "Generate Veo Scene Extension Prompts",
         type: "llm",
         description:
-          "Creates 3 Veo-optimized prompts for a continuous ~22s AI video using scene extension: Scene 1 (8s initial), Scene 2 (extend by ~7s), Scene 3 (extend merged by ~7s). Uses continuation language and shared style tokens.",
-        prompt: "Create 3 Veo scene extension prompts (8s+7s+7s) with camera movements, continuation language, shared style tokens.",
+          "Creates 3 Veo-optimized prompts for a continuous ~20s primary story AI video using scene extension: Scene 1 (8s initial), Scene 2 (extend by ~6s), Scene 3 (extend merged by ~6s). Uses the main story article as voiceover script. Continuation language and shared style tokens.",
+        prompt: "Create 3 Veo scene extension prompts (8s+6s+6s) for the primary story with camera movements, continuation language, shared style tokens, aligned to voiceover.",
         userMessage: "Generate Veo scene extension prompts for continuous video generation.",
         model: "gemini-2.5-flash",
         inputSchema: [
@@ -683,12 +683,12 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
       },
       {
         id: "generate-video-clip-2",
-        name: "Extend Video (Clip 2, ~7s extension)",
+        name: "Extend Video (Clip 2, ~6s extension)",
         type: "llm",
         subtype: "video",
         description:
-          "Extends clip 1 by ~7 seconds using Veo scene extension. Veo uses the last ~1 second of clip 1 as visual grounding seed, then generates continuation. Returns merged ~15s video.",
-        prompt: "Extend the initial clip by ~7 seconds using scene extension grounding.",
+          "Extends clip 1 by ~6 seconds using Veo scene extension. Veo uses the last ~1 second of clip 1 as visual grounding seed, then generates continuation. Returns merged ~14s video.",
+        prompt: "Extend the initial clip by ~6 seconds using scene extension grounding.",
         userMessage: "Extend the video with scene 2 using Veo scene extension.",
         model: "veo-3.0-generate-001",
         inputSchema: [
@@ -696,7 +696,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           { name: "sourceVideoBase64", type: "string", description: "The clip 1 video to extend" },
         ],
         outputSchema: [
-          { name: "videoBase64", type: "string", description: "Base64-encoded merged ~15s video (MP4)" },
+          { name: "videoBase64", type: "string", description: "Base64-encoded merged ~14s video (MP4)" },
           { name: "mimeType", type: "string", description: "Video MIME type" },
           { name: "durationSeconds", type: "number", description: "Merged duration" },
         ],
@@ -704,20 +704,20 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
       },
       {
         id: "generate-video-clip-3",
-        name: "Extend Video (Clip 3, final ~7s)",
+        name: "Extend Video (Clip 3, final ~6s)",
         type: "llm",
         subtype: "video",
         description:
-          "Extends the merged video by ~7 seconds using Veo scene extension. Veo uses the last ~1 second of the merged ~15s video as grounding seed. Returns final ~22s continuous video.",
+          "Extends the merged video by ~6 seconds using Veo scene extension. Veo uses the last ~1 second of the merged ~14s video as grounding seed. Returns final ~20s continuous video.",
         prompt: "Complete the continuous video with the final scene extension.",
         userMessage: "Complete the video with the final Veo scene extension.",
         model: "veo-3.0-generate-001",
         inputSchema: [
           { name: "veoPrompt", type: "string", description: "The third Veo scene prompt (conclusion)" },
-          { name: "sourceVideoBase64", type: "string", description: "The merged ~15s video to extend" },
+          { name: "sourceVideoBase64", type: "string", description: "The merged ~14s video to extend" },
         ],
         outputSchema: [
-          { name: "videoBase64", type: "string", description: "Base64-encoded final ~22s video (MP4)" },
+          { name: "videoBase64", type: "string", description: "Base64-encoded final ~20s video (MP4)" },
           { name: "mimeType", type: "string", description: "Video MIME type" },
           { name: "durationSeconds", type: "number", description: "Final merged duration" },
         ],
@@ -738,7 +738,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           { name: "storyboard", type: "object", description: "4-scene storyboard" },
           { name: "narrative", type: "object", description: "60s broadcast narration script" },
           { name: "sceneImages", type: "array", description: "AI-generated scene images" },
-          { name: "continuousVideo", type: "object", description: "Continuous AI video (~22s)" },
+          { name: "continuousVideo", type: "object", description: "Continuous primary story AI video (~20s)" },
         ],
         outputSchema: [
           { name: "exitSummary", type: "string", description: "Summary of the daily briefing for bilko-main recycling" },
