@@ -1060,13 +1060,6 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
 
   return (
     <div className="space-y-4">
-      <FlowProgress
-        mode="auto"
-        steps={trackerSteps}
-        activity={trackerActivity}
-        theme={NEWSLETTER_THEME}
-      />
-
       {/* ── LOADING states ────────────────────────────────────── */}
       {flowState !== "done" && flowState !== "error" && (
         <div className="flex flex-col items-center justify-center py-16 px-4">
@@ -1277,6 +1270,14 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
           </Button>
         </div>
       )}
+
+      {/* ── Flow progress — bottom of right panel ──────────── */}
+      <FlowProgress
+        mode="auto"
+        steps={trackerSteps}
+        activity={trackerActivity}
+        theme={NEWSLETTER_THEME}
+      />
     </div>
   );
 }
