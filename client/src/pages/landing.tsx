@@ -613,8 +613,10 @@ export function LandingContent() {
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Content row — chat + delivery surface */}
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden min-h-0">
-        {/* Left panel: Chat */}
+        {/* Left panel: Progress bar + Chat */}
         <div className="w-full lg:w-[420px] xl:w-[480px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
+          {/* Progress bar — directly under the logo */}
+          <FlowStatusIndicator flowId="bilko-main" onReset={handleReset} position="top" />
           <FlowChat />
         </div>
 
@@ -634,15 +636,12 @@ export function LandingContent() {
         </div>
       </div>
 
-      {/* Progress row — both bars aligned in a single horizontal strip */}
-      <div className="shrink-0 flex">
-        <div className="w-full lg:w-[420px] xl:w-[480px] lg:flex-none lg:border-r border-border bg-background">
-          <FlowStatusIndicator flowId="bilko-main" onReset={handleReset} />
+      {/* Subflow progress row — only when a subflow is active */}
+      {selectedMode && (
+        <div className="shrink-0">
+          <FlowProgressBanner excludeFlowId="bilko-main" onReset={handleReset} />
         </div>
-        <div className="flex-1">
-          {selectedMode && <FlowProgressBanner excludeFlowId="bilko-main" onReset={handleReset} />}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
