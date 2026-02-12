@@ -1271,9 +1271,9 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
         </div>
       )}
 
-      {/* ── Flow progress — bottom of right panel ──────────── */}
+      {/* ── SubFlowProgress — pinned bottom of right panel, expanded view ── */}
       <FlowProgress
-        mode="auto"
+        mode="expanded"
         steps={trackerSteps}
         activity={trackerActivity}
         theme={NEWSLETTER_THEME}
