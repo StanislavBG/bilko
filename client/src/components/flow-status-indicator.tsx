@@ -2,8 +2,8 @@
  * FlowStatusIndicator / FlowProgressBanner — Adapters that bridge
  * FlowBusContext data to bilko-flow/react's FlowProgress component.
  *
- * FlowStatusIndicator  → FlowProgress mode="compact" (inline bottom panel)
- * FlowProgressBanner   → FlowProgress mode="full"    (full-width top banner)
+ * FlowStatusIndicator  → FlowProgress mode="auto"     (inline bottom panel, expands when room)
+ * FlowProgressBanner   → FlowProgress mode="expanded" (full-width top banner, rectangular cards)
  */
 
 import { useMemo } from "react";
@@ -106,7 +106,7 @@ export function FlowStatusIndicator({ onReset, flowId, position = "bottom" }: Fl
       {activeFlows.map((flow) => (
         <FlowProgress
           key={flow.id}
-          mode="compact"
+          mode="auto"
           steps={toProgressSteps(flow)}
           label={flow.label}
           status={flow.status}
@@ -146,7 +146,7 @@ export function FlowProgressBanner({ onReset, excludeFlowId }: FlowProgressBanne
       {activeFlows.map((flow) => (
         <FlowProgress
           key={flow.id}
-          mode="full"
+          mode="expanded"
           steps={toProgressSteps(flow)}
           label={flow.label}
           status={flow.status}
