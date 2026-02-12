@@ -461,7 +461,8 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
       { id: "producing", label: "Produce", stepIds: ["design-infographic", "create-narrative"] },
       { id: "assembling", label: "Assemble", stepIds: ["generate-storyboard", "generate-video-prompts"] },
       { id: "generating-images", label: "Generate Images", stepIds: ["generate-infographic-image", "generate-scene-images"] },
-      { id: "generating-videos", label: "Generate Continuous Video", stepIds: ["generate-video-clips"] },
+      { id: "generating-videos", label: "Generate Video Clips", stepIds: ["generate-video-clip-1", "generate-video-clip-2", "generate-video-clip-3"] },
+      { id: "assembling-briefing", label: "Daily Briefing", stepIds: ["assemble-daily-briefing"] },
     ],
     output: {
       name: "mediaPackage",
@@ -656,26 +657,93 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         dependsOn: ["generate-storyboard"],
         parallel: true,
       },
-      // ── Video Generation Phase (Veo Scene Extension) ──
+      // ── Video Generation Phase (Veo Scene Extension — Client-Side Sequential) ──
+      // Each clip is generated individually from the client to avoid HTTP timeouts.
+      // Clip 1 is a fresh generation. Clips 2 & 3 are scene extensions that
+      // use the previous clip's last ~1 second as visual grounding.
       {
-        id: "generate-video-clips",
-        name: "Generate Continuous Video",
+        id: "generate-video-clip-1",
+        name: "Generate Video Clip 1 (Initial 8s)",
         type: "llm",
         subtype: "video",
         description:
-          "Generates a continuous ~22-second AI video using Veo scene extension: Clip 1 (8s initial) → Clip 2 (extend by ~7s using last ~1s as grounding) → Clip 3 (extend merged by ~7s). Each extension is sequential since it depends on the previous clip's output.",
-        prompt: "Generate a continuous ~22-second video by chaining 3 Veo clips with scene extension grounding.",
-        userMessage: "Generate continuous AI video with Veo scene extension.",
+          "Generates the initial 8-second video clip using Veo. This is a fresh text-to-video generation that establishes the visual tone for the continuous video.",
+        prompt: "Generate an initial 8-second video clip from the first Veo prompt.",
+        userMessage: "Generate the opening video clip with Veo.",
         model: "veo-3.0-generate-001",
         inputSchema: [
-          { name: "videoPrompts", type: "object", description: "3 Veo-optimized scene prompts designed for scene extension chaining" },
+          { name: "veoPrompt", type: "string", description: "The first Veo scene prompt" },
         ],
         outputSchema: [
-          { name: "mergedVideo", type: "object", description: "The final merged continuous video (~22s, base64 MP4)" },
-          { name: "clips", type: "array", description: "Per-clip results (null for failed clips)" },
-          { name: "totalDurationSeconds", type: "number", description: "Total merged duration" },
+          { name: "videoBase64", type: "string", description: "Base64-encoded 8s video clip (MP4)" },
+          { name: "mimeType", type: "string", description: "Video MIME type" },
+          { name: "durationSeconds", type: "number", description: "Clip duration in seconds" },
         ],
         dependsOn: ["generate-video-prompts"],
+      },
+      {
+        id: "generate-video-clip-2",
+        name: "Extend Video (Clip 2, ~7s extension)",
+        type: "llm",
+        subtype: "video",
+        description:
+          "Extends clip 1 by ~7 seconds using Veo scene extension. Veo uses the last ~1 second of clip 1 as visual grounding seed, then generates continuation. Returns merged ~15s video.",
+        prompt: "Extend the initial clip by ~7 seconds using scene extension grounding.",
+        userMessage: "Extend the video with scene 2 using Veo scene extension.",
+        model: "veo-3.0-generate-001",
+        inputSchema: [
+          { name: "veoPrompt", type: "string", description: "The second Veo scene prompt (continuation language)" },
+          { name: "sourceVideoBase64", type: "string", description: "The clip 1 video to extend" },
+        ],
+        outputSchema: [
+          { name: "videoBase64", type: "string", description: "Base64-encoded merged ~15s video (MP4)" },
+          { name: "mimeType", type: "string", description: "Video MIME type" },
+          { name: "durationSeconds", type: "number", description: "Merged duration" },
+        ],
+        dependsOn: ["generate-video-clip-1"],
+      },
+      {
+        id: "generate-video-clip-3",
+        name: "Extend Video (Clip 3, final ~7s)",
+        type: "llm",
+        subtype: "video",
+        description:
+          "Extends the merged video by ~7 seconds using Veo scene extension. Veo uses the last ~1 second of the merged ~15s video as grounding seed. Returns final ~22s continuous video.",
+        prompt: "Complete the continuous video with the final scene extension.",
+        userMessage: "Complete the video with the final Veo scene extension.",
+        model: "veo-3.0-generate-001",
+        inputSchema: [
+          { name: "veoPrompt", type: "string", description: "The third Veo scene prompt (conclusion)" },
+          { name: "sourceVideoBase64", type: "string", description: "The merged ~15s video to extend" },
+        ],
+        outputSchema: [
+          { name: "videoBase64", type: "string", description: "Base64-encoded final ~22s video (MP4)" },
+          { name: "mimeType", type: "string", description: "Video MIME type" },
+          { name: "durationSeconds", type: "number", description: "Final merged duration" },
+        ],
+        dependsOn: ["generate-video-clip-2"],
+      },
+      // ── Assembly Phase — Daily Briefing ──
+      {
+        id: "assemble-daily-briefing",
+        name: "Assemble Daily Briefing",
+        type: "display",
+        description:
+          "Assembles all generated outputs into the unified Daily Briefing view: newsletter articles, AI infographic image, slideshow, and continuous AI video. This is the final presentation the user sees.",
+        inputSchema: [
+          { name: "newsletter", type: "object", description: "Edition summary with mood and takeaway" },
+          { name: "articles", type: "array", description: "The 3 written articles" },
+          { name: "infographic", type: "object", description: "Infographic data with stats" },
+          { name: "infographicImage", type: "object", description: "AI-generated infographic image" },
+          { name: "storyboard", type: "object", description: "4-scene storyboard" },
+          { name: "narrative", type: "object", description: "60s broadcast narration script" },
+          { name: "sceneImages", type: "array", description: "AI-generated scene images" },
+          { name: "continuousVideo", type: "object", description: "Continuous AI video (~22s)" },
+        ],
+        outputSchema: [
+          { name: "exitSummary", type: "string", description: "Summary of the daily briefing for bilko-main recycling" },
+        ],
+        dependsOn: ["newsletter-summary", "generate-infographic-image", "generate-scene-images", "generate-video-clip-1"],
       },
     ],
   },
