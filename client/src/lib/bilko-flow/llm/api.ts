@@ -184,11 +184,14 @@ export interface VideoGenerationResult {
 }
 
 /**
- * Generate a single video using Veo.
- * Note: This is an async operation and may take up to 5 minutes.
+ * Generate a single video clip using Veo.
+ * Note: This is an async operation and may take up to 8 minutes.
  *
- * Supports scene extension: pass `sourceVideoBase64` to extend a
- * previous Veo-generated video by ~7 seconds using the last ~1 second as grounding.
+ * Each Veo call produces a standalone clip (max 8s). To build longer
+ * videos, generate multiple clips and concatenate with `concatenateVideos()`.
+ *
+ * Pass `sourceVideoBase64` to provide a previous clip as visual context —
+ * Veo uses the last ~2 seconds for style/scene continuity grounding.
  */
 export async function generateVideo(
   prompt: string,
@@ -197,7 +200,7 @@ export async function generateVideo(
     aspectRatio?: "16:9" | "9:16";
     model?: string;
     referenceImageBase64?: string;
-    /** Base64-encoded Veo-generated video to extend (scene extension) */
+    /** Base64-encoded previous Veo clip for visual grounding (last ~2s used as context) */
     sourceVideoBase64?: string;
     signal?: AbortSignal;
   },
@@ -213,15 +216,13 @@ export async function generateVideo(
 }
 
 /**
- * Generate a continuous video by chaining Veo scene extensions.
+ * Generate a continuous video: 3 individual Veo clips + FFmpeg concatenation.
  *
  * Creates a ~20-second continuous video from 3 prompts:
- *   - Clip 1: 8s initial generation
- *   - Clip 2: Extend by ~6s (Veo uses last ~1s of clip 1 as grounding)
- *   - Clip 3: Extend by ~6s (Veo uses last ~1s of merged clip as grounding)
- *
- * Each extension returns a merged video. The final result is a single
- * continuous video plus metadata about each clip.
+ *   - Clip 1: 8s initial generation (fresh)
+ *   - Clip 2: 6s clip grounded on clip 1 (Veo uses last ~2s as context)
+ *   - Clip 3: 6s clip grounded on clip 2
+ *   - Concat: FFmpeg joins the 3 standalone clips into one ~20s video
  */
 export interface ContinuousVideoResult {
   mergedVideo: { videoBase64: string; mimeType: string; durationSeconds: number } | null;
@@ -245,6 +246,25 @@ export async function generateContinuousVideo(
     aspectRatio: options?.aspectRatio,
     initialDurationSeconds: options?.initialDurationSeconds,
   }, { signal: options?.signal });
+}
+
+// ── Video Concatenation (FFmpeg) ─────────────────────────────────────
+
+export interface ConcatResult {
+  videoBase64: string;
+  mimeType: string;
+  durationSeconds: number;
+}
+
+/**
+ * Concatenate multiple video clips into a single video using server-side FFmpeg.
+ * Used after generating individual Veo clips to produce the final continuous video.
+ */
+export async function concatenateVideos(
+  clips: Array<{ videoBase64: string; mimeType?: string }>,
+  options?: { signal?: AbortSignal },
+): Promise<ConcatResult> {
+  return apiPost<ConcatResult>("/api/llm/concat-videos", { clips }, options);
 }
 
 /**

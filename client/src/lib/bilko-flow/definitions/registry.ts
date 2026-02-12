@@ -723,6 +723,23 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         ],
         dependsOn: ["generate-video-clip-2"],
       },
+      // ── Concatenation Phase (FFmpeg) ──
+      {
+        id: "concatenate-video-clips",
+        name: "Concatenate Video Clips (FFmpeg)",
+        type: "transform",
+        description:
+          "Concatenates the 3 individual Veo clips (8+6+6s) into a single ~20s continuous video using server-side FFmpeg concat demuxer. Container-level copy, no re-encoding.",
+        inputSchema: [
+          { name: "clips", type: "array", description: "Array of base64-encoded MP4 clips to concatenate" },
+        ],
+        outputSchema: [
+          { name: "videoBase64", type: "string", description: "Base64-encoded concatenated ~20s video (MP4)" },
+          { name: "mimeType", type: "string", description: "Video MIME type (video/mp4)" },
+          { name: "durationSeconds", type: "number", description: "Total duration of concatenated video" },
+        ],
+        dependsOn: ["generate-video-clip-3"],
+      },
       // ── Assembly Phase — Daily Briefing ──
       {
         id: "assemble-daily-briefing",
@@ -738,12 +755,12 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           { name: "storyboard", type: "object", description: "4-scene storyboard" },
           { name: "narrative", type: "object", description: "60s broadcast narration script" },
           { name: "sceneImages", type: "array", description: "AI-generated scene images" },
-          { name: "continuousVideo", type: "object", description: "Continuous primary story AI video (~20s)" },
+          { name: "continuousVideo", type: "object", description: "Continuous primary story AI video (~20s, FFmpeg-concatenated)" },
         ],
         outputSchema: [
           { name: "exitSummary", type: "string", description: "Summary of the daily briefing for bilko-main recycling" },
         ],
-        dependsOn: ["newsletter-summary", "generate-infographic-image", "generate-scene-images", "generate-video-clip-1"],
+        dependsOn: ["newsletter-summary", "generate-infographic-image", "generate-scene-images", "concatenate-video-clips"],
       },
     ],
   },
