@@ -19,7 +19,7 @@ import { registerStepHandler, NonRetryableStepError } from "bilko-flow";
 import type { CompiledStep, StepExecutionContext, InputFieldContract } from "bilko-flow";
 import { chat, AVAILABLE_MODELS, MODEL_DEFAULTS } from "../llm/index";
 import { generateImage, generateImages } from "../llm/image-generation";
-import { generateVideo, generateVideos } from "../llm/video-generation";
+import { generateClip, generateClips } from "../llm/video-generation";
 
 // ── Model lists derived from AVAILABLE_MODELS (single source of truth) ──
 
@@ -402,7 +402,7 @@ export function registerLLMStepHandler(): void {
             prompts = inputs.prompts as string[];
           }
 
-          const results = await generateVideos(
+          const results = await generateClips(
             prompts.map((p) => ({
               prompt: p,
               durationSeconds: durationSeconds as any,
@@ -425,7 +425,7 @@ export function registerLLMStepHandler(): void {
         }
 
         // Single video
-        const result = await generateVideo({
+        const result = await generateClip({
           prompt,
           durationSeconds: durationSeconds as any,
           aspectRatio: aspectRatio as any,

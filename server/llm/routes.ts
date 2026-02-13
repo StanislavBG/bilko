@@ -8,7 +8,7 @@
 import { Router, Request, Response } from "express";
 import { chat, AVAILABLE_MODELS, type ChatRequest } from "./index";
 import { generateImage, generateImages, type ImageGenerationRequest } from "./image-generation";
-import { generateVideo, generateVideos, generateContinuousVideo, type VideoGenerationRequest } from "./video-generation";
+import { generateClip, generateClips, generateVideo, type ClipGenerationRequest } from "./video-generation";
 import { concatenateVideos } from "./video-concat";
 
 const router = Router();
@@ -179,17 +179,17 @@ router.post("/generate-images", async (req: Request, res: Response) => {
 
 // ── Video Generation (Veo) ─────────────────────────────────────────
 
-router.post("/generate-video", async (req: Request, res: Response) => {
+router.post("/generate-clip", async (req: Request, res: Response) => {
   try {
     const { prompt, model, durationSeconds, aspectRatio, referenceImageBase64, referenceImageMimeType, sourceVideoBase64, sourceVideoMimeType } =
-      req.body as VideoGenerationRequest;
+      req.body as ClipGenerationRequest;
 
     if (!prompt) {
       res.status(400).json({ error: "prompt is required" });
       return;
     }
 
-    const result = await generateVideo({
+    const result = await generateClip({
       prompt,
       model,
       durationSeconds,
@@ -206,13 +206,13 @@ router.post("/generate-video", async (req: Request, res: Response) => {
       operationName: result.operationName,
     });
   } catch (error) {
-    console.error("Video generation error:", error);
+    console.error("Clip generation error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: message });
   }
 });
 
-router.post("/generate-continuous-video", async (req: Request, res: Response) => {
+router.post("/generate-video", async (req: Request, res: Response) => {
   try {
     const { prompts, model, aspectRatio, initialDurationSeconds } = req.body as {
       prompts: string[];
@@ -227,11 +227,11 @@ router.post("/generate-continuous-video", async (req: Request, res: Response) =>
     }
 
     if (prompts.length > 5) {
-      res.status(400).json({ error: "Maximum 5 prompts for continuous video" });
+      res.status(400).json({ error: "Maximum 5 prompts for video (8-6-6-6 methodology)" });
       return;
     }
 
-    const result = await generateContinuousVideo(prompts, {
+    const result = await generateVideo(prompts, {
       model,
       aspectRatio,
       initialDurationSeconds,
@@ -239,15 +239,15 @@ router.post("/generate-continuous-video", async (req: Request, res: Response) =>
 
     res.json(result);
   } catch (error) {
-    console.error("Continuous video generation error:", error);
+    console.error("Video generation error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: message });
   }
 });
 
-router.post("/generate-videos", async (req: Request, res: Response) => {
+router.post("/generate-clips", async (req: Request, res: Response) => {
   try {
-    const { requests } = req.body as { requests: VideoGenerationRequest[] };
+    const { requests } = req.body as { requests: ClipGenerationRequest[] };
 
     if (!Array.isArray(requests) || requests.length === 0) {
       res.status(400).json({ error: "requests array is required" });
@@ -255,21 +255,21 @@ router.post("/generate-videos", async (req: Request, res: Response) => {
     }
 
     if (requests.length > 4) {
-      res.status(400).json({ error: "Maximum 4 videos per batch" });
+      res.status(400).json({ error: "Maximum 4 clips per batch" });
       return;
     }
 
-    const results = await generateVideos(requests);
+    const results = await generateClips(requests);
 
     res.json({
-      videos: results.map((r) =>
+      clips: results.map((r) =>
         r
           ? { videos: r.videos, model: r.model }
           : null,
       ),
     });
   } catch (error) {
-    console.error("Batch video generation error:", error);
+    console.error("Batch clip generation error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: message });
   }
