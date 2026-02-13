@@ -102,6 +102,7 @@ export function FlowStatusIndicator({ onReset, flowId, position = "bottom", mode
   if (activeFlows.length === 0) return null;
 
   const isLarge = mode === "auto" || mode === "expanded" || mode === "full";
+  const borderClass = position === "top" ? "border-b" : "border-t";
 
   return (
     <div
