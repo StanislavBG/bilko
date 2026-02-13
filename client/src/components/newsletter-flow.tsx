@@ -36,9 +36,8 @@
  * Auto-starts immediately when rendered.
  */
 
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { FlowProgress, type FlowProgressStep, type FlowProgressTheme } from "@/components/ui/flow-progress";
 import {
   Newspaper,
   PenLine,
@@ -56,7 +55,6 @@ import {
   chatJSON,
   jsonPrompt,
   useFlowExecution,
-  useFlowDefinition,
   useFlowChat,
   generateImage,
 } from "@/lib/bilko-flow";
@@ -70,13 +68,6 @@ import { DailyBriefingView } from "@/components/newsletter/daily-briefing-view";
 
 // ── Owner ID — must match what landing.tsx uses for claimChat ──
 const OWNER_ID = "test-newsletter";
-
-// ── Theme — map domain step types to colors ──
-const NEWSLETTER_THEME: Partial<FlowProgressTheme> = {
-  stepColors: {
-    "llm:image": "bg-pink-500",
-  },
-};
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -370,8 +361,7 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
   const hasStarted = useRef(false);
   const stateStartRef = useRef<number>(Date.now());
 
-  const { trackStep, execution } = useFlowExecution("test-newsletter");
-  const { definition: flowDef } = useFlowDefinition("test-newsletter");
+  const { trackStep } = useFlowExecution("test-newsletter");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("test-newsletter", "European Football Newsletter");
   const { pushMessage } = useFlowChat();
 
@@ -400,33 +390,6 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
       pushAgentMessage(agent.greeting);
     }
   }, [agent, pushAgentMessage]);
-
-  // ── StepTracker state — derived from flow definition + execution ──
-
-  const trackerSteps = useMemo<FlowProgressStep[]>(() => {
-    if (!flowDef) return [];
-    return flowDef.steps.map((step) => {
-      const exec = execution.steps[step.id];
-      let status: FlowProgressStep["status"] = "pending";
-      if (exec) {
-        if (exec.status === "running") status = "active";
-        else if (exec.status === "success") status = "complete";
-        else if (exec.status === "error") status = "error";
-      }
-      return { id: step.id, label: step.name, status, type: step.subtype ? `${step.type}:${step.subtype}` : step.type };
-    });
-  }, [flowDef, execution.steps]);
-
-  const trackerActivity = useMemo<string | undefined>(() => {
-    if (flowState === "done") {
-      if (!newsletter) return "Complete";
-      return `${newsletter.editionTitle} — Newsletter + Infographic + Slideshow`;
-    }
-    if (flowState === "error") {
-      return error ?? "Something went wrong";
-    }
-    return statusMessage;
-  }, [flowState, statusMessage, newsletter, error]);
 
   // Sync flowState to flow bus
   useEffect(() => {
@@ -1004,13 +967,6 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
         </div>
       )}
 
-      {/* ── SubFlowProgress — pinned bottom of right panel, expanded view ── */}
-      <FlowProgress
-        mode="expanded"
-        steps={trackerSteps}
-        activity={trackerActivity}
-        theme={NEWSLETTER_THEME}
-      />
     </div>
   );
 }

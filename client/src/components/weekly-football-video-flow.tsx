@@ -27,9 +27,8 @@
  * Auto-starts immediately when rendered.
  */
 
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { FlowProgress, type FlowProgressStep, type FlowProgressTheme } from "@/components/ui/flow-progress";
 import {
   Search,
   PenLine,
@@ -45,7 +44,6 @@ import {
   chatJSON,
   jsonPrompt,
   useFlowExecution,
-  useFlowDefinition,
   useFlowChat,
   generateVideo,
   concatenateVideos,
@@ -57,13 +55,6 @@ import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
 // ── Owner ID — must match what landing.tsx uses for claimChat ──
 const OWNER_ID = "weekly-football-video";
-
-// ── Theme ──
-const VIDEO_THEME: Partial<FlowProgressTheme> = {
-  stepColors: {
-    "llm:video": "bg-rose-500",
-  },
-};
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -205,8 +196,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
   const hasStarted = useRef(false);
   const stateStartRef = useRef<number>(Date.now());
 
-  const { trackStep, execution } = useFlowExecution("weekly-football-video");
-  const { definition: flowDef } = useFlowDefinition("weekly-football-video");
+  const { trackStep } = useFlowExecution("weekly-football-video");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("weekly-football-video", "Weekly Football Highlight");
   const { pushMessage } = useFlowChat();
 
@@ -235,33 +225,6 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       pushAgentMessage(agent.greeting);
     }
   }, [agent, pushAgentMessage]);
-
-  // ── StepTracker state — derived from flow definition + execution ──
-
-  const trackerSteps = useMemo<FlowProgressStep[]>(() => {
-    if (!flowDef) return [];
-    return flowDef.steps.map((step) => {
-      const exec = execution.steps[step.id];
-      let status: FlowProgressStep["status"] = "pending";
-      if (exec) {
-        if (exec.status === "running") status = "active";
-        else if (exec.status === "success") status = "complete";
-        else if (exec.status === "error") status = "error";
-      }
-      return { id: step.id, label: step.name, status, type: step.subtype ? `${step.type}:${step.subtype}` : step.type };
-    });
-  }, [flowDef, execution.steps]);
-
-  const trackerActivity = useMemo<string | undefined>(() => {
-    if (flowState === "done") {
-      if (!script) return "Complete";
-      return `${script.title} — ${script.totalDurationSec}s Highlight Video`;
-    }
-    if (flowState === "error") {
-      return error ?? "Something went wrong";
-    }
-    return statusMessage;
-  }, [flowState, statusMessage, script, error]);
 
   // Sync flowState to flow bus
   useEffect(() => {
@@ -748,13 +711,6 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
         </div>
       )}
 
-      {/* ── FlowProgress — pinned bottom of right panel, expanded view ── */}
-      <FlowProgress
-        mode="expanded"
-        steps={trackerSteps}
-        activity={trackerActivity}
-        theme={VIDEO_THEME}
-      />
     </div>
   );
 }

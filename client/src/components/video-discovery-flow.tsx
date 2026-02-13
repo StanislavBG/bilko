@@ -30,7 +30,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FlowProgress, type FlowProgressStep } from "@/components/ui/flow-progress";
 import {
   Play,
   Brain,
@@ -50,7 +49,6 @@ import {
   jsonPrompt,
   searchYouTube,
   useFlowExecution,
-  useFlowDefinition,
   useFlowChat,
 } from "@/lib/bilko-flow";
 import type { VideoCandidate } from "@/lib/bilko-flow";
@@ -179,8 +177,7 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
   const recognitionRef = useRef<any>(null);
   const hasStarted = useRef(false);
 
-  const { trackStep, resolveUserInput, execution } = useFlowExecution("video-discovery");
-  const { definition: flowDef } = useFlowDefinition("video-discovery");
+  const { trackStep, resolveUserInput } = useFlowExecution("video-discovery");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("video-discovery", "Video Discovery");
   const { pushMessage } = useFlowChat();
 
@@ -208,46 +205,6 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
       pushAgentMessage(agent.greeting);
     }
   }, [agent, pushAgentMessage]);
-
-  // ── StepTracker state ──────────────────────────────────────────────
-
-  // Derive tracker steps from flow definition + execution state (single source of truth)
-  const trackerSteps = useMemo<FlowProgressStep[]>(() => {
-    if (!flowDef) return [];
-    return flowDef.steps.map((step) => {
-      const exec = execution.steps[step.id];
-      let status: FlowProgressStep["status"] = "pending";
-      if (exec) {
-        if (exec.status === "running") status = "active";
-        else if (exec.status === "success") status = "complete";
-        else if (exec.status === "error") status = "error";
-      }
-      return { id: step.id, label: step.name, status, type: step.subtype ? `${step.type}:${step.subtype}` : step.type };
-    });
-  }, [flowDef, execution.steps]);
-
-  const trackerActivity = useMemo<string | undefined>(() => {
-    switch (flowState) {
-      case "generating-topics":
-        return statusMessage;
-      case "select-topic":
-        return "Pick a topic or type your own";
-      case "generating-questions":
-        return statusMessage;
-      case "select-question":
-        return "What would you like to learn?";
-      case "searching-videos":
-        return statusMessage;
-      case "select-video":
-        return `Pick a video about ${selectedTopic}`;
-      case "watching":
-        return selectedVideo?.title;
-      case "error":
-        return error ?? "Something went wrong";
-      default:
-        return undefined;
-    }
-  }, [flowState, statusMessage, selectedTopic, selectedVideo, error]);
 
   // Sync flowState to flow bus
   useEffect(() => {
@@ -571,14 +528,6 @@ export function VideoDiscoveryFlow({ onComplete }: { onComplete?: (summary?: str
 
   return (
     <div className="space-y-4">
-      {/* Thin StepTracker bar — always visible */}
-      <FlowProgress
-        mode="auto"
-        steps={trackerSteps}
-        activity={trackerActivity}
-        lastResult={lastResult}
-      />
-
       {/* ── LOADING: Generating topics ─────────────────────────── */}
       {flowState === "generating-topics" && (
         <div className="flex flex-col items-center justify-center py-16 px-4">
