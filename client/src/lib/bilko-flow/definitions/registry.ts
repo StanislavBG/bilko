@@ -743,7 +743,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates the initial 8-second video clip using Veo/BO3. Fresh text-to-video generation from the first segment's visual description. The last 2 seconds must show a stable, continuing scene that Veo can use as grounding for clip 2.",
         prompt: "Generate the opening 8-second video clip from segment 1's visual description. End with stable motion for grounding.",
         userMessage: "Generate the opening 8-second video clip.",
-        model: "veo-3.0-generate-001",
+        model: "veo-3.1-generate-preview",
         inputSchema: [
           { name: "visualDescription", type: "string", description: "Segment 1 visual description from the script" },
           { name: "styleTokens", type: "string", description: "Shared Veo style tokens" },
@@ -764,7 +764,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates the second 8-second clip using Veo/BO3 with the last 2 seconds of clip 1 as visual grounding. The effective new content is ~6 seconds (2s overlap from grounding). Continues the visual narrative from segment 2 of the script.",
         prompt: "Generate an 8-second video extending clip 1. Veo uses the last 2 seconds of clip 1 as visual grounding seed. The visual must continue seamlessly.",
         userMessage: "Generate clip 2 grounded on the last 2 seconds of clip 1.",
-        model: "veo-3.0-generate-001",
+        model: "veo-3.1-generate-preview",
         inputSchema: [
           { name: "visualDescription", type: "string", description: "Segment 2 visual description from the script" },
           { name: "styleTokens", type: "string", description: "Shared Veo style tokens" },
@@ -786,7 +786,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates the final 8-second clip using Veo/BO3 with the last 2 seconds of clip 2 as visual grounding. The effective new content is ~6 seconds. Concludes the video with the payoff from segment 3 of the script.",
         prompt: "Generate the final 8-second video extending clip 2. Veo uses the last 2 seconds of clip 2 as grounding. Conclude the sequence satisfyingly.",
         userMessage: "Generate final clip 3 grounded on the last 2 seconds of clip 2.",
-        model: "veo-3.0-generate-001",
+        model: "veo-3.1-generate-preview",
         inputSchema: [
           { name: "visualDescription", type: "string", description: "Segment 3 visual description from the script" },
           { name: "styleTokens", type: "string", description: "Shared Veo style tokens" },
@@ -912,7 +912,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates a single 8-second video clip using Veo. Fresh text-to-video generation — no source grounding. This is the atomic unit.",
         prompt: "Generate an 8-second video clip from the visual description and style tokens.",
         userMessage: "Generate the 8-second video clip.",
-        model: "veo-3.0-generate-001",
+        model: "veo-3.1-generate-preview",
         inputSchema: [
           { name: "visualDescription", type: "string", description: "Clip visual description" },
           { name: "styleTokens", type: "string", description: "Veo style tokens" },

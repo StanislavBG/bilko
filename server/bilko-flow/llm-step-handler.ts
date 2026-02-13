@@ -342,7 +342,7 @@ export function registerLLMStepHandler(): void {
 
     validate(step: CompiledStep) {
       const inputs = step.inputs as Record<string, unknown>;
-      const model = (inputs.model as string) ?? "veo-3.0-generate-001";
+      const model = (inputs.model as string) ?? "veo-3.1-generate-preview";
       const errors: string[] = [];
 
       if (!ALL_MODEL_IDS.includes(model)) {

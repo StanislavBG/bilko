@@ -81,8 +81,8 @@ export const AVAILABLE_MODELS: LLMModel[] = [
     outputPrice: 0,
   },
   {
-    id: "veo-3.0-generate-001",
-    name: "Veo 3 (Video Generation)",
+    id: "veo-3.1-generate-preview",
+    name: "Veo 3.1 (Video Generation)",
     provider: "google",
     description: "AI video generation. Creates 5-8 second cinematic video clips from text prompts.",
     contextWindow: 0,

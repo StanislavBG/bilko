@@ -14,7 +14,7 @@
  * videos (e.g. ~20s), generate multiple clips sequentially and
  * concatenate them server-side with FFmpeg (see video-concat.ts).
  *
- * Model: veo-3.0-generate-001
+ * Model: veo-3.1-generate-preview
  *
  * Unlike image generation, video generation is an async operation
  * that requires polling. This service handles the full lifecycle:
@@ -28,8 +28,8 @@ import { createLogger } from "../logger";
 const log = createLogger("video-generation");
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_VIDEO_MODEL = "veo-3.0-generate-001";
-/** Video extension (source-grounded) requires Veo 3.1 — 3.0 does not support it */
+const DEFAULT_VIDEO_MODEL = "veo-3.1-generate-preview";
+/** Video extension (source-grounded) also uses Veo 3.1 */
 const EXTENSION_VIDEO_MODEL = "veo-3.1-generate-preview";
 
 export interface VideoGenerationRequest {
