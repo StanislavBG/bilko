@@ -6,9 +6,11 @@
  *   - Video = finished product (multiple clips chained + FFmpeg concat)
  *
  * API:
- *   generateClip()   — Single Veo call. The atomic building block.
- *   generateVideo()  — 8-6-6-6 methodology: chain N clips via source
- *                      grounding + FFmpeg concat into one continuous video.
+ *   generateClip()   — Single Veo call. The atomic building block (5-8s).
+ *   generateVideo()  — Variable-length video using the 8-6-6 grounding method.
+ *                      Each 8s clip overlaps 2s with the previous for continuity,
+ *                      yielding 6 unique seconds per extension. Pass N prompts
+ *                      for 8 + 6(N-1) unique seconds. FFmpeg concat at the end.
  *   generateClips()  — Batch of independent single clips (sequential).
  *
  * Supports:
@@ -335,19 +337,28 @@ async function parseClipResponse(
 }
 
 /**
- * Generate a full video using the 8-6-6(-6) methodology.
+ * Generate a full video of any length using the 8-6-6 grounding methodology.
  *
- * Chains multiple Veo clips via source grounding + FFmpeg concatenation:
- *   1. Clip 1: 8s initial generation (fresh)
- *   2. Clip 2: 6s grounded on clip 1 (Veo uses last ~2s as context)
- *   3. Clip 3: 6s grounded on clip 2
- *   4. Clip 4: 6s grounded on clip 3 (optional — for ~26s videos)
- *   5. Concatenate: FFmpeg concat demuxer joins all clips
+ * **How it works:**
+ *   - Each Veo call generates an 8-second clip
+ *   - The last 2 seconds of each clip are used as visual grounding for
+ *     the next clip, providing style/scene continuity
+ *   - So each extension clip adds 6 UNIQUE seconds (8s total minus 2s overlap)
+ *   - Final clips are joined with FFmpeg concat demuxer
  *
- * Each Veo call returns a standalone clip. The final video
- * is assembled by concatenation, not by Veo merging.
+ * **Duration formula:**
+ *   Unique seconds = 8 + 6 × (N - 1)   where N = number of clips
+ *   - 1 clip  =  8s unique
+ *   - 2 clips = 14s unique (8 + 6)
+ *   - 3 clips = 20s unique (8 + 6 + 6)
+ *   - 4 clips = 26s unique (8 + 6 + 6 + 6)
+ *   - 5 clips = 32s unique (8 + 6 + 6 + 6 + 6)
  *
- * @param prompts Array of prompts (one per clip). First clip is 8s, rest are 6s.
+ * The number of clips is determined by the number of prompts you pass.
+ * This is NOT a fixed format — use as many clips as needed for your
+ * target duration.
+ *
+ * @param prompts One prompt per clip. Length determines video duration.
  * @param options Common options for all clips
  * @returns The concatenated video and per-clip metadata
  */
