@@ -59,7 +59,7 @@ import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
 import { flowRegistry, activeFlowIds } from "@/lib/bilko-flow/definitions/registry";
 import { FlowBusProvider, useFlowBus, useFlowRegistration } from "@/contexts/flow-bus-context";
-import { FlowStatusIndicator as MainFlow } from "@/components/flow-status-indicator";
+import { FlowStatusIndicator as MainFlow, FlowProgressBanner } from "@/components/flow-status-indicator";
 import { useConversationDesign, matchScreenOption, useScreenOptions, type ScreenOption } from "@/contexts/conversation-design-context";
 import { useSidebarSafe } from "@/components/ui/sidebar";
 
@@ -624,15 +624,19 @@ export function LandingContent() {
       </div>
 
       {/* Right panel: Delivery surface */}
-      <div className="flex flex-1 overflow-auto min-h-0">
+      <div className="flex flex-col flex-1 min-h-0">
         {selectedMode ? (
-          <div className="flex-1 px-6 py-6 w-full">
-            <ExperienceBack onBack={handleBack} />
-            <RightPanelContent
-              mode={selectedMode}
-              onComplete={handleSubflowExit}
-            />
-          </div>
+          <>
+            <div className="flex-1 overflow-auto px-6 py-6">
+              <ExperienceBack onBack={handleBack} />
+              <RightPanelContent
+                mode={selectedMode}
+                onComplete={handleSubflowExit}
+              />
+            </div>
+            {/* Sub-flow progress bar — anchored to bottom, expanded */}
+            <FlowProgressBanner excludeFlowId="bilko-main" />
+          </>
         ) : (
           <ModeSelectionGrid onSelect={handleChoice} />
         )}
