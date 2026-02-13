@@ -1,7 +1,7 @@
 /**
- * Newsletter + Infographic + Video Flow — The full media pipeline v3.
+ * Newsletter + Infographic + Slideshow Flow — The media pipeline v5.
  *
- * 13-step DAG with parallel branches + AI image/video generation:
+ * 10-step DAG with parallel branches + AI image generation:
  *
  *   discover-stories (root)
  *          │
@@ -16,28 +16,23 @@
  *      design-      create-
  *     infographic   narrative
  *          │            │
- *          │       ┌────┴────┐
- *          │       │         │
- *          │  storyboard  video-prompts
- *          │       │         │
- *     ┌────┴───┐   │    clip1 (8s fresh)
- *     │        │   │         │
- * infographic scene-    clip2 (6s grounded)
- *   image    images          │
- *  (Nano     (Nano      clip3 (6s grounded)
- *  Banana)   Banana)         │
- *                      concat (FFmpeg)
+ *          │        storyboard
+ *          │            │
+ *     ┌────┴───┐        │
+ *     │        │        │
+ * infographic scene-images
+ *   image     (Nano Banana)
+ *  (Nano
+ *  Banana)
  *
  * Outputs:
  *   1. Newsletter      — 3 articles with image descriptions
  *   2. Infographic     — Cinematic AI wallpaper (Nano Banana) + score overlays
  *   3. Slideshow Video — AI scene images (Nano Banana) + TTS narration (~60s)
- *   4. AI Video        — 3 Veo clips (8+6+6) → FFmpeg concat → ~20s continuous video
  *
- * Models: Nano Banana (image gen) + Veo 3 (video gen) + Gemini 2.5 Flash (text)
- * Video pipeline: Each Veo call produces a standalone clip (max 8s). Clips 2 & 3
- * receive the previous clip as source context (Veo uses last ~2s for grounding).
- * FFmpeg concatenates the 3 individual clips into a single continuous video.
+ * AI video generation has been moved to the dedicated weekly-football-video flow.
+ *
+ * Models: Nano Banana (image gen) + Gemini 2.5 Flash (text)
  * Auto-starts immediately when rendered.
  */
 
@@ -53,10 +48,8 @@ import {
   Download,
   BarChart3,
   Film,
-  Video,
   Trophy,
   Wand2,
-  Clapperboard,
   Layout,
 } from "lucide-react";
 import {
@@ -66,16 +59,13 @@ import {
   useFlowDefinition,
   useFlowChat,
   generateImage,
-  generateVideo,
-  concatenateVideos,
 } from "@/lib/bilko-flow";
-import type { ImageGenerationResult, ContinuousVideoResult } from "@/lib/bilko-flow";
+import type { ImageGenerationResult } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 import { InfographicView, type InfographicData } from "@/components/newsletter/infographic-view";
 import { SlideshowPlayer, type StoryboardData, type NarrativeData } from "@/components/newsletter/slideshow-player";
-import { VideoPlanView, type VideoPromptsData } from "@/components/newsletter/video-plan-view";
 import { DailyBriefingView } from "@/components/newsletter/daily-briefing-view";
 
 // ── Owner ID — must match what landing.tsx uses for claimChat ──
@@ -85,7 +75,6 @@ const OWNER_ID = "test-newsletter";
 const NEWSLETTER_THEME: Partial<FlowProgressTheme> = {
   stepColors: {
     "llm:image": "bg-pink-500",
-    "llm:video": "bg-rose-500",
   },
 };
 
@@ -99,15 +88,10 @@ type FlowState =
   | "producing"
   | "assembling"
   | "generating-images"
-  | "generating-video-1"
-  | "generating-video-2"
-  | "generating-video-3"
-  | "concatenating"
-  | "generating-videos"
   | "done"
   | "error";
 
-type OutputTab = "daily-briefing" | "newsletter" | "infographic" | "slideshow" | "ai-video";
+type OutputTab = "daily-briefing" | "newsletter" | "infographic" | "slideshow";
 
 interface Story {
   headline: string;
@@ -316,44 +300,6 @@ Rules: exactly 4 scenes. imageDescription max 40 words, visualStyle max 15 words
   );
 }
 
-function generateVideoPromptsPrompt(
-  narrative: NarrativeData,
-  ranked: RankedStories,
-): string {
-  return bilkoSystemPrompt(
-    `You are an AI video production expert creating prompts for Google Veo scene extension to produce a CONTINUOUS ~20-second video focused EXCLUSIVELY on the PRIMARY news story.
-
-INPUT — PRIMARY STORY ONLY:
-HEADLINE: "${ranked.main.headline}"
-VISUAL: ${ranked.main.imageDescription}
-KEY STAT: ${ranked.main.keyStat} (${ranked.main.statLabel})
-ARTICLE (voiceover script): ${ranked.main.article}
-
-The article text above will be used as voice-over narration. Your video visuals must match and complement this narration — the viewer will HEAR the article while SEEING your video.
-
-MISSION: Create 3 Veo prompts that form a CONTINUOUS ~20-second video using Veo's SCENE EXTENSION feature. ALL 3 scenes must depict the PRIMARY story — do NOT include supporting stories.
-- Scene 1 (8 seconds): Initial clip — establish the story's setting, mood, and key visual. Fresh generation.
-- Scene 2 (6 seconds): EXTENSION of scene 1 — develop the story visually, show the action or drama unfolding.
-  Veo uses the last ~1 second of scene 1 as visual grounding. Describe what happens NEXT.
-- Scene 3 (6 seconds): EXTENSION of the merged scene 1+2 — conclude with the emotional payoff or resolution.
-  Veo uses the last ~1 second of the ~14s merged video. CONCLUDE the sequence satisfyingly.
-
-CRITICAL RULES FOR SCENE EXTENSION:
-1. ALL prompts must share the SAME visual style, lighting, and color palette (use identical style suffix)
-2. Scene 2+3 prompts must use CONTINUATION language: "continue", "follows", "gradually transitions to"
-3. Do NOT use "suddenly cut to" or "jump to" — Veo needs smooth transitions
-4. End scene 1 with stable, continuing motion (not a hard stop) so scene 2 has clean grounding
-5. Each prompt should be a single rich scene description (Veo understands cinematic language)
-6. Include camera movement (dolly, pan, tracking, aerial) that flows between scenes
-7. Keep scenes 2+3 concise — 6 seconds of action, not 7. Tighter pacing, fewer elements per scene.
-
-Return ONLY valid JSON:
-{"videoPrompts":{"scenes":[{"sceneNumber":1,"headline":"...","veoPrompt":"...","durationSec":8,"cameraMovement":"...","visualMood":"...","transitionType":"initial"},{"sceneNumber":2,"headline":"...","veoPrompt":"...","durationSec":6,"cameraMovement":"...","visualMood":"...","transitionType":"scene-extension"},{"sceneNumber":3,"headline":"...","veoPrompt":"...","durationSec":6,"cameraMovement":"...","visualMood":"...","transitionType":"scene-extension"}],"extensionTechnique":"Veo scene extension: each clip uses the last ~1 second (24 frames) of the previous merged video as grounding seed. Scenes share a consistent cinematic style suffix for visual continuity.","productionNotes":"..."}}
-
-Rules: exactly 3 scenes. veoPrompt max 60 words each. All must share consistent style tokens. productionNotes max 40 words. No markdown.`,
-  );
-}
-
 // ── Status messages ──────────────────────────────────────────────────
 
 const STATUS_MESSAGES: Record<string, string[]> = {
@@ -391,32 +337,6 @@ const STATUS_MESSAGES: Record<string, string[]> = {
     "Rendering scene images for slideshow...",
     "AI is painting the stadium atmosphere...",
   ],
-  "generating-video-1": [
-    "Generating initial 8-second clip with Veo (clip 1/3)...",
-    "Creating the opening scene for the main story...",
-    "Veo is rendering cinematic football footage...",
-  ],
-  "generating-video-2": [
-    "Generating clip 2/3 grounded on clip 1 (6s)...",
-    "Veo is using the last 2 seconds of clip 1 as visual context...",
-    "Building visual continuity from the previous scene...",
-  ],
-  "generating-video-3": [
-    "Generating final clip 3/3 grounded on clip 2 (6s)...",
-    "Veo is using the last 2 seconds of clip 2 as visual context...",
-    "Completing the primary story video sequence...",
-  ],
-  concatenating: [
-    "Concatenating 3 clips with FFmpeg (8+6+6 = ~20s)...",
-    "Joining individual clips into a single continuous video...",
-    "Server-side video assembly in progress...",
-  ],
-  "generating-videos": [
-    "Generating ~20s primary story video (3 individual clips)...",
-    "Creating cinematic football footage (8+6+6s)...",
-    "Each clip uses the previous as visual grounding...",
-    "Building the final continuous video package...",
-  ],
 };
 
 // ── Tab config ───────────────────────────────────────────────────────
@@ -426,7 +346,6 @@ const TABS: { id: OutputTab; label: string; icon: typeof Newspaper }[] = [
   { id: "newsletter", label: "Newsletter", icon: Newspaper },
   { id: "infographic", label: "Infographic", icon: BarChart3 },
   { id: "slideshow", label: "Slideshow Video", icon: Film },
-  { id: "ai-video", label: "AI Video", icon: Video },
 ];
 
 // ── Component ────────────────────────────────────────────────────────
@@ -441,11 +360,9 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
   const [infographic, setInfographic] = useState<InfographicData | null>(null);
   const [narrative, setNarrative] = useState<NarrativeData | null>(null);
   const [storyboard, setStoryboard] = useState<StoryboardData | null>(null);
-  const [videoPrompts, setVideoPrompts] = useState<VideoPromptsData | null>(null);
-  // Generated media (Nano Banana + Veo)
+  // Generated media (Nano Banana)
   const [infographicImage, setInfographicImage] = useState<ImageGenerationResult | null>(null);
   const [sceneImages, setSceneImages] = useState<(ImageGenerationResult | null)[] | null>(null);
-  const [continuousVideo, setContinuousVideo] = useState<ContinuousVideoResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState(STATUS_MESSAGES.discovering[0]);
   const [activeTab, setActiveTab] = useState<OutputTab>("daily-briefing");
@@ -503,17 +420,13 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
   const trackerActivity = useMemo<string | undefined>(() => {
     if (flowState === "done") {
       if (!newsletter) return "Complete";
-      const clipCount = continuousVideo?.clips?.filter(Boolean).length ?? 0;
-      const videoLabel = clipCount > 0
-        ? `+ ${clipCount}-clip AI Video (~${continuousVideo!.totalDurationSeconds}s)`
-        : "(video generation failed)";
-      return `${newsletter.editionTitle} — Newsletter + Infographic + Slideshow ${videoLabel}`;
+      return `${newsletter.editionTitle} — Newsletter + Infographic + Slideshow`;
     }
     if (flowState === "error") {
       return error ?? "Something went wrong";
     }
     return statusMessage;
-  }, [flowState, statusMessage, newsletter, continuousVideo, error]);
+  }, [flowState, statusMessage, newsletter, error]);
 
   // Sync flowState to flow bus
   useEffect(() => {
@@ -668,46 +581,28 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
 
       const narrativeData = narrativeResult.data.data.narrative;
       setNarrative(narrativeData);
-      pushAgentMessage(`Infographic designed. Narrative scripted at ${narrativeData.totalDurationSec}s. Building storyboard and AI video prompts.`);
+      pushAgentMessage(`Infographic designed. Narrative scripted at ${narrativeData.totalDurationSec}s. Building storyboard.`);
 
-      // ═══ Steps 7+8 PARALLEL: generate-storyboard + generate-video-prompts ═══
+      // ═══ Step 7: generate-storyboard ═══
       setFlowState("assembling");
 
-      const [storyboardResult, videoPromptsResult] = await Promise.all([
-        // Step 7: generate-storyboard (LLM)
-        trackStep(
-          "generate-storyboard",
-          { narrative: narrativeData, ranked: rankedStories },
-          () =>
-            chatJSON<{ storyboard: StoryboardData }>(
-              jsonPrompt(
-                generateStoryboardPrompt(narrativeData, rankedStories),
-                "Create a visual storyboard for the video slideshow.",
-              ),
+      const storyboardResult = await trackStep(
+        "generate-storyboard",
+        { narrative: narrativeData, ranked: rankedStories },
+        () =>
+          chatJSON<{ storyboard: StoryboardData }>(
+            jsonPrompt(
+              generateStoryboardPrompt(narrativeData, rankedStories),
+              "Create a visual storyboard for the video slideshow.",
             ),
-        ),
-        // Step 8: generate-video-prompts (LLM)
-        trackStep(
-          "generate-video-prompts",
-          { narrative: narrativeData, ranked: rankedStories },
-          () =>
-            chatJSON<{ videoPrompts: VideoPromptsData }>(
-              jsonPrompt(
-                generateVideoPromptsPrompt(narrativeData, rankedStories),
-                "Generate Veo-optimized video prompts for AI video generation.",
-              ),
-            ),
-        ),
-      ]);
+          ),
+      );
 
       const storyboardData = storyboardResult.data.data.storyboard;
       setStoryboard(storyboardData);
 
-      const videoPromptsData = videoPromptsResult.data.data.videoPrompts;
-      setVideoPrompts(videoPromptsData);
-
       pushAgentMessage(
-        `Storyboard and video prompts ready. Now generating cinematic images with Nano Banana...`,
+        `Storyboard ready. Now generating cinematic images with Nano Banana...`,
       );
 
       // ═══ Step 9: Generate Images with Nano Banana ═══
@@ -760,212 +655,13 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
       setSceneImages(sceneImgData as (ImageGenerationResult | null)[]);
 
       const imgCount = [infographicImgData, ...sceneImgData].filter(Boolean).length;
-      pushAgentMessage(
-        `Generated ${imgCount} cinematic images. Now generating continuous ~20s primary story video with Veo scene extension (3 clips chained)...`,
-      );
-
-      // ═══ Steps 10-12: Generate Individual Video Clips with Veo ═══
-      // Each clip is a separate HTTP request (Veo generates standalone clips, max 8s).
-      // Clip 1: Fresh 8s generation
-      // Clip 2: 6s clip grounded on clip 1 (Veo uses last ~2s as visual context)
-      // Clip 3: 6s clip grounded on clip 2
-      // Step 13: Concatenate clips with FFmpeg server-side → final ~20s video
-      const veoPrompts = videoPromptsData.scenes.map((s) => s.veoPrompt);
-      const clips: ({ videoBase64: string; mimeType: string; durationSeconds: number } | null)[] = [];
-      let previousClipBase64: string | null = null;
-
-      // ── Clip 1: Initial generation (8s) ──
-      setFlowState("generating-video-1");
-      try {
-        const clip1Result = await trackStep(
-          "generate-video-clip-1",
-          { prompt: veoPrompts[0], type: "initial", targetDuration: "8s" },
-          async () => {
-            return await generateVideo(veoPrompts[0], {
-              durationSeconds: 8,
-              aspectRatio: "16:9",
-            });
-          },
-        );
-
-        const clip1 = clip1Result.data.videos[0];
-        if (clip1) {
-          clips.push(clip1);
-          previousClipBase64 = clip1.videoBase64;
-          pushAgentMessage(`Clip 1/3 generated (${clip1.durationSeconds || 8}s). Generating clip 2 with visual grounding...`);
-        } else {
-          clips.push(null);
-          pushAgentMessage("Clip 1 returned empty. Video prompts are available in the AI Video tab.");
-        }
-      } catch (clip1Err) {
-        console.warn("Video clip 1 generation failed:", clip1Err);
-        clips.push(null);
-        pushAgentMessage(
-          `Video clip 1 failed: ${clip1Err instanceof Error ? clip1Err.message : "unknown error"}. Prompts available in AI Video tab.`,
-        );
-      }
-
-      // ── Mark skipped clips when clip 1 failed ──
-      if (!previousClipBase64 && veoPrompts.length > 1) {
-        for (const skipId of ["generate-video-clip-2", "generate-video-clip-3", "concatenate-video-clips"]) {
-          try {
-            await trackStep(skipId, { skipped: true, reason: "Previous clip failed" }, async () => {
-              throw new Error("Skipped: previous clip failed");
-            });
-          } catch { /* expected — marks step as error */ }
-        }
-      }
-
-      // ── Clip 2: Source-grounded generation (6s, clip 1 as context) ──
-      if (previousClipBase64 && veoPrompts.length > 1) {
-        setFlowState("generating-video-2");
-        try {
-          const clip2Result = await trackStep(
-            "generate-video-clip-2",
-            { prompt: veoPrompts[1], type: "source-grounded", grounding: "clip 1 last ~2s" },
-            async () => {
-              return await generateVideo(veoPrompts[1], {
-                durationSeconds: 6,
-                aspectRatio: "16:9",
-                sourceVideoBase64: previousClipBase64!,
-              });
-            },
-          );
-
-          const clip2 = clip2Result.data.videos[0];
-          if (clip2) {
-            clips.push(clip2);
-            previousClipBase64 = clip2.videoBase64;
-            pushAgentMessage(`Clip 2/3 generated (${clip2.durationSeconds || 6}s). Generating final clip...`);
-          } else {
-            clips.push(null);
-            pushAgentMessage("Clip 2 returned empty. Will concatenate available clips.");
-          }
-        } catch (clip2Err) {
-          console.warn("Video clip 2 generation failed:", clip2Err);
-          clips.push(null);
-          pushAgentMessage(
-            `Clip 2 failed: ${clip2Err instanceof Error ? clip2Err.message : "unknown error"}. Will concatenate available clips.`,
-          );
-        }
-      }
-
-      // ── Clip 3: Source-grounded generation (6s, clip 2 as context) ──
-      if (previousClipBase64 && veoPrompts.length > 2 && clips.filter(Boolean).length >= 2) {
-        setFlowState("generating-video-3");
-        try {
-          const clip3Result = await trackStep(
-            "generate-video-clip-3",
-            { prompt: veoPrompts[2], type: "source-grounded", grounding: "clip 2 last ~2s" },
-            async () => {
-              return await generateVideo(veoPrompts[2], {
-                durationSeconds: 6,
-                aspectRatio: "16:9",
-                sourceVideoBase64: previousClipBase64!,
-              });
-            },
-          );
-
-          const clip3 = clip3Result.data.videos[0];
-          if (clip3) {
-            clips.push(clip3);
-            pushAgentMessage(`All 3 clips generated! Concatenating into continuous video...`);
-          } else {
-            clips.push(null);
-          }
-        } catch (clip3Err) {
-          console.warn("Video clip 3 generation failed:", clip3Err);
-          clips.push(null);
-          pushAgentMessage(
-            `Final clip failed. Will concatenate ${clips.filter(Boolean).length} available clips.`,
-          );
-        }
-      } else if (veoPrompts.length > 2 && !execution.steps["generate-video-clip-3"]) {
-        try {
-          await trackStep("generate-video-clip-3", { skipped: true, reason: "Previous clip failed" }, async () => {
-            throw new Error("Skipped: previous clip failed or returned empty");
-          });
-        } catch { /* expected — marks step as error */ }
-      }
-
-      // ── Step 13: Concatenate clips with FFmpeg ──
-      const successfulClips = clips.filter((c): c is NonNullable<typeof c> => c !== null);
-      let continuousVideoResult: ContinuousVideoResult | null = null;
-
-      if (successfulClips.length >= 2) {
-        setFlowState("concatenating");
-        try {
-          const concatResult = await trackStep(
-            "concatenate-video-clips",
-            { clipCount: successfulClips.length, method: "ffmpeg-concat-demuxer" },
-            async () => {
-              return await concatenateVideos(successfulClips);
-            },
-          );
-
-          continuousVideoResult = {
-            mergedVideo: {
-              videoBase64: concatResult.data.videoBase64,
-              mimeType: concatResult.data.mimeType,
-              durationSeconds: concatResult.data.durationSeconds,
-            },
-            clips,
-            totalDurationSeconds: concatResult.data.durationSeconds,
-            model: "veo-3.0-generate-001",
-          };
-          pushAgentMessage(`Video concatenated: ~${concatResult.data.durationSeconds}s continuous video from ${successfulClips.length} clips.`);
-        } catch (concatErr) {
-          console.warn("Video concatenation failed:", concatErr);
-          pushAgentMessage(
-            `Concatenation failed: ${concatErr instanceof Error ? concatErr.message : "unknown error"}. Using last clip as fallback.`,
-          );
-          // Fallback: use the last individual clip
-          const lastClip = successfulClips[successfulClips.length - 1];
-          continuousVideoResult = {
-            mergedVideo: lastClip,
-            clips,
-            totalDurationSeconds: successfulClips.reduce((sum, c) => sum + (c.durationSeconds || 6), 0),
-            model: "veo-3.0-generate-001",
-          };
-        }
-      } else if (successfulClips.length === 1) {
-        // Single clip — no concat needed
-        continuousVideoResult = {
-          mergedVideo: successfulClips[0],
-          clips,
-          totalDurationSeconds: successfulClips[0].durationSeconds || 8,
-          model: "veo-3.0-generate-001",
-        };
-        // Mark concat as skipped
-        if (!execution.steps["concatenate-video-clips"]) {
-          try {
-            await trackStep("concatenate-video-clips", { skipped: true, reason: "Only 1 clip available" }, async () => {
-              throw new Error("Skipped: only 1 clip, no concatenation needed");
-            });
-          } catch { /* expected */ }
-        }
-      } else if (!execution.steps["concatenate-video-clips"]) {
-        // No clips — mark concat as skipped
-        try {
-          await trackStep("concatenate-video-clips", { skipped: true, reason: "No clips to concatenate" }, async () => {
-            throw new Error("Skipped: no clips available");
-          });
-        } catch { /* expected */ }
-      }
-
-      if (continuousVideoResult) {
-        setContinuousVideo(continuousVideoResult);
-      }
 
       pushAgentMessage(
-        `Daily Briefing ready! Newsletter, Cinematic Infographic${infographicImgData ? " (AI image)" : ""}, ${storyboardData.scenes.length}-scene Slideshow${imgCount > 1 ? " with AI visuals" : ""}, and ${continuousVideoResult?.mergedVideo ? `~${continuousVideoResult.totalDurationSeconds}s continuous AI video` : `${videoPromptsData.scenes.length}-scene video plan`}. Your Daily Briefing tab has everything in one view.`,
+        `Daily Briefing ready! Newsletter, Cinematic Infographic${infographicImgData ? " (AI image)" : ""}, and ${storyboardData.scenes.length}-scene Slideshow${imgCount > 1 ? " with AI visuals" : ""}. Your Daily Briefing tab has everything in one view.`,
       );
 
       // Send summary to FlowBus for activity logging
-      const videoDesc = continuousVideoResult?.mergedVideo
-        ? `~${continuousVideoResult.totalDurationSeconds}s continuous AI video`
-        : `${videoPromptsData.scenes.length}-scene video plan`;
-      const exitSummary = `Read "${nl.editionTitle}" covering ${nl.leaguesCovered.join(", ")}. Top story: ${nl.topStory}. Mood: ${nl.mood}. ${nl.takeaway}. Generated cinematic infographic, ${imgCount} AI images, and ${videoDesc}.`;
+      const exitSummary = `Read "${nl.editionTitle}" covering ${nl.leaguesCovered.join(", ")}. Top story: ${nl.topStory}. Mood: ${nl.mood}. ${nl.takeaway}. Generated cinematic infographic and ${imgCount} AI images.`;
       busSend("main", "summary", { summary: exitSummary });
 
       setFlowState("done");
@@ -1063,10 +759,8 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     setInfographic(null);
     setNarrative(null);
     setStoryboard(null);
-    setVideoPrompts(null);
     setInfographicImage(null);
     setSceneImages(null);
-    setContinuousVideo(null);
     setError(null);
     setActiveTab("daily-briefing");
     setTimeout(() => {
@@ -1086,10 +780,6 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     producing: BarChart3,
     assembling: Film,
     "generating-images": Wand2,
-    "generating-video-1": Clapperboard,
-    "generating-video-2": Clapperboard,
-    "generating-video-3": Clapperboard,
-    "generating-videos": Clapperboard,
   };
 
   const loadingTitles: Record<string, string> = {
@@ -1098,28 +788,18 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
     summarizing: "Summarizing & Ranking",
     ranking: "Ranking by Newsworthiness",
     producing: "Producing Infographic & Narrative",
-    assembling: "Assembling Video Assets",
+    assembling: "Assembling Storyboard",
     "generating-images": "Generating Cinematic Images",
-    "generating-video-1": "Generating Video — Clip 1/3 (8s initial)",
-    "generating-video-2": "Generating Clip 2/3 (6s, grounded on clip 1)",
-    "generating-video-3": "Generating Clip 3/3 (6s, grounded on clip 2)",
-    concatenating: "Concatenating Clips (FFmpeg)",
-    "generating-videos": "Generating Primary Story Video (~20s)",
   };
 
   const progressWidths: Record<string, string> = {
     discovering: "10%",
-    writing: "20%",
-    summarizing: "30%",
-    ranking: "40%",
-    producing: "50%",
-    assembling: "60%",
-    "generating-images": "70%",
-    "generating-video-1": "76%",
-    "generating-video-2": "82%",
-    "generating-video-3": "88%",
-    concatenating: "94%",
-    "generating-videos": "85%",
+    writing: "25%",
+    summarizing: "40%",
+    ranking: "50%",
+    producing: "60%",
+    assembling: "75%",
+    "generating-images": "90%",
   };
 
   // ── Render ─────────────────────────────────────────────────────────
@@ -1150,7 +830,6 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
           {elapsedSeconds > 5 && (
             <p className="text-xs text-muted-foreground/60 mb-4 tabular-nums">
               {Math.floor(elapsedSeconds / 60)}:{String(elapsedSeconds % 60).padStart(2, "0")} elapsed
-              {flowState.startsWith("generating-video") && " — video generation can take several minutes"}
             </p>
           )}
           <div className="w-48 bg-muted rounded-full h-1.5 overflow-hidden">
@@ -1181,10 +860,7 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const videoDesc = continuousVideo?.mergedVideo
-                    ? `~${continuousVideo.totalDurationSeconds}s continuous AI video`
-                    : "AI video plan";
-                  const exitSummary = `Read "${newsletter.editionTitle}" covering ${newsletter.leaguesCovered.join(", ")}. Top story: ${newsletter.topStory}. Mood: ${newsletter.mood}. ${newsletter.takeaway}. Full media package: infographic, slideshow video, ${videoDesc}.`;
+                  const exitSummary = `Read "${newsletter.editionTitle}" covering ${newsletter.leaguesCovered.join(", ")}. Top story: ${newsletter.topStory}. Mood: ${newsletter.mood}. ${newsletter.takeaway}. Full media package: infographic and slideshow.`;
                   onComplete(exitSummary);
                 }}
               >
@@ -1202,8 +878,7 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
                 (tab.id === "daily-briefing" && !!newsletter && !!articles) ||
                 (tab.id === "newsletter" && !!newsletter) ||
                 (tab.id === "infographic" && !!infographic) ||
-                (tab.id === "slideshow" && !!storyboard && !!narrative) ||
-                (tab.id === "ai-video" && !!videoPrompts);
+                (tab.id === "slideshow" && !!storyboard && !!narrative);
               return (
                 <button
                   key={tab.id}
@@ -1236,8 +911,6 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
                 storyboard={storyboard}
                 narrative={narrative}
                 sceneImages={sceneImages}
-                videoPrompts={videoPrompts}
-                continuousVideo={continuousVideo}
               />
             )}
 
@@ -1315,12 +988,6 @@ export function NewsletterFlow({ onComplete }: { onComplete?: (summary?: string)
               </div>
             )}
 
-            {/* AI Video Tab */}
-            {activeTab === "ai-video" && videoPrompts && (
-              <div className="animate-in fade-in duration-300">
-                <VideoPlanView data={videoPrompts} continuousVideo={continuousVideo ?? undefined} />
-              </div>
-            )}
           </div>
         </div>
       )}
