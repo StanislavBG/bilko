@@ -1,26 +1,25 @@
 /**
- * Video Generation Service — Veo (Gemini API video generation)
+ * Clip & Video Generation Service — Veo (Gemini API)
  *
- * Uses the Gemini API's dedicated generateVideos endpoint to produce
- * 5-8 second video clips from text prompts (and optional source videos).
+ * Naming convention:
+ *   - Clip  = single atomic Veo call (5-8 seconds)
+ *   - Video = finished product (multiple clips chained + FFmpeg concat)
+ *
+ * API:
+ *   generateClip()   — Single Veo call. The atomic building block (5-8s).
+ *   generateVideo()  — Variable-length video using the 8-6-6 grounding method.
+ *                      Each 8s clip overlaps 2s with the previous for continuity,
+ *                      yielding 6 unique seconds per extension. Pass N prompts
+ *                      for 8 + 6(N-1) unique seconds. FFmpeg concat at the end.
+ *   generateClips()  — Batch of independent single clips (sequential).
  *
  * Supports:
- *   - Text-to-video: Generate a clip from a text prompt
+ *   - Text-to-clip: Generate a clip from a text prompt
  *   - Source-grounded: Pass a previous clip as context — Veo uses the
  *     last ~2 seconds as visual grounding for style/scene continuity
- *   - Image-to-video: Generate a clip grounded on a reference image
- *
- * Each Veo call produces a standalone clip (max 8s). To build longer
- * videos (e.g. ~20s), generate multiple clips sequentially and
- * concatenate them server-side with FFmpeg (see video-concat.ts).
+ *   - Image-to-clip: Generate a clip grounded on a reference image
  *
  * Model: veo-3.1-generate-preview
- *
- * Unlike image generation, video generation is an async operation
- * that requires polling. This service handles the full lifecycle:
- * 1. Submit the generation request
- * 2. Poll until the operation completes
- * 3. Return the generated video data
  */
 
 import { createLogger } from "../logger";
@@ -30,12 +29,12 @@ const log = createLogger("video-generation");
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
-export interface VideoGenerationRequest {
+export interface ClipGenerationRequest {
   prompt: string;
   model?: string;
   durationSeconds?: 5 | 6 | 7 | 8;
   aspectRatio?: "16:9" | "9:16";
-  /** Optional reference image to guide the video */
+  /** Optional reference image to guide the clip */
   referenceImageBase64?: string;
   referenceImageMimeType?: string;
   /** Optional source video for grounding (base64-encoded previous Veo clip).
@@ -45,17 +44,24 @@ export interface VideoGenerationRequest {
   sourceVideoMimeType?: string;
 }
 
-export interface GeneratedVideo {
+export interface GeneratedClip {
   videoBase64: string;
   mimeType: string;
   durationSeconds: number;
 }
 
-export interface VideoGenerationResponse {
-  videos: GeneratedVideo[];
+export interface ClipGenerationResponse {
+  videos: GeneratedClip[];
   model: string;
   operationName?: string;
 }
+
+/** @deprecated Use ClipGenerationRequest */
+export type VideoGenerationRequest = ClipGenerationRequest;
+/** @deprecated Use GeneratedClip */
+export type GeneratedVideo = GeneratedClip;
+/** @deprecated Use ClipGenerationResponse */
+export type VideoGenerationResponse = ClipGenerationResponse;
 
 function getApiKey(): string {
   const key = process.env.GEMINI_API_KEY;
@@ -66,18 +72,18 @@ function getApiKey(): string {
 }
 
 /**
- * Submit a video generation request to Veo and poll until complete.
+ * Generate a single Veo clip (the atomic building block).
  *
- * Returns the generated video(s) as base64-encoded data.
- * Timeout: 8 minutes (video generation can be slow).
+ * Returns the generated clip as base64-encoded data.
+ * Timeout: 8 minutes (Veo can be slow for complex scenes).
  *
  * When `sourceVideoBase64` is provided, Veo uses the last ~2 seconds
  * of the source clip as visual grounding for scene/style continuity.
  * The response is a NEW standalone clip (not merged with the source).
  */
-export async function generateVideo(
-  request: VideoGenerationRequest,
-): Promise<VideoGenerationResponse> {
+export async function generateClip(
+  request: ClipGenerationRequest,
+): Promise<ClipGenerationResponse> {
   const apiKey = getApiKey();
   const hasSource = !!request.sourceVideoBase64;
   const hasReference = !!request.referenceImageBase64;
@@ -85,10 +91,9 @@ export async function generateVideo(
 
   const model = request.model ?? MODEL_DEFAULTS.video;
 
-  // Use the generateVideos endpoint (Gemini API) with inlineData format.
-  // The older predictLongRunning endpoint uses bytesBase64Encoded which is
-  // not supported for video/image inputs on current models.
-  const url = `${GEMINI_BASE_URL}/models/${model}:generateVideos?key=${apiKey}`;
+  // Use the predictLongRunning REST endpoint (Gemini API).
+  // The SDK method is called generateVideos, but the REST path is predictLongRunning.
+  const url = `${GEMINI_BASE_URL}/models/${model}:predictLongRunning?key=${apiKey}`;
 
   // Build the instance — use inlineData format for video/image inputs
   const instance: Record<string, unknown> = {
@@ -104,7 +109,7 @@ export async function generateVideo(
       },
     };
   } else if (request.referenceImageBase64) {
-    // Image-to-video: pass a reference image
+    // Image-to-clip: pass a reference image
     instance.image = {
       inlineData: {
         mimeType: request.referenceImageMimeType ?? "image/png",
@@ -124,7 +129,7 @@ export async function generateVideo(
     },
   };
 
-  log.info(`Submitting video ${hasSource ? "source-grounded" : "fresh"} generation with ${model}`, {
+  log.info(`Submitting clip ${hasSource ? "source-grounded" : "fresh"} generation with ${model}`, {
     promptLength: request.prompt.length,
     durationSeconds: durationSec,
     hasSourceVideo: hasSource,
@@ -141,8 +146,8 @@ export async function generateVideo(
 
   if (!submitResponse.ok) {
     const errorText = await submitResponse.text();
-    log.error(`Video ${hasSource ? "extension" : "generation"} submission failed: ${submitResponse.status}`, { error: errorText });
-    throw new Error(`Video ${hasSource ? "extension" : "generation"} failed (${submitResponse.status}): ${errorText}`);
+    log.error(`Clip ${hasSource ? "extension" : "generation"} submission failed: ${submitResponse.status}`, { error: errorText });
+    throw new Error(`Clip ${hasSource ? "extension" : "generation"} failed (${submitResponse.status}): ${errorText}`);
   }
 
   const operation = (await submitResponse.json()) as {
@@ -168,20 +173,20 @@ export async function generateVideo(
 
   // If immediately done (unlikely for video)
   if (operation.done && operation.response) {
-    return await parseVideoResponse(operation.response, model);
+    return await parseClipResponse(operation.response, model);
   }
 
   if (operation.error) {
-    throw new Error(`Video ${hasSource ? "extension" : "generation"} error: ${operation.error.message}`);
+    throw new Error(`Clip ${hasSource ? "extension" : "generation"} error: ${operation.error.message}`);
   }
 
   // Poll for completion
   const operationName = operation.name;
   if (!operationName) {
-    throw new Error("Video generation did not return an operation name");
+    throw new Error("Clip generation did not return an operation name");
   }
 
-  log.info(`Polling video ${hasSource ? "extension" : "generation"} operation: ${operationName}`);
+  log.info(`Polling clip ${hasSource ? "extension" : "generation"} operation: ${operationName}`);
 
   const maxPollTime = 8 * 60 * 1000; // 8 minutes (Veo can be slow for complex scenes)
   const pollInterval = 10_000; // 10 seconds
@@ -205,18 +210,18 @@ export async function generateVideo(
     const pollResult = (await pollResponse.json()) as typeof operation;
 
     if (pollResult.error) {
-      throw new Error(`Video ${hasSource ? "extension" : "generation"} failed: ${pollResult.error.message}`);
+      throw new Error(`Clip ${hasSource ? "extension" : "generation"} failed: ${pollResult.error.message}`);
     }
 
     if (pollResult.done && pollResult.response) {
-      log.info(`Video ${hasSource ? "extension" : "generation"} completed after ${Math.round((Date.now() - startTime) / 1000)}s`);
-      return await parseVideoResponse(pollResult.response, model, operationName);
+      log.info(`Clip ${hasSource ? "extension" : "generation"} completed after ${Math.round((Date.now() - startTime) / 1000)}s`);
+      return await parseClipResponse(pollResult.response, model, operationName);
     }
 
-    log.info(`Video still ${hasSource ? "extending" : "generating"}... (${Math.round((Date.now() - startTime) / 1000)}s elapsed)`);
+    log.info(`Clip still ${hasSource ? "extending" : "generating"}... (${Math.round((Date.now() - startTime) / 1000)}s elapsed)`);
   }
 
-  throw new Error(`Video ${hasSource ? "extension" : "generation"} timed out after 8 minutes`);
+  throw new Error(`Clip ${hasSource ? "extension" : "generation"} timed out after 8 minutes`);
 }
 
 /**
@@ -227,7 +232,7 @@ async function downloadVideoFromUri(uri: string, apiKey: string): Promise<string
   const separator = uri.includes("?") ? "&" : "?";
   const downloadUrl = `${uri}${separator}key=${apiKey}&alt=media`;
 
-  log.info(`Downloading video from URI: ${uri.substring(0, 100)}...`);
+  log.info(`Downloading clip from URI: ${uri.substring(0, 100)}...`);
 
   const response = await fetch(downloadUrl, {
     method: "GET",
@@ -237,29 +242,29 @@ async function downloadVideoFromUri(uri: string, apiKey: string): Promise<string
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
-    log.error(`Video download failed: ${response.status}`, { error: errorText, uri });
-    throw new Error(`Failed to download video (${response.status}): ${errorText}`);
+    log.error(`Clip download failed: ${response.status}`, { error: errorText, uri });
+    throw new Error(`Failed to download clip (${response.status}): ${errorText}`);
   }
 
   const arrayBuffer = await response.arrayBuffer();
   const base64 = Buffer.from(arrayBuffer).toString("base64");
 
-  log.info(`Video downloaded: ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB (${base64.length} chars base64)`);
+  log.info(`Clip downloaded: ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB (${base64.length} chars base64)`);
 
   return base64;
 }
 
-async function parseVideoResponse(
+async function parseClipResponse(
   response: Record<string, unknown>,
   model: string,
   operationName?: string,
-): Promise<VideoGenerationResponse> {
-  const videos: GeneratedVideo[] = [];
+): Promise<ClipGenerationResponse> {
+  const videos: GeneratedClip[] = [];
   const apiKey = getApiKey();
 
   // Log response shape for debugging
   const responseKeys = Object.keys(response);
-  log.info(`Parsing video response. Top-level keys: [${responseKeys.join(", ")}]`);
+  log.info(`Parsing clip response. Top-level keys: [${responseKeys.join(", ")}]`);
 
   const genResponse = response as {
     generateVideoResponse?: {
@@ -283,7 +288,7 @@ async function parseVideoResponse(
             durationSeconds: 8,
           });
         } catch (downloadErr) {
-          log.error(`Failed to download video from URI`, {
+          log.error(`Failed to download clip from URI`, {
             uri: sample.video.uri.substring(0, 100),
             error: downloadErr instanceof Error ? downloadErr.message : String(downloadErr),
           });
@@ -313,7 +318,7 @@ async function parseVideoResponse(
             durationSeconds: 8,
           });
         } catch (downloadErr) {
-          log.error(`Failed to download video from GCS URI`, {
+          log.error(`Failed to download clip from GCS URI`, {
             uri: v.gcsUri.substring(0, 100),
             error: downloadErr instanceof Error ? downloadErr.message : String(downloadErr),
           });
@@ -323,32 +328,41 @@ async function parseVideoResponse(
   }
 
   if (videos.length === 0) {
-    log.warn(`No videos parsed from response. Keys: [${responseKeys.join(", ")}]. Snippet: ${JSON.stringify(response).substring(0, 500)}`);
+    log.warn(`No clips parsed from response. Keys: [${responseKeys.join(", ")}]. Snippet: ${JSON.stringify(response).substring(0, 500)}`);
   } else {
-    log.info(`Parsed ${videos.length} video(s) successfully`);
+    log.info(`Parsed ${videos.length} clip(s) successfully`);
   }
 
   return { videos, model, operationName };
 }
 
 /**
- * Generate a continuous video by chaining Veo clips + FFmpeg concatenation.
+ * Generate a full video of any length using the 8-6-6 grounding methodology.
  *
- * Strategy for a ~20-second continuous video:
- *   1. Clip 1: Generate initial 8-second clip from the first prompt
- *   2. Clip 2: Generate 6-second clip using clip 1 as source context
- *      (Veo uses the last ~2 seconds for visual grounding)
- *   3. Clip 3: Generate 6-second clip using clip 2 as source context
- *   4. Concatenate: FFmpeg concat demuxer joins the 3 individual clips
+ * **How it works:**
+ *   - Each Veo call generates an 8-second clip
+ *   - The last 2 seconds of each clip are used as visual grounding for
+ *     the next clip, providing style/scene continuity
+ *   - So each extension clip adds 6 UNIQUE seconds (8s total minus 2s overlap)
+ *   - Final clips are joined with FFmpeg concat demuxer
  *
- * Each Veo call returns a standalone clip. The final ~20s video
- * is assembled by concatenation, not by Veo merging.
+ * **Duration formula:**
+ *   Unique seconds = 8 + 6 × (N - 1)   where N = number of clips
+ *   - 1 clip  =  8s unique
+ *   - 2 clips = 14s unique (8 + 6)
+ *   - 3 clips = 20s unique (8 + 6 + 6)
+ *   - 4 clips = 26s unique (8 + 6 + 6 + 6)
+ *   - 5 clips = 32s unique (8 + 6 + 6 + 6 + 6)
  *
- * @param prompts Array of 3 prompts (initial + 2 grounded prompts)
+ * The number of clips is determined by the number of prompts you pass.
+ * This is NOT a fixed format — use as many clips as needed for your
+ * target duration.
+ *
+ * @param prompts One prompt per clip. Length determines video duration.
  * @param options Common options for all clips
  * @returns The concatenated video and per-clip metadata
  */
-export async function generateContinuousVideo(
+export async function generateVideo(
   prompts: string[],
   options?: {
     model?: string;
@@ -358,10 +372,10 @@ export async function generateContinuousVideo(
     onClipProgress?: (clipIndex: number, status: "generating" | "extending" | "done" | "error", elapsedMs: number) => void;
   },
 ): Promise<{
-  /** The final concatenated continuous video (all clips joined by FFmpeg) */
-  mergedVideo: GeneratedVideo | null;
+  /** The final concatenated video (all clips joined by FFmpeg) */
+  mergedVideo: GeneratedClip | null;
   /** Per-clip results (null for failed clips) */
-  clips: (GeneratedVideo | null)[];
+  clips: (GeneratedClip | null)[];
   /** Total duration in seconds */
   totalDurationSeconds: number;
   model: string;
@@ -370,8 +384,8 @@ export async function generateContinuousVideo(
     throw new Error("At least one prompt is required");
   }
 
-  const model = options?.model ?? DEFAULT_VIDEO_MODEL;
-  const clips: (GeneratedVideo | null)[] = [];
+  const model = options?.model ?? MODEL_DEFAULTS.video;
+  const clips: (GeneratedClip | null)[] = [];
   let previousClipBase64: string | null = null;
   const startTime = Date.now();
 
@@ -386,9 +400,9 @@ export async function generateContinuousVideo(
     try {
       options?.onClipProgress?.(i, hasSource ? "extending" : "generating", Date.now() - startTime);
 
-      log.info(`Continuous video: ${hasSource ? "source-grounded" : "fresh"} clip ${i + 1}/${prompts.length} (${clipDuration}s)`);
+      log.info(`Video [8-6-6-6]: ${hasSource ? "source-grounded" : "fresh"} clip ${i + 1}/${prompts.length} (${clipDuration}s)`);
 
-      const result = await generateVideo({
+      const result = await generateClip({
         prompt: prompts[i],
         model,
         aspectRatio: options?.aspectRatio ?? "16:9",
@@ -423,14 +437,14 @@ export async function generateContinuousVideo(
   }
 
   // Concatenate all successful clips with FFmpeg
-  const successfulClips = clips.filter((c): c is GeneratedVideo => c !== null);
+  const successfulClips = clips.filter((c): c is GeneratedClip => c !== null);
 
   if (successfulClips.length === 0) {
     log.info("No clips generated — skipping concatenation");
     return { mergedVideo: null, clips, totalDurationSeconds: 0, model };
   }
 
-  let mergedVideo: GeneratedVideo | null = null;
+  let mergedVideo: GeneratedClip | null = null;
   let totalDuration = 0;
 
   if (successfulClips.length === 1) {
@@ -458,29 +472,29 @@ export async function generateContinuousVideo(
     }
   }
 
-  log.info(`Continuous video complete: ${successfulClips.length}/${prompts.length} clips, ~${totalDuration}s total`);
+  log.info(`Video complete: ${successfulClips.length}/${prompts.length} clips, ~${totalDuration}s total`);
 
   return { mergedVideo, clips, totalDurationSeconds: totalDuration, model };
 }
 
 /**
- * Generate multiple videos sequentially (to avoid rate limits).
+ * Generate multiple clips sequentially (to avoid rate limits).
  * Returns results in the same order as the requests.
  * Failed generations return null.
  */
-export async function generateVideos(
-  requests: VideoGenerationRequest[],
-): Promise<(VideoGenerationResponse | null)[]> {
-  log.info(`Generating ${requests.length} videos sequentially`);
-  const results: (VideoGenerationResponse | null)[] = [];
+export async function generateClips(
+  requests: ClipGenerationRequest[],
+): Promise<(ClipGenerationResponse | null)[]> {
+  log.info(`Generating ${requests.length} clips sequentially`);
+  const results: (ClipGenerationResponse | null)[] = [];
 
   for (let i = 0; i < requests.length; i++) {
     try {
-      log.info(`Starting video ${i + 1}/${requests.length}`);
-      const result = await generateVideo(requests[i]);
+      log.info(`Starting clip ${i + 1}/${requests.length}`);
+      const result = await generateClip(requests[i]);
       results.push(result);
     } catch (err) {
-      log.warn(`Video ${i + 1}/${requests.length} failed`, {
+      log.warn(`Clip ${i + 1}/${requests.length} failed`, {
         error: err instanceof Error ? err.message : String(err),
       });
       results.push(null);

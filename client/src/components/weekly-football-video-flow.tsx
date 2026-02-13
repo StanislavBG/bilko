@@ -53,7 +53,7 @@ import {
   jsonPrompt,
   useFlowExecution,
   useFlowChat,
-  generateVideo,
+  generateClip,
   concatenateVideos,
 } from "@/lib/bilko-flow";
 import type { ConcatResult } from "@/lib/bilko-flow";
@@ -572,7 +572,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       const { data: clip1Result } = await trackStep(
         "generate-clip-1",
         { visualDescription: seg1.visualDescription, styleTokens: scriptData.veoStyleTokens },
-        () => generateVideo(clip1Prompt, { durationSeconds: 8, aspectRatio: "16:9" }),
+        () => generateClip(clip1Prompt, { durationSeconds: 8, aspectRatio: "16:9" }),
       );
 
       const clip1Video = clip1Result.videos?.[0];
@@ -598,7 +598,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
         "generate-clip-2",
         { visualDescription: seg2.visualDescription, styleTokens: scriptData.veoStyleTokens },
         () =>
-          generateVideo(clip2Prompt, {
+          generateClip(clip2Prompt, {
             durationSeconds: 8,
             aspectRatio: "16:9",
             sourceVideoBase64: clip1Data.videoBase64,
@@ -628,7 +628,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
         "generate-clip-3",
         { visualDescription: seg3.visualDescription, styleTokens: scriptData.veoStyleTokens },
         () =>
-          generateVideo(clip3Prompt, {
+          generateClip(clip3Prompt, {
             durationSeconds: 8,
             aspectRatio: "16:9",
             sourceVideoBase64: clip2Data.videoBase64,
