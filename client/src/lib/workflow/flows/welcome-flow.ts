@@ -67,6 +67,13 @@ export const LEARNING_MODES = [
     icon: "Clapperboard",
     voiceTriggers: ["video", "highlight", "weekly", "football video", "social media", "clip"],
   },
+  {
+    id: "ai-clip",
+    label: "AI Clip",
+    description: "Research the top news and generate a single 8-second AI video clip with Veo",
+    icon: "Film",
+    voiceTriggers: ["ai clip", "single clip", "one clip", "quick clip", "8 second"],
+  },
 ] as const;
 
 export type LearningModeId = typeof LEARNING_MODES[number]["id"];

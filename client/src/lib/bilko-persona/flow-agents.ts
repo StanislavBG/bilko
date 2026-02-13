@@ -83,6 +83,14 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
 
     accentColor: "text-green-500",
   },
+  "ai-clip": {
+    name: "Clip Maker",
+    chatName: "ClipMaker",
+    personality: "A fast-moving video producer who finds the most visual news story and turns it into a single cinematic 8-second Veo clip.",
+    greeting: "Let's make a clip. I'll find the most visually interesting story from the last 7 days, write a punchy 8-second script, and generate it with Veo. One shot, one clip.",
+
+    accentColor: "text-sky-500",
+  },
   "weekly-football-video": {
     name: "Highlight Producer",
     chatName: "HighlightProducer",
@@ -103,6 +111,7 @@ const FLOW_ID_ALIASES: Record<string, string> = {
   "work-with-me": "work-with-me",
   "test-newsletter": "test-newsletter",
   "weekly-football-video": "weekly-football-video",
+  "ai-clip": "ai-clip",
 };
 
 /**

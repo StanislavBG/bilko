@@ -12,7 +12,7 @@
  *
  * ═══════════════════════════════════════════════════════════
  * ACTIVE FLOWS:  bilko-main, video-discovery, test-newsletter,
- *                weekly-football-video, work-with-me,
+ *                weekly-football-video, ai-clip, work-with-me,
  *                ai-consultation, recursive-interviewer,
  *                linkedin-strategist, socratic-architect
  * ═══════════════════════════════════════════════════════════
@@ -834,6 +834,115 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     ],
   },
 
+  // ── AI Clip — Single 8s Veo clip ────────────────────────────
+  //
+  // The simplest video building block:
+  //   1. Deep research → find a visually compelling story
+  //   2. Write 8-second clip script
+  //   3. Generate a single 8s Veo clip
+  {
+    id: "ai-clip",
+    name: "AI Clip",
+    description:
+      "Research the top news story and generate a single 8-second AI video clip with Veo. The simplest building block — one research, one script, one clip.",
+    version: "1.0.0",
+    location: "landing",
+    componentPath: "client/src/components/ai-clip-flow.tsx",
+    tags: ["landing", "video", "veo", "clip", "ai", "news", "single"],
+    icon: "Film",
+    voiceTriggers: ["ai clip", "single clip", "one clip", "quick clip", "8 second"],
+    websiteUrl: "https://bilkobibitkov.replit.app/",
+    phases: [
+      { id: "researching", label: "Research", stepIds: ["deep-research"] },
+      { id: "scripting", label: "Script", stepIds: ["write-clip-script"] },
+      { id: "generating", label: "Generate", stepIds: ["generate-clip"] },
+      { id: "complete", label: "Preview", stepIds: ["preview-clip"] },
+    ],
+    output: {
+      name: "videoClip",
+      type: "object",
+      description: "A single 8-second AI-generated video clip about a top news story",
+    },
+    steps: [
+      {
+        id: "deep-research",
+        name: "Deep Research — Top Story",
+        type: "llm",
+        description:
+          "Researches global news over the last 7 days and finds the single most visually interesting story. Focuses on stories with cinematic potential (sports, space, nature, technology).",
+        prompt: "You are a senior news researcher. Research the last 7 DAYS of global news and identify the single MOST INTERESTING story — something visually compelling that would make a great short video clip.",
+        userMessage: "What is the most visually interesting news story of the last 7 days?",
+        model: "gemini-2.5-flash",
+        inputSchema: [],
+        outputSchema: [
+          { name: "headline", type: "string", description: "Punchy headline (max 12 words)" },
+          { name: "topic", type: "string", description: "Category (e.g. Space, Football, Technology)" },
+          { name: "summary", type: "string", description: "Vivid visual context (80-120 words)" },
+          { name: "keyFacts", type: "array", description: "2-4 facts with numbers" },
+        ],
+        dependsOn: [],
+      },
+      {
+        id: "write-clip-script",
+        name: "Write 8s Clip Script",
+        type: "llm",
+        description:
+          "Writes a self-contained 8-second micro-story clip script with narration text, detailed visual description for Veo, and Veo style tokens.",
+        prompt: "Write a single 8-SECOND clip script. This clip must be a self-contained micro-story — hook, reveal, payoff in 8 seconds.",
+        userMessage: "Write a punchy 8-second clip script based on the research.",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          { name: "research", type: "object", description: "The deep research output" },
+        ],
+        outputSchema: [
+          { name: "title", type: "string", description: "Social-media punchy title (max 8 words)" },
+          { name: "narration", type: "string", description: "Voiceover text (max 20 words)" },
+          { name: "visualDescription", type: "string", description: "Cinematic Veo prompt (max 50 words)" },
+          { name: "keyStat", type: "string", description: "The single most impressive stat" },
+          { name: "veoStyleTokens", type: "string", description: "Visual style for Veo" },
+        ],
+        dependsOn: ["deep-research"],
+      },
+      {
+        id: "generate-clip",
+        name: "Generate Clip (8s Veo)",
+        type: "llm",
+        subtype: "video",
+        description:
+          "Generates a single 8-second video clip using Veo. Fresh text-to-video generation — no source grounding. This is the atomic unit.",
+        prompt: "Generate an 8-second video clip from the visual description and style tokens.",
+        userMessage: "Generate the 8-second video clip.",
+        model: "veo-3.0-generate-001",
+        inputSchema: [
+          { name: "visualDescription", type: "string", description: "Clip visual description" },
+          { name: "styleTokens", type: "string", description: "Veo style tokens" },
+        ],
+        outputSchema: [
+          { name: "videoBase64", type: "string", description: "Base64-encoded 8s video clip (MP4)" },
+          { name: "mimeType", type: "string", description: "Video MIME type" },
+          { name: "durationSeconds", type: "number", description: "Clip duration (8s)" },
+        ],
+        dependsOn: ["write-clip-script"],
+      },
+      {
+        id: "preview-clip",
+        name: "Preview & Export",
+        type: "display",
+        description:
+          "Displays the generated 8-second clip with the script, narration, key facts, and download option.",
+        inputSchema: [
+          { name: "research", type: "object", description: "Original research data" },
+          { name: "script", type: "object", description: "The clip script" },
+          { name: "clip", type: "object", description: "The generated video clip" },
+        ],
+        outputSchema: [
+          { name: "exitSummary", type: "string", description: "Summary for bilko-main recycling" },
+        ],
+        dependsOn: ["generate-clip"],
+      },
+    ],
+  },
+
   // ── Work With Me ──────────────────────────────────────────
   {
     id: "work-with-me",
@@ -1499,6 +1608,7 @@ export const activeFlowIds = new Set([
   "video-discovery",
   "test-newsletter",
   "weekly-football-video",
+  "ai-clip",
   "work-with-me",
   "ai-consultation",
   "recursive-interviewer",

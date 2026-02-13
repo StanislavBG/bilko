@@ -40,6 +40,7 @@ import {
 import { LinkedInStrategistFlow } from "@/components/linkedin-strategist-flow";
 import { WorkWithMeFlow } from "@/components/work-with-me-flow";
 import { WeeklyFootballVideoFlow } from "@/components/weekly-football-video-flow";
+import { AiClipFlow } from "@/components/ai-clip-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 import { chat, useFlowExecution, FlowChatProvider, useFlowChat } from "@/lib/bilko-flow";
@@ -54,6 +55,7 @@ import {
   CheckCircle2,
   ExternalLink,
   Clapperboard,
+  Film,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
@@ -81,6 +83,7 @@ const iconMap: Record<string, ReactNode> = {
   Play: <Play className="h-6 w-6" />,
   Gamepad2: <Gamepad2 className="h-6 w-6" />,
   Clapperboard: <Clapperboard className="h-6 w-6" />,
+  Film: <Film className="h-6 w-6" />,
 };
 
 /** Menu items — only ACTIVE flows from the registry (excludes bilko-main and standby) */
@@ -122,6 +125,7 @@ const FLOW_TO_MODE: Record<string, LearningModeId> = {
   "work-with-me": "work-with-me",
   "test-newsletter": "test-newsletter",
   "weekly-football-video": "weekly-football-video",
+  "ai-clip": "ai-clip",
 };
 
 // ── Subflow ID mapping ──────────────────────────────────
@@ -136,6 +140,7 @@ const MODE_TO_OWNER: Record<string, string> = {
   "work-with-me": "work-with-me",
   "test-newsletter": "test-newsletter",
   "weekly-football-video": "weekly-football-video",
+  "ai-clip": "ai-clip",
 };
 
 // ── LLM greeting prompts ────────────────────────────────
@@ -803,6 +808,7 @@ function RightPanelContent({
       {mode === "work-with-me" && <WorkWithMeFlow onComplete={onComplete} />}
       {mode === "test-newsletter" && <NewsletterFlow onComplete={onComplete} />}
       {mode === "weekly-football-video" && <WeeklyFootballVideoFlow onComplete={onComplete} />}
+      {mode === "ai-clip" && <AiClipFlow onComplete={onComplete} />}
     </div>
   );
 }
