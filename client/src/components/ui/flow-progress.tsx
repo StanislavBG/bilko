@@ -319,18 +319,18 @@ function ExpandedMode({
         )}
       </div>
 
-      <div className="flex items-center gap-1 overflow-x-auto">
+      <div className="flex items-center gap-1 w-full">
         {startEllipsis && (
           <div className="shrink-0 flex items-center px-1">
             <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
           </div>
         )}
         {visible.map((step, i) => (
-          <div key={step.id} className="flex items-center">
+          <div key={step.id} className="flex items-center flex-1 min-w-0">
             {i > 0 && <div className="w-4 h-px bg-border shrink-0" />}
             <div
               className={cn(
-                "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs whitespace-nowrap shrink-0",
+                "flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs whitespace-nowrap flex-1 min-w-0",
                 step.status === "active" && "border-blue-500/40 bg-blue-500/5",
                 step.status === "complete" && "border-green-500/30 bg-green-500/5",
                 step.status === "error" && "border-red-500/30 bg-red-500/5",
@@ -338,8 +338,9 @@ function ExpandedMode({
               )}
               data-testid={`card-step-${step.id}`}
             >
-              <StepStatusIcon status={step.status} className="h-3.5 w-3.5" />
+              <StepStatusIcon status={step.status} className="h-3.5 w-3.5 shrink-0" />
               <span className={cn(
+                "truncate",
                 step.status === "active" ? "text-foreground font-medium" : "text-muted-foreground",
               )}>
                 {step.label}
