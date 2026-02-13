@@ -220,13 +220,13 @@ export async function generateClip(
 }
 
 /**
- * Generate a full video using the 8-6-6(-6) methodology.
+ * Generate a variable-length video using the 8-6-6 grounding methodology.
  *
- * Chains Veo clips via source grounding + FFmpeg concatenation:
- *   - Clip 1: 8s initial (fresh)
- *   - Clip 2: 6s grounded on clip 1
- *   - Clip 3: 6s grounded on clip 2
- *   - Clip 4: 6s grounded on clip 3 (optional, for ~26s videos)
+ * Each 8s Veo clip overlaps 2s with the previous for visual continuity,
+ * so each extension adds 6 unique seconds. Pass N prompts for
+ * 8 + 6(N-1) unique seconds. Final clips are joined with FFmpeg.
+ *
+ * Examples: 2 prompts = 14s, 3 prompts = 20s, 4 prompts = 26s.
  */
 export interface VideoResult {
   mergedVideo: { videoBase64: string; mimeType: string; durationSeconds: number } | null;
