@@ -136,22 +136,24 @@ function CompactMode({
   const completedCount = steps.filter((s) => s.status === "complete").length;
 
   return (
-    <div className="flex flex-col gap-1 px-3 py-2" data-testid="flow-progress-compact">
-      <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex items-center gap-3 px-3 py-1.5" data-testid="flow-progress-compact">
+      <div className="flex items-center gap-1.5">
         {label && (
-          <span className="text-xs font-medium text-muted-foreground mr-1" data-testid="text-flow-label">
+          <span className="text-xs font-medium text-muted-foreground" data-testid="text-flow-label">
             {label}
           </span>
         )}
         <span className="text-xs text-muted-foreground tabular-nums">
           {completedCount}/{steps.length}
         </span>
+      </div>
+      <div className="flex items-center gap-1.5">
         {startEllipsis && <MoreHorizontal className="h-3 w-3 text-muted-foreground" />}
         {visible.map((step) => (
           <div
             key={step.id}
             className={cn(
-              "h-2 w-2 rounded-full transition-colors",
+              "h-1.5 w-1.5 rounded-full transition-colors",
               resolveStepBg(step, theme),
               step.status === "active" && "animate-pulse",
             )}
@@ -162,14 +164,14 @@ function CompactMode({
         {endEllipsis && <MoreHorizontal className="h-3 w-3 text-muted-foreground" />}
       </div>
       {activity && (
-        <p className="text-xs text-muted-foreground truncate" data-testid="text-flow-activity">
+        <span className="text-xs text-muted-foreground/70 truncate" data-testid="text-flow-activity">
           {activity}
-        </p>
+        </span>
       )}
       {lastResult && (
-        <p className="text-xs text-muted-foreground/60 truncate" data-testid="text-flow-last-result">
+        <span className="text-xs text-muted-foreground/50 truncate" data-testid="text-flow-last-result">
           {lastResult}
-        </p>
+        </span>
       )}
     </div>
   );
@@ -196,68 +198,65 @@ function FullMode({
   const completedCount = steps.filter((s) => s.status === "complete").length;
 
   return (
-    <div className="space-y-3 px-3 py-3" data-testid="flow-progress-full">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
+    <div className="space-y-2 px-3 py-2" data-testid="flow-progress-full">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           {label && (
-            <span className="text-sm font-medium" data-testid="text-flow-label">
+            <span className="text-sm font-medium shrink-0" data-testid="text-flow-label">
               {label}
             </span>
           )}
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {completedCount}/{steps.length} steps
+          <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+            {completedCount}/{steps.length}
           </span>
+          <div className="flex items-center gap-1 flex-1 min-w-0">
+            {startEllipsis && <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+            {visible.map((step, i) => (
+              <div key={step.id} className="flex items-center gap-1">
+                {i > 0 && <div className="w-3 h-px bg-border/60 shrink-0" />}
+                <div className="flex items-center gap-1">
+                  <div
+                    className={cn(
+                      "flex items-center justify-center h-5 w-5 rounded-full text-[10px] font-medium text-white shrink-0",
+                      resolveStepBg(step, theme),
+                      step.status === "active" && "ring-1 ring-blue-500/30",
+                    )}
+                    data-testid={`circle-step-${step.id}`}
+                  >
+                    {step.status === "complete" ? (
+                      <Check className="h-3 w-3" />
+                    ) : step.status === "active" ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : step.status === "error" ? (
+                      <XCircle className="h-3 w-3" />
+                    ) : (
+                      <span>{i + 1}</span>
+                    )}
+                  </div>
+                  <span
+                    className={cn(
+                      "text-xs whitespace-nowrap",
+                      step.status === "active" ? "text-foreground font-medium" : "text-muted-foreground",
+                    )}
+                  >
+                    {step.label}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {endEllipsis && <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+          </div>
         </div>
         {onReset && status === "complete" && (
           <button
             onClick={onReset}
-            className="text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors"
+            className="text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors shrink-0"
             data-testid="button-flow-reset"
           >
             <RotateCcw className="h-3 w-3" />
             Reset
           </button>
         )}
-      </div>
-
-      <div className="flex items-center gap-2 flex-wrap">
-        {startEllipsis && <MoreHorizontal className="h-4 w-4 text-muted-foreground" />}
-        {visible.map((step, i) => (
-          <div key={step.id} className="flex items-center gap-2">
-            {i > 0 && (
-              <div className="w-6 h-px bg-border" />
-            )}
-            <div className="flex items-center gap-1.5">
-              <div
-                className={cn(
-                  "flex items-center justify-center h-7 w-7 rounded-full text-xs font-medium text-white shrink-0",
-                  resolveStepBg(step, theme),
-                  step.status === "active" && "ring-2 ring-blue-500/30",
-                )}
-                data-testid={`circle-step-${step.id}`}
-              >
-                {step.status === "complete" ? (
-                  <Check className="h-3.5 w-3.5" />
-                ) : step.status === "active" ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : step.status === "error" ? (
-                  <XCircle className="h-3.5 w-3.5" />
-                ) : (
-                  <span>{i + 1}</span>
-                )}
-              </div>
-              <span
-                className={cn(
-                  "text-xs whitespace-nowrap",
-                  step.status === "active" ? "text-foreground font-medium" : "text-muted-foreground",
-                )}
-              >
-                {step.label}
-              </span>
-            </div>
-          </div>
-        ))}
-        {endEllipsis && <MoreHorizontal className="h-4 w-4 text-muted-foreground" />}
       </div>
 
       {activity && (
@@ -295,8 +294,8 @@ function ExpandedMode({
   const completedCount = steps.filter((s) => s.status === "complete").length;
 
   return (
-    <div className="space-y-3 px-3 py-3" data-testid="flow-progress-expanded">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
+    <div className="space-y-2 px-3 py-2" data-testid="flow-progress-expanded">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {label && (
             <span className="text-sm font-medium" data-testid="text-flow-label">
@@ -304,7 +303,7 @@ function ExpandedMode({
             </span>
           )}
           <span className="text-xs text-muted-foreground tabular-nums">
-            {completedCount}/{steps.length} steps
+            {completedCount}/{steps.length}
           </span>
         </div>
         {onReset && status === "complete" && (
@@ -322,15 +321,15 @@ function ExpandedMode({
       <div className="flex items-center gap-1 w-full">
         {startEllipsis && (
           <div className="shrink-0 flex items-center px-1">
-            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+            <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
         )}
         {visible.map((step, i) => (
           <div key={step.id} className="flex items-center flex-1 min-w-0">
-            {i > 0 && <div className="w-4 h-px bg-border shrink-0" />}
+            {i > 0 && <div className="w-3 h-px bg-border/60 shrink-0" />}
             <div
               className={cn(
-                "flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md border text-xs whitespace-nowrap flex-1 min-w-0",
+                "flex items-center justify-center gap-1.5 px-2 py-1 rounded-md border text-xs whitespace-nowrap flex-1 min-w-0",
                 step.status === "active" && "border-blue-500/40 bg-blue-500/5",
                 step.status === "complete" && "border-green-500/30 bg-green-500/5",
                 step.status === "error" && "border-red-500/30 bg-red-500/5",
@@ -338,7 +337,7 @@ function ExpandedMode({
               )}
               data-testid={`card-step-${step.id}`}
             >
-              <StepStatusIcon status={step.status} className="h-3.5 w-3.5 shrink-0" />
+              <StepStatusIcon status={step.status} className="h-3 w-3 shrink-0" />
               <span className={cn(
                 "truncate",
                 step.status === "active" ? "text-foreground font-medium" : "text-muted-foreground",
@@ -350,7 +349,7 @@ function ExpandedMode({
         ))}
         {endEllipsis && (
           <div className="shrink-0 flex items-center px-1">
-            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+            <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
         )}
       </div>

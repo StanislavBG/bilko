@@ -101,7 +101,6 @@ export function FlowStatusIndicator({ onReset, flowId, position = "bottom", mode
 
   if (activeFlows.length === 0) return null;
 
-  const borderClass = position === "top" ? "border-b" : "border-t";
   const isLarge = mode === "auto" || mode === "expanded" || mode === "full";
 
   return (
@@ -119,6 +118,7 @@ export function FlowStatusIndicator({ onReset, flowId, position = "bottom", mode
           onReset={onReset}
         />
       ))}
+      <div className={`${position === "top" ? "border-b" : "border-t"} border-border/40 mx-3`} />
     </div>
   );
 }
@@ -146,8 +146,8 @@ export function FlowProgressBanner({ onReset, excludeFlowId }: FlowProgressBanne
   if (activeFlows.length === 0) return null;
 
   return (
-    <div className="shrink-0 border-t border-border bg-background/95 backdrop-blur-sm
-      px-6 py-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <div className="shrink-0 border-t border-border/40 bg-background/95 backdrop-blur-sm
+      px-6 py-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
       {activeFlows.map((flow) => (
         <FlowProgress
           key={flow.id}
