@@ -48,8 +48,8 @@ interface DailyBriefingViewProps {
   storyboard: StoryboardData | null;
   narrative: NarrativeData | null;
   sceneImages: (ImageGenerationResult | null)[] | null;
-  videoPrompts: VideoPromptsData | null;
-  continuousVideo: ContinuousVideoResult | null;
+  videoPrompts?: VideoPromptsData | null;
+  continuousVideo?: ContinuousVideoResult | null;
 }
 
 const MOOD_EMOJI: Record<string, string> = {
