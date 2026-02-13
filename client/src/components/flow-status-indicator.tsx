@@ -8,7 +8,6 @@
 
 import { useMemo } from "react";
 import { FlowProgress, type FlowProgressStep, type FlowProgressProps } from "@/components/ui/flow-progress";
-import { PADDING } from "bilko-flow/react";
 import { useFlowBus, type FlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowById } from "@/lib/bilko-flow";
 import type { FlowPhase, FlowDefinition } from "@/lib/bilko-flow";
@@ -107,8 +106,7 @@ export function FlowStatusIndicator({ onReset, flowId, position = "bottom", mode
 
   return (
     <div
-      className={`${borderClass} border-border shrink-0 w-full ${isLarge ? "bg-background/95 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-2 duration-300" : ""}`}
-      style={isLarge ? { padding: `${PADDING / 2}px ${PADDING}px` } : undefined}
+      className={`${borderClass} border-border shrink-0 w-full ${isLarge ? "px-3 py-2 bg-background/95 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-2 duration-300" : ""}`}
     >
       {activeFlows.map((flow) => (
         <FlowProgress
