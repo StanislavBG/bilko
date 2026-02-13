@@ -47,7 +47,7 @@ export function adaptSteps(steps: FlowProgressStep[]): FlowProgressStep[] {
   return steps;
 }
 
-const DEFAULT_THEME: FlowProgressTheme = {
+export const DEFAULT_FLOW_PROGRESS_THEME: FlowProgressTheme = {
   completedColor: "bg-green-500",
   activeColor: "bg-blue-500",
   pendingColor: "bg-gray-600",
@@ -55,12 +55,12 @@ const DEFAULT_THEME: FlowProgressTheme = {
   stepColors: {},
 };
 
-function mergeTheme(theme?: Partial<FlowProgressTheme>): FlowProgressTheme {
-  if (!theme) return DEFAULT_THEME;
+export function mergeTheme(theme?: Partial<FlowProgressTheme>): FlowProgressTheme {
+  if (!theme) return DEFAULT_FLOW_PROGRESS_THEME;
   return {
-    ...DEFAULT_THEME,
+    ...DEFAULT_FLOW_PROGRESS_THEME,
     ...theme,
-    stepColors: { ...DEFAULT_THEME.stepColors, ...theme.stepColors },
+    stepColors: { ...DEFAULT_FLOW_PROGRESS_THEME.stepColors, ...theme.stepColors },
   };
 }
 

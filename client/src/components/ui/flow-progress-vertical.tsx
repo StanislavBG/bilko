@@ -17,26 +17,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import type { FlowProgressStep, FlowProgressTheme } from "./flow-progress";
-
-const DEFAULT_FLOW_PROGRESS_THEME: FlowProgressTheme = {
-  completedColor: "bg-green-500",
-  activeColor: "bg-blue-500",
-  pendingColor: "bg-gray-600",
-  errorColor: "bg-red-500",
-  stepColors: {},
-};
-
-function mergeTheme(partial?: Partial<FlowProgressTheme>): FlowProgressTheme {
-  if (!partial) return DEFAULT_FLOW_PROGRESS_THEME;
-  return {
-    ...DEFAULT_FLOW_PROGRESS_THEME,
-    ...partial,
-    stepColors: {
-      ...DEFAULT_FLOW_PROGRESS_THEME.stepColors,
-      ...partial.stepColors,
-    },
-  };
-}
+import { mergeTheme } from "./flow-progress";
 
 function resolveStepBg(step: FlowProgressStep, theme: FlowProgressTheme): string {
   if (step.type && theme.stepColors[step.type]) {
