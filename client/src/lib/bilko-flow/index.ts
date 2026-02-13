@@ -89,3 +89,14 @@ export type { FlowProgressTheme, FlowProgressAdapter, FlowProgressStepRenderer }
 // ── Component Definitions (from bilko-flow/react) ───────────
 export { DEFAULT_COMPONENT_DEFINITIONS, getComponentByType } from "bilko-flow/react";
 export type { ComponentDefinition, ComponentFieldSpec, ComponentUseCase, ComponentReference } from "bilko-flow/react";
+
+// ── Error Boundary (from bilko-flow/react) ───────────────────
+export { FlowErrorBoundary } from "bilko-flow/react";
+export type { FlowErrorBoundaryProps } from "bilko-flow/react";
+
+// ── Parallel Thread Visualization (from bilko-flow/react) ────
+export { ParallelThreadsSection, MAX_PARALLEL_THREADS } from "bilko-flow/react";
+export type { ParallelThreadsSectionProps } from "bilko-flow/react";
+
+// ── Parallel Flow Types (from bilko-flow/react) ─────────────
+export type { ParallelThread, ParallelConfig } from "bilko-flow/react";
