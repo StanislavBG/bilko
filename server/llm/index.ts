@@ -81,8 +81,8 @@ export const AVAILABLE_MODELS: LLMModel[] = [
     outputPrice: 0,
   },
   {
-    id: "veo-3.0-generate-001",
-    name: "Veo 3 (Video Generation)",
+    id: "veo-3.1-generate-preview",
+    name: "Veo 3.1 (Video Generation)",
     provider: "google",
     description: "AI video generation. Creates 5-8 second cinematic video clips from text prompts.",
     contextWindow: 0,
@@ -94,6 +94,19 @@ export const AVAILABLE_MODELS: LLMModel[] = [
 export function getModelById(modelId: string): LLMModel | undefined {
   return AVAILABLE_MODELS.find(m => m.id === modelId);
 }
+
+/**
+ * Default model for each capability — the SINGLE source of truth.
+ *
+ * When Google retires a model, update it HERE and everything else follows.
+ * bilko-flow workflow definitions should NOT hardcode model IDs —
+ * they omit the model field and the handler/service layer uses these defaults.
+ */
+export const MODEL_DEFAULTS = {
+  text: "gemini-2.5-flash",
+  image: "gemini-2.5-flash-image",
+  video: "veo-3.1-generate-preview",
+} as const;
 
 /**
  * Clean an LLM response string using bilko-flow's cleanLLMResponse.

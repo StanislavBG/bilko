@@ -20,7 +20,7 @@
  * This is the atomic unit — if this works, the 3-clip AI-Video
  * flow is just 3 of these chained together.
  *
- * Models: Gemini 2.5 Flash (research + script) + Veo 3.0 (video gen)
+ * Models: Gemini 2.5 Flash (research + script) + Veo 3.1 (video gen)
  * Auto-starts immediately when rendered.
  *
  * UI: Vertical pipeline tracker (inspired by Newsletter/AI-Video).

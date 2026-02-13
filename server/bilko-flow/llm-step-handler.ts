@@ -17,7 +17,7 @@
 
 import { registerStepHandler, NonRetryableStepError } from "bilko-flow";
 import type { CompiledStep, StepExecutionContext, InputFieldContract } from "bilko-flow";
-import { chat, AVAILABLE_MODELS } from "../llm/index";
+import { chat, AVAILABLE_MODELS, MODEL_DEFAULTS } from "../llm/index";
 import { generateImage, generateImages } from "../llm/image-generation";
 import { generateVideo, generateVideos } from "../llm/video-generation";
 
@@ -100,7 +100,7 @@ export function registerLLMStepHandler(): void {
 
     validate(step: CompiledStep) {
       const inputs = step.inputs as Record<string, unknown>;
-      const model = (inputs.model as string) ?? "gemini-2.5-flash";
+      const model = (inputs.model as string) ?? MODEL_DEFAULTS.text;
       const errors: string[] = [];
 
       if (!ALL_MODEL_IDS.includes(model)) {
@@ -123,7 +123,7 @@ export function registerLLMStepHandler(): void {
       context: StepExecutionContext,
     ): Promise<{ outputs: Record<string, unknown> }> {
       const inputs = step.inputs as Record<string, unknown>;
-      const model = (inputs.model as string) ?? "gemini-2.5-flash";
+      const model = (inputs.model as string) ?? MODEL_DEFAULTS.text;
 
       // Resolve prompt — either static or templated from upstream outputs
       let systemPrompt: string;
@@ -218,7 +218,7 @@ export function registerLLMStepHandler(): void {
 
     validate(step: CompiledStep) {
       const inputs = step.inputs as Record<string, unknown>;
-      const model = (inputs.model as string) ?? "gemini-2.5-flash-image";
+      const model = (inputs.model as string) ?? MODEL_DEFAULTS.image;
       const errors: string[] = [];
 
       if (!ALL_MODEL_IDS.includes(model)) {
@@ -342,7 +342,7 @@ export function registerLLMStepHandler(): void {
 
     validate(step: CompiledStep) {
       const inputs = step.inputs as Record<string, unknown>;
-      const model = (inputs.model as string) ?? "veo-3.0-generate-001";
+      const model = (inputs.model as string) ?? MODEL_DEFAULTS.video;
       const errors: string[] = [];
 
       if (!ALL_MODEL_IDS.includes(model)) {

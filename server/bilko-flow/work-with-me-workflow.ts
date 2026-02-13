@@ -113,7 +113,7 @@ Rules:
 - No markdown, ONLY the JSON object`,
         userMessageTemplate:
           'Find the step-by-step process for: "{{objective}}"',
-        model: "gemini-2.5-flash",
+
         templateSource: "objective-input",
       },
       outputs: {
@@ -248,7 +248,7 @@ Return ONLY valid JSON with this structure:
 Rules: 3-5 guidance items, primary=must do, secondary=should do, info=good to know. No markdown.`,
         userMessageTemplate:
           'Guide the user through this page to help them: "{{selectedStep.description}}"',
-        model: "gemini-2.5-flash",
+
         templateSources: [
           "objective-input",
           "select-step",

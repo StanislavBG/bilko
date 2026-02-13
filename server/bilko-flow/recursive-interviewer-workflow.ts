@@ -70,7 +70,7 @@ When done=true, omit nextQuestion/questionContext/questionsRemaining.
 No markdown. No explanation. ONLY the JSON object.`,
         userMessage:
           "Begin the Recursive Interviewer process. Your first question should establish the user's context — who they are, what domain they operate in, and what challenge or goal brought them here today. Be direct but warm.",
-        model: "gemini-2.5-flash",
+
       },
       outputs: {
         schema: {
@@ -122,7 +122,7 @@ RESPONSE FORMAT — return ONLY valid JSON:
 When done=true, omit nextQuestion/questionContext/questionsRemaining.
 No markdown. ONLY the JSON object.`,
         userMessageTemplate: "Full conversation history",
-        model: "gemini-2.5-flash",
+
         templateSource: "first-question",
       },
       outputs: {
@@ -220,7 +220,7 @@ Rules:
 - No markdown. ONLY the JSON object.`,
         userMessageTemplate:
           "Interview transcript:\n\n{{transcript}}\n\nProvide your analysis.",
-        model: "gemini-2.5-flash",
+
         templateSources: ["recursive-questions", "user-answers"],
       },
       outputs: {
