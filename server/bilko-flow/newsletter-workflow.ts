@@ -267,7 +267,7 @@ export function createNewsletterWorkflowInput(
         initialDurationSeconds: 8,
         extensionDurationSeconds: 6,
         aspectRatio: "16:9",
-        model: "veo-3.0-generate-001",
+        model: "veo-3.1-generate-preview",
       },
       outputs: { schema: { type: "object", properties: { clips: { type: "array" }, model: { type: "string" } } } },
       policy: { ...defaultPolicy, timeoutMs: 900000, maxAttempts: 1 },

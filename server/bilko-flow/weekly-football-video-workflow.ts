@@ -151,7 +151,7 @@ export function createWeeklyFootballVideoWorkflowInput(
           "{{write-video-script.script.segments[0].visualDescription}}. Style: {{write-video-script.script.veoStyleTokens}}. End with stable, continuing motion for grounding.",
         durationSeconds: 8,
         aspectRatio: "16:9",
-        model: "veo-3.0-generate-001",
+        model: "veo-3.1-generate-preview",
       },
       outputs: {
         schema: {
@@ -179,7 +179,7 @@ export function createWeeklyFootballVideoWorkflowInput(
         sourceVideoTemplate: "{{generate-clip-1.videoBase64}}",
         durationSeconds: 8,
         aspectRatio: "16:9",
-        model: "veo-3.0-generate-001",
+        model: "veo-3.1-generate-preview",
       },
       outputs: {
         schema: {
@@ -207,7 +207,7 @@ export function createWeeklyFootballVideoWorkflowInput(
         sourceVideoTemplate: "{{generate-clip-2.videoBase64}}",
         durationSeconds: 8,
         aspectRatio: "16:9",
-        model: "veo-3.0-generate-001",
+        model: "veo-3.1-generate-preview",
       },
       outputs: {
         schema: {

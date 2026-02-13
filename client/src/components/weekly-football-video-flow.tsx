@@ -23,7 +23,7 @@
  *   3. Generate 3 × 8s Veo clips chained via last-2-second grounding
  *   4. Concatenate → single ~20s continuous video
  *
- * Models: Gemini 2.5 Flash (research + script) + Veo 3.0 (video gen)
+ * Models: Gemini 2.5 Flash (research + script) + Veo 3.1 (video gen)
  * Auto-starts immediately when rendered.
  *
  * UI: Newsletter-inspired step tracker shows each pipeline stage
