@@ -124,7 +124,6 @@ export async function generateClip(
     parameters: {
       aspectRatio: request.aspectRatio ?? "16:9",
       durationSeconds: durationSec,
-      numberOfVideos: 1,
       ...(hasSource ? { resolution: "720p" } : {}),
     },
   };
