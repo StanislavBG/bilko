@@ -83,6 +83,14 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
 
     accentColor: "text-green-500",
   },
+  "weekly-football-video": {
+    name: "Highlight Producer",
+    chatName: "HighlightProducer",
+    personality: "A social-media video specialist who turns the week's biggest football event into a 20-second highlight reel with deep stats and cinematic Veo visuals.",
+    greeting: "Time to make a highlight reel. I'll deep-research the biggest European football event of the last 7 weeks, write a punchy 20-second script, then generate 3 Veo clips chained into one continuous video.",
+
+    accentColor: "text-rose-500",
+  },
 };
 
 /** Maps flow registry IDs to their corresponding agent key */
@@ -94,6 +102,7 @@ const FLOW_ID_ALIASES: Record<string, string> = {
   "socratic-architect": "socratic",
   "work-with-me": "work-with-me",
   "test-newsletter": "test-newsletter",
+  "weekly-football-video": "weekly-football-video",
 };
 
 /**
