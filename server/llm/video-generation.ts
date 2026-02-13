@@ -29,6 +29,44 @@ const log = createLogger("video-generation");
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
+// ── Veo predictLongRunning API contract ──────────────────────────────
+// Endpoint: POST /v1beta/models/{model}:predictLongRunning
+// Model:    veo-3.1-generate-preview
+//
+// These typed interfaces enforce the exact parameter shape accepted by
+// the API. Any unsupported parameter will cause a compile-time error
+// instead of a runtime 400 INVALID_ARGUMENT.
+// ─────────────────────────────────────────────────────────────────────
+
+/** Parameters accepted by the Veo predictLongRunning endpoint. */
+interface VeoPredictParameters {
+  aspectRatio: "16:9" | "9:16";
+  durationSeconds: number;
+  /** Only valid for source-grounded extensions (720p required by Veo 3.1 extend). */
+  resolution?: "720p";
+}
+
+/** Inline media payload (video or image) for Veo instance inputs. */
+interface VeoInlineMedia {
+  inlineData: {
+    mimeType: string;
+    data: string;
+  };
+}
+
+/** A single generation instance sent to the Veo API. */
+interface VeoPredictInstance {
+  prompt: string;
+  video?: VeoInlineMedia;
+  image?: VeoInlineMedia;
+}
+
+/** Full request body for the predictLongRunning endpoint. */
+interface VeoPredictRequestBody {
+  instances: VeoPredictInstance[];
+  parameters: VeoPredictParameters;
+}
+
 export interface ClipGenerationRequest {
   prompt: string;
   model?: string;
@@ -96,7 +134,7 @@ export async function generateClip(
   const url = `${GEMINI_BASE_URL}/models/${model}:predictLongRunning?key=${apiKey}`;
 
   // Build the instance — use inlineData format for video/image inputs
-  const instance: Record<string, unknown> = {
+  const instance: VeoPredictInstance = {
     prompt: request.prompt,
   };
 
@@ -118,14 +156,14 @@ export async function generateClip(
     };
   }
 
-  // Build the request body
-  const body: Record<string, unknown> = {
+  // Build the request body — typed to VeoPredictRequestBody so any
+  // unsupported parameter is a compile-time error, not a runtime 400.
+  const body: VeoPredictRequestBody = {
     instances: [instance],
     parameters: {
       aspectRatio: request.aspectRatio ?? "16:9",
       durationSeconds: durationSec,
-      numberOfVideos: 1,
-      ...(hasSource ? { resolution: "720p" } : {}),
+      ...(hasSource ? { resolution: "720p" as const } : {}),
     },
   };
 
