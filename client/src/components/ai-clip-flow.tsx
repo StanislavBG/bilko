@@ -164,7 +164,17 @@ Rules:
 - visualDescription: max 50 words — cinematic description of what the viewer SEES. Be specific about motion, camera angle, lighting. This goes directly to Veo.
 - keyStat: the single most impressive number/fact
 - veoStyleTokens: visual style for Veo (lighting, palette, mood, camera — max 25 words)
-- No markdown.`,
+- No markdown.
+
+PRIVACY COMPLIANCE (MANDATORY — Veo content policy):
+The visualDescription and veoStyleTokens go DIRECTLY to Google Veo for AI video generation. You MUST follow these rules strictly:
+1. NO REAL PEOPLE: Never name or describe any real, recognizable person (athletes, politicians, celebrities, public figures). Use generic descriptions like "a person", "a scientist", "a footballer" instead.
+2. NO IDENTIFIABLE FACES: Do not request close-ups of faces that could resemble real people. Prefer wide shots, silhouettes, overhead angles, or abstract representations.
+3. NO LOGOS OR TRADEMARKS: Do not reference specific team crests, brand logos, jersey numbers tied to real players, or trademarked visual elements.
+4. ABSTRACT OVER LITERAL: Prefer symbolic, cinematic, and artistic representations over photorealistic depictions of real events. E.g. "a football soaring into a stadium net under dramatic floodlights" NOT "[Real Player Name] scoring the winning goal".
+5. NO VIOLENCE: Do not describe physical confrontation, injury, or graphic impact.
+6. SAFE LANGUAGE: Ensure the visual description would pass content safety filters — no sexual, derogatory, toxic, or hateful content.
+If the news story involves specific people, translate their actions into generic, symbolic visuals that capture the ENERGY and EMOTION without identifying anyone.`,
   );
 }
 
@@ -503,7 +513,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
       currentStep = "generating";
       setFlowState("generating");
 
-      const clipPrompt = `${scriptData.visualDescription}. Style: ${scriptData.veoStyleTokens}.`;
+      const clipPrompt = `${scriptData.visualDescription}. Style: ${scriptData.veoStyleTokens}. No real people, no identifiable faces, no logos or trademarks. Abstract cinematic visuals only.`;
 
       const { data: clipResult } = await trackStep(
         "generate-clip",

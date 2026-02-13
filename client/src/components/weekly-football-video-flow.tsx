@@ -189,7 +189,17 @@ For each segment provide:
 Return ONLY valid JSON:
 {"script":{"title":"...","segments":[{"segmentNumber":1,"durationSec":8,"narration":"...","visualDescription":"...","transitionNote":"...","keyStat":"..."},{"segmentNumber":2,"durationSec":6,"narration":"...","visualDescription":"...","transitionNote":"...","keyStat":"..."},{"segmentNumber":3,"durationSec":6,"narration":"...","visualDescription":"...","transitionNote":"...","keyStat":"..."}],"totalDurationSec":20,"veoStyleTokens":"..."}}
 
-Rules: title max 10 words. narration max 25 words per segment. visualDescription max 40 words. transitionNote max 20 words. veoStyleTokens: shared visual style tokens for all Veo prompts (lighting, palette, mood — max 30 words). No markdown.`,
+Rules: title max 10 words. narration max 25 words per segment. visualDescription max 40 words. transitionNote max 20 words. veoStyleTokens: shared visual style tokens for all Veo prompts (lighting, palette, mood — max 30 words). No markdown.
+
+PRIVACY COMPLIANCE (MANDATORY — Veo content policy):
+Each visualDescription and the shared veoStyleTokens go DIRECTLY to Google Veo for AI video generation. You MUST follow these rules strictly:
+1. NO REAL PEOPLE: Never name or describe any real, recognizable person (players, managers, referees, pundits). Use generic descriptions like "a midfielder", "the goalkeeper", "a celebrating crowd" instead. NEVER use real names.
+2. NO IDENTIFIABLE FACES: Do not request close-ups of faces that could resemble real people. Prefer wide shots, silhouettes, overhead stadium angles, or abstract representations of the action.
+3. NO LOGOS OR TRADEMARKS: Do not reference specific team crests, kit designs, jersey numbers tied to real players, sponsor logos, or trademarked visual elements. Use generic "football kit", "stadium", "pitch" descriptions.
+4. ABSTRACT OVER LITERAL: Prefer symbolic, cinematic, and artistic representations over photorealistic depictions of real match moments. E.g. "a football arcing into the top corner under golden floodlights" NOT "[Real Player] scoring the winner".
+5. NO VIOLENCE: Do not describe tackles causing injury, physical confrontation, or aggressive contact.
+6. SAFE LANGUAGE: Ensure visual descriptions would pass content safety filters — no sexual, derogatory, toxic, or hateful content.
+If the story involves specific players or teams, translate their actions into generic, symbolic football visuals that capture the ENERGY and EMOTION without identifying anyone.`,
   );
 }
 
@@ -567,7 +577,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       setFlowState("generating-clip-1");
 
       const seg1 = scriptData.segments[0];
-      const clip1Prompt = `${seg1.visualDescription}. Style: ${scriptData.veoStyleTokens}. End with stable, continuing motion for grounding.`;
+      const clip1Prompt = `${seg1.visualDescription}. Style: ${scriptData.veoStyleTokens}. End with stable, continuing motion for grounding. No real people, no identifiable faces, no logos or trademarks. Abstract cinematic visuals only.`;
 
       const { data: clip1Result } = await trackStep(
         "generate-clip-1",
@@ -592,7 +602,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       setFlowState("generating-clip-2");
 
       const seg2 = scriptData.segments[1];
-      const clip2Prompt = `Continue from previous scene. ${seg2.visualDescription}. Style: ${scriptData.veoStyleTokens}. End with stable motion for grounding.`;
+      const clip2Prompt = `Continue from previous scene. ${seg2.visualDescription}. Style: ${scriptData.veoStyleTokens}. End with stable motion for grounding. No real people, no identifiable faces, no logos or trademarks. Abstract cinematic visuals only.`;
 
       const { data: clip2Result } = await trackStep(
         "generate-clip-2",
@@ -622,7 +632,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       setFlowState("generating-clip-3");
 
       const seg3 = scriptData.segments[2];
-      const clip3Prompt = `Continue from previous scene. ${seg3.visualDescription}. Style: ${scriptData.veoStyleTokens}. Conclude with a satisfying visual ending.`;
+      const clip3Prompt = `Continue from previous scene. ${seg3.visualDescription}. Style: ${scriptData.veoStyleTokens}. Conclude with a satisfying visual ending. No real people, no identifiable faces, no logos or trademarks. Abstract cinematic visuals only.`;
 
       const { data: clip3Result } = await trackStep(
         "generate-clip-3",
