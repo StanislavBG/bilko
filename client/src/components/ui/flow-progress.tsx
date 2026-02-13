@@ -397,9 +397,9 @@ export function FlowProgress({
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = entry.contentRect.width;
-        if (width >= 600) {
+        if (width >= 380) {
           setResolvedMode("expanded");
-        } else if (width >= 400) {
+        } else if (width >= 260) {
           setResolvedMode("full");
         } else {
           setResolvedMode("compact");
