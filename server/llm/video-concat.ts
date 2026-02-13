@@ -20,14 +20,34 @@ import {
 } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { createRequire } from "module";
 import { createLogger } from "../logger";
 
 const log = createLogger("video-concat");
 
-const require = createRequire(import.meta.url);
-const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
-const ffprobePath = require("@ffprobe-installer/ffprobe").path;
+let _ffmpegPath: string | null = null;
+let _ffprobePath: string | null = null;
+
+function getFfmpegPath(): string {
+  if (_ffmpegPath !== null) return _ffmpegPath;
+  try {
+    _ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
+  } catch {
+    _ffmpegPath = "ffmpeg";
+    log.warn("@ffmpeg-installer/ffmpeg not found, using system ffmpeg");
+  }
+  return _ffmpegPath!;
+}
+
+function getFfprobePath(): string {
+  if (_ffprobePath !== null) return _ffprobePath;
+  try {
+    _ffprobePath = require("@ffprobe-installer/ffprobe").path;
+  } catch {
+    _ffprobePath = "ffprobe";
+    log.warn("@ffprobe-installer/ffprobe not found, using system ffprobe");
+  }
+  return _ffprobePath!;
+}
 
 export interface ConcatResult {
   videoBase64: string;
@@ -85,7 +105,7 @@ export async function concatenateVideos(
 
     // Run FFmpeg concat — container-level copy, no re-encoding
     const outputPath = join(workDir, "output.mp4");
-    const cmd = `"${ffmpegPath}" -y -f concat -safe 0 -i "${listPath}" -c copy "${outputPath}"`;
+    const cmd = `"${getFfmpegPath()}" -y -f concat -safe 0 -i "${listPath}" -c copy "${outputPath}"`;
 
     log.info(`Running FFmpeg concat: ${clips.length} clips`);
     execSync(cmd, { timeout: 60_000, stdio: "pipe" });
@@ -123,7 +143,7 @@ export async function concatenateVideos(
 function probeVideoDurationFromFile(filePath: string): number {
   try {
     const output = execSync(
-      `"${ffprobePath}" -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
+      `"${getFfprobePath()}" -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
       { timeout: 10_000, stdio: "pipe" },
     )
       .toString()

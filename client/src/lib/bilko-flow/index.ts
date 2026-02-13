@@ -79,24 +79,29 @@ export { computeLayout, NODE_W, NODE_H, COL_GAP, ROW_GAP, PADDING } from "bilko-
 export type { NodeLayout, EdgeLayout, DAGLayout } from "bilko-flow/react";
 
 // ── Inspector: Step Visuals (from bilko-flow/react) ─────────
-export { STEP_TYPE_CONFIG, LLM_SUBTYPE_CONFIG, DOMAIN_STEP_TYPE_MAP, getStepVisuals } from "bilko-flow/react";
+export { STEP_TYPE_CONFIG, LLM_SUBTYPE_CONFIG, getStepVisuals } from "bilko-flow/react";
 export type { StepTypeVisuals } from "bilko-flow/react";
 
-// ── FlowProgress Theme & Adapters (from bilko-flow/react) ───
-export { DEFAULT_FLOW_PROGRESS_THEME, mergeTheme, adaptSteps } from "bilko-flow/react";
-export type { FlowProgressTheme, FlowProgressAdapter, FlowProgressStepRenderer } from "bilko-flow/react";
+// ── Domain Step Type Map (local) ─────────────────────────────
+export const DOMAIN_STEP_TYPE_MAP: Record<string, string> = {
+  "ai.generate-text": "llm",
+  "ai.generate-text-local": "llm",
+  "ai.summarize": "llm",
+  "ai.summarize-local": "llm",
+  "ai.embed-local": "llm",
+  "ai.generate-image": "llm",
+  "ai.generate-video": "llm",
+  "transform.filter": "transform",
+  "transform.map": "transform",
+  "transform.reduce": "transform",
+  "http.search": "external-input",
+  "http.request": "external-input",
+  "notification.send": "display",
+  "social.post": "chat",
+  "user.text-input": "user-input",
+  "ui.display": "display",
+};
 
 // ── Component Definitions (from bilko-flow/react) ───────────
 export { DEFAULT_COMPONENT_DEFINITIONS, getComponentByType } from "bilko-flow/react";
 export type { ComponentDefinition, ComponentFieldSpec, ComponentUseCase, ComponentReference } from "bilko-flow/react";
-
-// ── Error Boundary (from bilko-flow/react) ───────────────────
-export { FlowErrorBoundary } from "bilko-flow/react";
-export type { FlowErrorBoundaryProps } from "bilko-flow/react";
-
-// ── Parallel Thread Visualization (from bilko-flow/react) ────
-export { ParallelThreadsSection, MAX_PARALLEL_THREADS } from "bilko-flow/react";
-export type { ParallelThreadsSectionProps } from "bilko-flow/react";
-
-// ── Parallel Flow Types (from bilko-flow/react) ─────────────
-export type { ParallelThread, ParallelConfig } from "bilko-flow/react";
