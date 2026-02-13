@@ -85,10 +85,9 @@ export async function generateVideo(
 
   const model = request.model ?? MODEL_DEFAULTS.video;
 
-  // Use the generateVideos endpoint (Gemini API) with inlineData format.
-  // The older predictLongRunning endpoint uses bytesBase64Encoded which is
-  // not supported for video/image inputs on current models.
-  const url = `${GEMINI_BASE_URL}/models/${model}:generateVideos?key=${apiKey}`;
+  // Use the predictLongRunning REST endpoint (Gemini API).
+  // The SDK method is called generateVideos, but the REST path is predictLongRunning.
+  const url = `${GEMINI_BASE_URL}/models/${model}:predictLongRunning?key=${apiKey}`;
 
   // Build the instance — use inlineData format for video/image inputs
   const instance: Record<string, unknown> = {
@@ -370,7 +369,7 @@ export async function generateContinuousVideo(
     throw new Error("At least one prompt is required");
   }
 
-  const model = options?.model ?? DEFAULT_VIDEO_MODEL;
+  const model = options?.model ?? MODEL_DEFAULTS.video;
   const clips: (GeneratedVideo | null)[] = [];
   let previousClipBase64: string | null = null;
   const startTime = Date.now();
