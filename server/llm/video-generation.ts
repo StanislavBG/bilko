@@ -29,6 +29,8 @@ const log = createLogger("video-generation");
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 const DEFAULT_VIDEO_MODEL = "veo-3.0-generate-001";
+/** Video extension (source-grounded) requires Veo 3.1 — 3.0 does not support it */
+const EXTENSION_VIDEO_MODEL = "veo-3.1-generate-preview";
 
 export interface VideoGenerationRequest {
   prompt: string;
@@ -79,13 +81,21 @@ export async function generateVideo(
   request: VideoGenerationRequest,
 ): Promise<VideoGenerationResponse> {
   const apiKey = getApiKey();
-  const model = request.model ?? DEFAULT_VIDEO_MODEL;
-  const url = `${GEMINI_BASE_URL}/models/${model}:predictLongRunning?key=${apiKey}`;
-
   const hasSource = !!request.sourceVideoBase64;
+  const hasReference = !!request.referenceImageBase64;
   const durationSec = request.durationSeconds ?? 8;
 
-  // Build the instance — shape differs for source-grounded vs fresh generation
+  // Video extension requires Veo 3.1 — auto-upgrade when source video is provided
+  const model = hasSource
+    ? (request.model ?? EXTENSION_VIDEO_MODEL)
+    : (request.model ?? DEFAULT_VIDEO_MODEL);
+
+  // Use the generateVideos endpoint (Gemini API) with inlineData format.
+  // The older predictLongRunning endpoint uses bytesBase64Encoded which is
+  // not supported for video/image inputs on current models.
+  const url = `${GEMINI_BASE_URL}/models/${model}:generateVideos?key=${apiKey}`;
+
+  // Build the instance — use inlineData format for video/image inputs
   const instance: Record<string, unknown> = {
     prompt: request.prompt,
   };
@@ -93,24 +103,29 @@ export async function generateVideo(
   if (request.sourceVideoBase64) {
     // Source-grounded: pass previous clip for visual grounding (last ~2s used as context)
     instance.video = {
-      bytesBase64Encoded: request.sourceVideoBase64,
-      mimeType: request.sourceVideoMimeType ?? "video/mp4",
+      inlineData: {
+        mimeType: request.sourceVideoMimeType ?? "video/mp4",
+        data: request.sourceVideoBase64,
+      },
     };
   } else if (request.referenceImageBase64) {
     // Image-to-video: pass a reference image
     instance.image = {
-      bytesBase64Encoded: request.referenceImageBase64,
-      mimeType: request.referenceImageMimeType ?? "image/png",
+      inlineData: {
+        mimeType: request.referenceImageMimeType ?? "image/png",
+        data: request.referenceImageBase64,
+      },
     };
   }
 
-  // Build the request body — ALWAYS pass durationSeconds
+  // Build the request body
   const body: Record<string, unknown> = {
     instances: [instance],
     parameters: {
       aspectRatio: request.aspectRatio ?? "16:9",
       durationSeconds: durationSec,
-      sampleCount: 1,
+      numberOfVideos: 1,
+      ...(hasSource ? { resolution: "720p" } : {}),
     },
   };
 
@@ -118,7 +133,7 @@ export async function generateVideo(
     promptLength: request.prompt.length,
     durationSeconds: durationSec,
     hasSourceVideo: hasSource,
-    hasReference: !!request.referenceImageBase64,
+    hasReference,
   });
 
   // Submit the generation request
