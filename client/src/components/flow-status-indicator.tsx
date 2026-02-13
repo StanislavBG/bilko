@@ -8,6 +8,7 @@
 
 import { useMemo } from "react";
 import { FlowProgress, type FlowProgressStep, type FlowProgressProps } from "@/components/ui/flow-progress";
+import { FlowProgressVertical } from "@/components/ui/flow-progress-vertical";
 import { useFlowBus, type FlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowById } from "@/lib/bilko-flow";
 import type { FlowPhase, FlowDefinition } from "@/lib/bilko-flow";
@@ -85,9 +86,11 @@ interface FlowStatusIndicatorProps {
   /** Display mode — "compact" for tight spaces, "auto" adapts to container width.
    *  Defaults to "compact". */
   mode?: FlowProgressProps["mode"];
+  /** Use vertical layout instead of horizontal. Defaults to false. */
+  vertical?: boolean;
 }
 
-export function FlowStatusIndicator({ onReset, flowId, position = "bottom", mode = "compact" }: FlowStatusIndicatorProps) {
+export function FlowStatusIndicator({ onReset, flowId, position = "bottom", mode = "compact", vertical = false }: FlowStatusIndicatorProps) {
   const { flows } = useFlowBus();
 
   const activeFlows = useMemo(
@@ -101,24 +104,35 @@ export function FlowStatusIndicator({ onReset, flowId, position = "bottom", mode
 
   if (activeFlows.length === 0) return null;
 
-  const isLarge = mode === "auto" || mode === "expanded" || mode === "full";
+  const isLarge = vertical || mode === "auto" || mode === "expanded" || mode === "full";
   const borderClass = position === "top" ? "border-b" : "border-t";
 
   return (
     <div
       className={`${borderClass} border-border shrink-0 w-full ${isLarge ? "px-3 py-2 bg-background/95 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-2 duration-300" : ""}`}
     >
-      {activeFlows.map((flow) => (
-        <FlowProgress
-          key={flow.id}
-          mode={mode}
-          steps={toProgressSteps(flow)}
-          label={flow.label}
-          status={flow.status}
-          activity={resolveActivity(flow)}
-          onReset={onReset}
-        />
-      ))}
+      {activeFlows.map((flow) =>
+        vertical ? (
+          <FlowProgressVertical
+            key={flow.id}
+            steps={toProgressSteps(flow)}
+            label={flow.label}
+            status={flow.status}
+            activity={resolveActivity(flow)}
+            onReset={onReset}
+          />
+        ) : (
+          <FlowProgress
+            key={flow.id}
+            mode={mode}
+            steps={toProgressSteps(flow)}
+            label={flow.label}
+            status={flow.status}
+            activity={resolveActivity(flow)}
+            onReset={onReset}
+          />
+        ),
+      )}
       <div className={`${position === "top" ? "border-b" : "border-t"} border-border/40 mx-3`} />
     </div>
   );
