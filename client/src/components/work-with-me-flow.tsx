@@ -43,13 +43,11 @@ import {
   Target,
   Handshake,
 } from "lucide-react";
-import { FlowProgress, type FlowProgressStep } from "@/components/ui/flow-progress";
 import {
   chatJSON,
   jsonPrompt,
   apiPost,
   useFlowExecution,
-  useFlowDefinition,
   useFlowChat,
 } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
@@ -290,8 +288,7 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
   const [highlightedElement, setHighlightedElement] = useState<string | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
-  const { trackStep, resolveUserInput, execution, reset: resetExecution } = useFlowExecution("work-with-me");
-  const { definition: flowDef } = useFlowDefinition("work-with-me");
+  const { trackStep, resolveUserInput, reset: resetExecution } = useFlowExecution("work-with-me");
   const { setStatus: setBusStatus, send: busSend } = useFlowRegistration(
     "work-with-me",
     "Work With Me",
@@ -318,33 +315,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
       pushAgentMessage(agent.greeting);
     }
   }, [agent, pushAgentMessage]);
-
-  // Derive tracker steps from flow definition + execution state (single source of truth)
-  const trackerSteps = useMemo<FlowProgressStep[]>(() => {
-    if (!flowDef) return [];
-    return flowDef.steps.map((step) => {
-      const exec = execution.steps[step.id];
-      let status: FlowProgressStep["status"] = "pending";
-      if (exec) {
-        if (exec.status === "running") status = "active";
-        else if (exec.status === "success") status = "complete";
-        else if (exec.status === "error") status = "error";
-      }
-      return { id: step.id, label: step.name, status, type: step.subtype ? `${step.type}:${step.subtype}` : step.type };
-    });
-  }, [flowDef, execution.steps]);
-
-  const trackerActivity = useMemo<string | undefined>(() => {
-    switch (phase) {
-      case "objective-input": return "Enter your objective to get started";
-      case "researching": return statusMessage;
-      case "select-step": return research ? `${research.steps.length} steps found — pick one` : "Pick a step";
-      case "fetching-page": return `Loading ${selectedStep?.title ?? "page"}...`;
-      case "analyzing": return statusMessage;
-      case "guided-view": return pageStructure ? `Viewing: ${pageStructure.title}` : undefined;
-      case "error": return error ?? "Something went wrong";
-    }
-  }, [phase, statusMessage, research, selectedStep, pageStructure, error]);
 
   // Sync phase to flow bus
   useEffect(() => {
@@ -564,9 +534,6 @@ export function WorkWithMeFlow({ onComplete }: { onComplete?: (summary?: string)
 
   return (
     <div className="space-y-6">
-      {/* Progress tracker — derived from flow definition + execution state */}
-      <FlowProgress mode="auto" steps={trackerSteps} activity={trackerActivity} />
-
       {/* Phase 1: Objective input */}
       {phase === "objective-input" && (
         <Card className="border-primary/20">
