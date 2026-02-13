@@ -618,7 +618,7 @@ export function LandingContent() {
   return (
     <main className="flex flex-col lg:flex-row flex-1 overflow-hidden pt-14 min-h-0">
       {/* Left panel: MainFlow + Chat */}
-      <div className="w-full lg:w-[420px] xl:w-[480px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
+      <div className="w-full lg:w-[340px] xl:w-[380px] flex-1 lg:flex-none min-h-0 border-b lg:border-b-0 lg:border-r border-border flex flex-col bg-background">
         <MainFlow flowId="bilko-main" onReset={handleReset} position="top" mode="auto" />
         <FlowChat />
       </div>
