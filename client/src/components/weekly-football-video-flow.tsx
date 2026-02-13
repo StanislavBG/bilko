@@ -18,7 +18,7 @@
  *   preview-video (display)
  *
  * Pipeline:
- *   1. Deep research → find the biggest European football event (last 7 weeks)
+ *   1. Deep research → find the biggest European football event (last 7 days)
  *   2. Write 20s script pre-planned for 8-6-6 second transition points
  *   3. Generate 3 × 8s Veo clips chained via last-2-second grounding
  *   4. Concatenate → single ~20s continuous video
@@ -50,7 +50,7 @@ import {
   generateVideo,
   concatenateVideos,
 } from "@/lib/bilko-flow";
-import type { VideoGenerationResult, ConcatResult } from "@/lib/bilko-flow";
+import type { ConcatResult } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
@@ -82,7 +82,6 @@ interface ResearchResult {
   league: string;
   summary: string;
   keyFacts: Array<{ fact: string; number: string }>;
-  socialHook: string;
 }
 
 interface ScriptSegment {
@@ -110,19 +109,18 @@ interface ClipResult {
 // ── Prompts ──────────────────────────────────────────────────────────
 
 const DEEP_RESEARCH_PROMPT = bilkoSystemPrompt(
-  `You are a senior European football journalist and social media strategist. Research the last 7 weeks of European football and identify the single MOST IMPORTANT event across the Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and Champions League.
+  `You are a senior European football journalist. Research the last 7 DAYS of European football and identify the single MOST IMPORTANT event across the Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and Champions League.
 
-Gather deep, interesting facts — surprising stats, record-breaking numbers, transfer fees, historical context, fan reactions. Focus on details that make people stop scrolling.
+Gather deep, interesting facts — surprising stats, record-breaking numbers, transfer fees, historical context, fan reactions. Focus on the most impactful details.
 
 Return ONLY valid JSON:
-{"research":{"headline":"...","league":"...","summary":"...","keyFacts":[{"fact":"...","number":"..."},{"fact":"...","number":"..."},{"fact":"...","number":"..."},{"fact":"...","number":"..."},{"fact":"...","number":"..."}],"socialHook":"..."}}
+{"research":{"headline":"...","league":"...","summary":"...","keyFacts":[{"fact":"...","number":"..."}]}}
 
 Rules:
-- headline: max 12 words, punchy
+- headline: max 15 words, punchy
 - league: the competition name
 - summary: 150-200 words with context
-- keyFacts: exactly 5 facts, each with a "fact" (max 20 words) and "number" (the key stat)
-- socialHook: 1 sentence that would make someone share this
+- keyFacts: 3 to 7 facts (focus on most impactful), each with a "fact" (max 20 words) and "number" (the key stat)
 - No markdown, ONLY the JSON object.`,
 );
 
@@ -136,8 +134,6 @@ ${research.summary}
 
 Key facts:
 ${research.keyFacts.map((f, i) => `${i + 1}. ${f.fact} — ${f.number}`).join("\n")}
-
-Social hook: ${research.socialHook}
 
 MISSION: Write a 20-SECOND video script PRE-PLANNED for these EXACT transitions:
 - SEGMENT 1 (0-8s): Opening hook + establish the story. Must end with a STABLE visual scene (no hard cuts) because the last 2 seconds (6-8s) will be used as visual grounding for the next clip.
@@ -161,7 +157,7 @@ Rules: title max 10 words. narration max 25 words per segment. visualDescription
 
 const STATUS_MESSAGES: Record<string, string[]> = {
   researching: [
-    "Scanning European football headlines from the last 7 weeks...",
+    "Scanning European football headlines from the last 7 days...",
     "Checking Premier League, La Liga, Serie A, Bundesliga, Ligue 1...",
     "Finding the single biggest event with interesting stats...",
   ],
@@ -313,12 +309,12 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       // ═══ Step 1: deep-research (LLM) ═══
       const { data: researchResult } = await trackStep(
         "deep-research",
-        { request: "Deep research the biggest European football event of the last 7 weeks" },
+        { request: "Deep research the biggest European football event of the last 7 days" },
         () =>
           chatJSON<{ research: ResearchResult }>(
             jsonPrompt(
               DEEP_RESEARCH_PROMPT,
-              "What is the biggest European football event in the last 7 weeks? Deep-research it with interesting facts and stats for a social media video.",
+              "What is the biggest European football event in the last 7 days? Deep-research it with interesting facts and stats for a social media video.",
             ),
           ),
       );
@@ -326,7 +322,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       const researchData = researchResult.data.research;
       setResearch(researchData);
       pushAgentMessage(
-        `Found the story: "${researchData.headline}" (${researchData.league}). ${researchData.socialHook} Writing the script now.`,
+        `Found the story: "${researchData.headline}" (${researchData.league}). Writing the script now.`,
       );
 
       // ═══ Step 2: write-video-script (LLM) ═══
@@ -362,9 +358,10 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
         () => generateVideo(clip1Prompt, { durationSeconds: 8, aspectRatio: "16:9" }),
       );
 
+      const clip1Video = clip1Result.videos?.[0];
       const clip1Data: ClipResult = {
-        videoBase64: (clip1Result as unknown as VideoGenerationResult).videos?.[0]?.videoBase64 ?? (clip1Result as any).videoBase64 ?? "",
-        mimeType: (clip1Result as unknown as VideoGenerationResult).videos?.[0]?.mimeType ?? (clip1Result as any).mimeType ?? "video/mp4",
+        videoBase64: clip1Video?.videoBase64 ?? "",
+        mimeType: clip1Video?.mimeType ?? "video/mp4",
         durationSeconds: 8,
       };
       setClip1(clip1Data);
@@ -387,9 +384,10 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
           }),
       );
 
+      const clip2Video = clip2Result.videos?.[0];
       const clip2Data: ClipResult = {
-        videoBase64: (clip2Result as unknown as VideoGenerationResult).videos?.[0]?.videoBase64 ?? (clip2Result as any).videoBase64 ?? "",
-        mimeType: (clip2Result as unknown as VideoGenerationResult).videos?.[0]?.mimeType ?? (clip2Result as any).mimeType ?? "video/mp4",
+        videoBase64: clip2Video?.videoBase64 ?? "",
+        mimeType: clip2Video?.mimeType ?? "video/mp4",
         durationSeconds: 8,
       };
       setClip2(clip2Data);
@@ -412,9 +410,10 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
           }),
       );
 
+      const clip3Video = clip3Result.videos?.[0];
       const clip3Data: ClipResult = {
-        videoBase64: (clip3Result as unknown as VideoGenerationResult).videos?.[0]?.videoBase64 ?? (clip3Result as any).videoBase64 ?? "",
-        mimeType: (clip3Result as unknown as VideoGenerationResult).videos?.[0]?.mimeType ?? (clip3Result as any).mimeType ?? "video/mp4",
+        videoBase64: clip3Video?.videoBase64 ?? "",
+        mimeType: clip3Video?.mimeType ?? "video/mp4",
         durationSeconds: 8,
       };
       setClip3(clip3Data);
@@ -645,11 +644,6 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
 
             {/* Script overlay & research context */}
             <div className="p-4 space-y-4">
-              {/* Social hook */}
-              <div className="rounded-lg bg-rose-500/5 p-3">
-                <p className="text-sm font-medium text-rose-600">{research.socialHook}</p>
-              </div>
-
               {/* Segments timeline */}
               <div>
                 <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
@@ -693,6 +687,39 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
                   ))}
                 </div>
               </div>
+
+              {/* Individual clips */}
+              {(clip1 || clip2 || clip3) && (
+                <div>
+                  <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                    <Film className="h-3.5 w-3.5" />
+                    Individual Clips
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[
+                      { clip: clip1, label: "Clip 1 — Opening Hook", seg: script.segments[0] },
+                      { clip: clip2, label: "Clip 2 — Story", seg: script.segments[1] },
+                      { clip: clip3, label: "Clip 3 — Payoff", seg: script.segments[2] },
+                    ].map(({ clip, label, seg }) =>
+                      clip ? (
+                        <div key={label} className="rounded-lg border border-border overflow-hidden">
+                          <video
+                            controls
+                            className="w-full aspect-video bg-black"
+                            src={`data:${clip.mimeType || "video/mp4"};base64,${clip.videoBase64}`}
+                          />
+                          <div className="p-2">
+                            <p className="text-xs font-medium truncate">{label}</p>
+                            {seg && (
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">{seg.narration}</p>
+                            )}
+                          </div>
+                        </div>
+                      ) : null,
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Research summary (collapsible) */}
               <details className="group">

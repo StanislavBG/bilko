@@ -673,7 +673,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     id: "weekly-football-video",
     name: "Weekly Football Highlight",
     description:
-      "Deep-research the biggest European football event of the last 7 weeks, then produce a 20-second social-media video. The script is pre-planned for 8-6-6 second transitions. Three 8-second Veo clips are chained using last-2-second grounding to create a single continuous video packed with interesting facts and stats.",
+      "Deep-research the biggest European football event of the last 7 days, then produce a 20-second social-media video. The script is pre-planned for 8-6-6 second transitions. Three 8-second Veo clips are chained using last-2-second grounding to create a single continuous video packed with interesting facts and stats.",
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/weekly-football-video-flow.tsx",
@@ -701,17 +701,16 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         name: "Deep Research — Top Event",
         type: "llm",
         description:
-          "Researches European football across Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and Champions League over the last 7 weeks. Identifies the single most important event and gathers interesting facts, stats, transfer fees, and social-media-worthy details that will hook viewers.",
-        prompt: "You are a senior European football journalist and social media strategist. Research the last 7 weeks of European football and identify the single MOST IMPORTANT event. Gather deep, interesting facts — surprising stats, record-breaking numbers, transfer fees, historical context, fan reactions. Focus on details that make people stop scrolling. Return: event headline, league, date range, a detailed summary (150-200 words), 5 key facts with numbers, and a social media hook (1 sentence that would make someone share this).",
-        userMessage: "What is the biggest European football event in the last 7 weeks? Deep-research it with interesting facts and stats for a social media video.",
+          "Researches European football across Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and Champions League over the last 7 days. Identifies the single most important event and gathers the most impactful facts, stats, transfer fees, and details.",
+        prompt: "You are a senior European football journalist. Research the last 7 DAYS of European football and identify the single MOST IMPORTANT event. Gather deep, interesting facts — surprising stats, record-breaking numbers, transfer fees, historical context, fan reactions. Focus on the most impactful details. Return: event headline (max 15 words), league, a detailed summary (150-200 words), and 3-7 key facts with numbers.",
+        userMessage: "What is the biggest European football event in the last 7 days? Deep-research it with interesting facts and stats for a social media video.",
         model: "gemini-2.5-flash",
         inputSchema: [],
         outputSchema: [
-          { name: "headline", type: "string", description: "Punchy headline for the event (max 12 words)" },
+          { name: "headline", type: "string", description: "Punchy headline for the event (max 15 words)" },
           { name: "league", type: "string", description: "League or competition" },
           { name: "summary", type: "string", description: "Detailed summary with context (150-200 words)" },
-          { name: "keyFacts", type: "array", description: "5 key facts with numbers/stats that hook social media viewers" },
-          { name: "socialHook", type: "string", description: "One-sentence social media hook" },
+          { name: "keyFacts", type: "array", description: "3-7 most impactful facts with numbers/stats" },
         ],
         dependsOn: [],
       },
@@ -725,7 +724,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         userMessage: "Write the 20-second video script with 8-6-6 transition planning based on the research.",
         model: "gemini-2.5-flash",
         inputSchema: [
-          { name: "research", type: "object", description: "The deep research output (headline, summary, keyFacts, socialHook)" },
+          { name: "research", type: "object", description: "The deep research output (headline, league, summary, keyFacts)" },
         ],
         outputSchema: [
           { name: "title", type: "string", description: "Video title for social media (max 10 words)" },
