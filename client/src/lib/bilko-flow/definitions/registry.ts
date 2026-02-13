@@ -1411,7 +1411,9 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         name: "Pick Your Goal",
         type: "user-input",
         description: "User selects their goal: 'Improve your LinkedIn' (exploratory questions → multiple description options per role) or 'Interview me based on my roles' (dynamic interview → feedback and insights).",
-        inputSchema: [],
+        inputSchema: [
+          { name: "goalOptions", type: "array", description: "Available goal options: 'improve' (LinkedIn descriptions) or 'interview' (professional interview feedback)" },
+        ],
         outputSchema: [
           { name: "goal", type: "string", description: "'improve' or 'interview'" },
         ],
