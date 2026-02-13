@@ -4,7 +4,7 @@
  * backward compatibility with flow components.
  */
 
-import { FlowProgress, type FlowProgressStep } from "bilko-flow/react";
+import { FlowProgress, type FlowProgressStep } from "@/components/ui/flow-progress";
 
 export type TrackerStep = FlowProgressStep;
 
