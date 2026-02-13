@@ -12,9 +12,9 @@
  *
  * ═══════════════════════════════════════════════════════════
  * ACTIVE FLOWS:  bilko-main, video-discovery, test-newsletter,
- *                work-with-me, ai-consultation,
- *                recursive-interviewer, linkedin-strategist,
- *                socratic-architect
+ *                weekly-football-video, work-with-me,
+ *                ai-consultation, recursive-interviewer,
+ *                linkedin-strategist, socratic-architect
  * ═══════════════════════════════════════════════════════════
  */
 
@@ -434,40 +434,38 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     ],
   },
 
-  // ── ACTIVE — Newsletter + Infographic + Video Pipeline ───
-  // The full media pipeline. Discovers stories, writes articles,
+  // ── ACTIVE — Newsletter + Infographic + Slideshow Pipeline ──
+  // The media pipeline. Discovers stories, writes articles,
   // then branches into parallel production of:
   //   1. Newsletter summary
   //   2. Cinematic infographic (Nano Banana AI image + data overlay)
   //   3. Slideshow video (AI-generated scene images + TTS narration)
-  //   4. AI video clips (Veo-generated 7-8 second videos)
-  // 12-step DAG with image/video generation phases.
+  // AI video generation has been moved to the dedicated weekly-football-video flow.
   {
     id: "test-newsletter",
     name: "European Football Newsletter",
     description:
-      "The full media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana, emphasizing scores & transfer fees), slideshow with AI-generated scene images, and a continuous ~20s AI video of the primary story (3 Veo clips: 8+6+6s with scene extension grounding, voiced by short summary).",
-    version: "4.0.0",
+      "The media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana, emphasizing scores & transfer fees), and slideshow with AI-generated scene images.",
+    version: "5.0.0",
     location: "landing",
     componentPath: "client/src/components/newsletter-flow.tsx",
-    tags: ["landing", "newsletter", "football", "european", "infographic", "video", "media-pipeline", "nano-banana", "veo"],
+    tags: ["landing", "newsletter", "football", "european", "infographic", "media-pipeline", "nano-banana"],
     icon: "Newspaper",
-    voiceTriggers: ["newsletter", "football", "news", "newspaper", "daily", "infographic", "video"],
+    voiceTriggers: ["newsletter", "football", "news", "newspaper", "daily", "infographic"],
     websiteUrl: "https://bilkobibitkov.replit.app/",
     phases: [
       { id: "discovering", label: "Discover", stepIds: ["discover-stories"] },
       { id: "writing", label: "Write", stepIds: ["write-articles"] },
       { id: "summarizing", label: "Rank & Summarize", stepIds: ["newsletter-summary", "rank-stories"] },
       { id: "producing", label: "Produce", stepIds: ["design-infographic", "create-narrative"] },
-      { id: "assembling", label: "Assemble", stepIds: ["generate-storyboard", "generate-video-prompts"] },
+      { id: "assembling", label: "Assemble", stepIds: ["generate-storyboard"] },
       { id: "generating-images", label: "Generate Images", stepIds: ["generate-infographic-image", "generate-scene-images"] },
-      { id: "generating-videos", label: "Generate Video Clips", stepIds: ["generate-video-clip-1", "generate-video-clip-2", "generate-video-clip-3"] },
       { id: "assembling-briefing", label: "Daily Briefing", stepIds: ["assemble-daily-briefing"] },
     ],
     output: {
       name: "mediaPackage",
       type: "object",
-      description: "The complete media package: newsletter, cinematic AI infographic image, slideshow with AI scene images, and a continuous ~20s primary story AI video (3 Veo clips: 8+6+6s chained via scene extension)",
+      description: "The complete media package: newsletter, cinematic AI infographic image, and slideshow with AI scene images",
     },
     steps: [
       {
@@ -598,25 +596,6 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         dependsOn: ["create-narrative"],
         parallel: true,
       },
-      {
-        id: "generate-video-prompts",
-        name: "Generate Veo Scene Extension Prompts",
-        type: "llm",
-        description:
-          "Creates 3 Veo-optimized prompts for a continuous ~20s primary story AI video using scene extension: Scene 1 (8s initial), Scene 2 (extend by ~6s), Scene 3 (extend merged by ~6s). Uses the main story article as voiceover script. Continuation language and shared style tokens.",
-        prompt: "Create 3 Veo scene extension prompts (8s+6s+6s) for the primary story with camera movements, continuation language, shared style tokens, aligned to voiceover.",
-        userMessage: "Generate Veo scene extension prompts for continuous video generation.",
-        model: "gemini-2.5-flash",
-        inputSchema: [
-          { name: "narrative", type: "object", description: "The narration script" },
-          { name: "ranked", type: "object", description: "Ranked stories for visual context" },
-        ],
-        outputSchema: [
-          { name: "videoPrompts", type: "object", description: "3 scenes with veoPrompt, cameraMovement, visualMood + extensionTechnique" },
-        ],
-        dependsOn: ["create-narrative"],
-        parallel: true,
-      },
       // ── Image Generation Phase (Nano Banana) ──
       {
         id: "generate-infographic-image",
@@ -657,96 +636,13 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         dependsOn: ["generate-storyboard"],
         parallel: true,
       },
-      // ── Video Generation Phase (Veo Scene Extension — Client-Side Sequential) ──
-      // Each clip is generated individually from the client to avoid HTTP timeouts.
-      // Clip 1 is a fresh generation. Clips 2 & 3 are scene extensions that
-      // use the previous clip's last ~1 second as visual grounding.
-      {
-        id: "generate-video-clip-1",
-        name: "Generate Video Clip 1 (Initial 8s)",
-        type: "llm",
-        subtype: "video",
-        description:
-          "Generates the initial 8-second video clip using Veo. This is a fresh text-to-video generation that establishes the visual tone for the continuous video.",
-        prompt: "Generate an initial 8-second video clip from the first Veo prompt.",
-        userMessage: "Generate the opening video clip with Veo.",
-        model: "veo-3.0-generate-001",
-        inputSchema: [
-          { name: "veoPrompt", type: "string", description: "The first Veo scene prompt" },
-        ],
-        outputSchema: [
-          { name: "videoBase64", type: "string", description: "Base64-encoded 8s video clip (MP4)" },
-          { name: "mimeType", type: "string", description: "Video MIME type" },
-          { name: "durationSeconds", type: "number", description: "Clip duration in seconds" },
-        ],
-        dependsOn: ["generate-video-prompts"],
-      },
-      {
-        id: "generate-video-clip-2",
-        name: "Extend Video (Clip 2, ~6s extension)",
-        type: "llm",
-        subtype: "video",
-        description:
-          "Extends clip 1 by ~6 seconds using Veo scene extension. Veo uses the last ~1 second of clip 1 as visual grounding seed, then generates continuation. Returns merged ~14s video.",
-        prompt: "Extend the initial clip by ~6 seconds using scene extension grounding.",
-        userMessage: "Extend the video with scene 2 using Veo scene extension.",
-        model: "veo-3.0-generate-001",
-        inputSchema: [
-          { name: "veoPrompt", type: "string", description: "The second Veo scene prompt (continuation language)" },
-          { name: "sourceVideoBase64", type: "string", description: "The clip 1 video to extend" },
-        ],
-        outputSchema: [
-          { name: "videoBase64", type: "string", description: "Base64-encoded merged ~14s video (MP4)" },
-          { name: "mimeType", type: "string", description: "Video MIME type" },
-          { name: "durationSeconds", type: "number", description: "Merged duration" },
-        ],
-        dependsOn: ["generate-video-clip-1"],
-      },
-      {
-        id: "generate-video-clip-3",
-        name: "Extend Video (Clip 3, final ~6s)",
-        type: "llm",
-        subtype: "video",
-        description:
-          "Extends the merged video by ~6 seconds using Veo scene extension. Veo uses the last ~1 second of the merged ~14s video as grounding seed. Returns final ~20s continuous video.",
-        prompt: "Complete the continuous video with the final scene extension.",
-        userMessage: "Complete the video with the final Veo scene extension.",
-        model: "veo-3.0-generate-001",
-        inputSchema: [
-          { name: "veoPrompt", type: "string", description: "The third Veo scene prompt (conclusion)" },
-          { name: "sourceVideoBase64", type: "string", description: "The merged ~14s video to extend" },
-        ],
-        outputSchema: [
-          { name: "videoBase64", type: "string", description: "Base64-encoded final ~20s video (MP4)" },
-          { name: "mimeType", type: "string", description: "Video MIME type" },
-          { name: "durationSeconds", type: "number", description: "Final merged duration" },
-        ],
-        dependsOn: ["generate-video-clip-2"],
-      },
-      // ── Concatenation Phase (FFmpeg) ──
-      {
-        id: "concatenate-video-clips",
-        name: "Concatenate Video Clips (FFmpeg)",
-        type: "transform",
-        description:
-          "Concatenates the 3 individual Veo clips (8+6+6s) into a single ~20s continuous video using server-side FFmpeg concat demuxer. Container-level copy, no re-encoding.",
-        inputSchema: [
-          { name: "clips", type: "array", description: "Array of base64-encoded MP4 clips to concatenate" },
-        ],
-        outputSchema: [
-          { name: "videoBase64", type: "string", description: "Base64-encoded concatenated ~20s video (MP4)" },
-          { name: "mimeType", type: "string", description: "Video MIME type (video/mp4)" },
-          { name: "durationSeconds", type: "number", description: "Total duration of concatenated video" },
-        ],
-        dependsOn: ["generate-video-clip-3"],
-      },
       // ── Assembly Phase — Daily Briefing ──
       {
         id: "assemble-daily-briefing",
         name: "Assemble Daily Briefing",
         type: "display",
         description:
-          "Assembles all generated outputs into the unified Daily Briefing view: newsletter articles, AI infographic image, slideshow, and continuous AI video. This is the final presentation the user sees.",
+          "Assembles all generated outputs into the unified Daily Briefing view: newsletter articles, AI infographic image, and slideshow. This is the final presentation the user sees.",
         inputSchema: [
           { name: "newsletter", type: "object", description: "Edition summary with mood and takeaway" },
           { name: "articles", type: "array", description: "The 3 written articles" },
@@ -755,12 +651,186 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           { name: "storyboard", type: "object", description: "4-scene storyboard" },
           { name: "narrative", type: "object", description: "60s broadcast narration script" },
           { name: "sceneImages", type: "array", description: "AI-generated scene images" },
-          { name: "continuousVideo", type: "object", description: "Continuous primary story AI video (~20s, FFmpeg-concatenated)" },
         ],
         outputSchema: [
           { name: "exitSummary", type: "string", description: "Summary of the daily briefing for bilko-main recycling" },
         ],
-        dependsOn: ["newsletter-summary", "generate-infographic-image", "generate-scene-images", "concatenate-video-clips"],
+        dependsOn: ["newsletter-summary", "generate-infographic-image", "generate-scene-images"],
+      },
+    ],
+  },
+
+  // ── ACTIVE — Weekly Football Highlight Video ─────────────
+  // Dedicated 20-second social-media video pipeline.
+  // Separated from the newsletter flow for independent iteration.
+  //
+  // Pipeline:
+  //   1. Deep research → find the biggest European football event (last 7 weeks)
+  //   2. Write 20s script pre-planned for 8-6-6 second transition points
+  //   3. Generate 3 × 8s Veo clips chained via last-2-second grounding
+  //   4. Concatenate → single ~20s continuous video
+  {
+    id: "weekly-football-video",
+    name: "Weekly Football Highlight",
+    description:
+      "Deep-research the biggest European football event of the last 7 weeks, then produce a 20-second social-media video. The script is pre-planned for 8-6-6 second transitions. Three 8-second Veo clips are chained using last-2-second grounding to create a single continuous video packed with interesting facts and stats.",
+    version: "1.0.0",
+    location: "landing",
+    componentPath: "client/src/components/weekly-football-video-flow.tsx",
+    tags: ["landing", "football", "european", "video", "social-media", "veo", "highlight", "weekly"],
+    icon: "Clapperboard",
+    voiceTriggers: ["video", "highlight", "weekly", "football video", "social media", "clip"],
+    websiteUrl: "https://bilkobibitkov.replit.app/",
+    phases: [
+      { id: "researching", label: "Research", stepIds: ["deep-research"] },
+      { id: "scripting", label: "Script", stepIds: ["write-video-script"] },
+      { id: "generating-clip-1", label: "Clip 1", stepIds: ["generate-clip-1"] },
+      { id: "generating-clip-2", label: "Clip 2", stepIds: ["generate-clip-2"] },
+      { id: "generating-clip-3", label: "Clip 3", stepIds: ["generate-clip-3"] },
+      { id: "assembling", label: "Assemble", stepIds: ["concatenate-clips"] },
+      { id: "complete", label: "Preview", stepIds: ["preview-video"] },
+    ],
+    output: {
+      name: "continuousVideo",
+      type: "object",
+      description: "A single ~20-second continuous social-media video covering the week's biggest European football event",
+    },
+    steps: [
+      {
+        id: "deep-research",
+        name: "Deep Research — Top Event",
+        type: "llm",
+        description:
+          "Researches European football across Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and Champions League over the last 7 weeks. Identifies the single most important event and gathers interesting facts, stats, transfer fees, and social-media-worthy details that will hook viewers.",
+        prompt: "You are a senior European football journalist and social media strategist. Research the last 7 weeks of European football and identify the single MOST IMPORTANT event. Gather deep, interesting facts — surprising stats, record-breaking numbers, transfer fees, historical context, fan reactions. Focus on details that make people stop scrolling. Return: event headline, league, date range, a detailed summary (150-200 words), 5 key facts with numbers, and a social media hook (1 sentence that would make someone share this).",
+        userMessage: "What is the biggest European football event in the last 7 weeks? Deep-research it with interesting facts and stats for a social media video.",
+        model: "gemini-2.5-flash",
+        inputSchema: [],
+        outputSchema: [
+          { name: "headline", type: "string", description: "Punchy headline for the event (max 12 words)" },
+          { name: "league", type: "string", description: "League or competition" },
+          { name: "summary", type: "string", description: "Detailed summary with context (150-200 words)" },
+          { name: "keyFacts", type: "array", description: "5 key facts with numbers/stats that hook social media viewers" },
+          { name: "socialHook", type: "string", description: "One-sentence social media hook" },
+        ],
+        dependsOn: [],
+      },
+      {
+        id: "write-video-script",
+        name: "Write 20s Video Script (8-6-6 transitions)",
+        type: "llm",
+        description:
+          "Writes a precisely timed 20-second video script PRE-PLANNED for the BO3 generation pattern: 8s first segment, then two 6s segments. Each segment transition must be designed so the last 2 seconds provide clean visual grounding for the next clip. The script weaves in the most compelling facts and stats from the research.",
+        prompt: "You are a social media video scriptwriter specializing in short-form sports content. Write a 20-SECOND video script for the researched football event.\n\nCRITICAL: The script MUST be pre-planned for these EXACT transitions:\n- SEGMENT 1 (0-8s): Opening hook + establish the story. Must end with a STABLE visual scene (no hard cuts) because the last 2 seconds (6-8s) will be used as visual grounding for the next clip.\n- SEGMENT 2 (8-14s): Develop the story with the most shocking stat/fact. The opening must visually CONTINUE from segment 1's ending. Must end with a stable visual scene (12-14s used as grounding).\n- SEGMENT 3 (14-20s): Payoff + call to action. Opens continuing from segment 2's ending. Ends with a satisfying visual conclusion.\n\nFor each segment provide:\n1. Narration text (spoken words, timed to the segment)\n2. Visual description (what the viewer sees — cinematic, social-media style)\n3. Transition note (how the last 2s set up the next segment's grounding)\n4. The key fact/stat featured in that segment\n\nMake it ENGAGING — this is for social media. Short punchy sentences, dramatic reveals, surprising numbers.",
+        userMessage: "Write the 20-second video script with 8-6-6 transition planning based on the research.",
+        model: "gemini-2.5-flash",
+        inputSchema: [
+          { name: "research", type: "object", description: "The deep research output (headline, summary, keyFacts, socialHook)" },
+        ],
+        outputSchema: [
+          { name: "title", type: "string", description: "Video title for social media (max 10 words)" },
+          { name: "segments", type: "array", description: "3 segments with narration, visualDescription, transitionNote, keyStat, durationSec (8, 6, 6)" },
+          { name: "totalDurationSec", type: "number", description: "Total duration — must be 20" },
+          { name: "veoStyleTokens", type: "string", description: "Shared visual style tokens for all 3 Veo prompts (lighting, palette, mood)" },
+        ],
+        dependsOn: ["deep-research"],
+      },
+      {
+        id: "generate-clip-1",
+        name: "Generate Clip 1 (8s initial)",
+        type: "llm",
+        subtype: "video",
+        description:
+          "Generates the initial 8-second video clip using Veo/BO3. Fresh text-to-video generation from the first segment's visual description. The last 2 seconds must show a stable, continuing scene that Veo can use as grounding for clip 2.",
+        prompt: "Generate the opening 8-second video clip from segment 1's visual description. End with stable motion for grounding.",
+        userMessage: "Generate the opening 8-second video clip.",
+        model: "veo-3.0-generate-001",
+        inputSchema: [
+          { name: "visualDescription", type: "string", description: "Segment 1 visual description from the script" },
+          { name: "styleTokens", type: "string", description: "Shared Veo style tokens" },
+        ],
+        outputSchema: [
+          { name: "videoBase64", type: "string", description: "Base64-encoded 8s video clip (MP4)" },
+          { name: "mimeType", type: "string", description: "Video MIME type" },
+          { name: "durationSeconds", type: "number", description: "Clip duration (8s)" },
+        ],
+        dependsOn: ["write-video-script"],
+      },
+      {
+        id: "generate-clip-2",
+        name: "Generate Clip 2 (8s, grounded on clip 1)",
+        type: "llm",
+        subtype: "video",
+        description:
+          "Generates the second 8-second clip using Veo/BO3 with the last 2 seconds of clip 1 as visual grounding. The effective new content is ~6 seconds (2s overlap from grounding). Continues the visual narrative from segment 2 of the script.",
+        prompt: "Generate an 8-second video extending clip 1. Veo uses the last 2 seconds of clip 1 as visual grounding seed. The visual must continue seamlessly.",
+        userMessage: "Generate clip 2 grounded on the last 2 seconds of clip 1.",
+        model: "veo-3.0-generate-001",
+        inputSchema: [
+          { name: "visualDescription", type: "string", description: "Segment 2 visual description from the script" },
+          { name: "styleTokens", type: "string", description: "Shared Veo style tokens" },
+          { name: "sourceVideoBase64", type: "string", description: "Clip 1 video — last 2s used as grounding" },
+        ],
+        outputSchema: [
+          { name: "videoBase64", type: "string", description: "Base64-encoded 8s video clip (MP4)" },
+          { name: "mimeType", type: "string", description: "Video MIME type" },
+          { name: "durationSeconds", type: "number", description: "Clip duration (8s, ~6s net new)" },
+        ],
+        dependsOn: ["generate-clip-1"],
+      },
+      {
+        id: "generate-clip-3",
+        name: "Generate Clip 3 (8s, grounded on clip 2)",
+        type: "llm",
+        subtype: "video",
+        description:
+          "Generates the final 8-second clip using Veo/BO3 with the last 2 seconds of clip 2 as visual grounding. The effective new content is ~6 seconds. Concludes the video with the payoff from segment 3 of the script.",
+        prompt: "Generate the final 8-second video extending clip 2. Veo uses the last 2 seconds of clip 2 as grounding. Conclude the sequence satisfyingly.",
+        userMessage: "Generate final clip 3 grounded on the last 2 seconds of clip 2.",
+        model: "veo-3.0-generate-001",
+        inputSchema: [
+          { name: "visualDescription", type: "string", description: "Segment 3 visual description from the script" },
+          { name: "styleTokens", type: "string", description: "Shared Veo style tokens" },
+          { name: "sourceVideoBase64", type: "string", description: "Clip 2 video — last 2s used as grounding" },
+        ],
+        outputSchema: [
+          { name: "videoBase64", type: "string", description: "Base64-encoded 8s video clip (MP4)" },
+          { name: "mimeType", type: "string", description: "Video MIME type" },
+          { name: "durationSeconds", type: "number", description: "Clip duration (8s, ~6s net new)" },
+        ],
+        dependsOn: ["generate-clip-2"],
+      },
+      {
+        id: "concatenate-clips",
+        name: "Concatenate Clips (FFmpeg)",
+        type: "transform",
+        description:
+          "Concatenates the 3 individual 8-second Veo clips into a single ~20-second continuous video using server-side FFmpeg concat demuxer. Container-level copy, no re-encoding. The 2-second grounding overlaps are trimmed during concatenation.",
+        inputSchema: [
+          { name: "clips", type: "array", description: "Array of 3 base64-encoded 8s MP4 clips" },
+        ],
+        outputSchema: [
+          { name: "videoBase64", type: "string", description: "Base64-encoded concatenated ~20s video (MP4)" },
+          { name: "mimeType", type: "string", description: "Video MIME type (video/mp4)" },
+          { name: "durationSeconds", type: "number", description: "Total duration of concatenated video (~20s)" },
+        ],
+        dependsOn: ["generate-clip-3"],
+      },
+      {
+        id: "preview-video",
+        name: "Preview & Export",
+        type: "display",
+        description:
+          "Displays the final ~20-second continuous video with the script overlay, key facts, and social media export options. Shows each segment's narration text alongside the video playback.",
+        inputSchema: [
+          { name: "research", type: "object", description: "Original research data" },
+          { name: "script", type: "object", description: "The 20s video script with segments" },
+          { name: "continuousVideo", type: "object", description: "The concatenated ~20s video" },
+        ],
+        outputSchema: [
+          { name: "exitSummary", type: "string", description: "Summary for bilko-main recycling" },
+        ],
+        dependsOn: ["concatenate-clips"],
       },
     ],
   },
@@ -1429,6 +1499,7 @@ export const activeFlowIds = new Set([
   "bilko-main",
   "video-discovery",
   "test-newsletter",
+  "weekly-football-video",
   "work-with-me",
   "ai-consultation",
   "recursive-interviewer",
