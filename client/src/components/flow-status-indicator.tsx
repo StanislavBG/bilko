@@ -7,7 +7,8 @@
  */
 
 import { useMemo } from "react";
-import { FlowProgress, PADDING, type FlowProgressStep, type FlowProgressProps } from "bilko-flow/react";
+import { FlowProgress, type FlowProgressStep, type FlowProgressProps } from "@/components/ui/flow-progress";
+import { PADDING } from "bilko-flow/react";
 import { useFlowBus, type FlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowById } from "@/lib/bilko-flow";
 import type { FlowPhase, FlowDefinition } from "@/lib/bilko-flow";
