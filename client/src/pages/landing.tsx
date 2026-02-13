@@ -52,6 +52,7 @@ import {
   Construction,
   CheckCircle2,
   ExternalLink,
+  Clapperboard,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
@@ -78,6 +79,7 @@ interface ModeOption {
 const iconMap: Record<string, ReactNode> = {
   Play: <Play className="h-6 w-6" />,
   Gamepad2: <Gamepad2 className="h-6 w-6" />,
+  Clapperboard: <Clapperboard className="h-6 w-6" />,
 };
 
 /** Menu items — only ACTIVE flows from the registry (excludes bilko-main and standby) */
@@ -118,6 +120,7 @@ const FLOW_TO_MODE: Record<string, LearningModeId> = {
   "socratic-architect": "socratic",
   "work-with-me": "work-with-me",
   "test-newsletter": "test-newsletter",
+  "weekly-football-video": "weekly-football-video",
 };
 
 // ── Subflow ID mapping ──────────────────────────────────
@@ -131,6 +134,7 @@ const MODE_TO_OWNER: Record<string, string> = {
   socratic: "socratic-architect",
   "work-with-me": "work-with-me",
   "test-newsletter": "test-newsletter",
+  "weekly-football-video": "weekly-football-video",
 };
 
 // ── LLM greeting prompts ────────────────────────────────
@@ -793,6 +797,23 @@ function RightPanelContent({
       {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} onComplete={onComplete} />}
       {mode === "work-with-me" && <WorkWithMeFlow onComplete={onComplete} />}
       {mode === "test-newsletter" && <NewsletterFlow onComplete={onComplete} />}
+      {mode === "weekly-football-video" && (
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+          <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center mb-6">
+            <Clapperboard className="h-8 w-8 text-rose-500" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Weekly Football Highlight</h2>
+          <p className="text-muted-foreground max-w-md mb-6">
+            Deep-research the biggest European football event, then produce a 20-second social-media video with 3 Veo clips chained via last-2-second grounding.
+          </p>
+          <p className="text-sm text-muted-foreground/60">Component coming soon — flow definition is ready in the registry.</p>
+          {onComplete && (
+            <Button variant="outline" size="sm" className="mt-4" onClick={() => onComplete("Previewed the Weekly Football Highlight flow.")}>
+              Done
+            </Button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

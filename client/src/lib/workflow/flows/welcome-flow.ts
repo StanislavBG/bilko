@@ -60,6 +60,13 @@ export const LEARNING_MODES = [
     icon: "Newspaper",
     voiceTriggers: ["newsletter", "football", "news", "newspaper", "daily"],
   },
+  {
+    id: "weekly-football-video",
+    label: "Weekly Football Highlight",
+    description: "Deep-research the biggest European football event and produce a 20-second social media video",
+    icon: "Clapperboard",
+    voiceTriggers: ["video", "highlight", "weekly", "football video", "social media", "clip"],
+  },
 ] as const;
 
 export type LearningModeId = typeof LEARNING_MODES[number]["id"];
