@@ -12,11 +12,11 @@
  */
 
 import { createLogger } from "../logger";
+import { MODEL_DEFAULTS } from "./index";
 
 const log = createLogger("image-generation");
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-image";
 
 export interface ImageGenerationRequest {
   prompt: string;
@@ -52,7 +52,7 @@ export async function generateImage(
   request: ImageGenerationRequest,
 ): Promise<ImageGenerationResponse> {
   const apiKey = getApiKey();
-  const model = request.model ?? DEFAULT_IMAGE_MODEL;
+  const model = request.model ?? MODEL_DEFAULTS.image;
   const url = `${GEMINI_BASE_URL}/models/${model}:generateContent?key=${apiKey}`;
 
   // Build the content parts

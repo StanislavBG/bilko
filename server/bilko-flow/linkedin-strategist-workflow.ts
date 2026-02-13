@@ -149,7 +149,7 @@ RESPONSE FORMAT — return ONLY valid JSON:
 No markdown. ONLY the JSON object.`,
         userMessageTemplate:
           "I'd like to {{#if goal == 'improve'}}improve my LinkedIn profile{{else}}be interviewed based on my professional roles{{/if}}. My profile URL is {{linkedinUrl}}. Let's start.",
-        model: "gemini-2.5-flash",
+
         templateSources: ["goal-selection", "linkedin-input"],
       },
       outputs: {
@@ -193,7 +193,7 @@ No markdown. ONLY the JSON object.`,
         systemPromptTemplate:
           "Continue the conversation. Build on the user's answers. Maintain the cumulative rolesDiscovered list. Set done=true when enough context is gathered.",
         userMessageTemplate: "User's latest answer + roles context",
-        model: "gemini-2.5-flash",
+
         templateSource: "conversation-start",
       },
       outputs: {
@@ -303,7 +303,7 @@ RESPONSE FORMAT — return ONLY valid JSON:
 Be specific. Reference actual things said. No markdown. ONLY the JSON object.`,
         userMessageTemplate:
           "Conversation transcript and discovered roles. Generate the final deliverable.",
-        model: "gemini-2.5-flash",
+
         templateSources: [
           "goal-selection",
           "linkedin-input",

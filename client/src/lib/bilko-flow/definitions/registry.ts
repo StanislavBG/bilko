@@ -57,7 +57,7 @@ const allFlows: FlowDefinition[] = [
         prompt:
           "You are greeting a new visitor to the AI School. Generate a warm, natural opening. Welcome them, introduce yourself briefly as Bilko their AI training partner, and ask how they'd like to learn today. 2-3 sentences max. Plain text only.",
         userMessage: "A new visitor just arrived at the AI School.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           {
             name: "recycleContext",
@@ -241,7 +241,7 @@ Return ONLY valid JSON. Example:
 Rules: title max 6 words, description max 12 words. No markdown, ONLY the JSON object.`,
         userMessage:
           "What are 10 interesting topics someone curious would enjoy learning about right now?",
-        model: "gemini-2.5-flash",
+
         inputSchema: [],
         outputSchema: [
           {
@@ -289,7 +289,7 @@ Return ONLY valid JSON. Example:
 Rules: each question max 15 words. No markdown, ONLY the JSON object.`,
         userMessage:
           'What are 5 interesting questions someone new to "{topic}" would want answered?',
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           {
             name: "topic",
@@ -343,7 +343,7 @@ Return ONLY valid JSON. Example:
 Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSON object.`,
         userMessage:
           'Generate YouTube search queries for topic "{topic}", question: "{question}"',
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           {
             name: "topic",
@@ -476,7 +476,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Acts as a European football journalist to discover 3 trending stories from across the major leagues — Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and Champions League.",
         prompt: "Discover 3 trending European football stories with headline, summary, league, and keyStat.",
         userMessage: "Discover 3 trending European football stories for today's newsletter.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [],
         outputSchema: [
           {
@@ -495,7 +495,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Writes short newspaper articles and cinematic image descriptions for each discovered story.",
         prompt: "Write 3 newspaper articles (60-80 words each) with image descriptions.",
         userMessage: "Write 3 newspaper articles with image descriptions.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           { name: "stories", type: "array", description: "The 3 discovered stories" },
         ],
@@ -512,7 +512,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Distills articles into an experience summary with mood and takeaway. Runs in parallel with rank-stories.",
         prompt: "Create a newsletter experience summary with editionTitle, topStory, mood, takeaway.",
         userMessage: "Create a newsletter experience summary.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           { name: "articles", type: "array", description: "The 3 completed articles" },
         ],
@@ -530,7 +530,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Ranks the 3 stories by newsworthiness. #1 becomes the infographic/video lead. Runs in parallel with newsletter-summary.",
         prompt: "Rank stories: pick 1 main + 2 supporting with stat callouts for infographic and video.",
         userMessage: "Rank the 3 stories by newsworthiness for infographic and video production.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           { name: "articles", type: "array", description: "The 3 articles" },
           { name: "stories", type: "array", description: "Original story data with keyStats" },
@@ -549,7 +549,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Creates structured infographic data emphasizing SCORES, TRANSFER FEES, and NUMERICAL DATA from ranked stories — plus a rich imagePrompt for Nano Banana cinematic wallpaper generation. Runs in parallel with create-narrative.",
         prompt: "Design an infographic layout with title, mainStory (60% space), 2 supporting cards, and a cinematic imagePrompt for AI image generation emphasizing scores and transfer fees.",
         userMessage: "Design a sports infographic for the ranked stories with scores and transfer fee emphasis.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           { name: "ranked", type: "object", description: "Ranked stories with main + supporting" },
         ],
@@ -567,7 +567,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Writes a 60-second broadcast narration script (10s intro, 20s main, 15s+15s supporting). Runs in parallel with design-infographic.",
         prompt: "Write a 60-second sports TV narration: intro(10s) + main(20s) + 2 supporting(15s each).",
         userMessage: "Write a 60-second broadcast narration script.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           { name: "ranked", type: "object", description: "Ranked stories" },
         ],
@@ -585,7 +585,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Creates a 4-scene visual storyboard for the slideshow video — image descriptions, visual styles, transitions. Runs in parallel with generate-video-prompts.",
         prompt: "Create 4 storyboard scenes with image descriptions, visual style, transitions.",
         userMessage: "Create a visual storyboard for the video slideshow.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           { name: "narrative", type: "object", description: "The narration script" },
           { name: "ranked", type: "object", description: "Ranked stories for visual context" },
@@ -606,7 +606,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates a cinematic wallpaper-style infographic image using Nano Banana (Gemini native image gen). Focuses on scores, transfer fees, and dramatic football visuals with stat callouts.",
         prompt: "Generate a cinematic infographic image for European football with scores and transfer fee emphasis.",
         userMessage: "Generate the infographic hero image with Nano Banana.",
-        model: "gemini-2.5-flash-image",
+
         inputSchema: [
           { name: "infographic", type: "object", description: "Infographic data with imagePrompt" },
         ],
@@ -626,7 +626,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates cinematic AI images for each storyboard scene using Nano Banana. Each image focuses on one key event with dramatic football visuals.",
         prompt: "Generate cinematic scene images for each storyboard scene, one per key football event.",
         userMessage: "Generate AI images for the slideshow scenes.",
-        model: "gemini-2.5-flash-image",
+
         inputSchema: [
           { name: "storyboard", type: "object", description: "Storyboard with scene image descriptions" },
         ],
@@ -704,7 +704,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Researches European football across Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and Champions League over the last 7 days. Identifies the single most important event and gathers the most impactful facts, stats, transfer fees, and details.",
         prompt: "You are a senior European football journalist. Research the last 7 DAYS of European football and identify the single MOST IMPORTANT event. Gather deep, interesting facts — surprising stats, record-breaking numbers, transfer fees, historical context, fan reactions. Focus on the most impactful details. Return: event headline (max 15 words), league, a detailed summary (150-200 words), and 3-7 key facts with numbers.",
         userMessage: "What is the biggest European football event in the last 7 days? Deep-research it with interesting facts and stats for a social media video.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [],
         outputSchema: [
           { name: "headline", type: "string", description: "Punchy headline for the event (max 15 words)" },
@@ -722,7 +722,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Writes a precisely timed 20-second video script PRE-PLANNED for the BO3 generation pattern: 8s first segment, then two 6s segments. Each segment transition must be designed so the last 2 seconds provide clean visual grounding for the next clip. The script weaves in the most compelling facts and stats from the research.",
         prompt: "You are a social media video scriptwriter specializing in short-form sports content. Write a 20-SECOND video script for the researched football event.\n\nCRITICAL: The script MUST be pre-planned for these EXACT transitions:\n- SEGMENT 1 (0-8s): Opening hook + establish the story. Must end with a STABLE visual scene (no hard cuts) because the last 2 seconds (6-8s) will be used as visual grounding for the next clip.\n- SEGMENT 2 (8-14s): Develop the story with the most shocking stat/fact. The opening must visually CONTINUE from segment 1's ending. Must end with a stable visual scene (12-14s used as grounding).\n- SEGMENT 3 (14-20s): Payoff + call to action. Opens continuing from segment 2's ending. Ends with a satisfying visual conclusion.\n\nFor each segment provide:\n1. Narration text (spoken words, timed to the segment)\n2. Visual description (what the viewer sees — cinematic, social-media style)\n3. Transition note (how the last 2s set up the next segment's grounding)\n4. The key fact/stat featured in that segment\n\nMake it ENGAGING — this is for social media. Short punchy sentences, dramatic reveals, surprising numbers.",
         userMessage: "Write the 20-second video script with 8-6-6 transition planning based on the research.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           { name: "research", type: "object", description: "The deep research output (headline, league, summary, keyFacts)" },
         ],
@@ -743,7 +743,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates the initial 8-second video clip using Veo/BO3. Fresh text-to-video generation from the first segment's visual description. The last 2 seconds must show a stable, continuing scene that Veo can use as grounding for clip 2.",
         prompt: "Generate the opening 8-second video clip from segment 1's visual description. End with stable motion for grounding.",
         userMessage: "Generate the opening 8-second video clip.",
-        model: "veo-3.1-generate-preview",
+
         inputSchema: [
           { name: "visualDescription", type: "string", description: "Segment 1 visual description from the script" },
           { name: "styleTokens", type: "string", description: "Shared Veo style tokens" },
@@ -764,7 +764,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates the second 8-second clip using Veo/BO3 with the last 2 seconds of clip 1 as visual grounding. The effective new content is ~6 seconds (2s overlap from grounding). Continues the visual narrative from segment 2 of the script.",
         prompt: "Generate an 8-second video extending clip 1. Veo uses the last 2 seconds of clip 1 as visual grounding seed. The visual must continue seamlessly.",
         userMessage: "Generate clip 2 grounded on the last 2 seconds of clip 1.",
-        model: "veo-3.1-generate-preview",
+
         inputSchema: [
           { name: "visualDescription", type: "string", description: "Segment 2 visual description from the script" },
           { name: "styleTokens", type: "string", description: "Shared Veo style tokens" },
@@ -786,7 +786,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates the final 8-second clip using Veo/BO3 with the last 2 seconds of clip 2 as visual grounding. The effective new content is ~6 seconds. Concludes the video with the payoff from segment 3 of the script.",
         prompt: "Generate the final 8-second video extending clip 2. Veo uses the last 2 seconds of clip 2 as grounding. Conclude the sequence satisfyingly.",
         userMessage: "Generate final clip 3 grounded on the last 2 seconds of clip 2.",
-        model: "veo-3.1-generate-preview",
+
         inputSchema: [
           { name: "visualDescription", type: "string", description: "Segment 3 visual description from the script" },
           { name: "styleTokens", type: "string", description: "Shared Veo style tokens" },
@@ -872,7 +872,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Researches global news over the last 7 days and finds the single most visually interesting story. Focuses on stories with cinematic potential (sports, space, nature, technology).",
         prompt: "You are a senior news researcher. Research the last 7 DAYS of global news and identify the single MOST INTERESTING story — something visually compelling that would make a great short video clip.",
         userMessage: "What is the most visually interesting news story of the last 7 days?",
-        model: "gemini-2.5-flash",
+
         inputSchema: [],
         outputSchema: [
           { name: "headline", type: "string", description: "Punchy headline (max 12 words)" },
@@ -890,7 +890,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Writes a self-contained 8-second micro-story clip script with narration text, detailed visual description for Veo, and Veo style tokens.",
         prompt: "Write a single 8-SECOND clip script. This clip must be a self-contained micro-story — hook, reveal, payoff in 8 seconds.",
         userMessage: "Write a punchy 8-second clip script based on the research.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           { name: "research", type: "object", description: "The deep research output" },
         ],
@@ -912,7 +912,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Generates a single 8-second video clip using Veo. Fresh text-to-video generation — no source grounding. This is the atomic unit.",
         prompt: "Generate an 8-second video clip from the visual description and style tokens.",
         userMessage: "Generate the 8-second video clip.",
-        model: "veo-3.1-generate-preview",
+
         inputSchema: [
           { name: "visualDescription", type: "string", description: "Clip visual description" },
           { name: "styleTokens", type: "string", description: "Veo style tokens" },
@@ -992,7 +992,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         prompt:
           "Given a user objective, find the exact step-by-step process with real URLs from official websites.",
         userMessage: 'Find the step-by-step process for: "{objective}"',
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           {
             name: "objective",
@@ -1075,7 +1075,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "Analyze the page structure and generate element-level guidance with justifications for achieving the user's objective.",
         userMessage:
           "Guide the user through this page to help them achieve their goal.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           {
             name: "objective",
@@ -1173,7 +1173,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
           "You are an elite AI strategy consultant. Ask your first warm, conversational question to understand the user's role and industry.",
         userMessage:
           "Start the consultation. Ask your first question to understand who this person is and what they do.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [],
         outputSchema: [
           {
@@ -1199,7 +1199,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         prompt:
           "Given the interview so far, ask the next question OR set done=true if you have enough context for recommendations.",
         userMessage: "User's latest answer + full conversation history",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           {
             name: "conversationHistory",
@@ -1252,7 +1252,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         prompt:
           "Based on the interview transcript, provide exactly 2 obvious and 2 non-obvious AI recommendations specific to the user's workflows.",
         userMessage: "Full interview transcript with all Q&A pairs",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           {
             name: "transcript",
@@ -1330,7 +1330,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         description: "Opens with a question to understand who the user is and what challenge brought them here.",
         prompt: "Begin the Recursive Interviewer. Establish context.",
         userMessage: "Ask first question: role, domain, challenge/goal.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [],
         outputSchema: [{ name: "nextQuestion", type: "string", description: "Opening question" }],
         dependsOn: [],
@@ -1342,7 +1342,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         description: "Each question references prior answers. Breadth first, then depth. 5-7 total.",
         prompt: "Build recursively on prior answers.",
         userMessage: "Full conversation history",
-        model: "gemini-2.5-flash",
+
         inputSchema: [{ name: "history", type: "array", description: "Prior Q&A pairs" }],
         outputSchema: [{ name: "nextQuestion", type: "string", description: "Next interview question" }, { name: "done", type: "boolean", description: "Whether interview is complete" }],
         dependsOn: ["first-question"],
@@ -1363,7 +1363,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         description: "Delivers 2 confirmed insights and 2 hidden patterns with tools and impact.",
         prompt: "Analyze transcript for confirmed + hidden insights.",
         userMessage: "Full interview transcript",
-        model: "gemini-2.5-flash",
+
         inputSchema: [{ name: "transcript", type: "string", description: "Complete interview Q&A transcript" }],
         outputSchema: [{ name: "obvious", type: "array", description: "Primary recommendations" }, { name: "nonObvious", type: "array", description: "Secondary/hidden recommendations" }],
         dependsOn: ["recursive-questions", "user-answers"],
@@ -1441,7 +1441,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         description: "Multi-turn conversation adapted to the selected goal. For 'improve': asks exploratory questions about roles and achievements, discovers roles, takes notes. For 'interview': conducts a dynamic professional interview based on the user's roles. The LLM tracks discovered roles and signals when conversation is complete.",
         prompt: "Conduct a goal-adapted conversation: explore roles for improvement or conduct a professional interview.",
         userMessage: "User's responses to conversational questions",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           { name: "goal", type: "string", description: "The user's selected goal" },
           { name: "linkedinUrl", type: "string", description: "The user's LinkedIn URL" },
@@ -1473,7 +1473,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         description: "For 'improve' goal: generates 2-3 description options per discovered role (impact-focused, leadership-focused, technical depth). For 'interview' goal: generates interview feedback with summary, strengths, areas to explore, and role-specific insights.",
         prompt: "Generate goal-appropriate results from the conversation: description options (improve) or interview feedback (interview).",
         userMessage: "Conversation transcript + discovered roles + goal",
-        model: "gemini-2.5-flash",
+
         inputSchema: [
           { name: "goal", type: "string", description: "The user's selected goal" },
           { name: "conversationTranscript", type: "string", description: "Full conversation history" },
@@ -1548,7 +1548,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         description: "First question from the configured expert persona.",
         prompt: "Dynamic — built from setup values.",
         userMessage: "Begin the Socratic interview.",
-        model: "gemini-2.5-flash",
+
         inputSchema: [{ name: "setupValues", type: "object", description: "User-configured expertise, goal, output" }],
         outputSchema: [{ name: "nextQuestion", type: "string", description: "Opening interview question" }],
         dependsOn: ["setup"],
@@ -1560,7 +1560,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         description: "Each question builds on prior answers. Expert judges when context is complete.",
         prompt: "Dynamic — built from setup values.",
         userMessage: "Conversation history",
-        model: "gemini-2.5-flash",
+
         inputSchema: [{ name: "history", type: "array", description: "Prior Q&A pairs" }],
         outputSchema: [{ name: "nextQuestion", type: "string", description: "Next interview question" }, { name: "done", type: "boolean", description: "Whether interview is complete" }],
         dependsOn: ["first-question"],
@@ -1581,7 +1581,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         description: "Delivers findings structured as 2 obvious + 2 non-obvious based on the user-defined output requirement.",
         prompt: "Dynamic — built from setup values.",
         userMessage: "Full interview transcript",
-        model: "gemini-2.5-flash",
+
         inputSchema: [{ name: "transcript", type: "string", description: "Complete interview Q&A transcript" }],
         outputSchema: [{ name: "obvious", type: "array", description: "Primary recommendations" }, { name: "nonObvious", type: "array", description: "Secondary/hidden recommendations" }],
         dependsOn: ["socratic-questions", "user-answers"],
