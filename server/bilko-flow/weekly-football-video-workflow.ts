@@ -105,7 +105,7 @@ export function createWeeklyFootballVideoWorkflowInput(
         systemPrompt: `Senior European football journalist and social media strategist. Research the last 7 weeks. Identify the MOST IMPORTANT event. Return JSON: {"research":{"headline","league","summary","keyFacts":[{"fact","number"}],"socialHook"}}`,
         userMessage:
           "What is the biggest European football event in the last 7 weeks? Deep-research it with interesting facts and stats for a social media video.",
-        model: "gemini-2.5-flash",
+
       },
       outputs: {
         schema: {
@@ -127,7 +127,7 @@ export function createWeeklyFootballVideoWorkflowInput(
         systemPromptTemplate: `Social media video scriptwriter. Write a 20-SECOND script with 3 segments: Segment 1 (8s), Segment 2 (6s), Segment 3 (6s). Each segment must end with stable visual scene for grounding. Return JSON: {"script":{"title","segments":[{"segmentNumber","durationSec","narration","visualDescription","transitionNote","keyStat"}],"totalDurationSec":20,"veoStyleTokens"}}`,
         userMessageTemplate:
           "Write the 20-second video script with 8-6-6 transition planning based on the research.",
-        model: "gemini-2.5-flash",
+
         templateSource: "deep-research",
       },
       outputs: {
@@ -151,7 +151,7 @@ export function createWeeklyFootballVideoWorkflowInput(
           "{{write-video-script.script.segments[0].visualDescription}}. Style: {{write-video-script.script.veoStyleTokens}}. End with stable, continuing motion for grounding.",
         durationSeconds: 8,
         aspectRatio: "16:9",
-        model: "veo-3.1-generate-preview",
+
       },
       outputs: {
         schema: {
@@ -179,7 +179,7 @@ export function createWeeklyFootballVideoWorkflowInput(
         sourceVideoTemplate: "{{generate-clip-1.videoBase64}}",
         durationSeconds: 8,
         aspectRatio: "16:9",
-        model: "veo-3.1-generate-preview",
+
       },
       outputs: {
         schema: {
@@ -207,7 +207,7 @@ export function createWeeklyFootballVideoWorkflowInput(
         sourceVideoTemplate: "{{generate-clip-2.videoBase64}}",
         durationSeconds: 8,
         aspectRatio: "16:9",
-        model: "veo-3.1-generate-preview",
+
       },
       outputs: {
         schema: {

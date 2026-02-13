@@ -85,7 +85,7 @@ export function createNewsletterWorkflowInput(
       inputs: {
         systemPrompt: `Senior European football journalist. Identify 3 compelling stories. Return JSON: {"stories":[{"headline","summary","league","keyStat"}]}`,
         userMessage: "Discover 3 trending European football stories for today's newsletter.",
-        model: "gemini-2.5-flash",
+
       },
       outputs: { schema: { type: "object", properties: { stories: { type: "array" } } } },
       policy: defaultPolicy,
@@ -100,7 +100,7 @@ export function createNewsletterWorkflowInput(
       inputs: {
         systemPromptTemplate: `Sports editor. Write 3 articles (60-80 words each) with image descriptions (max 30 words).`,
         userMessageTemplate: "Write 3 newspaper articles with image descriptions.",
-        model: "gemini-2.5-flash",
+
         templateSource: "discover-stories",
       },
       outputs: { schema: { type: "object", properties: { articles: { type: "array" } } } },
@@ -116,7 +116,7 @@ export function createNewsletterWorkflowInput(
       inputs: {
         systemPromptTemplate: `Experience designer. Summarize newsletter: editionTitle, topStory, leaguesCovered, mood, takeaway.`,
         userMessageTemplate: "Create a newsletter experience summary.",
-        model: "gemini-2.5-flash",
+
         templateSources: ["write-articles"],
       },
       outputs: { schema: { type: "object", properties: { newsletter: { type: "object" } } } },
@@ -132,7 +132,7 @@ export function createNewsletterWorkflowInput(
       inputs: {
         systemPromptTemplate: `News editor. Rank stories: main (60% space) + 2 supporting. Extract stat numbers and labels.`,
         userMessageTemplate: "Rank the 3 stories for infographic and video production.",
-        model: "gemini-2.5-flash",
+
         templateSources: ["discover-stories", "write-articles"],
       },
       outputs: { schema: { type: "object", properties: { ranked: { type: "object" } } } },
@@ -148,7 +148,7 @@ export function createNewsletterWorkflowInput(
       inputs: {
         systemPromptTemplate: `Data visualization designer focused on SCORES, TRANSFER FEES, and NUMERICAL DATA. Create infographic: title, mainStory with prominent stat, 2 supporting with stats, accent colors, and a cinematic imagePrompt (40-80 words) for AI wallpaper generation.`,
         userMessageTemplate: "Design a sports infographic layout with scores and transfer fee emphasis.",
-        model: "gemini-2.5-flash",
+
         templateSource: "rank-stories",
       },
       outputs: { schema: { type: "object", properties: { infographic: { type: "object" } } } },
@@ -164,7 +164,7 @@ export function createNewsletterWorkflowInput(
       inputs: {
         systemPromptTemplate: `Sports TV narrator. Write 60s script: intro(10s), main(20s), supporting1(15s), supporting2(15s).`,
         userMessageTemplate: "Write a 60-second broadcast narration script.",
-        model: "gemini-2.5-flash",
+
         templateSource: "rank-stories",
       },
       outputs: { schema: { type: "object", properties: { narrative: { type: "object" } } } },
@@ -180,7 +180,7 @@ export function createNewsletterWorkflowInput(
       inputs: {
         systemPromptTemplate: `Video storyboard artist. Create 4 scenes: imageDescription, visualStyle, transitions, narrationText.`,
         userMessageTemplate: "Create a visual storyboard for the video slideshow.",
-        model: "gemini-2.5-flash",
+
         templateSources: ["create-narrative", "rank-stories"],
       },
       outputs: { schema: { type: "object", properties: { storyboard: { type: "object" } } } },
@@ -196,7 +196,7 @@ export function createNewsletterWorkflowInput(
       inputs: {
         systemPromptTemplate: `AI video production expert. Create 3 Veo scene extension prompts (8s+6s+6s) focused on the PRIMARY story only. Visuals must complement the main story article used as voiceover. Camera movements, continuation language, shared style tokens. Each extension uses the last ~1s of the previous merged video as grounding seed.`,
         userMessageTemplate: "Generate Veo scene extension prompts for continuous video.",
-        model: "gemini-2.5-flash",
+
         templateSources: ["create-narrative", "rank-stories"],
       },
       outputs: { schema: { type: "object", properties: { videoPrompts: { type: "object" } } } },
@@ -213,7 +213,7 @@ export function createNewsletterWorkflowInput(
       inputs: {
         promptTemplate: "{{design-infographic.infographic.imagePrompt}}",
         aspectRatio: "16:9",
-        model: "gemini-2.5-flash-image",
+
       },
       outputs: { schema: { type: "object", properties: { imageBase64: { type: "string" }, mimeType: { type: "string" } } } },
       policy: { ...defaultPolicy, timeoutMs: 120000 },
@@ -238,7 +238,7 @@ export function createNewsletterWorkflowInput(
       inputs: {
         promptsTemplate: "{{generate-storyboard.storyboard.scenes|map:imageDescription}}",
         aspectRatio: "16:9",
-        model: "gemini-2.5-flash-image",
+
       },
       outputs: { schema: { type: "object", properties: { images: { type: "array" } } } },
       policy: { ...defaultPolicy, timeoutMs: 120000 },
@@ -267,7 +267,7 @@ export function createNewsletterWorkflowInput(
         initialDurationSeconds: 8,
         extensionDurationSeconds: 6,
         aspectRatio: "16:9",
-        model: "veo-3.1-generate-preview",
+
       },
       outputs: { schema: { type: "object", properties: { clips: { type: "array" }, model: { type: "string" } } } },
       policy: { ...defaultPolicy, timeoutMs: 900000, maxAttempts: 1 },

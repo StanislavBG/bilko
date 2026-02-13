@@ -65,7 +65,7 @@ When done=true, omit nextQuestion/questionContext/questionsRemaining.
 No markdown. No explanation. ONLY the JSON object.`,
         userMessage:
           "Start the consultation. Ask your first question to understand who this person is and what they do. Make it warm and conversational — they're here because they want to leverage AI better.",
-        model: "gemini-2.5-flash",
+
       },
       outputs: {
         schema: {
@@ -119,7 +119,7 @@ RESPONSE FORMAT — return ONLY valid JSON:
 When done=true, omit nextQuestion/questionContext/questionsRemaining.
 No markdown. ONLY the JSON object.`,
         userMessageTemplate: "User's latest answer + full conversation history",
-        model: "gemini-2.5-flash",
+
         templateSource: "first-question",
       },
       outputs: {
@@ -217,7 +217,7 @@ Rules:
 - No markdown. ONLY the JSON object.`,
         userMessageTemplate:
           "Interview transcript:\n\n{{transcript}}\n\nProvide your analysis and recommendations.",
-        model: "gemini-2.5-flash",
+
         templateSources: ["follow-up-questions", "user-answers"],
       },
       outputs: {

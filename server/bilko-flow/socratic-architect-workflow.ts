@@ -179,7 +179,7 @@ When done=true, omit nextQuestion/questionContext/questionsRemaining.
 No markdown. No explanation. ONLY the JSON object.`,
         userMessageTemplate:
           'Begin the Socratic interview. You are an expert {{expertise}} helping the user achieve: "{{goal}}". Ask your first question to establish their current situation and context. Be warm and professional.',
-        model: "gemini-2.5-flash",
+
         templateSource: "setup",
       },
       outputs: {
@@ -222,7 +222,7 @@ No markdown. No explanation. ONLY the JSON object.`,
         systemPromptTemplate:
           "Continue the Socratic interview. Build recursively on prior answers. Each question MUST reference something specific the user said.",
         userMessageTemplate: "Full conversation history",
-        model: "gemini-2.5-flash",
+
         templateSource: "first-question",
       },
       outputs: {
@@ -321,7 +321,7 @@ Rules:
 - No markdown. ONLY the JSON object.`,
         userMessageTemplate:
           "Interview transcript:\n\n{{transcript}}\n\nProvide your analysis.",
-        model: "gemini-2.5-flash",
+
         templateSources: ["setup", "socratic-questions", "user-answers"],
       },
       outputs: {

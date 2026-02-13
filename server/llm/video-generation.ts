@@ -24,13 +24,11 @@
  */
 
 import { createLogger } from "../logger";
+import { MODEL_DEFAULTS } from "./index";
 
 const log = createLogger("video-generation");
 
 const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_VIDEO_MODEL = "veo-3.1-generate-preview";
-/** Video extension (source-grounded) also uses Veo 3.1 */
-const EXTENSION_VIDEO_MODEL = "veo-3.1-generate-preview";
 
 export interface VideoGenerationRequest {
   prompt: string;
@@ -85,10 +83,7 @@ export async function generateVideo(
   const hasReference = !!request.referenceImageBase64;
   const durationSec = request.durationSeconds ?? 8;
 
-  // Video extension requires Veo 3.1 — auto-upgrade when source video is provided
-  const model = hasSource
-    ? (request.model ?? EXTENSION_VIDEO_MODEL)
-    : (request.model ?? DEFAULT_VIDEO_MODEL);
+  const model = request.model ?? MODEL_DEFAULTS.video;
 
   // Use the generateVideos endpoint (Gemini API) with inlineData format.
   // The older predictLongRunning endpoint uses bytesBase64Encoded which is

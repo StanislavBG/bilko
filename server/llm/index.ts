@@ -96,6 +96,19 @@ export function getModelById(modelId: string): LLMModel | undefined {
 }
 
 /**
+ * Default model for each capability — the SINGLE source of truth.
+ *
+ * When Google retires a model, update it HERE and everything else follows.
+ * bilko-flow workflow definitions should NOT hardcode model IDs —
+ * they omit the model field and the handler/service layer uses these defaults.
+ */
+export const MODEL_DEFAULTS = {
+  text: "gemini-2.5-flash",
+  image: "gemini-2.5-flash-image",
+  video: "veo-3.1-generate-preview",
+} as const;
+
+/**
  * Clean an LLM response string using bilko-flow's cleanLLMResponse.
  *
  * The library's cleanLLMResponse returns parsed JSON (unknown), but the
