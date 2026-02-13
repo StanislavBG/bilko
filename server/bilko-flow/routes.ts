@@ -30,6 +30,7 @@ import { createAiConsultationWorkflowInput } from "./ai-consultation-workflow";
 import { createRecursiveInterviewerWorkflowInput } from "./recursive-interviewer-workflow";
 import { createLinkedInStrategistWorkflowInput } from "./linkedin-strategist-workflow";
 import { createSocraticArchitectWorkflowInput } from "./socratic-architect-workflow";
+import { createWeeklyFootballVideoWorkflowInput } from "./weekly-football-video-workflow";
 
 const router = Router();
 
@@ -58,6 +59,7 @@ const WORKFLOW_REGISTRY: Array<{
   { id: "recursive-interviewer", factory: createRecursiveInterviewerWorkflowInput },
   { id: "linkedin-strategist", factory: createLinkedInStrategistWorkflowInput },
   { id: "socratic-architect", factory: createSocraticArchitectWorkflowInput },
+  { id: "weekly-football-video", factory: createWeeklyFootballVideoWorkflowInput },
 ];
 
 /**
