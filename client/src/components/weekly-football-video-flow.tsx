@@ -1,7 +1,7 @@
 /**
  * Weekly Football Highlight Video Flow — 20s social-media video pipeline.
  *
- * 8-step DAG (sequential chain):
+ * 7-step DAG (sequential chain):
  *
  *   deep-research (root)
  *        │
@@ -25,6 +25,9 @@
  *
  * Models: Gemini 2.5 Flash (research + script) + Veo 3.0 (video gen)
  * Auto-starts immediately when rendered.
+ *
+ * UI: Newsletter-inspired step tracker shows each pipeline stage
+ * with live status so the user always knows where the process is.
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -39,6 +42,11 @@ import {
   Clapperboard,
   Scissors,
   Eye,
+  CheckCircle2,
+  Circle,
+  Loader2,
+  XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import {
   chatJSON,
@@ -95,6 +103,47 @@ interface ClipResult {
   videoBase64: string;
   mimeType: string;
   durationSeconds: number;
+}
+
+// ── Pipeline step definitions ────────────────────────────────────────
+
+interface PipelineStep {
+  id: FlowState;
+  label: string;
+  shortLabel: string;
+  icon: typeof Search;
+}
+
+const PIPELINE_STEPS: PipelineStep[] = [
+  { id: "researching", label: "Deep Research — Top Event", shortLabel: "Research", icon: Search },
+  { id: "scripting", label: "Writing 20s Video Script", shortLabel: "Script", icon: PenLine },
+  { id: "generating-clip-1", label: "Generating Clip 1 (8s opening)", shortLabel: "Clip 1", icon: Film },
+  { id: "generating-clip-2", label: "Generating Clip 2 (grounded)", shortLabel: "Clip 2", icon: Film },
+  { id: "generating-clip-3", label: "Generating Clip 3 (finale)", shortLabel: "Clip 3", icon: Film },
+  { id: "concatenating", label: "Concatenating Clips (FFmpeg)", shortLabel: "Concat", icon: Scissors },
+  { id: "done", label: "Preview", shortLabel: "Preview", icon: Eye },
+];
+
+const STEP_ORDER = PIPELINE_STEPS.map((s) => s.id);
+
+function getStepIndex(state: FlowState): number {
+  const idx = STEP_ORDER.indexOf(state);
+  return idx >= 0 ? idx : -1;
+}
+
+type StepStatus = "pending" | "active" | "complete" | "error";
+
+function deriveStepStatus(
+  stepId: FlowState,
+  currentState: FlowState,
+  failedStep: FlowState | null,
+): StepStatus {
+  if (failedStep && stepId === failedStep) return "error";
+  const stepIdx = getStepIndex(stepId);
+  const currentIdx = getStepIndex(currentState === "error" ? (failedStep ?? "researching") : currentState);
+  if (stepIdx < currentIdx) return "complete";
+  if (stepIdx === currentIdx && currentState !== "error") return "active";
+  return "pending";
 }
 
 // ── Prompts ──────────────────────────────────────────────────────────
@@ -179,11 +228,210 @@ const STATUS_MESSAGES: Record<string, string[]> = {
   ],
 };
 
+// ── Step Tracker Component ───────────────────────────────────────────
+
+function StepStatusIcon({ status }: { status: StepStatus }) {
+  switch (status) {
+    case "complete":
+      return <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />;
+    case "active":
+      return <Loader2 className="h-4 w-4 text-rose-500 animate-spin shrink-0" />;
+    case "error":
+      return <XCircle className="h-4 w-4 text-red-500 shrink-0" />;
+    default:
+      return <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />;
+  }
+}
+
+function PipelineTracker({
+  currentState,
+  failedStep,
+  research,
+  script,
+  clip1,
+  clip2,
+  clip3,
+  statusMessage,
+  elapsedSeconds,
+  error,
+}: {
+  currentState: FlowState;
+  failedStep: FlowState | null;
+  research: ResearchResult | null;
+  script: VideoScript | null;
+  clip1: ClipResult | null;
+  clip2: ClipResult | null;
+  clip3: ClipResult | null;
+  statusMessage: string;
+  elapsedSeconds: number;
+  error: string | null;
+}) {
+  const completedCount = PIPELINE_STEPS.filter(
+    (s) => deriveStepStatus(s.id, currentState, failedStep) === "complete",
+  ).length;
+  const progressPercent =
+    currentState === "done"
+      ? 100
+      : Math.round((completedCount / PIPELINE_STEPS.length) * 100);
+
+  const clips: Record<string, ClipResult | null> = {
+    "generating-clip-1": clip1,
+    "generating-clip-2": clip2,
+    "generating-clip-3": clip3,
+  };
+
+  return (
+    <div className="rounded-xl border-2 border-border overflow-hidden">
+      {/* Header */}
+      <div className="bg-rose-500/5 border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Clapperboard className="h-4 w-4 text-rose-500" />
+            <span className="text-sm font-medium">Video Pipeline</span>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {completedCount}/{PIPELINE_STEPS.length}
+            </span>
+          </div>
+          <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-rose-500 rounded-full transition-all duration-500"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Step list */}
+      <div className="p-3 space-y-0.5">
+        {PIPELINE_STEPS.map((step, i) => {
+          const status = deriveStepStatus(step.id, currentState, failedStep);
+          const isActive = status === "active";
+          const isError = status === "error";
+          const isComplete = status === "complete";
+          const Icon = step.icon;
+          const clipData = clips[step.id];
+
+          // Inline detail for completed data steps
+          let detail: string | null = null;
+          if (isComplete && step.id === "researching" && research) {
+            detail = `"${research.headline}" (${research.league})`;
+          } else if (isComplete && step.id === "scripting" && script) {
+            detail = `"${script.title}" — ${script.segments.length} segments`;
+          } else if (isComplete && clipData) {
+            detail = `${clipData.durationSeconds}s clip ready`;
+          }
+
+          return (
+            <div key={step.id}>
+              <div
+                className={`flex items-start gap-2.5 rounded-lg px-2.5 py-2 transition-colors ${
+                  isActive
+                    ? "bg-rose-500/5"
+                    : isError
+                      ? "bg-red-500/5"
+                      : ""
+                }`}
+              >
+                {/* Status icon */}
+                <div className="mt-0.5">
+                  <StepStatusIcon status={status} />
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Icon
+                      className={`h-3.5 w-3.5 shrink-0 ${
+                        isActive
+                          ? "text-rose-500"
+                          : isError
+                            ? "text-red-500"
+                            : isComplete
+                              ? "text-green-500/70"
+                              : "text-muted-foreground/40"
+                      }`}
+                    />
+                    <span
+                      className={`text-sm ${
+                        isActive
+                          ? "text-foreground font-medium"
+                          : isError
+                            ? "text-red-500 font-medium"
+                            : isComplete
+                              ? "text-muted-foreground"
+                              : "text-muted-foreground/50"
+                      }`}
+                    >
+                      {step.label}
+                    </span>
+                  </div>
+
+                  {/* Completed detail */}
+                  {detail && isComplete && (
+                    <p className="text-xs text-muted-foreground/70 mt-0.5 truncate pl-5.5">
+                      {detail}
+                    </p>
+                  )}
+
+                  {/* Active: rotating status message + elapsed */}
+                  {isActive && (
+                    <div className="mt-1 pl-5.5">
+                      <p className="text-xs text-muted-foreground animate-in fade-in duration-300">
+                        {statusMessage}
+                      </p>
+                      {elapsedSeconds > 5 && (
+                        <p className="text-xs text-muted-foreground/50 tabular-nums mt-0.5">
+                          {Math.floor(elapsedSeconds / 60)}:
+                          {String(elapsedSeconds % 60).padStart(2, "0")} elapsed
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Error detail */}
+                  {isError && error && (
+                    <div className="mt-1 pl-5.5">
+                      <p className="text-xs text-red-500/80">{error}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Completed clip inline preview */}
+              {isComplete && clipData && clipData.videoBase64 && (
+                <div className="ml-9 mr-2 mb-1 mt-0.5">
+                  <video
+                    controls
+                    className="w-full max-w-[240px] aspect-video bg-black rounded-md border border-border"
+                    src={`data:${clipData.mimeType || "video/mp4"};base64,${clipData.videoBase64}`}
+                  />
+                </div>
+              )}
+
+              {/* Connecting line between steps */}
+              {i < PIPELINE_STEPS.length - 1 && (
+                <div className="ml-[18px] h-1.5">
+                  <div
+                    className={`w-px h-full mx-auto ${
+                      isComplete ? "bg-green-500/30" : "bg-border/40"
+                    }`}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Component ────────────────────────────────────────────────────────
 
 export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
   // ── Flow state ──
   const [flowState, setFlowState] = useState<FlowState>("researching");
+  const [failedAtStep, setFailedAtStep] = useState<FlowState | null>(null);
   const [research, setResearch] = useState<ResearchResult | null>(null);
   const [script, setScript] = useState<VideoScript | null>(null);
   const [clip1, setClip1] = useState<ClipResult | null>(null);
@@ -266,10 +514,14 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
 
   const runFlow = useCallback(async () => {
     setFlowState("researching");
+    setFailedAtStep(null);
     setError(null);
+
+    let currentStep: FlowState = "researching";
 
     try {
       // ═══ Step 1: deep-research (LLM) ═══
+      currentStep = "researching";
       const { data: researchResult } = await trackStep(
         "deep-research",
         { request: "Deep research the biggest European football event of the last 7 days" },
@@ -289,6 +541,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       );
 
       // ═══ Step 2: write-video-script (LLM) ═══
+      currentStep = "scripting";
       setFlowState("scripting");
 
       const { data: scriptResult } = await trackStep(
@@ -310,6 +563,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       );
 
       // ═══ Step 3: generate-clip-1 (8s initial Veo) ═══
+      currentStep = "generating-clip-1";
       setFlowState("generating-clip-1");
 
       const seg1 = scriptData.segments[0];
@@ -322,15 +576,19 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       );
 
       const clip1Video = clip1Result.videos?.[0];
+      if (!clip1Video?.videoBase64) {
+        throw new Error("Clip 1: Veo returned no video data. The model may be unavailable or the prompt was rejected.");
+      }
       const clip1Data: ClipResult = {
-        videoBase64: clip1Video?.videoBase64 ?? "",
-        mimeType: clip1Video?.mimeType ?? "video/mp4",
+        videoBase64: clip1Video.videoBase64,
+        mimeType: clip1Video.mimeType ?? "video/mp4",
         durationSeconds: 8,
       };
       setClip1(clip1Data);
       pushAgentMessage("Clip 1 generated (8s opening hook). Now grounding clip 2 on the last 2 seconds.");
 
       // ═══ Step 4: generate-clip-2 (8s, grounded on clip 1) ═══
+      currentStep = "generating-clip-2";
       setFlowState("generating-clip-2");
 
       const seg2 = scriptData.segments[1];
@@ -348,15 +606,19 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       );
 
       const clip2Video = clip2Result.videos?.[0];
+      if (!clip2Video?.videoBase64) {
+        throw new Error("Clip 2: Veo returned no video data. Source-grounded generation may have failed.");
+      }
       const clip2Data: ClipResult = {
-        videoBase64: clip2Video?.videoBase64 ?? "",
-        mimeType: clip2Video?.mimeType ?? "video/mp4",
+        videoBase64: clip2Video.videoBase64,
+        mimeType: clip2Video.mimeType ?? "video/mp4",
         durationSeconds: 8,
       };
       setClip2(clip2Data);
       pushAgentMessage("Clip 2 ready (grounded continuation). Generating the final payoff clip.");
 
       // ═══ Step 5: generate-clip-3 (8s, grounded on clip 2) ═══
+      currentStep = "generating-clip-3";
       setFlowState("generating-clip-3");
 
       const seg3 = scriptData.segments[2];
@@ -374,15 +636,19 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       );
 
       const clip3Video = clip3Result.videos?.[0];
+      if (!clip3Video?.videoBase64) {
+        throw new Error("Clip 3: Veo returned no video data. Source-grounded generation may have failed.");
+      }
       const clip3Data: ClipResult = {
-        videoBase64: clip3Video?.videoBase64 ?? "",
-        mimeType: clip3Video?.mimeType ?? "video/mp4",
+        videoBase64: clip3Video.videoBase64,
+        mimeType: clip3Video.mimeType ?? "video/mp4",
         durationSeconds: 8,
       };
       setClip3(clip3Data);
       pushAgentMessage("All 3 clips generated. Concatenating into one continuous video.");
 
       // ═══ Step 6: concatenate-clips (FFmpeg) ═══
+      currentStep = "concatenating";
       setFlowState("concatenating");
 
       const { data: concatResult } = await trackStep(
@@ -407,6 +673,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       setFlowState("done");
     } catch (err) {
       console.error("Weekly football video flow error:", err);
+      setFailedAtStep(currentStep);
       setError(err instanceof Error ? err.message : "Failed to run video pipeline.");
       setFlowState("error");
     }
@@ -453,6 +720,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
     setClip3(null);
     setFinalVideo(null);
     setError(null);
+    setFailedAtStep(null);
     setTimeout(() => {
       hasStarted.current = true;
       didGreet.current = true;
@@ -460,83 +728,42 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
     }, 0);
   }, [runFlow]);
 
-  // ── Loading screen helpers ─────────────────────────────────────────
-
-  const loadingIcons: Record<string, typeof Search> = {
-    researching: Search,
-    scripting: PenLine,
-    "generating-clip-1": Film,
-    "generating-clip-2": Film,
-    "generating-clip-3": Film,
-    concatenating: Scissors,
-  };
-
-  const loadingTitles: Record<string, string> = {
-    researching: "Deep Research — Top Event",
-    scripting: "Writing 20s Video Script",
-    "generating-clip-1": "Generating Clip 1 (8s opening)",
-    "generating-clip-2": "Generating Clip 2 (grounded)",
-    "generating-clip-3": "Generating Clip 3 (finale)",
-    concatenating: "Concatenating Clips (FFmpeg)",
-  };
-
-  const progressWidths: Record<string, string> = {
-    researching: "10%",
-    scripting: "20%",
-    "generating-clip-1": "35%",
-    "generating-clip-2": "55%",
-    "generating-clip-3": "75%",
-    concatenating: "90%",
-  };
-
   // ── Render ─────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-4">
-      {/* ── LOADING states ────────────────────────────────────── */}
-      {flowState !== "done" && flowState !== "error" && (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center mb-6">
-            {(() => {
-              const Icon = loadingIcons[flowState] ?? Clapperboard;
-              return <Icon className="h-8 w-8 text-rose-500 animate-pulse" />;
-            })()}
+      {/* ── Pipeline Step Tracker (always visible except done) ─── */}
+      {flowState !== "done" && (
+        <PipelineTracker
+          currentState={flowState}
+          failedStep={failedAtStep}
+          research={research}
+          script={script}
+          clip1={clip1}
+          clip2={clip2}
+          clip3={clip3}
+          statusMessage={statusMessage}
+          elapsedSeconds={elapsedSeconds}
+          error={error}
+        />
+      )}
+
+      {/* ── Error: actions ─────────────────────────────────── */}
+      {flowState === "error" && (
+        <div className="flex flex-col items-center gap-3 py-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <span>
+              Pipeline stopped at{" "}
+              <span className="font-medium text-foreground">
+                {PIPELINE_STEPS.find((s) => s.id === failedAtStep)?.shortLabel ?? "unknown step"}
+              </span>
+            </span>
           </div>
-          <h2 className="text-xl font-semibold text-center mb-2">
-            {loadingTitles[flowState] ?? "Processing..."}
-          </h2>
-          {research && flowState === "scripting" && (
-            <p className="text-sm text-muted-foreground text-center max-w-md mb-2">
-              {research.headline} ({research.league})
-            </p>
-          )}
-          {script && flowState.startsWith("generating-clip") && (
-            <p className="text-sm text-muted-foreground text-center max-w-md mb-2">
-              {script.title}
-            </p>
-          )}
-          <p className="text-muted-foreground text-center max-w-md mb-4">
-            {statusMessage}
-          </p>
-          {elapsedSeconds > 5 && (
-            <p className="text-xs text-muted-foreground/60 mb-4 tabular-nums">
-              {Math.floor(elapsedSeconds / 60)}:{String(elapsedSeconds % 60).padStart(2, "0")} elapsed
-            </p>
-          )}
-          <div className="w-48 bg-muted rounded-full h-1.5 overflow-hidden">
-            <div
-              className="bg-rose-500 h-full rounded-full transition-all duration-500"
-              style={{ width: progressWidths[flowState] ?? "50%" }}
-            />
-          </div>
-          {/* Clip progress indicators */}
-          {(flowState === "generating-clip-2" || flowState === "generating-clip-3" || flowState === "concatenating") && (
-            <div className="flex gap-2 mt-4">
-              <div className={`w-2 h-2 rounded-full ${clip1 ? "bg-rose-500" : "bg-muted"}`} title="Clip 1" />
-              <div className={`w-2 h-2 rounded-full ${clip2 ? "bg-rose-500" : "bg-muted"}`} title="Clip 2" />
-              <div className={`w-2 h-2 rounded-full ${clip3 ? "bg-rose-500" : "bg-muted"}`} title="Clip 3" />
-            </div>
-          )}
+          <Button onClick={reset} variant="outline" size="sm">
+            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+            Try Again
+          </Button>
         </div>
       )}
 
@@ -696,18 +923,6 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
               </details>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* ── Error state ─────────────────────────────────────── */}
-      {flowState === "error" && (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <p className="text-red-500 mb-2 font-medium">Something went wrong</p>
-          <p className="text-sm text-muted-foreground mb-4 text-center max-w-md">{error}</p>
-          <Button onClick={reset} variant="outline" size="sm">
-            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-            Try Again
-          </Button>
         </div>
       )}
 
