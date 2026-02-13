@@ -61,7 +61,7 @@ Return ONLY valid JSON:
 Rules: name max 5 words, description max 30 words, cognitiveDomain max 4 words, whyBeneficial max 25 words. No markdown.`,
         userMessage:
           "Select a random neuroscientist-recommended brain teaser game for me to play.",
-        model: "gemini-2.5-flash",
+
       },
       outputs: {
         schema: {
@@ -117,7 +117,7 @@ Return ONLY valid JSON:
 Rules: setup max 25 words, each keyMoment max 20 words, highlight max 20 words. No markdown.`,
         userMessageTemplate:
           'Simulate a round of "{{game.name}}" at {{game.difficulty}} difficulty between the user and Cortex.',
-        model: "gemini-2.5-flash",
+
         // The upstream step ID whose output provides template variables
         templateSource: "select-game",
       },
@@ -175,7 +175,7 @@ Return ONLY valid JSON:
 Rules: summary max 40 words, takeaway max 15 words, mood single word. No markdown.`,
         userMessageTemplate:
           'Create an experience summary for the {{game.name}} session. Result: {{gameSummary.winner}} won {{gameSummary.userScore}}-{{gameSummary.aiScore}}. Highlight: {{gameSummary.highlight}}',
-        model: "gemini-2.5-flash",
+
         // This step needs outputs from both select-game and generate-summary
         templateSources: ["select-game", "generate-summary"],
       },
