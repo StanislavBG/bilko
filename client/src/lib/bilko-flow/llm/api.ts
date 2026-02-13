@@ -172,9 +172,13 @@ export async function generateImages(
   return result.images;
 }
 
-// ── Video Generation (Veo) ──────────────────────────────────────────
+// ── Clip & Video Generation (Veo) ───────────────────────────────────
+//
+// Naming:
+//   Clip  = single atomic Veo call (5-8 seconds)
+//   Video = finished product (8-6-6-6 methodology, multiple clips + FFmpeg)
 
-export interface VideoGenerationResult {
+export interface ClipGenerationResult {
   videos: Array<{
     videoBase64: string;
     mimeType: string;
@@ -183,17 +187,17 @@ export interface VideoGenerationResult {
   model: string;
 }
 
+/** @deprecated Use ClipGenerationResult */
+export type VideoGenerationResult = ClipGenerationResult;
+
 /**
- * Generate a single video clip using Veo.
- * Note: This is an async operation and may take up to 8 minutes.
- *
- * Each Veo call produces a standalone clip (max 8s). To build longer
- * videos, generate multiple clips and concatenate with `concatenateVideos()`.
+ * Generate a single Veo clip (the atomic building block).
+ * Async operation — may take up to 8 minutes.
  *
  * Pass `sourceVideoBase64` to provide a previous clip as visual context —
  * Veo uses the last ~2 seconds for style/scene continuity grounding.
  */
-export async function generateVideo(
+export async function generateClip(
   prompt: string,
   options?: {
     durationSeconds?: 5 | 6 | 7 | 8;
@@ -204,8 +208,8 @@ export async function generateVideo(
     sourceVideoBase64?: string;
     signal?: AbortSignal;
   },
-): Promise<VideoGenerationResult> {
-  return apiPost<VideoGenerationResult>("/api/llm/generate-video", {
+): Promise<ClipGenerationResult> {
+  return apiPost<ClipGenerationResult>("/api/llm/generate-clip", {
     prompt,
     durationSeconds: options?.durationSeconds,
     aspectRatio: options?.aspectRatio,
@@ -216,22 +220,25 @@ export async function generateVideo(
 }
 
 /**
- * Generate a continuous video: 3 individual Veo clips + FFmpeg concatenation.
+ * Generate a variable-length video using the 8-6-6 grounding methodology.
  *
- * Creates a ~20-second continuous video from 3 prompts:
- *   - Clip 1: 8s initial generation (fresh)
- *   - Clip 2: 6s clip grounded on clip 1 (Veo uses last ~2s as context)
- *   - Clip 3: 6s clip grounded on clip 2
- *   - Concat: FFmpeg joins the 3 standalone clips into one ~20s video
+ * Each 8s Veo clip overlaps 2s with the previous for visual continuity,
+ * so each extension adds 6 unique seconds. Pass N prompts for
+ * 8 + 6(N-1) unique seconds. Final clips are joined with FFmpeg.
+ *
+ * Examples: 2 prompts = 14s, 3 prompts = 20s, 4 prompts = 26s.
  */
-export interface ContinuousVideoResult {
+export interface VideoResult {
   mergedVideo: { videoBase64: string; mimeType: string; durationSeconds: number } | null;
   clips: ({ videoBase64: string; mimeType: string; durationSeconds: number } | null)[];
   totalDurationSeconds: number;
   model: string;
 }
 
-export async function generateContinuousVideo(
+/** @deprecated Use VideoResult */
+export type ContinuousVideoResult = VideoResult;
+
+export async function generateVideo(
   prompts: string[],
   options?: {
     model?: string;
@@ -239,8 +246,8 @@ export async function generateContinuousVideo(
     initialDurationSeconds?: 5 | 6 | 7 | 8;
     signal?: AbortSignal;
   },
-): Promise<ContinuousVideoResult> {
-  return apiPost<ContinuousVideoResult>("/api/llm/generate-continuous-video", {
+): Promise<VideoResult> {
+  return apiPost<VideoResult>("/api/llm/generate-video", {
     prompts,
     model: options?.model,
     aspectRatio: options?.aspectRatio,
@@ -268,10 +275,10 @@ export async function concatenateVideos(
 }
 
 /**
- * Generate multiple videos sequentially using Veo.
+ * Generate multiple clips sequentially using Veo.
  * Returns array of results (null for failed generations).
  */
-export async function generateVideos(
+export async function generateClips(
   prompts: Array<{
     prompt: string;
     durationSeconds?: 5 | 6 | 7 | 8;
@@ -279,9 +286,9 @@ export async function generateVideos(
     model?: string;
   }>,
   options?: { signal?: AbortSignal },
-): Promise<(VideoGenerationResult | null)[]> {
-  const result = await apiPost<{ videos: (VideoGenerationResult | null)[] }>(
-    "/api/llm/generate-videos",
+): Promise<(ClipGenerationResult | null)[]> {
+  const result = await apiPost<{ clips: (ClipGenerationResult | null)[] }>(
+    "/api/llm/generate-clips",
     {
       requests: prompts.map((p) => ({
         prompt: p.prompt,
@@ -292,7 +299,7 @@ export async function generateVideos(
     },
     { signal: options?.signal },
   );
-  return result.videos;
+  return result.clips;
 }
 
 /**

@@ -47,7 +47,7 @@ import {
   jsonPrompt,
   useFlowExecution,
   useFlowChat,
-  generateVideo,
+  generateClip,
 } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
@@ -508,7 +508,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
       const { data: clipResult } = await trackStep(
         "generate-clip",
         { visualDescription: scriptData.visualDescription, styleTokens: scriptData.veoStyleTokens },
-        () => generateVideo(clipPrompt, { durationSeconds: 8, aspectRatio: "16:9" }),
+        () => generateClip(clipPrompt, { durationSeconds: 8, aspectRatio: "16:9" }),
       );
 
       const clipVideo = clipResult.videos?.[0];
