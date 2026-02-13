@@ -20,9 +20,14 @@ import {
 } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
+import { createRequire } from "module";
 import { createLogger } from "../logger";
 
 const log = createLogger("video-concat");
+
+const require = createRequire(import.meta.url);
+const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
+const ffprobePath = require("@ffprobe-installer/ffprobe").path;
 
 export interface ConcatResult {
   videoBase64: string;
@@ -80,7 +85,7 @@ export async function concatenateVideos(
 
     // Run FFmpeg concat — container-level copy, no re-encoding
     const outputPath = join(workDir, "output.mp4");
-    const cmd = `ffmpeg -y -f concat -safe 0 -i "${listPath}" -c copy "${outputPath}"`;
+    const cmd = `"${ffmpegPath}" -y -f concat -safe 0 -i "${listPath}" -c copy "${outputPath}"`;
 
     log.info(`Running FFmpeg concat: ${clips.length} clips`);
     execSync(cmd, { timeout: 60_000, stdio: "pipe" });
@@ -118,7 +123,7 @@ export async function concatenateVideos(
 function probeVideoDurationFromFile(filePath: string): number {
   try {
     const output = execSync(
-      `ffprobe -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
+      `"${ffprobePath}" -v quiet -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`,
       { timeout: 10_000, stdio: "pipe" },
     )
       .toString()
