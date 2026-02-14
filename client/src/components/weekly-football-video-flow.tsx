@@ -55,9 +55,14 @@ import {
   useFlowChat,
   generateClip,
   concatenateVideos,
+  createVideoRun,
+  updateVideoRun,
+  saveVideoClip,
+  saveVideoFinal,
 } from "@/lib/bilko-flow";
 import type { ConcatResult } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
+import { VideoRunHistory } from "@/components/video-run-history";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
@@ -527,6 +532,17 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
     setFailedAtStep(null);
     setError(null);
 
+    // Generate a unique run ID for persistence
+    const runId = `vr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // Fire-and-forget persistence helper (never blocks the pipeline)
+    const persist = (fn: () => Promise<unknown>) => {
+      fn().catch((err) => console.warn("[video-run] persist failed:", err));
+    };
+
+    // Create the run record
+    persist(() => createVideoRun("weekly-football-video", runId));
+
     let currentStep: FlowState = "researching";
 
     try {
@@ -546,6 +562,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
 
       const researchData = researchResult.data.research;
       setResearch(researchData);
+      persist(() => updateVideoRun(runId, { research: researchData }));
       pushAgentMessage(
         `Found the story: "${researchData.headline}" (${researchData.league}). Writing the script now.`,
       );
@@ -568,6 +585,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
 
       const scriptData = scriptResult.data.script;
       setScript(scriptData);
+      persist(() => updateVideoRun(runId, { script: scriptData }));
       pushAgentMessage(
         `Script ready: "${scriptData.title}" — ${scriptData.totalDurationSec}s across ${scriptData.segments.length} segments. Generating video clips with Veo.`,
       );
@@ -595,6 +613,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
         durationSeconds: 8,
       };
       setClip1(clip1Data);
+      persist(() => saveVideoClip(runId, 0, clip1Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 1 })));
       pushAgentMessage("Clip 1 generated (8s opening hook). Now grounding clip 2 on the last 2 seconds.");
 
       // ═══ Step 4: generate-clip-2 (8s, grounded on clip 1) ═══
@@ -625,6 +644,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
         durationSeconds: 8,
       };
       setClip2(clip2Data);
+      persist(() => saveVideoClip(runId, 1, clip2Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 2 })));
       pushAgentMessage("Clip 2 ready (grounded continuation). Generating the final payoff clip.");
 
       // ═══ Step 5: generate-clip-3 (8s, grounded on clip 2) ═══
@@ -655,6 +675,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
         durationSeconds: 8,
       };
       setClip3(clip3Data);
+      persist(() => saveVideoClip(runId, 2, clip3Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 3 })));
       pushAgentMessage("All 3 clips generated. Concatenating into one continuous video.");
 
       // ═══ Step 6: concatenate-clips (FFmpeg) ═══
@@ -674,6 +695,17 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
 
       setFinalVideo(concatResult as ConcatResult);
 
+      // Persist combined video + mark run complete
+      const finalConcat = concatResult as ConcatResult;
+      persist(() =>
+        saveVideoFinal(runId, finalConcat.videoBase64).then(() =>
+          updateVideoRun(runId, {
+            status: "completed",
+            finalDurationSeconds: finalConcat.durationSeconds ?? 20,
+          }),
+        ),
+      );
+
       const exitSummary = `Produced "${scriptData.title}" — a ${(concatResult as ConcatResult).durationSeconds ?? 20}s highlight video about "${researchData.headline}" (${researchData.league}). 3 Veo clips chained via last-2s grounding + FFmpeg concat.`;
       pushAgentMessage(
         `Video ready! "${scriptData.title}" — ${(concatResult as ConcatResult).durationSeconds ?? 20} seconds of continuous highlight footage. Check the preview.`,
@@ -683,9 +715,11 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       setFlowState("done");
     } catch (err) {
       console.error("Weekly football video flow error:", err);
+      const errMsg = err instanceof Error ? err.message : "Failed to run video pipeline.";
       setFailedAtStep(currentStep);
-      setError(err instanceof Error ? err.message : "Failed to run video pipeline.");
+      setError(errMsg);
       setFlowState("error");
+      persist(() => updateVideoRun(runId, { status: "failed", error: errMsg }));
     }
   }, [trackStep, pushAgentMessage, busSend]);
 
@@ -935,6 +969,9 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
           </div>
         </div>
       )}
+
+      {/* ── Past Runs (always visible) ────────────────────────── */}
+      <VideoRunHistory flowId="weekly-football-video" />
 
     </div>
   );
