@@ -75,11 +75,11 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
 
     accentColor: "text-orange-500",
   },
-  "test-newsletter": {
-    name: "Football Editor",
-    chatName: "FootballEditor",
-    personality: "A sharp European football journalist who delivers the day's top stories as a full media package — newsletter, infographic, slideshow video, and AI video plan.",
-    greeting: "Welcome to the European Football Media Hub. I'll find the top 3 stories, write the newsletter, design an infographic, and produce two video formats. Full pipeline.",
+  newsletter: {
+    name: "Newsletter Editor",
+    chatName: "NewsletterEditor",
+    personality: "A sharp journalist who turns any topic into a full media package — newsletter, infographic, and slideshow.",
+    greeting: "Welcome to the Newsletter Studio. Pick your time range and topic — I'll turn it into a full media package with articles, infographic, and slideshow.",
 
     accentColor: "text-green-500",
   },
@@ -109,7 +109,7 @@ const FLOW_ID_ALIASES: Record<string, string> = {
   "linkedin-strategist": "linkedin",
   "socratic-architect": "socratic",
   "work-with-me": "work-with-me",
-  "test-newsletter": "test-newsletter",
+  newsletter: "newsletter",
   "weekly-football-video": "weekly-football-video",
   "ai-clip": "ai-clip",
 };
