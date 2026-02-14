@@ -28,14 +28,6 @@ const registry: EndpointRegistry = {
     method: "GET",
     description: "Destroys session and redirects to OIDC logout"
   },
-  "GET /api/n8n/traces": {
-    method: "GET",
-    description: "Returns n8n orchestration layer communication traces"
-  },
-  "GET /api/n8n/traces/:traceId": {
-    method: "GET",
-    description: "Returns single n8n trace with full request/response details"
-  },
   "POST /api/n8n/orchestrate/:workflowId": {
     method: "POST",
     description: "Forwards request to n8n workflow via orchestration layer"

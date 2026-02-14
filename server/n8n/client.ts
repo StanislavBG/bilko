@@ -1431,7 +1431,7 @@ return [{ json: output }];`
  *        Parse Topics → CB → Prepare Deep Diver → CB → Deep Diver (Gemini) → CB →
  *        Parse Verified Topics → CB (final-output) → Respond
  *
- * Each callback sends full step output + diagnostic metadata to Memory Explorer.
+ * Each callback sends full step output + diagnostic metadata as communication traces.
  */
 function buildFvpTroubleshootNodes(webhookPath: string): {
   nodes: N8nNode[];
