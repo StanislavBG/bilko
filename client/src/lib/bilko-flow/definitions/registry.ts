@@ -883,23 +883,23 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     ],
   },
 
-  // ── AI Clip — Single 8s Veo clip ────────────────────────────
+  // ── AI Clip — Single 5s Wan 2.1 clip via Replicate ──────────
   //
   // The simplest video building block:
   //   1. Deep research → find a visually compelling story
-  //   2. Write 8-second clip script
-  //   3. Generate a single 8s Veo clip
+  //   2. Write 5-second clip script
+  //   3. Generate a single 5s clip via Replicate (Wan 2.1)
   {
     id: "ai-clip",
     name: "AI Clip",
     description:
-      "Research the top news story and generate a single 8-second AI video clip with Veo. The simplest building block — one research, one script, one clip.",
+      "Research the top news story and generate a single 5-second AI video clip with Wan 2.1 via Replicate. The simplest building block — one research, one script, one clip.",
     version: "1.0.0",
     location: "landing",
     componentPath: "client/src/components/ai-clip-flow.tsx",
-    tags: ["landing", "video", "veo", "clip", "ai", "news", "single"],
+    tags: ["landing", "video", "replicate", "wan", "clip", "ai", "news", "single"],
     icon: "Film",
-    voiceTriggers: ["ai clip", "single clip", "one clip", "quick clip", "8 second"],
+    voiceTriggers: ["ai clip", "single clip", "one clip", "quick clip", "5 second"],
     websiteUrl: "https://bilkobibitkov.replit.app/",
     phases: [
       { id: "researching", label: "Research", stepIds: ["deep-research"] },
@@ -910,7 +910,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     output: {
       name: "videoClip",
       type: "object",
-      description: "A single 8-second AI-generated video clip about a top news story",
+      description: "A single 5-second AI-generated video clip about a top news story (Wan 2.1 via Replicate)",
     },
     steps: [
       {
@@ -933,12 +933,12 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
       },
       {
         id: "write-clip-script",
-        name: "Write 8s Clip Script",
+        name: "Write 5s Clip Script",
         type: "llm",
         description:
-          "Writes a self-contained 8-second micro-story clip script with narration text, detailed visual description for Veo, and Veo style tokens.",
-        prompt: "Write a single 8-SECOND clip script. This clip must be a self-contained micro-story — hook, reveal, payoff in 8 seconds.",
-        userMessage: "Write a punchy 8-second clip script based on the research.",
+          "Writes a self-contained 5-second micro-story clip script with narration text, detailed visual description, and style tokens for Wan 2.1.",
+        prompt: "Write a single 5-SECOND clip script. This clip must be a self-contained micro-story — hook, reveal, payoff in 5 seconds.",
+        userMessage: "Write a punchy 5-second clip script based on the research.",
 
         inputSchema: [
           { name: "research", type: "object", description: "The deep research output" },
@@ -946,30 +946,30 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         outputSchema: [
           { name: "title", type: "string", description: "Social-media punchy title (max 8 words)" },
           { name: "narration", type: "string", description: "Voiceover text (max 20 words)" },
-          { name: "visualDescription", type: "string", description: "Cinematic Veo prompt (max 50 words)" },
+          { name: "visualDescription", type: "string", description: "Cinematic visual prompt (max 50 words)" },
           { name: "keyStat", type: "string", description: "The single most impressive stat" },
-          { name: "veoStyleTokens", type: "string", description: "Visual style for Veo" },
+          { name: "veoStyleTokens", type: "string", description: "Visual style tokens" },
         ],
         dependsOn: ["deep-research"],
       },
       {
         id: "generate-clip",
-        name: "Generate Clip (8s Veo)",
+        name: "Generate Clip (5s Wan 2.1)",
         type: "llm",
         subtype: "video",
         description:
-          "Generates a single 8-second video clip using Veo. Fresh text-to-video generation — no source grounding. This is the atomic unit.",
-        prompt: "Generate an 8-second video clip from the visual description and style tokens.",
-        userMessage: "Generate the 8-second video clip.",
+          "Generates a single 5-second video clip using Wan 2.1 via Replicate. Fresh text-to-video generation — no source grounding. This is the atomic unit.",
+        prompt: "Generate a 5-second video clip from the visual description and style tokens.",
+        userMessage: "Generate the 5-second video clip via Replicate.",
 
         inputSchema: [
           { name: "visualDescription", type: "string", description: "Clip visual description" },
-          { name: "styleTokens", type: "string", description: "Veo style tokens" },
+          { name: "styleTokens", type: "string", description: "Style tokens" },
         ],
         outputSchema: [
-          { name: "videoBase64", type: "string", description: "Base64-encoded 8s video clip (MP4)" },
+          { name: "videoBase64", type: "string", description: "Base64-encoded 5s video clip (MP4)" },
           { name: "mimeType", type: "string", description: "Video MIME type" },
-          { name: "durationSeconds", type: "number", description: "Clip duration (8s)" },
+          { name: "durationSeconds", type: "number", description: "Clip duration (5s)" },
         ],
         dependsOn: ["write-clip-script"],
       },
@@ -978,7 +978,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         name: "Preview & Export",
         type: "display",
         description:
-          "Displays the generated 8-second clip with the script, narration, key facts, and download option.",
+          "Displays the generated 5-second clip with the script, narration, key facts, and download option.",
         inputSchema: [
           { name: "research", type: "object", description: "Original research data" },
           { name: "script", type: "object", description: "The clip script" },
