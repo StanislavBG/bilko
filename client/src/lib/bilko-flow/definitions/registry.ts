@@ -11,7 +11,7 @@
  * server/bilko-flow/ for deterministic engine integration.
  *
  * ═══════════════════════════════════════════════════════════
- * ACTIVE FLOWS:  bilko-main, video-discovery, test-newsletter,
+ * ACTIVE FLOWS:  bilko-main, video-discovery, newsletter,
  *                weekly-football-video, ai-clip, work-with-me,
  *                ai-consultation, recursive-interviewer,
  *                linkedin-strategist, socratic-architect
@@ -177,7 +177,7 @@ const allFlows: FlowDefinition[] = [
         type: "external-input",
         subtype: "flow-output",
         description:
-          "Receives the experience summary from a completed sub-flow (e.g. test-newsletter). This external-input node injects mood and context data into the greeting node's next iteration, allowing Bilko to adjust tone and references based on what the user just experienced.",
+          "Receives the experience summary from a completed sub-flow (e.g. newsletter). This external-input node injects mood and context data into the greeting node's next iteration, allowing Bilko to adjust tone and references based on what the user just experienced.",
         outputSchema: [
           {
             name: "experienceSummary",
@@ -442,18 +442,20 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
   //   3. Slideshow video (AI-generated scene images + TTS narration)
   // AI video generation has been moved to the dedicated weekly-football-video flow.
   {
-    id: "test-newsletter",
-    name: "European Football Newsletter",
+    id: "newsletter",
+    name: "Newsletter",
     description:
-      "The media pipeline — discovers 3 trending European football stories, writes articles, then produces a complete package: newsletter, cinematic AI infographic (Nano Banana, emphasizing scores & transfer fees), and slideshow with AI-generated scene images.",
-    version: "5.0.0",
+      "Pick a time range and topic, drill into a subtopic, then get a custom media package: newsletter articles, cinematic AI infographic (Nano Banana), and slideshow with AI-generated scene images.",
+    version: "6.0.0",
     location: "landing",
     componentPath: "client/src/components/newsletter-flow.tsx",
-    tags: ["landing", "newsletter", "football", "european", "infographic", "media-pipeline", "nano-banana"],
+    tags: ["landing", "newsletter", "custom", "infographic", "media-pipeline", "nano-banana"],
     icon: "Newspaper",
-    voiceTriggers: ["newsletter", "football", "news", "newspaper", "daily", "infographic"],
+    voiceTriggers: ["newsletter", "news", "newspaper", "daily", "infographic", "custom"],
     websiteUrl: "https://bilkobibitkov.replit.app/",
     phases: [
+      { id: "select-range-and-topic", label: "Time & Topic", stepIds: ["select-range-and-topic"] },
+      { id: "select-subtopic", label: "Subtopic", stepIds: ["generate-subtopics", "select-subtopic"] },
       { id: "discovering", label: "Discover", stepIds: ["discover-stories"] },
       { id: "writing", label: "Write", stepIds: ["write-articles"] },
       { id: "summarizing", label: "Rank & Summarize", stepIds: ["newsletter-summary", "rank-stories"] },
@@ -469,23 +471,70 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     },
     steps: [
       {
+        id: "select-range-and-topic",
+        name: "Select Time Range & Topic",
+        type: "user-input",
+        description:
+          "User selects a time range (1d to 10y+) and a topic from pre-built world events or custom text/voice input.",
+        inputSchema: [],
+        outputSchema: [
+          { name: "timeRange", type: "string", description: "Selected time range (1d, 1w, 1m, 1y, 5y, 10y, 10y+)" },
+          { name: "topic", type: "string", description: "Selected or custom topic" },
+        ],
+        dependsOn: [],
+      },
+      {
+        id: "generate-subtopics",
+        name: "Generate Subtopics",
+        type: "llm",
+        description:
+          "Generates 5 compelling subtopics, angles, or open questions for the selected topic and time range.",
+        prompt: "Generate 5 subtopics/angles for the selected topic and time range.",
+        userMessage: "Find 5 interesting angles for this topic.",
+        inputSchema: [
+          { name: "timeRange", type: "string", description: "Selected time range" },
+          { name: "topic", type: "string", description: "Selected topic" },
+        ],
+        outputSchema: [
+          { name: "subtopics", type: "array", description: "5 subtopics with question and description" },
+        ],
+        dependsOn: ["select-range-and-topic"],
+      },
+      {
+        id: "select-subtopic",
+        name: "Select Subtopic",
+        type: "user-input",
+        description:
+          "User picks from 5 generated subtopics or enters a custom angle via text/voice.",
+        inputSchema: [
+          { name: "subtopics", type: "array", description: "The 5 generated subtopics" },
+        ],
+        outputSchema: [
+          { name: "selectedSubtopic", type: "string", description: "The chosen subtopic or custom input" },
+        ],
+        dependsOn: ["generate-subtopics"],
+      },
+      {
         id: "discover-stories",
         name: "Discover Stories",
         type: "llm",
         description:
-          "Acts as a European football journalist to discover 3 trending stories from across the major leagues — Premier League, La Liga, Serie A, Bundesliga, Ligue 1, and Champions League.",
-        prompt: "Discover 3 trending European football stories with headline, summary, league, and keyStat.",
-        userMessage: "Discover 3 trending European football stories for today's newsletter.",
-
-        inputSchema: [],
+          "Discovers 3 compelling stories based on the user's chosen time range, topic, and subtopic angle.",
+        prompt: "Discover 3 stories about the selected topic focused on the chosen subtopic.",
+        userMessage: "Discover 3 stories matching the selected topic and angle.",
+        inputSchema: [
+          { name: "timeRange", type: "string", description: "Time range" },
+          { name: "topic", type: "string", description: "Topic" },
+          { name: "subtopic", type: "string", description: "Selected subtopic" },
+        ],
         outputSchema: [
           {
             name: "stories",
             type: "array",
-            description: "Array of 3 trending stories with headline, summary, league, keyStat",
+            description: "Array of 3 stories with headline, summary, league/category, keyStat",
           },
         ],
-        dependsOn: [],
+        dependsOn: ["select-subtopic"],
       },
       {
         id: "write-articles",
@@ -546,9 +595,9 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         name: "Design Infographic",
         type: "llm",
         description:
-          "Creates structured infographic data emphasizing SCORES, TRANSFER FEES, and NUMERICAL DATA from ranked stories — plus a rich imagePrompt for Nano Banana cinematic wallpaper generation. Runs in parallel with create-narrative.",
-        prompt: "Design an infographic layout with title, mainStory (60% space), 2 supporting cards, and a cinematic imagePrompt for AI image generation emphasizing scores and transfer fees.",
-        userMessage: "Design a sports infographic for the ranked stories with scores and transfer fee emphasis.",
+          "Creates structured infographic data emphasizing KEY NUMBERS and DATA from ranked stories — plus a rich imagePrompt for Nano Banana cinematic wallpaper generation. Runs in parallel with create-narrative.",
+        prompt: "Design an infographic layout with title, mainStory (60% space), 2 supporting cards, and a cinematic imagePrompt for AI image generation.",
+        userMessage: "Design an infographic for the ranked stories.",
 
         inputSchema: [
           { name: "ranked", type: "object", description: "Ranked stories with main + supporting" },
@@ -603,8 +652,8 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         type: "llm",
         subtype: "image",
         description:
-          "Generates a cinematic wallpaper-style infographic image using Nano Banana (Gemini native image gen). Focuses on scores, transfer fees, and dramatic football visuals with stat callouts.",
-        prompt: "Generate a cinematic infographic image for European football with scores and transfer fee emphasis.",
+          "Generates a cinematic wallpaper-style infographic image using Nano Banana (Gemini native image gen). Dramatic visuals with stat callouts.",
+        prompt: "Generate a cinematic infographic image with key data emphasis.",
         userMessage: "Generate the infographic hero image with Nano Banana.",
 
         inputSchema: [
@@ -623,8 +672,8 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         type: "llm",
         subtype: "image",
         description:
-          "Generates cinematic AI images for each storyboard scene using Nano Banana. Each image focuses on one key event with dramatic football visuals.",
-        prompt: "Generate cinematic scene images for each storyboard scene, one per key football event.",
+          "Generates cinematic AI images for each storyboard scene using Nano Banana. Each image focuses on one key visual moment.",
+        prompt: "Generate cinematic scene images for each storyboard scene.",
         userMessage: "Generate AI images for the slideshow scenes.",
 
         inputSchema: [
@@ -1608,7 +1657,7 @@ export const flowRegistry: FlowDefinition[] = validateRegistry(allFlows);
 export const activeFlowIds = new Set([
   "bilko-main",
   "video-discovery",
-  "test-newsletter",
+  "newsletter",
   "weekly-football-video",
   "ai-clip",
   "work-with-me",
