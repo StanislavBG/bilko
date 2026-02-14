@@ -587,7 +587,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
 
       const clip1Video = clip1Result.videos?.[0];
       if (!clip1Video?.videoBase64) {
-        throw new Error("Clip 1: Veo returned no video data. The model may be unavailable or the prompt was rejected.");
+        throw new Error("Clip 1: generation returned no video data. Check server logs for Veo API response details.");
       }
       const clip1Data: ClipResult = {
         videoBase64: clip1Video.videoBase64,
@@ -617,7 +617,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
 
       const clip2Video = clip2Result.videos?.[0];
       if (!clip2Video?.videoBase64) {
-        throw new Error("Clip 2: Veo returned no video data. Source-grounded generation may have failed.");
+        throw new Error("Clip 2: source-grounded generation returned no video data. Check server logs for details.");
       }
       const clip2Data: ClipResult = {
         videoBase64: clip2Video.videoBase64,
@@ -647,7 +647,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
 
       const clip3Video = clip3Result.videos?.[0];
       if (!clip3Video?.videoBase64) {
-        throw new Error("Clip 3: Veo returned no video data. Source-grounded generation may have failed.");
+        throw new Error("Clip 3: source-grounded generation returned no video data. Check server logs for details.");
       }
       const clip3Data: ClipResult = {
         videoBase64: clip3Video.videoBase64,
