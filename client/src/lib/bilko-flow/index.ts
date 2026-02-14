@@ -38,8 +38,8 @@ export { chat, chatJSON, jsonPrompt, LLMError, LLMParseError } from "./llm/clien
 export type { ChatMessage, TokenUsage, LLMResult, LLMOptions } from "./llm/client";
 
 // ── HTTP API Helpers ────────────────────────────────────────
-export { apiPost, apiGet, validateVideos, searchYouTube, generateImage, generateImages, generateClip, generateClips, generateVideo, concatenateVideos, APIError } from "./llm/api";
-export type { VideoCandidate, ImageGenerationResult, ClipGenerationResult, VideoGenerationResult, VideoResult, ContinuousVideoResult, ConcatResult } from "./llm/api";
+export { apiPost, apiGet, apiPatch, validateVideos, searchYouTube, generateImage, generateImages, generateClip, generateClips, generateVideo, concatenateVideos, createVideoRun, updateVideoRun, saveVideoClip, saveVideoFinal, listVideoRuns, getVideoRun, APIError } from "./llm/api";
+export type { VideoCandidate, ImageGenerationResult, ClipGenerationResult, VideoGenerationResult, VideoResult, ContinuousVideoResult, ConcatResult, VideoRunSummary, VideoRunDetail } from "./llm/api";
 
 // ── Flow Execution Runtime ──────────────────────────────────
 export { useFlowExecution, useExecutionStore } from "./runtime/use-flow-execution";
