@@ -33,7 +33,7 @@ export interface ValidationReport {
   steps: StepResult[];
 }
 
-// ── Trace shape from Memory Explorer ──
+// ── Trace shape from communication traces ──
 
 interface TraceData {
   action: string | null;

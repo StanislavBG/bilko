@@ -56,7 +56,7 @@ bilko/
 │   └── models/              # Drizzle ORM schemas (PostgreSQL)
 ├── rules/                    # Governance documents (THE SOURCE OF TRUTH)
 │   ├── architecture/        # ARCH-000 to ARCH-005
-│   ├── apps/                # APP-* (landing, home, memory, workflows, rules)
+│   ├── apps/                # APP-* (landing, home, workflows, rules)
 │   ├── data/                # DATA-* (principles, traces, audits)
 │   ├── env/                 # ENV-* (n8n instance, workflow registry, channels)
 │   ├── hub/                 # HUB-* (layout, access, navigation)
@@ -168,8 +168,6 @@ Defined in `shared/models/`:
 | Route | Purpose |
 |-------|---------|
 | `POST /api/orchestrate/:workflowId` | Execute n8n workflow through orchestrator |
-| `GET /api/traces` | List communication traces (admin only) |
-| `GET /api/traces/:id` | Get trace details |
 | `GET /api/rules` | List all rules from manifest |
 | `GET /api/rules/:ruleId` | Get rule content |
 | `GET /api/workflows` | List available workflows |
@@ -196,7 +194,6 @@ Defined in `shared/models/`:
 | `/flows/:flowId` | `FlowDetail` | Inspect flow: DAG, step-through, execution history |
 | `/projects/:projectId?` | `Projects` | Project listing and details |
 | `/workflows` | `N8nWorkflows` | N8N Workflows — n8n workflow management |
-| `/memory` | `MemoryExplorer` | View communication traces |
 | `/rules` | `RulesExplorer` | Browse rule catalog (admin) |
 
 ## Rules System

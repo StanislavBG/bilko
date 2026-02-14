@@ -145,7 +145,7 @@ export function registerOrchestratorRoutes(app: Express) {
     if (!sessionUser || !sessionUser.claims?.sub) {
       return res.status(401).json({ error: "Authentication required" });
     }
-    
+
     try {
       const dbUser = await authStorage.getUser(sessionUser.claims.sub);
       if (!dbUser || !dbUser.isAdmin) {
@@ -157,41 +157,6 @@ export function registerOrchestratorRoutes(app: Express) {
       return res.status(500).json({ error: "Failed to verify admin status" });
     }
   };
-
-  // n8n communication traces
-  app.get("/api/n8n/traces", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 10, 100);
-      const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
-      const [traces, total] = await Promise.all([
-        orchestratorStorage.getRecentTraces(limit, offset),
-        orchestratorStorage.countTraces()
-      ]);
-      res.json({
-        traces,
-        pagination: {
-          total,
-          limit,
-          offset,
-          hasMore: offset + traces.length < total
-        }
-      });
-    } catch (err) {
-      next(err);
-    }
-  });
-
-  app.get("/api/n8n/traces/:id", requireAdmin, async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const trace = await orchestratorStorage.getTrace(req.params.id as string);
-      if (!trace) {
-        return res.status(404).json({ error: "Trace not found" });
-      }
-      res.json(trace);
-    } catch (err) {
-      next(err);
-    }
-  });
 
   // n8n topic deduplication
   app.get("/api/n8n/topics/:workflowId", async (req: Request, res: Response, next: NextFunction) => {

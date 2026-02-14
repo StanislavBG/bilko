@@ -29,7 +29,7 @@ READ: rules/integration/n8n/index.md
 | Building/modifying workflows | INT-002 (Directives D1-D14+), ENV-002, Workflow Artifact |
 | Setting up n8n instance | INT-004, ENV-001 |
 | **Debugging workflow failures** | **INT-002 (Known Issues FIRST), ENV-001, ENV-002, Workflow Artifact** |
-| Implementing callbacks/memory | INT-005 (Callback Persistence), ENV-001 |
+| Implementing callbacks | INT-005 (Callback Persistence), ENV-001 |
 
 ### Step 3: Extract Critical Content from INT-002
 
@@ -392,7 +392,7 @@ Before debugging, always load:
 | ENV-001 | n8n instance URLs, webhook base, API base |
 | ENV-002 | Workflow registry - n8n IDs, webhook paths |
 | Workflow Artifact | Objectives, prompts, JSON definition (see Artifact Pattern below) |
-| INT-005 | Callback persistence - how memory/traces work |
+| INT-005 | Callback persistence - how traces work |
 | INT-002 | Known Issues Registry - documented problems |
 
 ### Artifact Pattern
@@ -477,7 +477,7 @@ Check fields: selectedTopic.dataRichness, extractedStats.score, extractedStats.t
 - **rules/integration/n8n/001-overview.md** (INT-001): Quick reference overview
 - **rules/integration/n8n/002-api-practices.md** (INT-002): Comprehensive practices, Known Issues, Directives
 - **rules/integration/n8n/004-setup.md** (INT-004): Self-hosting setup guide
-- **rules/integration/005-callback-persistence.md** (INT-005): Callback persistence for memory/traces
+- **rules/integration/005-callback-persistence.md** (INT-005): Callback persistence for traces
 
 ### Environment Configuration
 - **rules/env/001-n8n-instance.md** (ENV-001): n8n instance URLs, webhook base, API base
@@ -506,7 +506,7 @@ Check fields: selectedTopic.dataRichness, extractedStats.score, extractedStats.t
 
 ### v3.1.0 (2026-02-01)
 - Added DEBUGGING PROTOCOL section with mandatory Known Issues gate
-- Added debugging workflow failures and callbacks/memory to task table
+- Added debugging workflow failures and callbacks to task table
 - Added ENV-002 and INT-005 to cross-references
 - Added Known Issues Quick Reference table
 - Added extended ISSUE-011 sanitization pattern with full code example

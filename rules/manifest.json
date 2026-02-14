@@ -498,7 +498,6 @@
       ],
       "crossReferences": [
         "ARCH-003",
-        "APP-MEMORY-001",
         "DATA-004"
       ],
       "description": "Schema and practices for storing communication traces with execution linkage and error tracking."
@@ -672,28 +671,6 @@
         "UI-005"
       ],
       "description": "Multi-agent conversation canvas contract. Speaker attribution, per-agent voices, mic-on default, no inline widgets, small text, flow step visibility, voice settings, and canvas interaction rules (merged from ARCH-005 C1-C4)."
-    },
-    "APP-MEMORY-001": {
-      "id": "APP-MEMORY-001",
-      "title": "Memory Explorer",
-      "path": "rules/apps/memory-explorer/001-overview.md",
-      "partition": "apps",
-      "priority": "HIGH",
-      "version": "1.0.0",
-      "triggers": [
-        "memory",
-        "trace",
-        "explorer",
-        "communication history"
-      ],
-      "dependencies": [
-        "DATA-002",
-        "UI-001"
-      ],
-      "crossReferences": [
-        "DATA-002"
-      ],
-      "description": "UI for viewing and inspecting communication traces."
     },
     "APP-WORKFLOWS-001": {
       "id": "APP-WORKFLOWS-001",
@@ -924,7 +901,7 @@
         ]
       },
       {
-        "pattern": "home|dashboard|landing|workflow page|memory explorer|new app|new feature",
+        "pattern": "home|dashboard|landing|workflow page|new app|new feature",
         "partitions": [
           "apps",
           "architecture"
