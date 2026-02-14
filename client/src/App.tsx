@@ -105,6 +105,7 @@ function AuthenticatedApp() {
                 <main className="flex-1 flex overflow-hidden">
                   <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Skeleton className="h-8 w-48" /></div>}>
                     <Switch>
+                      <Route path="/s/:flowId" component={MainFlow} />
                       <Route path="/" component={MainFlow} />
                       <Route path="/projects/:projectId?" component={Projects} />
                       <Route path="/bilkos-way" component={BilkosWay} />
