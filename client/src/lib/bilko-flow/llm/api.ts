@@ -282,6 +282,24 @@ export async function generateVideo(
   }, { signal: options?.signal });
 }
 
+// ── Video Frame Extraction (FFmpeg) ──────────────────────────────────
+
+/**
+ * Extract the last frame of a video as a PNG base64 string.
+ * Used for minimax clip chaining: last frame of clip N → first_frame_image of clip N+1.
+ */
+export async function extractLastFrame(
+  videoBase64: string,
+  options?: { mimeType?: string; signal?: AbortSignal },
+): Promise<string> {
+  const result = await apiPost<{ frameBase64: string }>(
+    "/api/llm/extract-last-frame",
+    { videoBase64, mimeType: options?.mimeType },
+    { signal: options?.signal },
+  );
+  return result.frameBase64;
+}
+
 // ── Video Concatenation (FFmpeg) ─────────────────────────────────────
 
 export interface ConcatResult {
