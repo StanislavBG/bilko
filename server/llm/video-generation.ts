@@ -366,10 +366,34 @@ async function parseClipResponse(
   }
 
   if (videos.length === 0) {
-    log.warn(`No clips parsed from response. Keys: [${responseKeys.join(", ")}]. Snippet: ${JSON.stringify(response).substring(0, 500)}`);
-  } else {
-    log.info(`Parsed ${videos.length} clip(s) successfully`);
+    // Check for RAI (Responsible AI) content filtering in the response
+    const raiCount = (genResponse as Record<string, unknown>).generateVideoResponse
+      ? ((genResponse.generateVideoResponse as Record<string, unknown>).raiMediaFilteredCount as number | undefined)
+      : undefined;
+    const raiReasons = (genResponse as Record<string, unknown>).generateVideoResponse
+      ? ((genResponse.generateVideoResponse as Record<string, unknown>).raiMediaFilteredReasons as string[] | undefined)
+      : undefined;
+
+    const snippet = JSON.stringify(response).substring(0, 500);
+
+    if (raiCount && raiCount > 0) {
+      const reasons = raiReasons?.length ? raiReasons.join(", ") : "unspecified safety filter";
+      log.error(`Veo content filtered by safety policy (${raiCount} sample(s)): ${reasons}`, { snippet });
+      throw new Error(`Veo rejected the prompt due to content safety filters: ${reasons}. Try rephrasing the visual description to avoid references to real people, violence, or copyrighted content.`);
+    }
+
+    // Check if generatedSamples existed but had no downloadable URIs
+    const samples = genResponse.generateVideoResponse?.generatedSamples;
+    if (samples && samples.length > 0) {
+      log.error(`Veo returned ${samples.length} sample(s) but none had downloadable video URIs`, { snippet });
+      throw new Error(`Veo returned ${samples.length} sample(s) but video download failed for all of them. The Gemini API file URIs may be temporarily unavailable.`);
+    }
+
+    log.error(`No clips parsed from Veo response. Keys: [${responseKeys.join(", ")}]. Snippet: ${snippet}`);
+    throw new Error(`Veo returned no video data. Response keys: [${responseKeys.join(", ")}]. The model may be unavailable or the response format was unrecognized.`);
   }
+
+  log.info(`Parsed ${videos.length} clip(s) successfully`);
 
   return { videos, model, operationName };
 }
