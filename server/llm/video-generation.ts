@@ -22,6 +22,10 @@
  * Model: veo-3.1-generate-preview
  */
 
+import { GoogleGenAI } from "@google/genai";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import { createLogger } from "../logger";
 import { MODEL_DEFAULTS } from "./index";
 
@@ -263,47 +267,85 @@ export async function generateClip(
 }
 
 /**
+ * Build a proper download URL from a Gemini file URI.
+ * Ensures `alt=media` is present exactly once and avoids duplicate params.
+ */
+function buildDownloadUrl(uri: string): string {
+  // Decode in case the URI is URL-encoded
+  const decoded = decodeURIComponent(uri);
+
+  try {
+    const url = new URL(decoded);
+    // Ensure alt=media is present (needed for binary download)
+    if (!url.searchParams.has("alt")) {
+      url.searchParams.set("alt", "media");
+    }
+    return url.toString();
+  } catch {
+    // If URL parsing fails, fall back to string manipulation
+    if (!decoded.includes("alt=media")) {
+      const sep = decoded.includes("?") ? "&" : "?";
+      return `${decoded}${sep}alt=media`;
+    }
+    return decoded;
+  }
+}
+
+/**
  * Download video content from a Gemini API file URI.
- * The URI requires the API key appended as a query parameter to authorize the download.
+ *
+ * Uses header-based authentication (`x-goog-api-key`) which is the
+ * reliable method for Gemini file downloads. Query-param auth causes
+ * 403 "project mismatch" errors because the file URI is hosted on a
+ * shared Google project, not the caller's project.
+ *
+ * Falls back to the @google/genai SDK's file download if header auth fails.
  */
 async function downloadVideoFromUri(uri: string, apiKey: string): Promise<string> {
-  const separator = uri.includes("?") ? "&" : "?";
-  const downloadUrl = `${uri}${separator}key=${apiKey}&alt=media`;
+  const downloadUrl = buildDownloadUrl(uri);
 
   // Retry with exponential backoff — Gemini file URIs can take a few seconds
   // to become available after the generation operation completes.
-  const maxRetries = 4;
-  const baseDelayMs = 3_000; // 3s, 6s, 12s, 24s
+  const maxRetries = 5;
+  const baseDelayMs = 5_000; // 5s, 10s, 20s, 40s, 80s
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    log.info(`Downloading clip from URI (attempt ${attempt}/${maxRetries}): ${uri.substring(0, 100)}...`);
+    log.info(`Downloading clip (attempt ${attempt}/${maxRetries}): ${downloadUrl.substring(0, 150)}`);
 
     try {
+      // Header-based auth — fixes the 403 "project mismatch" issue
       const response = await fetch(downloadUrl, {
         method: "GET",
+        headers: { "x-goog-api-key": apiKey },
         signal: AbortSignal.timeout(120_000), // 2 min download timeout
         redirect: "follow",
       });
 
       if (response.ok) {
         const arrayBuffer = await response.arrayBuffer();
-        const base64 = Buffer.from(arrayBuffer).toString("base64");
-        log.info(`Clip downloaded: ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB (${base64.length} chars base64)`);
-        return base64;
+        if (arrayBuffer.byteLength === 0) {
+          log.warn(`Empty response body on attempt ${attempt}, treating as retryable`);
+        } else {
+          const base64 = Buffer.from(arrayBuffer).toString("base64");
+          log.info(`Clip downloaded: ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB (${base64.length} chars base64)`);
+          return base64;
+        }
+      } else {
+        const errorText = await response.text().catch(() => "");
+
+        // Don't retry on non-retryable client errors
+        // 403 IS retryable here — it's the known "project mismatch" issue that
+        // can resolve with header auth or after propagation delay
+        if (response.status >= 400 && response.status < 500
+            && response.status !== 403 && response.status !== 404
+            && response.status !== 408 && response.status !== 429) {
+          log.error(`Clip download failed with non-retryable status ${response.status}`, { error: errorText, downloadUrl });
+          throw new Error(`Failed to download clip (${response.status}): ${errorText}`);
+        }
+
+        log.warn(`Clip download attempt ${attempt}/${maxRetries} failed: ${response.status}`, { error: errorText });
       }
-
-      const errorText = await response.text().catch(() => "");
-
-      // Don't retry on client errors (4xx) other than 404/408/429 — they won't resolve
-      if (response.status >= 400 && response.status < 500
-          && response.status !== 404 && response.status !== 408 && response.status !== 429) {
-        log.error(`Clip download failed with non-retryable status ${response.status}`, { error: errorText, uri });
-        throw new Error(`Failed to download clip (${response.status}): ${errorText}`);
-      }
-
-      log.warn(`Clip download attempt ${attempt}/${maxRetries} failed: ${response.status}`, { error: errorText });
     } catch (err) {
-      // Re-throw non-retryable errors (like the one we throw above)
       if (err instanceof Error && err.message.startsWith("Failed to download clip")) {
         throw err;
       }
@@ -319,7 +361,50 @@ async function downloadVideoFromUri(uri: string, apiKey: string): Promise<string
     }
   }
 
-  throw new Error(`Failed to download clip after ${maxRetries} attempts from URI: ${uri.substring(0, 100)}`);
+  // Last resort: try the @google/genai SDK's file download method.
+  // This handles auth internally and may succeed where manual fetch fails.
+  log.info("All fetch attempts failed. Trying @google/genai SDK file download as fallback...");
+  try {
+    return await downloadVideoWithSdk(uri, apiKey);
+  } catch (sdkErr) {
+    log.error("SDK fallback download also failed", {
+      error: sdkErr instanceof Error ? sdkErr.message : String(sdkErr),
+    });
+  }
+
+  throw new Error(`Failed to download clip after ${maxRetries} fetch attempts + SDK fallback from URI: ${uri.substring(0, 150)}`);
+}
+
+/**
+ * Fallback download using the @google/genai SDK.
+ * Downloads to a temp file and reads back as base64.
+ */
+async function downloadVideoWithSdk(uri: string, apiKey: string): Promise<string> {
+  const ai = new GoogleGenAI({ apiKey });
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "veo-download-"));
+  const tmpFile = path.join(tmpDir, "clip.mp4");
+
+  try {
+    await ai.files.download({
+      file: uri,
+      downloadPath: tmpFile,
+    });
+
+    const buffer = fs.readFileSync(tmpFile);
+    if (buffer.byteLength === 0) {
+      throw new Error("SDK downloaded an empty file");
+    }
+
+    const base64 = buffer.toString("base64");
+    log.info(`SDK fallback downloaded: ${(buffer.byteLength / 1024 / 1024).toFixed(1)}MB`);
+    return base64;
+  } finally {
+    // Clean up temp files
+    try {
+      if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
+      if (fs.existsSync(tmpDir)) fs.rmdirSync(tmpDir);
+    } catch { /* ignore cleanup errors */ }
+  }
 }
 
 async function parseClipResponse(
@@ -343,13 +428,19 @@ async function parseClipResponse(
 
   // Shape 1: generateVideoResponse.generatedSamples (Gemini API)
   // The API returns a download URI — we must fetch the actual video bytes.
-  // Brief pause before first download — file URIs can lag behind operation completion.
+  // Pause before first download — file URIs need time to propagate after
+  // the operation completes. 5s is more reliable than the previous 2s.
   if (genResponse.generateVideoResponse?.generatedSamples) {
     const samples = genResponse.generateVideoResponse.generatedSamples;
-    log.info(`Response shape: generateVideoResponse with ${samples.length} sample(s). Waiting 2s for URI propagation...`);
-    await sleep(2_000);
+    log.info(`Response shape: generateVideoResponse with ${samples.length} sample(s). Waiting 5s for URI propagation...`);
+    await sleep(5_000);
+
+    let samplesWithUri = 0;
+    let samplesWithoutUri = 0;
     for (const sample of samples) {
       if (sample.video?.uri) {
+        samplesWithUri++;
+        log.info(`Sample ${samplesWithUri}: URI = ${sample.video.uri}`);
         try {
           const videoBase64 = await downloadVideoFromUri(sample.video.uri, apiKey);
           videos.push({
@@ -359,12 +450,16 @@ async function parseClipResponse(
           });
         } catch (downloadErr) {
           log.error(`Failed to download clip from URI`, {
-            uri: sample.video.uri.substring(0, 100),
+            uri: sample.video.uri,
             error: downloadErr instanceof Error ? downloadErr.message : String(downloadErr),
           });
         }
+      } else {
+        samplesWithoutUri++;
+        log.warn(`Sample has no video URI. video object: ${JSON.stringify(sample.video)}`);
       }
     }
+    log.info(`URI summary: ${samplesWithUri} with URI, ${samplesWithoutUri} without URI, ${videos.length} downloaded`);
   }
 
   // Shape 2: direct videos array (may contain inline base64 or GCS URIs)
@@ -417,8 +512,14 @@ async function parseClipResponse(
     // Check if generatedSamples existed but had no downloadable URIs
     const samples = genResponse.generateVideoResponse?.generatedSamples;
     if (samples && samples.length > 0) {
-      log.error(`Veo returned ${samples.length} sample(s) but none had downloadable video URIs`, { snippet });
-      throw new Error(`Veo returned ${samples.length} sample(s) but video download failed for all of them. The Gemini API file URIs may be temporarily unavailable.`);
+      const hasAnyUri = samples.some(s => s.video?.uri);
+      if (hasAnyUri) {
+        log.error(`Veo returned ${samples.length} sample(s) with URIs but all downloads failed`, { snippet });
+        throw new Error(`Veo returned ${samples.length} sample(s) but all video downloads failed. Check server logs for HTTP status codes from the download attempts.`);
+      } else {
+        log.error(`Veo returned ${samples.length} sample(s) but none contained video URIs`, { snippet });
+        throw new Error(`Veo returned ${samples.length} sample(s) but none contained download URIs. The API response may have changed format.`);
+      }
     }
 
     log.error(`No clips parsed from Veo response. Keys: [${responseKeys.join(", ")}]. Snippet: ${snippet}`);
