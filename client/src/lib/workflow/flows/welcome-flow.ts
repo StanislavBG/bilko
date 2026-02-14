@@ -61,8 +61,8 @@ export const LEARNING_MODES = [
     voiceTriggers: ["newsletter", "news", "newspaper", "daily", "custom"],
   },
   {
-    id: "weekly-football-video",
-    label: "Weekly Football Highlight",
+    id: "ai-video",
+    label: "AI Video",
     description: "Deep-research the biggest European football event and produce a 20-second social media video",
     icon: "Clapperboard",
     voiceTriggers: ["video", "highlight", "weekly", "football video", "social media", "clip"],
