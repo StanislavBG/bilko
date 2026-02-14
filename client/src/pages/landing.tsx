@@ -240,6 +240,16 @@ export function LandingContent() {
   const [selectedMode, setSelectedMode] = useState<LearningModeId | null>(null);
   const [greetingLoading, setGreetingLoading] = useState(false);
 
+  // ── Shared subflow URL detection ─────────────────────────
+  // If the URL is /s/:flowId, auto-launch that subflow on mount.
+  const initialFlowId = useMemo(() => {
+    const match = window.location.pathname.match(/^\/s\/([^/]+)$/);
+    if (!match) return null;
+    const flowId = match[1];
+    return flowRegistry.some(f => f.id === flowId && f.location === "landing" && f.id !== "bilko-main")
+      ? flowId : null;
+  }, []);
+
   // AbortController for in-flight LLM calls — aborted on unmount
   const abortRef = useRef<AbortController>(new AbortController());
 
@@ -368,13 +378,22 @@ export function LandingContent() {
     [pushMessage, trackStep, setMainFlowPhase],
   );
 
-  // ── Initial greeting on mount ──
+  // ── Initial greeting on mount (or auto-launch from shared URL) ──
   const didInit = useRef(false);
   useEffect(() => {
     if (didInit.current) return;
     didInit.current = true;
 
-    runGreeting();
+    if (initialFlowId) {
+      // Shared URL (/s/:flowId) — skip greeting, launch subflow directly
+      handleChoice(initialFlowId);
+    } else {
+      // Redirect stale /s/ URLs with invalid IDs back to root
+      if (window.location.pathname.startsWith("/s/")) {
+        window.history.replaceState(null, "", "/");
+      }
+      runGreeting();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -449,6 +468,11 @@ export function LandingContent() {
           return { status: "running", subflowOwner: subflowOwnerId };
         },
       );
+
+      // Update URL for shareable subflow link
+      if (window.location.pathname !== `/s/${choiceId}`) {
+        window.history.pushState(null, "", `/s/${choiceId}`);
+      }
     },
     [pushMessage, resolveUserInput, sidebarCtx, claimChat, trackStep, setMainFlowPhase],
   );
@@ -493,6 +517,11 @@ export function LandingContent() {
 
           // Clear the selected mode — show mode grid again
           setSelectedMode(null);
+
+          // Reset URL back to root
+          if (window.location.pathname !== "/") {
+            window.history.pushState(null, "", "/");
+          }
 
           const recycleContext = summary
             ? { modeLabel, summary }
@@ -625,6 +654,22 @@ export function LandingContent() {
     });
     return unsub;
   }, [subscribe]);
+
+  // ── Browser back/forward — sync URL with subflow state ──
+  useEffect(() => {
+    const onPopState = () => {
+      const subflowMatch = window.location.pathname.match(/^\/s\/([^/]+)$/);
+      if (!subflowMatch && selectedMode) {
+        // Browser back to grid — lightweight exit without full recycle
+        releaseChat();
+        pushMessage(OWNER_ID, { speaker: "system", text: "Returning to Bilko" });
+        setSelectedMode(null);
+        setMainFlowPhase("running", "mode-selection");
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [selectedMode, releaseChat, pushMessage, setMainFlowPhase]);
 
   // Reset
   const handleReset = useCallback(() => {
