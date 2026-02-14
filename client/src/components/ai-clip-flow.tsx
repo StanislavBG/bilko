@@ -34,13 +34,15 @@ import {
   Film,
   RotateCcw,
   Download,
-  Clapperboard,
   Eye,
   CheckCircle2,
   Circle,
   Loader2,
   XCircle,
   AlertTriangle,
+  Copy,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import {
   chatJSON,
@@ -213,12 +215,58 @@ function StepStatusIcon({ status }: { status: StepStatus }) {
   }
 }
 
+/** Copyable code block for prompts and error details */
+function CopyableBlock({ label, content }: { label: string; content: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="mt-1.5 rounded-md border border-border bg-muted/30 overflow-hidden">
+      <div className="flex items-center justify-between px-2 py-1 border-b border-border/50 bg-muted/50">
+        <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+          {label}
+        </span>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(content);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          }}
+          className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors"
+        >
+          <Copy className="h-2.5 w-2.5" />
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre className="px-2 py-1.5 text-[11px] leading-relaxed text-foreground/80 whitespace-pre-wrap break-words font-mono max-h-[200px] overflow-y-auto">
+        {content}
+      </pre>
+    </div>
+  );
+}
+
+/** Expandable details section */
+function ExpandableDetail({ label, children, defaultOpen }: { label: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen ?? false);
+  return (
+    <div className="mt-1">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {open ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+        {label}
+      </button>
+      {open && <div className="mt-0.5">{children}</div>}
+    </div>
+  );
+}
+
 function PipelineTracker({
   currentState,
   failedStep,
   research,
   script,
   clip,
+  veoPrompt,
   statusMessage,
   elapsedSeconds,
   error,
@@ -228,6 +276,7 @@ function PipelineTracker({
   research: ResearchResult | null;
   script: ClipScript | null;
   clip: ClipResult | null;
+  veoPrompt: string | null;
   statusMessage: string;
   elapsedSeconds: number;
   error: string | null;
@@ -329,6 +378,26 @@ function PipelineTracker({
                     </p>
                   )}
 
+                  {/* Script details — show after scripting completes */}
+                  {(isComplete || isActive || isError) && step.id === "scripting" && script && (
+                    <div className="pl-5.5">
+                      <ExpandableDetail label="Script details" defaultOpen={isError && failedStep === "generating"}>
+                        <div className="space-y-1 text-[11px]">
+                          <div>
+                            <span className="text-muted-foreground font-medium">Narration: </span>
+                            <span className="text-foreground/80">{script.narration}</span>
+                          </div>
+                          <CopyableBlock label="Visual Description (sent to Veo)" content={script.visualDescription} />
+                          <CopyableBlock label="Style Tokens" content={script.veoStyleTokens} />
+                          <div>
+                            <span className="text-muted-foreground font-medium">Key Stat: </span>
+                            <span className="text-foreground/80">{script.keyStat}</span>
+                          </div>
+                        </div>
+                      </ExpandableDetail>
+                    </div>
+                  )}
+
                   {isActive && (
                     <div className="mt-1 pl-5.5">
                       <p className="text-xs text-muted-foreground animate-in fade-in duration-300">
@@ -343,9 +412,23 @@ function PipelineTracker({
                     </div>
                   )}
 
+                  {/* Veo prompt — show during/after generation step */}
+                  {(isActive || isComplete || isError) && step.id === "generating" && veoPrompt && (
+                    <div className="pl-5.5">
+                      <ExpandableDetail label="Exact Veo prompt" defaultOpen={isError}>
+                        <CopyableBlock label="Prompt sent to Veo API" content={veoPrompt} />
+                      </ExpandableDetail>
+                    </div>
+                  )}
+
                   {isError && error && (
-                    <div className="mt-1 pl-5.5">
-                      <p className="text-xs text-red-500/80">{error}</p>
+                    <div className="mt-1.5 pl-5.5">
+                      <div className="rounded-md border border-red-500/20 bg-red-500/5 p-2">
+                        <p className="text-xs font-medium text-red-500 mb-1">Error Details</p>
+                        <p className="text-xs text-red-400/90 whitespace-pre-wrap break-words leading-relaxed">
+                          {error}
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -387,6 +470,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
   const [research, setResearch] = useState<ResearchResult | null>(null);
   const [script, setScript] = useState<ClipScript | null>(null);
   const [clip, setClip] = useState<ClipResult | null>(null);
+  const [veoPrompt, setVeoPrompt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState(STATUS_MESSAGES.researching[0]);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -463,6 +547,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
     setFlowState("researching");
     setFailedAtStep(null);
     setError(null);
+    setVeoPrompt(null);
 
     let currentStep: FlowState = "researching";
 
@@ -514,6 +599,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
       setFlowState("generating");
 
       const clipPrompt = `${scriptData.visualDescription}. Style: ${scriptData.veoStyleTokens}. No real people, no identifiable faces, no logos or trademarks. Abstract cinematic visuals only.`;
+      setVeoPrompt(clipPrompt);
 
       const { data: clipResult } = await trackStep(
         "generate-clip",
@@ -523,7 +609,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
 
       const clipVideo = clipResult.videos?.[0];
       if (!clipVideo?.videoBase64) {
-        throw new Error("Veo returned no video data. The model may be unavailable or the prompt was rejected.");
+        throw new Error("Clip generation returned no video data. Check server logs for Veo API response details.");
       }
       const clipData: ClipResult = {
         videoBase64: clipVideo.videoBase64,
@@ -584,6 +670,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
     setResearch(null);
     setScript(null);
     setClip(null);
+    setVeoPrompt(null);
     setError(null);
     setFailedAtStep(null);
     setTimeout(() => {
@@ -605,6 +692,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
           research={research}
           script={script}
           clip={clip}
+          veoPrompt={veoPrompt}
           statusMessage={statusMessage}
           elapsedSeconds={elapsedSeconds}
           error={error}
