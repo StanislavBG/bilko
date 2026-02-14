@@ -76,20 +76,29 @@ function isMinimaxModel(model: string): boolean {
 /**
  * Build model-specific input for Replicate.
  *
- * - minimax/video-01: { prompt, prompt_optimizer } — 6s at 720p (fixed)
- * - wan-* models:     { prompt, num_frames, resolution }
+ * - minimax/video-01: { prompt, prompt_optimizer, first_frame_image? }
+ *   If firstFrameImageBase64 is provided, the model uses it as the opening
+ *   frame (image-to-video mode) for clip continuity chaining.
+ * - wan-* models: { prompt, num_frames, resolution }
  */
 function buildModelInput(
   model: string,
   prompt: string,
   durationSeconds: number,
   aspectRatio: string,
+  firstFrameImageBase64?: string,
 ): Record<string, unknown> {
   if (isMinimaxModel(model)) {
-    return {
+    const input: Record<string, unknown> = {
       prompt,
       prompt_optimizer: true,
     };
+    if (firstFrameImageBase64) {
+      // minimax accepts base64 PNG/JPEG directly as first_frame_image
+      input.first_frame_image = `data:image/png;base64,${firstFrameImageBase64}`;
+      log.info("Using first_frame_image for minimax clip chaining (image-to-video mode)");
+    }
+    return input;
   }
 
   // Wan-family models (wavespeedai/wan-*, wan-video/wan-*)
@@ -140,12 +149,19 @@ export async function generateClipReplicate(
     promptLength: request.prompt.length,
     durationSeconds: durationSec,
     aspectRatio: request.aspectRatio ?? "16:9",
+    hasFirstFrame: !!request.referenceImageBase64,
   });
 
   const startTime = Date.now();
 
   try {
-    const input = buildModelInput(model, request.prompt, durationSec, request.aspectRatio ?? "16:9");
+    const input = buildModelInput(
+      model,
+      request.prompt,
+      durationSec,
+      request.aspectRatio ?? "16:9",
+      request.referenceImageBase64,
+    );
 
     log.info(`Replicate input: ${JSON.stringify(input)}`);
 

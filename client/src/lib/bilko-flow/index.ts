@@ -38,7 +38,7 @@ export { chat, chatJSON, jsonPrompt, LLMError, LLMParseError } from "./llm/clien
 export type { ChatMessage, TokenUsage, LLMResult, LLMOptions } from "./llm/client";
 
 // ── HTTP API Helpers ────────────────────────────────────────
-export { apiPost, apiGet, apiPatch, validateVideos, searchYouTube, generateImage, generateImages, generateClip, generateClips, generateVideo, concatenateVideos, createVideoRun, updateVideoRun, saveVideoClip, saveVideoFinal, listVideoRuns, getVideoRun, APIError } from "./llm/api";
+export { apiPost, apiGet, apiPatch, validateVideos, searchYouTube, generateImage, generateImages, generateClip, generateClips, generateVideo, concatenateVideos, extractLastFrame, createVideoRun, updateVideoRun, saveVideoClip, saveVideoFinal, listVideoRuns, getVideoRun, APIError } from "./llm/api";
 export type { VideoCandidate, ImageGenerationResult, ClipGenerationResult, VideoGenerationResult, VideoResult, ContinuousVideoResult, ConcatResult, VideoRunSummary, VideoRunDetail } from "./llm/api";
 
 // ── Flow Execution Runtime ──────────────────────────────────
