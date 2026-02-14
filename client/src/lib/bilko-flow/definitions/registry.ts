@@ -709,26 +709,30 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     ],
   },
 
-  // ── ACTIVE — Weekly Football Highlight Video ─────────────
-  // Dedicated 20-second social-media video pipeline.
+  // ── ACTIVE — AI-Video (Weekly Football Highlight) ────────
+  // Dedicated model-aware video pipeline.
   // Separated from the newsletter flow for independent iteration.
   //
   // Pipeline:
-  //   1. Deep research → find the biggest European football event (last 7 weeks)
-  //   2. Write 20s script pre-planned for 8-6-6 second transition points
-  //   3. Generate 3 × 8s Veo clips chained via last-2-second grounding
-  //   4. Concatenate → single ~20s continuous video
+  //   1. Deep research → find the biggest European football event (last 7 days)
+  //   2. Write script with equal-segment transitions
+  //   3. Generate 3 clips chained for visual continuity
+  //   4. Concatenate → single continuous video
+  //
+  // Model-aware chaining:
+  //   - minimax/video-01 (Hailuo): 6s clips, last-frame → first_frame_image
+  //   - Veo (Gemini): 8s clips, source-video grounding (last 2s)
   {
     id: "weekly-football-video",
-    name: "Weekly Football Highlight",
+    name: "AI-Video",
     description:
-      "Deep-research the biggest European football event of the last 7 days, then produce a 20-second social-media video. The script is pre-planned for 8-6-6 second transitions. Three 8-second Veo clips are chained using last-2-second grounding to create a single continuous video packed with interesting facts and stats.",
-    version: "1.0.0",
+      "Deep-research the biggest European football event of the last 7 days, then produce a continuous social-media video. Three AI clips are chained for visual continuity using last-frame extraction (minimax) or source-video grounding (Veo), then concatenated via FFmpeg.",
+    version: "2.0.0",
     location: "landing",
     componentPath: "client/src/components/weekly-football-video-flow.tsx",
-    tags: ["landing", "football", "european", "video", "social-media", "veo", "highlight", "weekly"],
+    tags: ["landing", "football", "european", "video", "social-media", "highlight", "weekly", "minimax", "hailuo", "free"],
     icon: "Clapperboard",
-    voiceTriggers: ["video", "highlight", "weekly", "football video", "social media", "clip"],
+    voiceTriggers: ["ai video", "video", "highlight", "weekly", "football video", "social media"],
     websiteUrl: "https://bilkobibitkov.replit.app/",
     phases: [
       { id: "researching", label: "Research", stepIds: ["deep-research"] },
