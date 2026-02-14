@@ -11,6 +11,7 @@ import { generateImage, generateImages, type ImageGenerationRequest } from "./im
 import { generateClip, generateClips, generateVideo, type ClipGenerationRequest } from "./video-generation";
 import { generateClipReplicate, isReplicateModel, REPLICATE_VIDEO_MODEL } from "./video-generation-replicate";
 import { concatenateVideos } from "./video-concat";
+import { extractLastFrame } from "./video-frame-extract";
 import { createLogger } from "../logger";
 
 const log = createLogger("llm-routes");
@@ -321,6 +322,29 @@ router.post("/concat-videos", async (req: Request, res: Response) => {
     res.json(result);
   } catch (error) {
     console.error("Video concatenation error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// ── Last Frame Extraction (FFmpeg) ───────────────────────────────────
+
+router.post("/extract-last-frame", async (req: Request, res: Response) => {
+  try {
+    const { videoBase64, mimeType } = req.body as {
+      videoBase64: string;
+      mimeType?: string;
+    };
+
+    if (!videoBase64) {
+      res.status(400).json({ error: "videoBase64 is required" });
+      return;
+    }
+
+    const frameBase64 = await extractLastFrame(videoBase64, mimeType);
+    res.json({ frameBase64, mimeType: "image/png" });
+  } catch (error) {
+    console.error("Frame extraction error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: message });
   }

@@ -55,6 +55,33 @@ export async function apiGet<T>(
   return response.json() as Promise<T>;
 }
 
+/**
+ * General-purpose PATCH. Returns typed response body.
+ */
+export async function apiPatch<T>(
+  endpoint: string,
+  body: unknown,
+  options?: { signal?: AbortSignal },
+): Promise<T> {
+  const response = await fetch(endpoint, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: options?.signal,
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new APIError(
+      err.error || `API request failed (${response.status})`,
+      response.status,
+      endpoint,
+    );
+  }
+
+  return response.json() as Promise<T>;
+}
+
 // ── Domain-specific helpers ──────────────────────────────────────────
 
 export interface VideoCandidate {
@@ -255,6 +282,24 @@ export async function generateVideo(
   }, { signal: options?.signal });
 }
 
+// ── Video Frame Extraction (FFmpeg) ──────────────────────────────────
+
+/**
+ * Extract the last frame of a video as a PNG base64 string.
+ * Used for minimax clip chaining: last frame of clip N → first_frame_image of clip N+1.
+ */
+export async function extractLastFrame(
+  videoBase64: string,
+  options?: { mimeType?: string; signal?: AbortSignal },
+): Promise<string> {
+  const result = await apiPost<{ frameBase64: string }>(
+    "/api/llm/extract-last-frame",
+    { videoBase64, mimeType: options?.mimeType },
+    { signal: options?.signal },
+  );
+  return result.frameBase64;
+}
+
 // ── Video Concatenation (FFmpeg) ─────────────────────────────────────
 
 export interface ConcatResult {
@@ -301,6 +346,75 @@ export async function generateClips(
   );
   return result.clips;
 }
+
+// ── Video Run Persistence ────────────────────────────────────────────
+
+export interface VideoRunSummary {
+  id: string;
+  flowId: string;
+  runId: string;
+  status: string;
+  createdAt: string;
+  completedAt: string | null;
+  title: string | null;
+  headline: string | null;
+  league: string | null;
+  clipCount: number;
+  finalDurationSeconds: number | null;
+  hasFinalVideo: boolean;
+}
+
+export interface VideoRunDetail extends VideoRunSummary {
+  research: unknown;
+  script: unknown;
+  error: string | null;
+  clips: Array<{ index: number; url: string; sizeMB: number }>;
+  finalVideoUrl: string | null;
+}
+
+/** Create a new video run record */
+export async function createVideoRun(flowId: string, runId: string): Promise<void> {
+  await apiPost("/api/video-runs", { flowId, runId });
+}
+
+/** Update video run metadata */
+export async function updateVideoRun(
+  runId: string,
+  data: {
+    status?: string;
+    research?: unknown;
+    script?: unknown;
+    clipCount?: number;
+    finalDurationSeconds?: number;
+    error?: string;
+  },
+): Promise<void> {
+  await apiPatch(`/api/video-runs/${runId}`, data);
+}
+
+/** Save a clip video file to the server */
+export async function saveVideoClip(runId: string, clipIndex: number, videoBase64: string): Promise<void> {
+  await apiPost(`/api/video-runs/${runId}/clips/${clipIndex}`, { videoBase64 });
+}
+
+/** Save the combined final video to the server */
+export async function saveVideoFinal(runId: string, videoBase64: string): Promise<void> {
+  await apiPost(`/api/video-runs/${runId}/video`, { videoBase64 });
+}
+
+/** List past video runs */
+export async function listVideoRuns(flowId?: string): Promise<VideoRunSummary[]> {
+  const query = flowId ? `?flowId=${encodeURIComponent(flowId)}` : "";
+  const result = await apiGet<{ runs: VideoRunSummary[] }>(`/api/video-runs${query}`);
+  return result.runs;
+}
+
+/** Get full details for a video run */
+export async function getVideoRun(runId: string): Promise<VideoRunDetail> {
+  return apiGet<VideoRunDetail>(`/api/video-runs/${runId}`);
+}
+
+// ── Errors ───────────────────────────────────────────────────────────
 
 /**
  * API-specific error with status and endpoint.
