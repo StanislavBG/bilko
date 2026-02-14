@@ -62,14 +62,6 @@ export const applicationRegistry: readonly ApplicationDefinition[] = [
     description: "n8n workflow management and execution monitoring.",
   },
   {
-    id: "memory",
-    name: "Memory Explorer",
-    basePath: "/memory",
-    agentic: false,
-    access: "admin",
-    description: "Communication trace viewer for debugging.",
-  },
-  {
     id: "flows",
     name: "Flow Explorer",
     basePath: "/flows",

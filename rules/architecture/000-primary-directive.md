@@ -24,7 +24,7 @@ Why this matters:
 1. **Observability** - Every external call is logged with full request/response data
 2. **Debuggability** - Trace IDs correlate requests across systems
 3. **Recoverability** - Failed requests can be retried with modification
-4. **Learning** - The Memory Explorer reveals all system behavior
+4. **Learning** - Communication traces reveal all system behavior
 5. **Future AI** - Agents can analyze past interactions to improve
 
 **DO**: Call n8n through orchestrator dispatch (`POST /api/orchestrate/:serviceId`)

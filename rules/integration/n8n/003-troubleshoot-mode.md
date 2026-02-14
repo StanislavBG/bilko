@@ -8,7 +8,7 @@
 
 ## Purpose
 
-Define a structured protocol for debugging n8n workflows from Claude.ai (or Claude Code) using the Memory Explorer as the observation layer. This enables continuous development where an AI agent can trigger, inspect, validate, and iterate on n8n workflows without manual n8n UI access.
+Define a structured protocol for debugging n8n workflows from Claude.ai (or Claude Code) using communication traces as the observation layer. This enables continuous development where an AI agent can trigger, inspect, validate, and iterate on n8n workflows without manual n8n UI access.
 
 ## Architecture
 
@@ -16,7 +16,7 @@ Define a structured protocol for debugging n8n workflows from Claude.ai (or Clau
 ┌─────────────┐     trigger      ┌──────────────┐     webhook      ┌─────────────┐
 │  Claude.ai  │ ──────────────→  │   Bilko App  │ ──────────────→  │    n8n      │
 │  (Claude    │                  │  Orchestrator │                  │  Workflow   │
-│   Code)     │  ← read traces   │  + Memory     │  ← callbacks     │  (TS mode) │
+│   Code)     │  ← read traces   │  Orchestrator │  ← callbacks     │  (TS mode) │
 └─────────────┘                  └──────────────┘                  └─────────────┘
       │                                │
       │  1. POST /api/n8n/orchestrate  │
@@ -92,7 +92,7 @@ The orchestrator enriches the payload with `geminiApiKey`, `callbackUrl`, and `r
 
 ### Step 2: Wait for Execution
 
-The troubleshoot workflow runs asynchronously. Callbacks arrive at Memory Explorer as each step completes. Expected timeline for FVP troubleshoot:
+The troubleshoot workflow runs asynchronously. Callbacks arrive as communication traces as each step completes. Expected timeline for FVP troubleshoot:
 
 | Step | Callback | ~Time |
 |------|----------|-------|
@@ -112,7 +112,7 @@ GET /api/n8n/workflows/fvp-troubleshoot/output
 # Or get full execution traces
 GET /api/n8n/executions/<executionId>
 
-# Or list recent traces (Memory Explorer API)
+# Or list recent traces
 GET /api/n8n/traces?limit=10
 ```
 
@@ -154,9 +154,9 @@ Then repeat from Step 1.
 |----|----------------|---------------|----------|
 | `fvp-troubleshoot` | `football-video-pipeline` | Phase 1 (News Hound) + Phase 2 (Deep Diver) | troubleshoot |
 
-## D5: Memory Explorer Integration
+## D5: Trace Integration
 
-Troubleshoot traces appear in Memory Explorer with:
+Troubleshoot traces are stored as communication traces with:
 - **Routing**: `n8n → bilko` (callback direction)
 - **Action**: `ts-*` prefix identifies troubleshoot steps
 - **Details**: Contains `mode: "troubleshoot"` for filtering

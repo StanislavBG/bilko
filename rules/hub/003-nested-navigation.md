@@ -268,10 +268,6 @@ Note: Action icons (like PanelLeft for collapse toggle) are permitted per UI-005
 - Level 3 (Catalog): Rule partitions (architecture, hub, ui, data, apps, integration)
 - Level 3 (Audit): Individual audit checks
 
-### Memory Explorer (if needed)
-- Level 2: "Browse" | "Search" | "Stats"
-- Level 3: Optional, based on complexity
-
 ## Mobile Behavior
 
 On mobile viewports (< 768px), navigation columns use the same user-controlled collapse behavior as desktop:

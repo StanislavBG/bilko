@@ -21,7 +21,7 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
   
-  // n8n orchestrator routes (/api/n8n/orchestrate, /api/n8n/traces, /api/n8n/topics)
+  // n8n orchestrator routes (/api/n8n/orchestrate, /api/n8n/topics)
   registerOrchestratorRoutes(app);
 
   // Rules catalog and preview routes
