@@ -1,5 +1,5 @@
 /**
- * AI Clip Flow — Single 5-second clip from top news via Replicate (Wan 2.1).
+ * AI Clip Flow — Single 6-second clip from top news via Replicate (minimax/video-01).
  *
  * The simplest video building block:
  *
@@ -7,20 +7,20 @@
  *        │
  *   write-clip-script
  *        │
- *   generate-clip (5s Wan 2.1 via Replicate)
+ *   generate-clip (6s minimax/video-01 via Replicate)
  *        │
  *   preview-clip (display)
  *
  * Pipeline:
  *   1. Deep research → find the biggest news story (last 7 days)
- *   2. Write a 5-second clip script with visual description
- *   3. Generate a single 5s clip via Replicate (Wan 2.1 open-source model)
+ *   2. Write a 6-second clip script with visual description
+ *   3. Generate a single 6s clip via Replicate (minimax/video-01, free tier)
  *   4. Preview + download
  *
  * This is the atomic unit — if this works, the 3-clip AI-Video
  * flow is just 3 of these chained together.
  *
- * Models: Gemini 2.5 Flash (research + script) + Wan 2.1 via Replicate (video gen)
+ * Models: Gemini 2.5 Flash (research + script) + minimax/video-01 via Replicate (video gen)
  * Auto-starts immediately when rendered.
  *
  * UI: Vertical pipeline tracker (inspired by Newsletter/AI-Video).
@@ -592,10 +592,10 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
       const scriptData = scriptResult.data.script;
       setScript(scriptData);
       pushAgentMessage(
-        `Script ready: "${scriptData.title}". Sending to Wan 2.1 via Replicate for generation.`,
+        `Script ready: "${scriptData.title}". Sending to minimax/video-01 via Replicate for generation.`,
       );
 
-      // ═══ Step 3: generate-clip (5s Wan 2.1 via Replicate) ═══
+      // ═══ Step 3: generate-clip (6s minimax/video-01 via Replicate) ═══
       currentStep = "generating";
       setFlowState("generating");
 
@@ -605,7 +605,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
       const { data: clipResult } = await trackStep(
         "generate-clip",
         { visualDescription: scriptData.visualDescription, styleTokens: scriptData.veoStyleTokens },
-        () => generateClip(clipPrompt, { durationSeconds: 5, aspectRatio: "16:9", model: "wavespeedai/wan-2.1-t2v-480p" }),
+        () => generateClip(clipPrompt, { durationSeconds: 6, aspectRatio: "16:9", model: "minimax/video-01" }),
       );
 
       const clipVideo = clipResult.videos?.[0];
@@ -615,13 +615,13 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
       const clipData: ClipResult = {
         videoBase64: clipVideo.videoBase64,
         mimeType: clipVideo.mimeType ?? "video/mp4",
-        durationSeconds: 5,
+        durationSeconds: 6,
       };
       setClip(clipData);
 
-      const exitSummary = `Generated "${scriptData.title}" — a 5-second AI clip about "${researchData.headline}" (${researchData.topic}). Wan 2.1 via Replicate.`;
+      const exitSummary = `Generated "${scriptData.title}" — a 6-second AI clip about "${researchData.headline}" (${researchData.topic}). minimax/video-01 via Replicate.`;
       pushAgentMessage(
-        `Clip ready! "${scriptData.title}" — 5 seconds of cinematic footage via Wan 2.1. Check the preview.`,
+        `Clip ready! "${scriptData.title}" — 6 seconds of cinematic footage via Hailuo. Check the preview.`,
       );
       busSend("main", "summary", { summary: exitSummary });
 
