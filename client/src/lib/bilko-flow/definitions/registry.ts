@@ -12,7 +12,7 @@
  *
  * ═══════════════════════════════════════════════════════════
  * ACTIVE FLOWS:  bilko-main, video-discovery, newsletter,
- *                weekly-football-video, ai-clip, work-with-me,
+ *                ai-video, ai-clip, work-with-me,
  *                ai-consultation, recursive-interviewer,
  *                linkedin-strategist, socratic-architect
  * ═══════════════════════════════════════════════════════════
@@ -440,7 +440,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
   //   1. Newsletter summary
   //   2. Cinematic infographic (Nano Banana AI image + data overlay)
   //   3. Slideshow video (AI-generated scene images + TTS narration)
-  // AI video generation has been moved to the dedicated weekly-football-video flow.
+  // AI video generation has been moved to the dedicated ai-video flow.
   {
     id: "newsletter",
     name: "Newsletter",
@@ -723,13 +723,13 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
   //   - minimax/video-01 (Hailuo): 6s clips, last-frame → first_frame_image
   //   - Veo (Gemini): 8s clips, source-video grounding (last 2s)
   {
-    id: "weekly-football-video",
+    id: "ai-video",
     name: "AI-Video",
     description:
       "Deep-research the biggest European football event of the last 7 days, then produce a continuous social-media video. Three AI clips are chained for visual continuity using last-frame extraction (minimax) or source-video grounding (Veo), then concatenated via FFmpeg.",
     version: "2.0.0",
     location: "landing",
-    componentPath: "client/src/components/weekly-football-video-flow.tsx",
+    componentPath: "client/src/components/ai-video-flow.tsx",
     tags: ["landing", "football", "european", "video", "social-media", "highlight", "weekly", "minimax", "hailuo", "free"],
     icon: "Clapperboard",
     voiceTriggers: ["ai video", "video", "highlight", "weekly", "football video", "social media"],
@@ -1662,7 +1662,7 @@ export const activeFlowIds = new Set([
   "bilko-main",
   "video-discovery",
   "newsletter",
-  "weekly-football-video",
+  "ai-video",
   "ai-clip",
   "work-with-me",
   "ai-consultation",

@@ -11,7 +11,7 @@ import { z } from "zod";
 export const videoFlowRuns = pgTable("video_flow_runs", {
   id: uuid("id").defaultRandom().primaryKey(),
 
-  /** Which flow produced this run (e.g. "weekly-football-video", "ai-clip") */
+  /** Which flow produced this run (e.g. "ai-video", "ai-clip") */
   flowId: text("flow_id").notNull(),
 
   /** Unique execution ID (matches client-side execution ID) */
