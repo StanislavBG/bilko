@@ -1,5 +1,5 @@
 /**
- * AI Clip Flow — Single 8-second Veo clip from top news.
+ * AI Clip Flow — Single 5-second clip from top news via Replicate (Wan 2.1).
  *
  * The simplest video building block:
  *
@@ -7,20 +7,20 @@
  *        │
  *   write-clip-script
  *        │
- *   generate-clip (8s Veo)
+ *   generate-clip (5s Wan 2.1 via Replicate)
  *        │
  *   preview-clip (display)
  *
  * Pipeline:
  *   1. Deep research → find the biggest news story (last 7 days)
- *   2. Write an 8-second clip script with visual description
- *   3. Generate a single 8s Veo clip
+ *   2. Write a 5-second clip script with visual description
+ *   3. Generate a single 5s clip via Replicate (Wan 2.1 open-source model)
  *   4. Preview + download
  *
  * This is the atomic unit — if this works, the 3-clip AI-Video
  * flow is just 3 of these chained together.
  *
- * Models: Gemini 2.5 Flash (research + script) + Veo 3.1 (video gen)
+ * Models: Gemini 2.5 Flash (research + script) + Wan 2.1 via Replicate (video gen)
  * Auto-starts immediately when rendered.
  *
  * UI: Vertical pipeline tracker (inspired by Newsletter/AI-Video).
@@ -99,8 +99,8 @@ interface PipelineStep {
 
 const PIPELINE_STEPS: PipelineStep[] = [
   { id: "researching", label: "Deep Research — Top Story", shortLabel: "Research", icon: Search },
-  { id: "scripting", label: "Writing 8s Clip Script", shortLabel: "Script", icon: PenLine },
-  { id: "generating", label: "Generating Clip (8s Veo)", shortLabel: "Clip", icon: Film },
+  { id: "scripting", label: "Writing 5s Clip Script", shortLabel: "Script", icon: PenLine },
+  { id: "generating", label: "Generating Clip (Wan 2.1)", shortLabel: "Clip", icon: Film },
   { id: "done", label: "Preview", shortLabel: "Preview", icon: Eye },
 ];
 
@@ -141,12 +141,13 @@ Rules:
 - topic: category (e.g. "Space", "Football", "Technology", "Nature")
 - summary: 80-120 words with vivid visual context
 - keyFacts: 2 to 4 facts, each with a "fact" (max 15 words) and "number" (the key stat)
-- No markdown, ONLY the JSON object.`,
+- No markdown, ONLY the JSON object.
+- The clip will be 5 seconds, so pick something with a single striking visual moment.`,
 );
 
 function writeClipScriptPrompt(research: ResearchResult): string {
   return bilkoSystemPrompt(
-    `You are a social media video scriptwriter specializing in 8-second attention-grabbing clips.
+    `You are a social media video scriptwriter specializing in 5-second attention-grabbing clips.
 
 INPUT: The most visually interesting story:
 "${research.headline}" (${research.topic})
@@ -155,21 +156,21 @@ ${research.summary}
 Key facts:
 ${research.keyFacts.map((f, i) => `${i + 1}. ${f.fact} — ${f.number}`).join("\n")}
 
-MISSION: Write a single 8-SECOND clip script. This clip must be a self-contained micro-story — hook, reveal, payoff in 8 seconds.
+MISSION: Write a single 5-SECOND clip script. This clip must be a self-contained micro-story — hook and payoff in 5 seconds.
 
 Return ONLY valid JSON:
 {"script":{"title":"...","narration":"...","visualDescription":"...","keyStat":"...","veoStyleTokens":"..."}}
 
 Rules:
 - title: max 8 words, social-media punchy
-- narration: max 20 words — what a voiceover would say in 8 seconds
-- visualDescription: max 50 words — cinematic description of what the viewer SEES. Be specific about motion, camera angle, lighting. This goes directly to Veo.
+- narration: max 12 words — what a voiceover would say in 5 seconds
+- visualDescription: max 40 words — cinematic description of what the viewer SEES. Be specific about motion, camera angle, lighting. This goes directly to an AI video model.
 - keyStat: the single most impressive number/fact
-- veoStyleTokens: visual style for Veo (lighting, palette, mood, camera — max 25 words)
+- veoStyleTokens: visual style keywords (lighting, palette, mood, camera — max 25 words)
 - No markdown.
 
-PRIVACY COMPLIANCE (MANDATORY — Veo content policy):
-The visualDescription and veoStyleTokens go DIRECTLY to Google Veo for AI video generation. You MUST follow these rules strictly:
+CONTENT POLICY (MANDATORY):
+The visualDescription and veoStyleTokens go DIRECTLY to an AI video generation model. You MUST follow these rules strictly:
 1. NO REAL PEOPLE: Never name or describe any real, recognizable person (athletes, politicians, celebrities, public figures). Use generic descriptions like "a person", "a scientist", "a footballer" instead.
 2. NO IDENTIFIABLE FACES: Do not request close-ups of faces that could resemble real people. Prefer wide shots, silhouettes, overhead angles, or abstract representations.
 3. NO LOGOS OR TRADEMARKS: Do not reference specific team crests, brand logos, jersey numbers tied to real players, or trademarked visual elements.
@@ -189,14 +190,14 @@ const STATUS_MESSAGES: Record<string, string[]> = {
     "Finding the most interesting story for an 8-second clip...",
   ],
   scripting: [
-    "Writing the 8-second clip script...",
+    "Writing the 5-second clip script...",
     "Crafting a micro-story — hook, reveal, payoff...",
-    "Designing the visual description for Veo...",
+    "Designing the visual description for Wan 2.1...",
   ],
   generating: [
-    "Generating 8-second clip with Veo...",
-    "Rendering cinematic visuals...",
-    "This usually takes 2-5 minutes...",
+    "Generating clip with Wan 2.1 via Replicate...",
+    "Rendering cinematic visuals (open-source model)...",
+    "This usually takes 30-60 seconds...",
   ],
 };
 
@@ -387,7 +388,7 @@ function PipelineTracker({
                             <span className="text-muted-foreground font-medium">Narration: </span>
                             <span className="text-foreground/80">{script.narration}</span>
                           </div>
-                          <CopyableBlock label="Visual Description (sent to Veo)" content={script.visualDescription} />
+                          <CopyableBlock label="Visual Description (sent to Wan 2.1)" content={script.visualDescription} />
                           <CopyableBlock label="Style Tokens" content={script.veoStyleTokens} />
                           <div>
                             <span className="text-muted-foreground font-medium">Key Stat: </span>
@@ -415,8 +416,8 @@ function PipelineTracker({
                   {/* Veo prompt — show during/after generation step */}
                   {(isActive || isComplete || isError) && step.id === "generating" && veoPrompt && (
                     <div className="pl-5.5">
-                      <ExpandableDetail label="Exact Veo prompt" defaultOpen={isError}>
-                        <CopyableBlock label="Prompt sent to Veo API" content={veoPrompt} />
+                      <ExpandableDetail label="Exact Wan 2.1 prompt" defaultOpen={isError}>
+                        <CopyableBlock label="Prompt sent to Replicate API" content={veoPrompt} />
                       </ExpandableDetail>
                     </div>
                   )}
@@ -561,7 +562,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
           chatJSON<{ research: ResearchResult }>(
             jsonPrompt(
               DEEP_RESEARCH_PROMPT,
-              "What is the most visually interesting news story of the last 7 days? Find something that would make a stunning 8-second video clip.",
+              "What is the most visually interesting news story of the last 7 days? Find something that would make a stunning 5-second video clip.",
             ),
           ),
       );
@@ -569,7 +570,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
       const researchData = researchResult.data.research;
       setResearch(researchData);
       pushAgentMessage(
-        `Found the story: "${researchData.headline}" (${researchData.topic}). Writing the clip script.`,
+        `Found the story: "${researchData.headline}" (${researchData.topic}). Writing the 5s clip script.`,
       );
 
       // ═══ Step 2: write-clip-script (LLM) ═══
@@ -583,7 +584,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
           chatJSON<{ script: ClipScript }>(
             jsonPrompt(
               writeClipScriptPrompt(researchData),
-              "Write a punchy 8-second clip script based on the research. Make it social-media ready.",
+              "Write a punchy 5-second clip script based on the research. Make it social-media ready.",
             ),
           ),
       );
@@ -591,10 +592,10 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
       const scriptData = scriptResult.data.script;
       setScript(scriptData);
       pushAgentMessage(
-        `Script ready: "${scriptData.title}". Sending to Veo for generation.`,
+        `Script ready: "${scriptData.title}". Sending to Wan 2.1 via Replicate for generation.`,
       );
 
-      // ═══ Step 3: generate-clip (8s Veo) ═══
+      // ═══ Step 3: generate-clip (5s Wan 2.1 via Replicate) ═══
       currentStep = "generating";
       setFlowState("generating");
 
@@ -604,23 +605,23 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
       const { data: clipResult } = await trackStep(
         "generate-clip",
         { visualDescription: scriptData.visualDescription, styleTokens: scriptData.veoStyleTokens },
-        () => generateClip(clipPrompt, { durationSeconds: 8, aspectRatio: "16:9" }),
+        () => generateClip(clipPrompt, { durationSeconds: 5, aspectRatio: "16:9", model: "wavespeedai/wan-2.1-t2v-480p" }),
       );
 
       const clipVideo = clipResult.videos?.[0];
       if (!clipVideo?.videoBase64) {
-        throw new Error("Clip generation returned no video data. Check server logs for Veo API response details.");
+        throw new Error("Clip generation returned no video data. Check server logs for Replicate API response details.");
       }
       const clipData: ClipResult = {
         videoBase64: clipVideo.videoBase64,
         mimeType: clipVideo.mimeType ?? "video/mp4",
-        durationSeconds: 8,
+        durationSeconds: 5,
       };
       setClip(clipData);
 
-      const exitSummary = `Generated "${scriptData.title}" — an 8-second AI clip about "${researchData.headline}" (${researchData.topic}). Single Veo generation, no chaining.`;
+      const exitSummary = `Generated "${scriptData.title}" — a 5-second AI clip about "${researchData.headline}" (${researchData.topic}). Wan 2.1 via Replicate.`;
       pushAgentMessage(
-        `Clip ready! "${scriptData.title}" — 8 seconds of cinematic footage. Check the preview.`,
+        `Clip ready! "${scriptData.title}" — 5 seconds of cinematic footage via Wan 2.1. Check the preview.`,
       );
       busSend("main", "summary", { summary: exitSummary });
 
@@ -741,7 +742,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const exitSummary = `Generated "${script.title}" — 8s AI clip about "${research.headline}" (${research.topic}).`;
+                  const exitSummary = `Generated "${script.title}" — 5s AI clip about "${research.headline}" (${research.topic}). Wan 2.1 via Replicate.`;
                   onComplete(exitSummary);
                 }}
               >
@@ -761,7 +762,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
                 <div className="flex-1 min-w-0">
                   <h2 className="text-lg font-semibold truncate">{script.title}</h2>
                   <p className="text-sm text-muted-foreground">
-                    {research.topic} — 8s clip
+                    {research.topic} — 5s clip (Wan 2.1)
                   </p>
                 </div>
               </div>
