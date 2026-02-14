@@ -1,7 +1,7 @@
 /**
- * Weekly Football Highlight Video Workflow — bilko-flow DSL definition
+ * AI Video Workflow — bilko-flow DSL definition
  *
- * Translates the weekly-football-video flow (8-step sequential chain)
+ * Translates the ai-video flow (8-step sequential chain)
  * into the bilko-flow deterministic workflow format.
  *
  * Pipeline:
@@ -85,10 +85,10 @@ const videoPolicy = {
 };
 
 /**
- * Create the weekly-football-video workflow definition for bilko-flow.
+ * Create the ai-video workflow definition for bilko-flow.
  * Requires accountId, projectId, environmentId from the bilko-flow context.
  */
-export function createWeeklyFootballVideoWorkflowInput(
+export function createAiVideoWorkflowInput(
   accountId: string,
   projectId: string,
   environmentId: string,
@@ -276,7 +276,7 @@ export function createWeeklyFootballVideoWorkflowInput(
     accountId,
     projectId,
     environmentId,
-    name: "Weekly Football Highlight Video Pipeline",
+    name: "AI Video Pipeline",
     description:
       "Deep-researches the biggest European football event of the last 7 weeks, writes a 20-second script with 8-6-6 transition planning, generates 3 Veo clips chained via last-2-second grounding, and concatenates into a single continuous social-media video. 8-step sequential DAG. Powered by bilko-flow engine.",
     specVersion: "1.0.0",
