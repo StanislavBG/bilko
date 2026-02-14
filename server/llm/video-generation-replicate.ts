@@ -155,19 +155,17 @@ export async function generateClipReplicate(
 
     log.info(`Replicate generation completed after ${Math.round((Date.now() - startTime) / 1000)}s`);
 
-    // Output is typically a URL string or a FileOutput object
-    const videoUrl = extractVideoUrl(output);
-    if (!videoUrl) {
-      log.error("Replicate returned no video URL", {
-        output: JSON.stringify(output).substring(0, 500),
+    // SDK v1.4+ returns FileOutput (ReadableStream) objects, not raw URLs.
+    // We read the stream directly into base64 — no separate download needed.
+    const videoBase64 = await extractVideoBase64(output);
+    if (!videoBase64) {
+      log.error("Replicate returned no video data", {
+        outputType: typeof output,
+        outputConstructor: output?.constructor?.name ?? "unknown",
+        outputStr: String(output).substring(0, 500),
       });
       throw new Error("Replicate returned no video data. The model may be unavailable or the prompt was filtered.");
     }
-
-    log.info(`Downloading video from Replicate: ${videoUrl.substring(0, 100)}...`);
-
-    // Download the video and convert to base64
-    const videoBase64 = await downloadVideoAsBase64(videoUrl);
 
     const clip: GeneratedClip = {
       videoBase64,
@@ -188,33 +186,94 @@ export async function generateClipReplicate(
 }
 
 /**
- * Extract the video URL from Replicate output.
- * Output format varies by model — can be a string URL, a FileOutput, or an array.
+ * Extract video data as base64 from Replicate output.
+ *
+ * The SDK v1.4+ returns FileOutput objects that extend ReadableStream.
+ * We handle all output shapes:
+ *   - FileOutput (ReadableStream) → read stream directly to base64
+ *   - String URL → download and convert
+ *   - Array → recurse on first item
+ *   - Object with toString() → extract URL string, download
  */
-function extractVideoUrl(output: unknown): string | null {
+async function extractVideoBase64(output: unknown): Promise<string | null> {
   if (!output) return null;
 
-  // String URL
-  if (typeof output === "string") return output;
-
-  // FileOutput object with url() method
-  if (typeof output === "object" && output !== null && "url" in output) {
-    const url = (output as { url: () => string }).url?.();
-    if (typeof url === "string") return url;
-    // Or it might be a direct property
-    const urlProp = (output as { url: string }).url;
-    if (typeof urlProp === "string") return urlProp;
+  // FileOutput extends ReadableStream — read it directly (most efficient)
+  if (output instanceof ReadableStream) {
+    log.info("Output is a ReadableStream (FileOutput) — reading directly");
+    return await readStreamToBase64(output as ReadableStream<Uint8Array>);
   }
 
-  // Array of outputs (take first)
+  // String URL (older SDK or useFileOutput: false)
+  if (typeof output === "string" && (output.startsWith("https:") || output.startsWith("data:"))) {
+    log.info(`Output is a URL string — downloading: ${output.substring(0, 100)}...`);
+    return await downloadVideoAsBase64(output);
+  }
+
+  // Array of outputs — take first non-null
   if (Array.isArray(output)) {
+    log.info(`Output is an array of ${output.length} items — processing first`);
     for (const item of output) {
-      const url = extractVideoUrl(item);
-      if (url) return url;
+      const data = await extractVideoBase64(item);
+      if (data) return data;
+    }
+    return null;
+  }
+
+  // Object with toString() that returns a URL (FileOutput fallback)
+  if (typeof output === "object" && output !== null) {
+    const str = String(output);
+    if (str.startsWith("https:") || str.startsWith("http:")) {
+      log.info(`Output object stringifies to URL — downloading: ${str.substring(0, 100)}...`);
+      return await downloadVideoAsBase64(str);
+    }
+    // Try .url() method (FileOutput.url() returns a URL object)
+    if ("url" in output && typeof (output as any).url === "function") {
+      const urlObj = (output as any).url();
+      const urlStr = String(urlObj);
+      if (urlStr.startsWith("https:") || urlStr.startsWith("http:")) {
+        log.info(`Output.url() = ${urlStr.substring(0, 100)}... — downloading`);
+        return await downloadVideoAsBase64(urlStr);
+      }
     }
   }
 
   return null;
+}
+
+/**
+ * Read a ReadableStream<Uint8Array> fully into a base64 string.
+ * Used to consume FileOutput objects directly without a separate download.
+ */
+async function readStreamToBase64(stream: ReadableStream<Uint8Array>): Promise<string> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const totalLength = chunks.reduce((acc, c) => acc + c.length, 0);
+  if (totalLength === 0) {
+    throw new Error("FileOutput stream was empty — no video data received");
+  }
+
+  const merged = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  const base64 = Buffer.from(merged).toString("base64");
+  log.info(`Stream read complete: ${(totalLength / 1024 / 1024).toFixed(1)}MB`);
+  return base64;
 }
 
 /**
