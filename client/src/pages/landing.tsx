@@ -243,6 +243,11 @@ export function LandingContent() {
   // AbortController for in-flight LLM calls — aborted on unmount
   const abortRef = useRef<AbortController>(new AbortController());
 
+  // Guards runGreeting's finally block from overwriting a phase that
+  // handleChoice already advanced past mode-selection. Reset at the
+  // top of each runGreeting cycle so the loop works correctly.
+  const modeChosenRef = useRef(false);
+
   // Track completed activity summaries for Bilko's recursive learning
   const activityLogRef = useRef<Array<{ modeId: string; modeLabel: string; summary: string }>>([]);
 
@@ -281,6 +286,7 @@ export function LandingContent() {
 
   const runGreeting = useCallback(
     async (context?: { modeLabel: string; summary: string }) => {
+      modeChosenRef.current = false;
       setGreetingLoading(true);
       setMainFlowPhase("running", "greeting");
 
@@ -352,7 +358,11 @@ export function LandingContent() {
         });
       } finally {
         setGreetingLoading(false);
-        setMainFlowPhase("running", "mode-selection");
+        // Only advance to mode-selection if the user hasn't already picked
+        // a mode while the greeting was loading (race condition guard).
+        if (!modeChosenRef.current) {
+          setMainFlowPhase("running", "mode-selection");
+        }
       }
     },
     [pushMessage, trackStep, setMainFlowPhase],
@@ -401,6 +411,10 @@ export function LandingContent() {
       const flowDef = flowRegistry.find((f) => f.id === choiceId);
       const modeLabel = flowDef?.name ?? LEARNING_MODES.find((m) => m.id === mode)?.label;
       const _agent = getFlowAgent(choiceId);
+
+      // Signal that a choice was made — prevents runGreeting's finally
+      // block from overwriting the phase back to mode-selection.
+      modeChosenRef.current = true;
 
       // Track as user-input flow step
       resolveUserInput("mode-selection", { selectedMode: mode, modeLabel });
