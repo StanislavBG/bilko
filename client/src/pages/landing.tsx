@@ -39,7 +39,7 @@ import {
 } from "@/components/ai-consultation-flow";
 import { LinkedInStrategistFlow } from "@/components/linkedin-strategist-flow";
 import { WorkWithMeFlow } from "@/components/work-with-me-flow";
-import { WeeklyFootballVideoFlow } from "@/components/weekly-football-video-flow";
+import { AiVideoFlow } from "@/components/ai-video-flow";
 import { AiClipFlow } from "@/components/ai-clip-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
@@ -136,7 +136,7 @@ const FLOW_TO_MODE: Record<string, LearningModeId> = {
   "socratic-architect": "socratic",
   "work-with-me": "work-with-me",
   newsletter: "newsletter",
-  "weekly-football-video": "weekly-football-video",
+  "ai-video": "ai-video",
   "ai-clip": "ai-clip",
 };
 
@@ -151,7 +151,7 @@ const MODE_TO_OWNER: Record<string, string> = {
   socratic: "socratic-architect",
   "work-with-me": "work-with-me",
   newsletter: "newsletter",
-  "weekly-football-video": "weekly-football-video",
+  "ai-video": "ai-video",
   "ai-clip": "ai-clip",
 };
 
@@ -878,7 +878,7 @@ function RightPanelContent({
       {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} onComplete={onComplete} />}
       {mode === "work-with-me" && <WorkWithMeFlow onComplete={onComplete} />}
       {mode === "newsletter" && <NewsletterFlow onComplete={onComplete} />}
-      {mode === "weekly-football-video" && <WeeklyFootballVideoFlow onComplete={onComplete} />}
+      {mode === "ai-video" && <AiVideoFlow onComplete={onComplete} />}
       {mode === "ai-clip" && <AiClipFlow onComplete={onComplete} />}
     </div>
   );

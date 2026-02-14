@@ -1,5 +1,5 @@
 /**
- * Weekly Football Highlight Video Flow — model-aware video pipeline.
+ * AI Video Video Flow — model-aware video pipeline.
  *
  * Pre-screen: user selects model (Free / Veo3) or plays a saved video.
  *
@@ -80,7 +80,7 @@ import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
 // ── Owner ID — must match what landing.tsx uses for claimChat ──
-const OWNER_ID = "weekly-football-video";
+const OWNER_ID = "ai-video";
 
 // ── Model options ─────────────────────────────────────────────────────
 type VideoModelChoice = "free" | "veo3";
@@ -473,7 +473,7 @@ function usesFrameChaining(model?: string): boolean {
   return !!model && model.startsWith("minimax/");
 }
 
-export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
+export function AiVideoFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
   // ── Model selection state ──
   const [selectedModel, setSelectedModel] = useState<VideoModelChoice | null>(null);
   const [showSavedVideos, setShowSavedVideos] = useState(false);
@@ -499,11 +499,11 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
   const hasStarted = useRef(false);
   const stateStartRef = useRef<number>(Date.now());
 
-  const { trackStep } = useFlowExecution("weekly-football-video");
-  const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("weekly-football-video", "Weekly Football Highlight");
+  const { trackStep } = useFlowExecution("ai-video");
+  const { setStatus: setBusStatus, send: busSend } = useFlowRegistration("ai-video", "AI Video");
   const { pushMessage } = useFlowChat();
 
-  const agent = getFlowAgent("weekly-football-video");
+  const agent = getFlowAgent("ai-video");
 
   // ── Push agent message to chat ──────────────────────────
   const pushAgentMessage = useCallback(
@@ -582,7 +582,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
     };
 
     // Create the run record
-    persist(() => createVideoRun("weekly-football-video", runId));
+    persist(() => createVideoRun("ai-video", runId));
 
     // Snapshot model values for this run
     const activeModel = model;
@@ -815,7 +815,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
 
       setFlowState("done");
     } catch (err) {
-      console.error("Weekly football video flow error:", err);
+      console.error("AI video flow error:", err);
       const errMsg = err instanceof Error ? err.message : "Failed to run video pipeline.";
       setFailedAtStep(currentStep);
       setError(errMsg);
@@ -837,7 +837,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
     setShowSavedVideos(false);
     setSelectedModel(choice);
     const opt = MODEL_OPTIONS.find((m) => m.id === choice);
-    pushAgentMessage(`Using ${opt?.label ?? choice} model. Researching the latest football story.`);
+    pushAgentMessage(`Using ${opt?.label ?? choice} model. Starting research.`);
   }, [pushAgentMessage]);
 
   // ── Download video ─────────────────────────────────────────────────
@@ -931,7 +931,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to model selection
           </button>
-          <VideoRunHistory flowId="weekly-football-video" />
+          <VideoRunHistory flowId="ai-video" />
         </div>
       )}
 
@@ -1136,7 +1136,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       )}
 
       {/* ── Past Runs (always visible) ────────────────────────── */}
-      <VideoRunHistory flowId="weekly-football-video" />
+      <VideoRunHistory flowId="ai-video" />
 
     </div>
   );

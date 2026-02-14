@@ -91,7 +91,7 @@ export const FLOW_AGENTS: Record<string, FlowAgent> = {
 
     accentColor: "text-sky-500",
   },
-  "weekly-football-video": {
+  "ai-video": {
     name: "Highlight Producer",
     chatName: "HighlightProducer",
     personality: "A social-media video specialist who turns the week's biggest football event into a 20-second highlight reel with deep stats and cinematic Veo visuals.",
@@ -110,7 +110,7 @@ const FLOW_ID_ALIASES: Record<string, string> = {
   "socratic-architect": "socratic",
   "work-with-me": "work-with-me",
   newsletter: "newsletter",
-  "weekly-football-video": "weekly-football-video",
+  "ai-video": "ai-video",
   "ai-clip": "ai-clip",
 };
 
