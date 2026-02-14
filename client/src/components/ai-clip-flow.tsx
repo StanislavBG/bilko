@@ -1,27 +1,27 @@
 /**
- * AI Clip Flow — Single 6-second clip from top news via Replicate (minimax/video-01).
+ * AI Clip Flow — Single 5-6s clip from top news.
  *
- * The simplest video building block:
+ * Model-aware: user selects "Free" (minimax/video-01 via Replicate)
+ * or "Veo3" (Veo 3.1 via Gemini) before the pipeline runs.
  *
+ *   [model-selection]
+ *        │
  *   deep-research (root)
  *        │
  *   write-clip-script
  *        │
- *   generate-clip (6s minimax/video-01 via Replicate)
+ *   generate-clip
  *        │
  *   preview-clip (display)
  *
  * Pipeline:
+ *   0. User selects model (Free / Veo3)
  *   1. Deep research → find the biggest news story (last 7 days)
- *   2. Write a 6-second clip script with visual description
- *   3. Generate a single 6s clip via Replicate (minimax/video-01, free tier)
+ *   2. Write a 5-second clip script with visual description
+ *   3. Generate a single clip via selected model
  *   4. Preview + download
  *
- * This is the atomic unit — if this works, the 3-clip AI-Video
- * flow is just 3 of these chained together.
- *
- * Models: Gemini 2.5 Flash (research + script) + minimax/video-01 via Replicate (video gen)
- * Auto-starts immediately when rendered.
+ * Persistence: clip is saved to disk via video-runs service.
  *
  * UI: Vertical pipeline tracker (inspired by Newsletter/AI-Video).
  */
@@ -50,10 +50,21 @@ import {
   useFlowExecution,
   useFlowChat,
   generateClip,
+  createVideoRun,
+  updateVideoRun,
+  saveVideoClip,
 } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
+
+// ── Model options ─────────────────────────────────────────────────────
+type VideoModelChoice = "free" | "veo3";
+
+const MODEL_OPTIONS: { id: VideoModelChoice; label: string; modelId: string; description: string }[] = [
+  { id: "free", label: "Free", modelId: "minimax/video-01", description: "Hailuo (Replicate) — 6s clips, free tier" },
+  { id: "veo3", label: "Veo3", modelId: "", description: "Google Veo 3.1 — higher quality, 5-8s clips" },
+];
 
 // ── Owner ID — must match what landing.tsx uses for claimChat ──
 const OWNER_ID = "ai-clip";
@@ -61,6 +72,7 @@ const OWNER_ID = "ai-clip";
 // ── Types ────────────────────────────────────────────────────────────
 
 type FlowState =
+  | "model-selection"
   | "researching"
   | "scripting"
   | "generating"
@@ -100,7 +112,7 @@ interface PipelineStep {
 const PIPELINE_STEPS: PipelineStep[] = [
   { id: "researching", label: "Deep Research — Top Story", shortLabel: "Research", icon: Search },
   { id: "scripting", label: "Writing 5s Clip Script", shortLabel: "Script", icon: PenLine },
-  { id: "generating", label: "Generating Clip (Wan 2.1)", shortLabel: "Clip", icon: Film },
+  { id: "generating", label: "Generating Clip", shortLabel: "Clip", icon: Film },
   { id: "done", label: "Preview", shortLabel: "Preview", icon: Eye },
 ];
 
@@ -190,14 +202,14 @@ const STATUS_MESSAGES: Record<string, string[]> = {
     "Finding the most interesting story for an 8-second clip...",
   ],
   scripting: [
-    "Writing the 5-second clip script...",
+    "Writing the clip script...",
     "Crafting a micro-story — hook, reveal, payoff...",
-    "Designing the visual description for Wan 2.1...",
+    "Designing the visual description...",
   ],
   generating: [
-    "Generating clip with Wan 2.1 via Replicate...",
-    "Rendering cinematic visuals (open-source model)...",
-    "This usually takes 30-60 seconds...",
+    "Generating clip...",
+    "Rendering cinematic visuals...",
+    "This usually takes 30-90 seconds...",
   ],
 };
 
@@ -388,7 +400,7 @@ function PipelineTracker({
                             <span className="text-muted-foreground font-medium">Narration: </span>
                             <span className="text-foreground/80">{script.narration}</span>
                           </div>
-                          <CopyableBlock label="Visual Description (sent to Wan 2.1)" content={script.visualDescription} />
+                          <CopyableBlock label="Visual Description" content={script.visualDescription} />
                           <CopyableBlock label="Style Tokens" content={script.veoStyleTokens} />
                           <div>
                             <span className="text-muted-foreground font-medium">Key Stat: </span>
@@ -416,8 +428,8 @@ function PipelineTracker({
                   {/* Veo prompt — show during/after generation step */}
                   {(isActive || isComplete || isError) && step.id === "generating" && veoPrompt && (
                     <div className="pl-5.5">
-                      <ExpandableDetail label="Exact Wan 2.1 prompt" defaultOpen={isError}>
-                        <CopyableBlock label="Prompt sent to Replicate API" content={veoPrompt} />
+                      <ExpandableDetail label="Exact video prompt" defaultOpen={isError}>
+                        <CopyableBlock label="Prompt sent to video model" content={veoPrompt} />
                       </ExpandableDetail>
                     </div>
                   )}
@@ -466,7 +478,8 @@ function PipelineTracker({
 // ── Component ────────────────────────────────────────────────────────
 
 export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
-  const [flowState, setFlowState] = useState<FlowState>("researching");
+  const [flowState, setFlowState] = useState<FlowState>("model-selection");
+  const [selectedModel, setSelectedModel] = useState<VideoModelChoice | null>(null);
   const [failedAtStep, setFailedAtStep] = useState<FlowState | null>(null);
   const [research, setResearch] = useState<ResearchResult | null>(null);
   const [script, setScript] = useState<ClipScript | null>(null);
@@ -483,6 +496,12 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
   const { pushMessage } = useFlowChat();
 
   const agent = getFlowAgent("ai-clip");
+
+  // Derived model config
+  const modelConfig = selectedModel ? MODEL_OPTIONS.find((m) => m.id === selectedModel) : null;
+  const modelId = modelConfig?.modelId || undefined; // empty string → undefined for Veo default
+  const isVeo3 = selectedModel === "veo3";
+  const clipDuration = isVeo3 ? 5 : 6; // Veo: 5s, minimax: 6s
 
   const pushAgentMessage = useCallback(
     (text: string) => {
@@ -509,6 +528,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
 
   // Sync to flow bus
   useEffect(() => {
+    if (flowState === "model-selection") return; // don't report model selection as running
     setBusStatus(
       flowState === "done" ? "complete" : flowState === "error" ? "error" : "running",
       flowState,
@@ -530,7 +550,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
 
   // Track elapsed time
   useEffect(() => {
-    if (flowState === "done" || flowState === "error") {
+    if (flowState === "done" || flowState === "error" || flowState === "model-selection") {
       setElapsedSeconds(0);
       return;
     }
@@ -549,6 +569,22 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
     setFailedAtStep(null);
     setError(null);
     setVeoPrompt(null);
+
+    // Generate a unique run ID for persistence
+    const runId = `vc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // Fire-and-forget persistence helper (never blocks the pipeline)
+    const persist = (fn: () => Promise<unknown>) => {
+      fn().catch((err) => console.warn("[ai-clip] persist failed:", err));
+    };
+
+    // Create the run record
+    persist(() => createVideoRun("ai-clip", runId));
+
+    const activeModelId = modelId;
+    const activeIsVeo3 = isVeo3;
+    const activeClipDuration = clipDuration;
+    const modelLabel = activeIsVeo3 ? "Veo3" : "Free (Hailuo)";
 
     let currentStep: FlowState = "researching";
 
@@ -569,8 +605,9 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
 
       const researchData = researchResult.data.research;
       setResearch(researchData);
+      persist(() => updateVideoRun(runId, { research: researchData }));
       pushAgentMessage(
-        `Found the story: "${researchData.headline}" (${researchData.topic}). Writing the 5s clip script.`,
+        `Found the story: "${researchData.headline}" (${researchData.topic}). Writing the clip script.`,
       );
 
       // ═══ Step 2: write-clip-script (LLM) ═══
@@ -591,11 +628,12 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
 
       const scriptData = scriptResult.data.script;
       setScript(scriptData);
+      persist(() => updateVideoRun(runId, { script: scriptData }));
       pushAgentMessage(
-        `Script ready: "${scriptData.title}". Sending to minimax/video-01 via Replicate for generation.`,
+        `Script ready: "${scriptData.title}". Generating with ${modelLabel}.`,
       );
 
-      // ═══ Step 3: generate-clip (6s minimax/video-01 via Replicate) ═══
+      // ═══ Step 3: generate-clip ═══
       currentStep = "generating";
       setFlowState("generating");
 
@@ -604,43 +642,67 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
 
       const { data: clipResult } = await trackStep(
         "generate-clip",
-        { visualDescription: scriptData.visualDescription, styleTokens: scriptData.veoStyleTokens },
-        () => generateClip(clipPrompt, { durationSeconds: 6, aspectRatio: "16:9", model: "minimax/video-01" }),
+        { visualDescription: scriptData.visualDescription, styleTokens: scriptData.veoStyleTokens, model: activeModelId },
+        () => generateClip(clipPrompt, {
+          durationSeconds: activeClipDuration as 5 | 6 | 7 | 8,
+          aspectRatio: "16:9",
+          model: activeModelId,
+        }),
       );
 
       const clipVideo = clipResult.videos?.[0];
       if (!clipVideo?.videoBase64) {
-        throw new Error("Clip generation returned no video data. Check server logs for Replicate API response details.");
+        throw new Error("Clip generation returned no video data. Check server logs.");
       }
       const clipData: ClipResult = {
         videoBase64: clipVideo.videoBase64,
         mimeType: clipVideo.mimeType ?? "video/mp4",
-        durationSeconds: 6,
+        durationSeconds: activeClipDuration,
       };
       setClip(clipData);
 
-      const exitSummary = `Generated "${scriptData.title}" — a 6-second AI clip about "${researchData.headline}" (${researchData.topic}). minimax/video-01 via Replicate.`;
+      // Persist the clip
+      persist(() =>
+        saveVideoClip(runId, 0, clipData.videoBase64).then(() =>
+          updateVideoRun(runId, {
+            status: "completed",
+            clipCount: 1,
+            finalDurationSeconds: activeClipDuration,
+          }),
+        ),
+      );
+
+      const exitSummary = `Generated "${scriptData.title}" — a ${activeClipDuration}s AI clip about "${researchData.headline}" (${researchData.topic}). ${modelLabel}.`;
       pushAgentMessage(
-        `Clip ready! "${scriptData.title}" — 6 seconds of cinematic footage via Hailuo. Check the preview.`,
+        `Clip ready! "${scriptData.title}" — ${activeClipDuration}s of cinematic footage via ${modelLabel}. Check the preview.`,
       );
       busSend("main", "summary", { summary: exitSummary });
 
       setFlowState("done");
     } catch (err) {
       console.error("AI clip flow error:", err);
+      const errMsg = err instanceof Error ? err.message : "Failed to run clip pipeline.";
       setFailedAtStep(currentStep);
-      setError(err instanceof Error ? err.message : "Failed to run clip pipeline.");
+      setError(errMsg);
       setFlowState("error");
+      persist(() => updateVideoRun(runId, { status: "failed", error: errMsg }));
     }
-  }, [trackStep, pushAgentMessage, busSend]);
+  }, [trackStep, pushAgentMessage, busSend, modelId, isVeo3, clipDuration]);
 
-  // Auto-start on mount
+  // Start when model is selected (not on mount — waits for user choice)
   useEffect(() => {
-    if (!hasStarted.current) {
+    if (selectedModel && !hasStarted.current) {
       hasStarted.current = true;
       runFlow();
     }
-  }, [runFlow]);
+  }, [selectedModel, runFlow]);
+
+  // Handle model selection
+  const handleModelSelect = useCallback((choice: VideoModelChoice) => {
+    setSelectedModel(choice);
+    const opt = MODEL_OPTIONS.find((m) => m.id === choice);
+    pushAgentMessage(`Using ${opt?.label ?? choice} model. Let's find a story.`);
+  }, [pushAgentMessage]);
 
   // ── Download ──────────────────────────────────────────────
 
@@ -667,26 +729,52 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
 
   const reset = useCallback(() => {
     hasStarted.current = false;
-    didGreet.current = false;
     setResearch(null);
     setScript(null);
     setClip(null);
     setVeoPrompt(null);
     setError(null);
     setFailedAtStep(null);
-    setTimeout(() => {
-      hasStarted.current = true;
-      didGreet.current = true;
-      runFlow();
-    }, 0);
-  }, [runFlow]);
+    setSelectedModel(null);
+    setFlowState("model-selection");
+  }, []);
 
   // ── Render ────────────────────────────────────────────────
 
   return (
     <div className="space-y-4">
+      {/* Model selection screen */}
+      {flowState === "model-selection" && (
+        <div className="rounded-xl border-2 border-border overflow-hidden">
+          <div className="bg-sky-500/5 border-b border-border px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Film className="h-4 w-4 text-sky-500" />
+              <span className="text-sm font-medium">Choose Video Model</span>
+            </div>
+          </div>
+          <div className="p-4 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Select the AI model for clip generation:
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {MODEL_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => handleModelSelect(opt.id)}
+                  className="group text-left rounded-lg border-2 border-border p-4 transition-all
+                    hover:border-sky-500/50 hover:bg-sky-500/5"
+                >
+                  <p className="text-sm font-semibold">{opt.label}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{opt.description}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Pipeline tracker (visible during execution & error) */}
-      {flowState !== "done" && (
+      {flowState !== "done" && flowState !== "model-selection" && (
         <PipelineTracker
           currentState={flowState}
           failedStep={failedAtStep}
@@ -742,7 +830,8 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const exitSummary = `Generated "${script.title}" — 5s AI clip about "${research.headline}" (${research.topic}). Wan 2.1 via Replicate.`;
+                  const mLabel = isVeo3 ? "Veo3" : "Free (Hailuo)";
+                  const exitSummary = `Generated "${script.title}" — ${clipDuration}s AI clip about "${research.headline}" (${research.topic}). ${mLabel}.`;
                   onComplete(exitSummary);
                 }}
               >
@@ -762,7 +851,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
                 <div className="flex-1 min-w-0">
                   <h2 className="text-lg font-semibold truncate">{script.title}</h2>
                   <p className="text-sm text-muted-foreground">
-                    {research.topic} — 5s clip (Wan 2.1)
+                    {research.topic} — {clipDuration}s clip ({isVeo3 ? "Veo3" : "Hailuo"})
                   </p>
                 </div>
               </div>
