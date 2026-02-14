@@ -649,7 +649,7 @@ export function AiVideoFlow({ onComplete }: { onComplete?: (summary?: string) =>
       const { data: clip1Result } = await trackStep(
         "generate-clip-1",
         { visualDescription: seg1.visualDescription, styleTokens: scriptData.veoStyleTokens, model: activeModel },
-        () => generateClip(clip1Prompt, { durationSeconds: clipDuration as 5 | 6 | 7 | 8, aspectRatio: "16:9", model: activeModel }),
+        () => generateClip(clip1Prompt, { durationSeconds: clipDuration as 4 | 5 | 6 | 7 | 8, aspectRatio: "16:9", model: activeModel }),
       );
 
       const clip1Video = clip1Result.videos?.[0];
@@ -694,7 +694,7 @@ export function AiVideoFlow({ onComplete }: { onComplete?: (summary?: string) =>
         { visualDescription: seg2.visualDescription, styleTokens: scriptData.veoStyleTokens, model: activeModel },
         () =>
           generateClip(clip2Prompt, {
-            durationSeconds: clipDuration as 5 | 6 | 7 | 8,
+            durationSeconds: clipDuration as 4 | 5 | 6 | 7 | 8,
             aspectRatio: "16:9",
             model: activeModel,
             // Minimax: last frame as first_frame_image. Veo: source video grounding.
@@ -743,7 +743,7 @@ export function AiVideoFlow({ onComplete }: { onComplete?: (summary?: string) =>
         { visualDescription: seg3.visualDescription, styleTokens: scriptData.veoStyleTokens, model: activeModel },
         () =>
           generateClip(clip3Prompt, {
-            durationSeconds: clipDuration as 5 | 6 | 7 | 8,
+            durationSeconds: clipDuration as 4 | 5 | 6 | 7 | 8,
             aspectRatio: "16:9",
             model: activeModel,
             ...(activeIsFrameChaining

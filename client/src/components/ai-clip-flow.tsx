@@ -644,7 +644,7 @@ export function AiClipFlow({ onComplete }: { onComplete?: (summary?: string) => 
         "generate-clip",
         { visualDescription: scriptData.visualDescription, styleTokens: scriptData.veoStyleTokens, model: activeModelId },
         () => generateClip(clipPrompt, {
-          durationSeconds: activeClipDuration as 5 | 6 | 7 | 8,
+          durationSeconds: activeClipDuration as 4 | 5 | 6 | 7 | 8,
           aspectRatio: "16:9",
           model: activeModelId,
         }),

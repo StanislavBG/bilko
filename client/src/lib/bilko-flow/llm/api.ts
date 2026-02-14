@@ -227,7 +227,7 @@ export type VideoGenerationResult = ClipGenerationResult;
 export async function generateClip(
   prompt: string,
   options?: {
-    durationSeconds?: 5 | 6 | 7 | 8;
+    durationSeconds?: 4 | 5 | 6 | 7 | 8;
     aspectRatio?: "16:9" | "9:16";
     model?: string;
     referenceImageBase64?: string;
@@ -270,7 +270,7 @@ export async function generateVideo(
   options?: {
     model?: string;
     aspectRatio?: "16:9" | "9:16";
-    initialDurationSeconds?: 5 | 6 | 7 | 8;
+    initialDurationSeconds?: 4 | 5 | 6 | 7 | 8;
     signal?: AbortSignal;
   },
 ): Promise<VideoResult> {
@@ -326,7 +326,7 @@ export async function concatenateVideos(
 export async function generateClips(
   prompts: Array<{
     prompt: string;
-    durationSeconds?: 5 | 6 | 7 | 8;
+    durationSeconds?: 4 | 5 | 6 | 7 | 8;
     aspectRatio?: "16:9" | "9:16";
     model?: string;
   }>,

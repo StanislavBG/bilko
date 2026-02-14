@@ -38,7 +38,7 @@ const log = createLogger("video-generation");
 export interface ClipGenerationRequest {
   prompt: string;
   model?: string;
-  durationSeconds?: 5 | 6 | 7 | 8;
+  durationSeconds?: 4 | 5 | 6 | 7 | 8;
   aspectRatio?: "16:9" | "9:16";
   /** Optional reference image to guide the clip */
   referenceImageBase64?: string;
@@ -107,8 +107,15 @@ export async function generateClip(
   const ai = getAI();
   const hasSource = !!request.sourceVideoBase64;
   const hasReference = !!request.referenceImageBase64;
-  const durationSec = request.durationSeconds ?? 8;
+  // Veo API accepts integer durationSeconds in [4, 8]. Clamp and round to
+  // guarantee we never send an out-of-range value.
+  const rawDuration = request.durationSeconds ?? 8;
+  const durationSec = Math.round(Math.max(4, Math.min(8, rawDuration)));
   const model = request.model ?? MODEL_DEFAULTS.video;
+
+  if (rawDuration !== durationSec) {
+    log.warn(`durationSeconds clamped: requested ${rawDuration} → sending ${durationSec}`);
+  }
 
   log.info(`Submitting clip ${hasSource ? "source-grounded" : "fresh"} generation with ${model}`, {
     promptLength: request.prompt.length,
@@ -439,8 +446,8 @@ export async function generateVideo(
   options?: {
     model?: string;
     aspectRatio?: "16:9" | "9:16";
-    initialDurationSeconds?: 5 | 6 | 7 | 8;
-    extensionDurationSeconds?: 5 | 6 | 7 | 8;
+    initialDurationSeconds?: 4 | 5 | 6 | 7 | 8;
+    extensionDurationSeconds?: 4 | 5 | 6 | 7 | 8;
     onClipProgress?: (clipIndex: number, status: "generating" | "extending" | "done" | "error", elapsedMs: number) => void;
   },
 ): Promise<{
