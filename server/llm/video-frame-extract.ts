@@ -3,6 +3,9 @@
  *
  * Extracts the last frame of a video as a PNG base64 string.
  * Used for minimax/video-01 clip chaining: last frame → first_frame_image.
+ *
+ * Uses @ffmpeg-installer/ffmpeg (same as video-concat.ts) so it works
+ * even when system FFmpeg is not in PATH.
  */
 
 import { spawn } from "child_process";
@@ -12,6 +15,19 @@ import os from "os";
 import { createLogger } from "../logger";
 
 const log = createLogger("video-frame-extract");
+
+/** Resolve FFmpeg binary path — prefer npm-installed, fallback to system */
+let _ffmpegPath: string | null = null;
+function getFfmpegPath(): string {
+  if (_ffmpegPath !== null) return _ffmpegPath;
+  try {
+    _ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
+  } catch {
+    _ffmpegPath = "ffmpeg";
+    log.warn("@ffmpeg-installer/ffmpeg not found, using system ffmpeg");
+  }
+  return _ffmpegPath!;
+}
 
 /**
  * Extract the last frame of a base64-encoded video as a PNG base64 string.
@@ -31,9 +47,12 @@ export async function extractLastFrame(videoBase64: string, mimeType = "video/mp
     fs.writeFileSync(inputPath, videoBuffer);
     log.info(`Extracting last frame from ${(videoBuffer.length / 1024 / 1024).toFixed(1)}MB video`);
 
+    const ffmpegBin = getFfmpegPath();
+    log.info(`Using FFmpeg at: ${ffmpegBin}`);
+
     // Run FFmpeg to extract last frame
     await new Promise<void>((resolve, reject) => {
-      const ffmpeg = spawn("ffmpeg", [
+      const ffmpeg = spawn(ffmpegBin, [
         "-sseof", "-1",        // seek to last 1 second
         "-i", inputPath,       // input file
         "-vsync", "0",         // no frame dropping

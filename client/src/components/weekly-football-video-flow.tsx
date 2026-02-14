@@ -638,10 +638,16 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
       persist(() => saveVideoClip(runId, 0, clip1Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 1 })));
 
       // For minimax: extract last frame for chaining. For Veo: use sourceVideoBase64 directly.
+      // Frame extraction is best-effort — if it fails, clip 2 generates without chaining.
       let clip1LastFrame: string | undefined;
       if (isFrameChaining) {
         pushAgentMessage("Clip 1 generated. Extracting last frame for continuity chaining.");
-        clip1LastFrame = await extractLastFrame(clip1Data.videoBase64);
+        try {
+          clip1LastFrame = await extractLastFrame(clip1Data.videoBase64);
+        } catch (frameErr) {
+          console.warn("[video-flow] Frame extraction failed for clip 1, generating clip 2 without chaining:", frameErr);
+          pushAgentMessage("Frame extraction unavailable — generating clip 2 without visual chaining.");
+        }
       } else {
         pushAgentMessage("Clip 1 generated. Grounding clip 2 on the last 2 seconds.");
       }
@@ -683,7 +689,12 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
       let clip2LastFrame: string | undefined;
       if (isFrameChaining) {
         pushAgentMessage("Clip 2 ready. Extracting last frame for the final clip.");
-        clip2LastFrame = await extractLastFrame(clip2Data.videoBase64);
+        try {
+          clip2LastFrame = await extractLastFrame(clip2Data.videoBase64);
+        } catch (frameErr) {
+          console.warn("[video-flow] Frame extraction failed for clip 2, generating clip 3 without chaining:", frameErr);
+          pushAgentMessage("Frame extraction unavailable — generating clip 3 without visual chaining.");
+        }
       } else {
         pushAgentMessage("Clip 2 ready (grounded continuation). Generating the final payoff clip.");
       }
