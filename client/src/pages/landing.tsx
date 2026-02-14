@@ -56,6 +56,12 @@ import {
   ExternalLink,
   Clapperboard,
   Film,
+  Newspaper,
+  Handshake,
+  MessageCircle,
+  Lightbulb,
+  Briefcase,
+  GraduationCap,
 } from "lucide-react";
 import type { LearningModeId } from "@/lib/workflow";
 import { LEARNING_MODES } from "@/lib/workflow/flows/welcome-flow";
@@ -84,6 +90,12 @@ const iconMap: Record<string, ReactNode> = {
   Gamepad2: <Gamepad2 className="h-6 w-6" />,
   Clapperboard: <Clapperboard className="h-6 w-6" />,
   Film: <Film className="h-6 w-6" />,
+  Newspaper: <Newspaper className="h-6 w-6" />,
+  Handshake: <Handshake className="h-6 w-6" />,
+  MessageCircle: <MessageCircle className="h-6 w-6" />,
+  Lightbulb: <Lightbulb className="h-6 w-6" />,
+  Briefcase: <Briefcase className="h-6 w-6" />,
+  GraduationCap: <GraduationCap className="h-6 w-6" />,
 };
 
 /** Menu items — only ACTIVE flows from the registry (excludes bilko-main and standby) */
