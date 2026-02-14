@@ -1,10 +1,11 @@
 /**
- * Clip Generation Service — Replicate (Wan 2.1)
+ * Clip Generation Service — Replicate
  *
  * Drop-in alternative to video-generation.ts (Veo) for single clip generation.
- * Uses the Replicate HTTP API with the open-source Wan 2.1 model.
+ * Uses the Replicate HTTP API with open-source / free-tier models.
  *
- * Model: wavespeedai/wan-2.1-t2v-480p (14B, ~39s for 5s clip at 480p)
+ * Default model: minimax/video-01 (Hailuo) — free-to-try, 6s clips at 720p/25fps.
+ * Also supports: wavespeedai/wan-2.1-t2v-480p, wan-video/wan-2.2-t2v-fast, etc.
  *
  * Returns the same ClipGenerationResponse shape as the Veo implementation
  * so the rest of the pipeline (routes, client, flows) works unchanged.
@@ -16,8 +17,8 @@ import type { ClipGenerationRequest, ClipGenerationResponse, GeneratedClip } fro
 
 const log = createLogger("video-generation-replicate");
 
-/** Default Replicate model for text-to-video */
-export const REPLICATE_VIDEO_MODEL = "wavespeedai/wan-2.1-t2v-480p";
+/** Default Replicate model for text-to-video (free-to-try on Replicate) */
+export const REPLICATE_VIDEO_MODEL = "minimax/video-01";
 
 function getApiToken(): string {
   const token = process.env.REPLICATE_VIDEO_API_KEY;
@@ -66,27 +67,72 @@ function aspectToResolution(aspectRatio: string): string {
 }
 
 /**
- * Generate a single clip using Replicate's Wan 2.1 model.
+ * Check if a model ID is a minimax model.
+ */
+function isMinimaxModel(model: string): boolean {
+  return model.startsWith("minimax/");
+}
+
+/**
+ * Build model-specific input for Replicate.
+ *
+ * - minimax/video-01: { prompt, prompt_optimizer } — 6s at 720p (fixed)
+ * - wan-* models:     { prompt, num_frames, resolution }
+ */
+function buildModelInput(
+  model: string,
+  prompt: string,
+  durationSeconds: number,
+  aspectRatio: string,
+): Record<string, unknown> {
+  if (isMinimaxModel(model)) {
+    return {
+      prompt,
+      prompt_optimizer: true,
+    };
+  }
+
+  // Wan-family models (wavespeedai/wan-*, wan-video/wan-*)
+  return {
+    prompt,
+    num_frames: durationToFrames(durationSeconds),
+    resolution: aspectToResolution(aspectRatio),
+  };
+}
+
+/**
+ * Get the fixed output duration for models that don't support configurable length.
+ * Returns null if the model supports configurable duration.
+ */
+function getFixedDuration(model: string): number | null {
+  if (isMinimaxModel(model)) return 6; // minimax/video-01 always produces 6s
+  return null;
+}
+
+/**
+ * Generate a single clip using a Replicate-hosted model.
  *
  * Matches the same ClipGenerationResponse interface as the Veo implementation.
  * The `replicate.run()` call handles polling automatically.
  *
- * Note: Wan 2.1 does not support source-grounded generation (extending a
- * previous clip). If sourceVideoBase64 is provided, it is ignored with a warning.
- * For multi-clip continuity, use the Veo-based generateVideo() instead.
+ * Supported models:
+ *   - minimax/video-01 (Hailuo) — free-to-try, 6s at 720p
+ *   - wavespeedai/wan-2.1-t2v-480p — 5-8s at 480p
+ *   - wan-video/wan-2.2-t2v-fast — 5-8s at 480p/720p
  */
 export async function generateClipReplicate(
   request: ClipGenerationRequest,
 ): Promise<ClipGenerationResponse> {
   const replicate = getReplicate();
   const model = request.model ?? REPLICATE_VIDEO_MODEL;
-  const durationSec = request.durationSeconds ?? 5;
+  const fixedDuration = getFixedDuration(model);
+  const durationSec = fixedDuration ?? request.durationSeconds ?? 5;
 
   if (request.sourceVideoBase64) {
-    log.warn("Wan 2.1 does not support source-grounded generation. sourceVideoBase64 will be ignored.");
+    log.warn("Replicate t2v models do not support source-grounded generation. sourceVideoBase64 will be ignored.");
   }
 
-  if (request.referenceImageBase64) {
+  if (request.referenceImageBase64 && !isMinimaxModel(model)) {
     log.warn("Use the i2v (image-to-video) model variant for reference images. referenceImageBase64 will be ignored for t2v model.");
   }
 
@@ -99,12 +145,7 @@ export async function generateClipReplicate(
   const startTime = Date.now();
 
   try {
-    // Build input for Wan 2.1 model
-    const input: Record<string, unknown> = {
-      prompt: request.prompt,
-      num_frames: durationToFrames(durationSec),
-      resolution: aspectToResolution(request.aspectRatio ?? "16:9"),
-    };
+    const input = buildModelInput(model, request.prompt, durationSec, request.aspectRatio ?? "16:9");
 
     log.info(`Replicate input: ${JSON.stringify(input)}`);
 
