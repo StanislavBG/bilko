@@ -1,8 +1,12 @@
 /**
  * Weekly Football Highlight Video Flow — model-aware video pipeline.
  *
+ * Pre-screen: user selects model (Free / Veo3) or plays a saved video.
+ *
  * 7-step DAG (sequential chain):
  *
+ *   [model-selection / play-saved]
+ *        │
  *   deep-research (root)
  *        │
  *   write-video-script
@@ -18,6 +22,7 @@
  *   preview-video (display)
  *
  * Pipeline:
+ *   0. User selects model (Free / Veo3) or browses saved videos
  *   1. Deep research → find the biggest European football event (last 7 days)
  *   2. Write script pre-planned for equal segment transition points
  *   3. Generate 3 clips chained for visual continuity
@@ -27,8 +32,9 @@
  *   - minimax/video-01 (Hailuo): 6s clips, last-frame extraction → first_frame_image
  *   - Veo (Gemini): 8s clips, source-video grounding (last 2s used as context)
  *
- * Models: Gemini 2.5 Flash (research + script) + configurable video model
- * Auto-starts immediately when rendered.
+ * Persistence:
+ *   - Veo3: saves all individual clips
+ *   - Free: saves the combined final video
  *
  * UI: Newsletter-inspired step tracker shows each pipeline stage
  * with live status so the user always knows where the process is.
@@ -51,6 +57,8 @@ import {
   Loader2,
   XCircle,
   AlertTriangle,
+  History,
+  ArrowLeft,
 } from "lucide-react";
 import {
   chatJSON,
@@ -74,9 +82,18 @@ import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 // ── Owner ID — must match what landing.tsx uses for claimChat ──
 const OWNER_ID = "weekly-football-video";
 
+// ── Model options ─────────────────────────────────────────────────────
+type VideoModelChoice = "free" | "veo3";
+
+const MODEL_OPTIONS: { id: VideoModelChoice; label: string; modelId: string; description: string }[] = [
+  { id: "free", label: "Free", modelId: "minimax/video-01", description: "Hailuo (Replicate) — 6s clips, free tier" },
+  { id: "veo3", label: "Veo3", modelId: "", description: "Google Veo 3.1 — higher quality, 8s clips" },
+];
+
 // ── Types ────────────────────────────────────────────────────────────
 
 type FlowState =
+  | "model-selection"
   | "researching"
   | "scripting"
   | "generating-clip-1"
@@ -451,20 +468,24 @@ function PipelineTracker({
 
 // ── Component ────────────────────────────────────────────────────────
 
-/** Default video model: minimax/video-01 (free Replicate) or omit for Veo (Gemini) */
-const DEFAULT_VIDEO_MODEL = "minimax/video-01";
-
 /** Check if a model uses last-frame chaining (minimax) vs source-video grounding (Veo) */
 function usesFrameChaining(model?: string): boolean {
   return !!model && model.startsWith("minimax/");
 }
 
-export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete?: (summary?: string) => void; videoModel?: string }) {
-  const model = videoModel ?? DEFAULT_VIDEO_MODEL;
+export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
+  // ── Model selection state ──
+  const [selectedModel, setSelectedModel] = useState<VideoModelChoice | null>(null);
+  const [showSavedVideos, setShowSavedVideos] = useState(false);
+
+  // Derived model config
+  const modelConfig = selectedModel ? MODEL_OPTIONS.find((m) => m.id === selectedModel) : null;
+  const model = modelConfig?.modelId || undefined; // empty string → undefined for Veo default
   const isFrameChaining = usesFrameChaining(model);
   const clipDuration = isFrameChaining ? 6 : 8; // minimax: 6s fixed, Veo: 8s
+
   // ── Flow state ──
-  const [flowState, setFlowState] = useState<FlowState>("researching");
+  const [flowState, setFlowState] = useState<FlowState>("model-selection");
   const [failedAtStep, setFailedAtStep] = useState<FlowState | null>(null);
   const [research, setResearch] = useState<ResearchResult | null>(null);
   const [script, setScript] = useState<VideoScript | null>(null);
@@ -510,6 +531,7 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
 
   // Sync flowState to flow bus
   useEffect(() => {
+    if (flowState === "model-selection") return;
     setBusStatus(
       flowState === "done" ? "complete" : flowState === "error" ? "error" : "running",
       flowState,
@@ -532,7 +554,7 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
 
   // Track elapsed time per state
   useEffect(() => {
-    if (flowState === "done" || flowState === "error") {
+    if (flowState === "done" || flowState === "error" || flowState === "model-selection") {
       setElapsedSeconds(0);
       return;
     }
@@ -561,6 +583,11 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
 
     // Create the run record
     persist(() => createVideoRun("weekly-football-video", runId));
+
+    // Snapshot model values for this run
+    const activeModel = model;
+    const activeIsFrameChaining = isFrameChaining;
+    const activeIsVeo3 = selectedModel === "veo3";
 
     let currentStep: FlowState = "researching";
 
@@ -607,7 +634,7 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
       const scriptData = scriptResult.data.script;
       setScript(scriptData);
       persist(() => updateVideoRun(runId, { script: scriptData }));
-      const modelLabel = isFrameChaining ? "Hailuo" : "Veo";
+      const modelLabel = activeIsFrameChaining ? "Hailuo" : "Veo";
       pushAgentMessage(
         `Script ready: "${scriptData.title}" — ${scriptData.totalDurationSec}s across ${scriptData.segments.length} segments. Generating video clips with ${modelLabel}.`,
       );
@@ -621,8 +648,8 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
 
       const { data: clip1Result } = await trackStep(
         "generate-clip-1",
-        { visualDescription: seg1.visualDescription, styleTokens: scriptData.veoStyleTokens, model },
-        () => generateClip(clip1Prompt, { durationSeconds: clipDuration as 5 | 6 | 7 | 8, aspectRatio: "16:9", model }),
+        { visualDescription: seg1.visualDescription, styleTokens: scriptData.veoStyleTokens, model: activeModel },
+        () => generateClip(clip1Prompt, { durationSeconds: clipDuration as 5 | 6 | 7 | 8, aspectRatio: "16:9", model: activeModel }),
       );
 
       const clip1Video = clip1Result.videos?.[0];
@@ -635,12 +662,15 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
         durationSeconds: clipDuration,
       };
       setClip1(clip1Data);
-      persist(() => saveVideoClip(runId, 0, clip1Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 1 })));
+      // Veo3: persist individual clips. Free: skip (only save combined).
+      if (activeIsVeo3) {
+        persist(() => saveVideoClip(runId, 0, clip1Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 1 })));
+      }
 
       // For minimax: extract last frame for chaining. For Veo: use sourceVideoBase64 directly.
       // Frame extraction is best-effort — if it fails, clip 2 generates without chaining.
       let clip1LastFrame: string | undefined;
-      if (isFrameChaining) {
+      if (activeIsFrameChaining) {
         pushAgentMessage("Clip 1 generated. Extracting last frame for continuity chaining.");
         try {
           clip1LastFrame = await extractLastFrame(clip1Data.videoBase64);
@@ -661,14 +691,14 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
 
       const { data: clip2Result } = await trackStep(
         "generate-clip-2",
-        { visualDescription: seg2.visualDescription, styleTokens: scriptData.veoStyleTokens, model },
+        { visualDescription: seg2.visualDescription, styleTokens: scriptData.veoStyleTokens, model: activeModel },
         () =>
           generateClip(clip2Prompt, {
             durationSeconds: clipDuration as 5 | 6 | 7 | 8,
             aspectRatio: "16:9",
-            model,
+            model: activeModel,
             // Minimax: last frame as first_frame_image. Veo: source video grounding.
-            ...(isFrameChaining
+            ...(activeIsFrameChaining
               ? { referenceImageBase64: clip1LastFrame }
               : { sourceVideoBase64: clip1Data.videoBase64 }),
           }),
@@ -684,10 +714,12 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
         durationSeconds: clipDuration,
       };
       setClip2(clip2Data);
-      persist(() => saveVideoClip(runId, 1, clip2Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 2 })));
+      if (activeIsVeo3) {
+        persist(() => saveVideoClip(runId, 1, clip2Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 2 })));
+      }
 
       let clip2LastFrame: string | undefined;
-      if (isFrameChaining) {
+      if (activeIsFrameChaining) {
         pushAgentMessage("Clip 2 ready. Extracting last frame for the final clip.");
         try {
           clip2LastFrame = await extractLastFrame(clip2Data.videoBase64);
@@ -708,13 +740,13 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
 
       const { data: clip3Result } = await trackStep(
         "generate-clip-3",
-        { visualDescription: seg3.visualDescription, styleTokens: scriptData.veoStyleTokens, model },
+        { visualDescription: seg3.visualDescription, styleTokens: scriptData.veoStyleTokens, model: activeModel },
         () =>
           generateClip(clip3Prompt, {
             durationSeconds: clipDuration as 5 | 6 | 7 | 8,
             aspectRatio: "16:9",
-            model,
-            ...(isFrameChaining
+            model: activeModel,
+            ...(activeIsFrameChaining
               ? { referenceImageBase64: clip2LastFrame }
               : { sourceVideoBase64: clip2Data.videoBase64 }),
           }),
@@ -730,7 +762,9 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
         durationSeconds: clipDuration,
       };
       setClip3(clip3Data);
-      persist(() => saveVideoClip(runId, 2, clip3Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 3 })));
+      if (activeIsVeo3) {
+        persist(() => saveVideoClip(runId, 2, clip3Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 3 })));
+      }
       pushAgentMessage("All 3 clips generated. Concatenating into one continuous video.");
 
       // ═══ Step 6: concatenate-clips (FFmpeg) ═══
@@ -750,18 +784,29 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
 
       setFinalVideo(concatResult as ConcatResult);
 
-      // Persist combined video + mark run complete
+      // Persist based on model: Free saves combined video, Veo3 saves clips (already saved above)
       const finalConcat = concatResult as ConcatResult;
-      persist(() =>
-        saveVideoFinal(runId, finalConcat.videoBase64).then(() =>
+      if (activeIsVeo3) {
+        // Veo3: clips already saved, just mark complete
+        persist(() =>
           updateVideoRun(runId, {
             status: "completed",
-            finalDurationSeconds: finalConcat.durationSeconds ?? 20,
+            finalDurationSeconds: finalConcat.durationSeconds ?? clipDuration * 3,
           }),
-        ),
-      );
+        );
+      } else {
+        // Free: save the combined video
+        persist(() =>
+          saveVideoFinal(runId, finalConcat.videoBase64).then(() =>
+            updateVideoRun(runId, {
+              status: "completed",
+              finalDurationSeconds: finalConcat.durationSeconds ?? clipDuration * 3,
+            }),
+          ),
+        );
+      }
 
-      const chainingMethod = isFrameChaining ? "last-frame chaining" : "last-2s grounding";
+      const chainingMethod = activeIsFrameChaining ? "last-frame chaining" : "last-2s grounding";
       const exitSummary = `Produced "${scriptData.title}" — a ${(concatResult as ConcatResult).durationSeconds ?? clipDuration * 3}s highlight video about "${researchData.headline}" (${researchData.league}). 3 ${modelLabel} clips via ${chainingMethod} + FFmpeg concat.`;
       pushAgentMessage(
         `Video ready! "${scriptData.title}" — ${(concatResult as ConcatResult).durationSeconds ?? 20} seconds of continuous highlight footage. Check the preview.`,
@@ -777,15 +822,23 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
       setFlowState("error");
       persist(() => updateVideoRun(runId, { status: "failed", error: errMsg }));
     }
-  }, [trackStep, pushAgentMessage, busSend]);
+  }, [trackStep, pushAgentMessage, busSend, model, isFrameChaining, selectedModel, clipDuration]);
 
-  // Auto-start on mount
+  // Start when model is selected (not on mount — waits for user choice)
   useEffect(() => {
-    if (!hasStarted.current) {
+    if (selectedModel && !hasStarted.current) {
       hasStarted.current = true;
       runFlow();
     }
-  }, [runFlow]);
+  }, [selectedModel, runFlow]);
+
+  // Handle model selection
+  const handleModelSelect = useCallback((choice: VideoModelChoice) => {
+    setShowSavedVideos(false);
+    setSelectedModel(choice);
+    const opt = MODEL_OPTIONS.find((m) => m.id === choice);
+    pushAgentMessage(`Using ${opt?.label ?? choice} model. Researching the latest football story.`);
+  }, [pushAgentMessage]);
 
   // ── Download video ─────────────────────────────────────────────────
 
@@ -812,7 +865,6 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
 
   const reset = useCallback(() => {
     hasStarted.current = false;
-    didGreet.current = false;
     setResearch(null);
     setScript(null);
     setClip1(null);
@@ -821,19 +873,70 @@ export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete
     setFinalVideo(null);
     setError(null);
     setFailedAtStep(null);
-    setTimeout(() => {
-      hasStarted.current = true;
-      didGreet.current = true;
-      runFlow();
-    }, 0);
-  }, [runFlow]);
+    setSelectedModel(null);
+    setShowSavedVideos(false);
+    setFlowState("model-selection");
+  }, []);
 
   // ── Render ─────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-4">
-      {/* ── Pipeline Step Tracker (always visible except done) ─── */}
-      {flowState !== "done" && (
+      {/* ── Model selection + Play saved video screen ─── */}
+      {flowState === "model-selection" && !showSavedVideos && (
+        <div className="rounded-xl border-2 border-border overflow-hidden">
+          <div className="bg-rose-500/5 border-b border-border px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Clapperboard className="h-4 w-4 text-rose-500" />
+              <span className="text-sm font-medium">AI Video — Choose Model</span>
+            </div>
+          </div>
+          <div className="p-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select the AI model for video generation:
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {MODEL_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => handleModelSelect(opt.id)}
+                  className="group text-left rounded-lg border-2 border-border p-4 transition-all
+                    hover:border-rose-500/50 hover:bg-rose-500/5"
+                >
+                  <p className="text-sm font-semibold">{opt.label}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{opt.description}</p>
+                </button>
+              ))}
+            </div>
+            <div className="border-t border-border pt-3">
+              <button
+                onClick={() => setShowSavedVideos(true)}
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <History className="h-4 w-4" />
+                Play a saved video
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Saved videos browser ─── */}
+      {flowState === "model-selection" && showSavedVideos && (
+        <div className="space-y-3">
+          <button
+            onClick={() => setShowSavedVideos(false)}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to model selection
+          </button>
+          <VideoRunHistory flowId="weekly-football-video" />
+        </div>
+      )}
+
+      {/* ── Pipeline Step Tracker (always visible except done and model-selection) ─── */}
+      {flowState !== "done" && flowState !== "model-selection" && (
         <PipelineTracker
           currentState={flowState}
           failedStep={failedAtStep}
