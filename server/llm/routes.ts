@@ -9,8 +9,11 @@ import { Router, Request, Response } from "express";
 import { chat, AVAILABLE_MODELS, type ChatRequest } from "./index";
 import { generateImage, generateImages, type ImageGenerationRequest } from "./image-generation";
 import { generateClip, generateClips, generateVideo, type ClipGenerationRequest } from "./video-generation";
-import { generateClipReplicate, isReplicateModel } from "./video-generation-replicate";
+import { generateClipReplicate, isReplicateModel, REPLICATE_VIDEO_MODEL } from "./video-generation-replicate";
 import { concatenateVideos } from "./video-concat";
+import { createLogger } from "../logger";
+
+const log = createLogger("llm-routes");
 
 const router = Router();
 
@@ -193,6 +196,12 @@ router.post("/generate-clip", async (req: Request, res: Response) => {
     // Dispatch to Replicate for Wan/Replicate models, otherwise Veo
     const useReplicate = model && isReplicateModel(model);
 
+    log.info(`generate-clip request — model: ${model ?? "(none)"}, useReplicate: ${!!useReplicate}, duration: ${durationSeconds ?? "default"}`);
+
+    if (!model) {
+      log.warn("No model specified in generate-clip request — will fall through to Veo. If this should use Replicate, the client must send model explicitly.");
+    }
+
     const result = useReplicate
       ? await generateClipReplicate({
           prompt,
@@ -217,7 +226,11 @@ router.post("/generate-clip", async (req: Request, res: Response) => {
       operationName: result.operationName,
     });
   } catch (error) {
-    console.error("Clip generation error:", error);
+    const backend = (req.body as ClipGenerationRequest)?.model && isReplicateModel((req.body as ClipGenerationRequest).model!)
+      ? "Replicate" : "Veo/Gemini";
+    log.error(`Clip generation failed (${backend}, model: ${(req.body as ClipGenerationRequest)?.model ?? "(none)"})`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: message });
   }
