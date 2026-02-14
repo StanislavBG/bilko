@@ -1,7 +1,7 @@
 /**
  * Newsletter + Infographic + Video Workflow — bilko-flow DSL definition
  *
- * Translates the test-newsletter flow (12-step DAG with parallel branches)
+ * Translates the newsletter flow (12-step DAG with parallel branches)
  * into the bilko-flow deterministic workflow format.
  *
  * Inspired by the [EFD] European Football Daily n8n workflow
@@ -67,7 +67,7 @@ const defaultPolicy = {
 };
 
 /**
- * Create the test-newsletter workflow definition for bilko-flow.
+ * Create the newsletter workflow definition for bilko-flow.
  * Requires accountId, projectId, environmentId from the bilko-flow context.
  */
 export function createNewsletterWorkflowInput(

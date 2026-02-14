@@ -123,7 +123,7 @@ const FLOW_TO_MODE: Record<string, LearningModeId> = {
   "linkedin-strategist": "linkedin",
   "socratic-architect": "socratic",
   "work-with-me": "work-with-me",
-  "test-newsletter": "test-newsletter",
+  newsletter: "newsletter",
   "weekly-football-video": "weekly-football-video",
   "ai-clip": "ai-clip",
 };
@@ -138,7 +138,7 @@ const MODE_TO_OWNER: Record<string, string> = {
   linkedin: "linkedin-strategist",
   socratic: "socratic-architect",
   "work-with-me": "work-with-me",
-  "test-newsletter": "test-newsletter",
+  newsletter: "newsletter",
   "weekly-football-video": "weekly-football-video",
   "ai-clip": "ai-clip",
 };
@@ -741,7 +741,7 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="h-4 w-4" />
-            <span>Ready for Testing</span>
+            <span>Ready for UX</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
             {readyOptions.map((option, i) => (
@@ -865,7 +865,7 @@ function RightPanelContent({
       {mode === "linkedin" && <LinkedInStrategistFlow onComplete={onComplete} />}
       {mode === "socratic" && <AiConsultationFlow config={SOCRATIC_ARCHITECT_CONFIG} onComplete={onComplete} />}
       {mode === "work-with-me" && <WorkWithMeFlow onComplete={onComplete} />}
-      {mode === "test-newsletter" && <NewsletterFlow onComplete={onComplete} />}
+      {mode === "newsletter" && <NewsletterFlow onComplete={onComplete} />}
       {mode === "weekly-football-video" && <WeeklyFootballVideoFlow onComplete={onComplete} />}
       {mode === "ai-clip" && <AiClipFlow onComplete={onComplete} />}
     </div>

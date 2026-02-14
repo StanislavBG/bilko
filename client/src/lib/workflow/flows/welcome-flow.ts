@@ -54,11 +54,11 @@ export const LEARNING_MODES = [
     voiceTriggers: ["work with me", "guide", "help me", "walk me through", "assist", "task"],
   },
   {
-    id: "test-newsletter",
-    label: "Football Newsletter",
-    description: "A daily European football newspaper — 3 trending stories, articles, and cinematic image descriptions",
+    id: "newsletter",
+    label: "Newsletter",
+    description: "Pick a time range and topic, then get a custom newsletter with articles, infographic, and slideshow",
     icon: "Newspaper",
-    voiceTriggers: ["newsletter", "football", "news", "newspaper", "daily"],
+    voiceTriggers: ["newsletter", "news", "newspaper", "daily", "custom"],
   },
   {
     id: "weekly-football-video",
