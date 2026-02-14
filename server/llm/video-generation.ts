@@ -270,26 +270,56 @@ async function downloadVideoFromUri(uri: string, apiKey: string): Promise<string
   const separator = uri.includes("?") ? "&" : "?";
   const downloadUrl = `${uri}${separator}key=${apiKey}&alt=media`;
 
-  log.info(`Downloading clip from URI: ${uri.substring(0, 100)}...`);
+  // Retry with exponential backoff — Gemini file URIs can take a few seconds
+  // to become available after the generation operation completes.
+  const maxRetries = 4;
+  const baseDelayMs = 3_000; // 3s, 6s, 12s, 24s
 
-  const response = await fetch(downloadUrl, {
-    method: "GET",
-    signal: AbortSignal.timeout(120_000), // 2 min download timeout
-    redirect: "follow",
-  });
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    log.info(`Downloading clip from URI (attempt ${attempt}/${maxRetries}): ${uri.substring(0, 100)}...`);
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    log.error(`Clip download failed: ${response.status}`, { error: errorText, uri });
-    throw new Error(`Failed to download clip (${response.status}): ${errorText}`);
+    try {
+      const response = await fetch(downloadUrl, {
+        method: "GET",
+        signal: AbortSignal.timeout(120_000), // 2 min download timeout
+        redirect: "follow",
+      });
+
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer();
+        const base64 = Buffer.from(arrayBuffer).toString("base64");
+        log.info(`Clip downloaded: ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB (${base64.length} chars base64)`);
+        return base64;
+      }
+
+      const errorText = await response.text().catch(() => "");
+
+      // Don't retry on client errors (4xx) other than 404/408/429 — they won't resolve
+      if (response.status >= 400 && response.status < 500
+          && response.status !== 404 && response.status !== 408 && response.status !== 429) {
+        log.error(`Clip download failed with non-retryable status ${response.status}`, { error: errorText, uri });
+        throw new Error(`Failed to download clip (${response.status}): ${errorText}`);
+      }
+
+      log.warn(`Clip download attempt ${attempt}/${maxRetries} failed: ${response.status}`, { error: errorText });
+    } catch (err) {
+      // Re-throw non-retryable errors (like the one we throw above)
+      if (err instanceof Error && err.message.startsWith("Failed to download clip")) {
+        throw err;
+      }
+      log.warn(`Clip download attempt ${attempt}/${maxRetries} error`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+
+    if (attempt < maxRetries) {
+      const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
+      log.info(`Waiting ${delayMs / 1000}s before retry...`);
+      await sleep(delayMs);
+    }
   }
 
-  const arrayBuffer = await response.arrayBuffer();
-  const base64 = Buffer.from(arrayBuffer).toString("base64");
-
-  log.info(`Clip downloaded: ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(1)}MB (${base64.length} chars base64)`);
-
-  return base64;
+  throw new Error(`Failed to download clip after ${maxRetries} attempts from URI: ${uri.substring(0, 100)}`);
 }
 
 async function parseClipResponse(
@@ -313,9 +343,11 @@ async function parseClipResponse(
 
   // Shape 1: generateVideoResponse.generatedSamples (Gemini API)
   // The API returns a download URI — we must fetch the actual video bytes.
+  // Brief pause before first download — file URIs can lag behind operation completion.
   if (genResponse.generateVideoResponse?.generatedSamples) {
     const samples = genResponse.generateVideoResponse.generatedSamples;
-    log.info(`Response shape: generateVideoResponse with ${samples.length} sample(s)`);
+    log.info(`Response shape: generateVideoResponse with ${samples.length} sample(s). Waiting 2s for URI propagation...`);
+    await sleep(2_000);
     for (const sample of samples) {
       if (sample.video?.uri) {
         try {
