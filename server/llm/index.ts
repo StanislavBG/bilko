@@ -31,7 +31,7 @@ function getClient(): OpenAI {
 export interface LLMModel {
   id: string;
   name: string;
-  provider: "google";
+  provider: "google" | "replicate";
   description: string;
   contextWindow: number;
   inputPrice: number;
@@ -85,6 +85,15 @@ export const AVAILABLE_MODELS: LLMModel[] = [
     name: "Veo 3.1 (Video Generation)",
     provider: "google",
     description: "AI video generation. Creates 5-8 second cinematic video clips from text prompts.",
+    contextWindow: 0,
+    inputPrice: 0,
+    outputPrice: 0,
+  },
+  {
+    id: "wavespeedai/wan-2.1-t2v-480p",
+    name: "Wan 2.1 (Video Generation — Replicate)",
+    provider: "replicate",
+    description: "Open-source AI video generation via Replicate. Fast 480p clips from text prompts (~39s for 5s).",
     contextWindow: 0,
     inputPrice: 0,
     outputPrice: 0,
