@@ -9,6 +9,7 @@ import { Router, Request, Response } from "express";
 import { chat, AVAILABLE_MODELS, type ChatRequest } from "./index";
 import { generateImage, generateImages, type ImageGenerationRequest } from "./image-generation";
 import { generateClip, generateClips, generateVideo, type ClipGenerationRequest } from "./video-generation";
+import { generateClipReplicate, isReplicateModel } from "./video-generation-replicate";
 import { concatenateVideos } from "./video-concat";
 
 const router = Router();
@@ -189,16 +190,26 @@ router.post("/generate-clip", async (req: Request, res: Response) => {
       return;
     }
 
-    const result = await generateClip({
-      prompt,
-      model,
-      durationSeconds,
-      aspectRatio,
-      referenceImageBase64,
-      referenceImageMimeType,
-      sourceVideoBase64,
-      sourceVideoMimeType,
-    });
+    // Dispatch to Replicate for Wan/Replicate models, otherwise Veo
+    const useReplicate = model && isReplicateModel(model);
+
+    const result = useReplicate
+      ? await generateClipReplicate({
+          prompt,
+          model,
+          durationSeconds,
+          aspectRatio,
+        })
+      : await generateClip({
+          prompt,
+          model,
+          durationSeconds,
+          aspectRatio,
+          referenceImageBase64,
+          referenceImageMimeType,
+          sourceVideoBase64,
+          sourceVideoMimeType,
+        });
 
     res.json({
       videos: result.videos,
