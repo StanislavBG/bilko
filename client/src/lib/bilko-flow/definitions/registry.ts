@@ -883,23 +883,23 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     ],
   },
 
-  // ── AI Clip — Single 5s Wan 2.1 clip via Replicate ──────────
+  // ── AI Clip — Single 6s clip via Replicate (minimax/video-01) ──
   //
   // The simplest video building block:
   //   1. Deep research → find a visually compelling story
-  //   2. Write 5-second clip script
-  //   3. Generate a single 5s clip via Replicate (Wan 2.1)
+  //   2. Write 6-second clip script
+  //   3. Generate a single 6s clip via Replicate (minimax/video-01, free tier)
   {
     id: "ai-clip",
     name: "AI Clip",
     description:
-      "Research the top news story and generate a single 5-second AI video clip with Wan 2.1 via Replicate. The simplest building block — one research, one script, one clip.",
-    version: "1.0.0",
+      "Research the top news story and generate a single 6-second AI video clip with minimax/video-01 (Hailuo) via Replicate. Free-tier model — one research, one script, one clip.",
+    version: "1.1.0",
     location: "landing",
     componentPath: "client/src/components/ai-clip-flow.tsx",
-    tags: ["landing", "video", "replicate", "wan", "clip", "ai", "news", "single"],
+    tags: ["landing", "video", "replicate", "minimax", "hailuo", "clip", "ai", "news", "single", "free"],
     icon: "Film",
-    voiceTriggers: ["ai clip", "single clip", "one clip", "quick clip", "5 second"],
+    voiceTriggers: ["ai clip", "single clip", "one clip", "quick clip", "6 second"],
     websiteUrl: "https://bilkobibitkov.replit.app/",
     phases: [
       { id: "researching", label: "Research", stepIds: ["deep-research"] },
@@ -910,7 +910,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
     output: {
       name: "videoClip",
       type: "object",
-      description: "A single 5-second AI-generated video clip about a top news story (Wan 2.1 via Replicate)",
+      description: "A single 6-second AI-generated video clip about a top news story (minimax/video-01 via Replicate)",
     },
     steps: [
       {
@@ -933,12 +933,12 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
       },
       {
         id: "write-clip-script",
-        name: "Write 5s Clip Script",
+        name: "Write 6s Clip Script",
         type: "llm",
         description:
-          "Writes a self-contained 5-second micro-story clip script with narration text, detailed visual description, and style tokens for Wan 2.1.",
-        prompt: "Write a single 5-SECOND clip script. This clip must be a self-contained micro-story — hook, reveal, payoff in 5 seconds.",
-        userMessage: "Write a punchy 5-second clip script based on the research.",
+          "Writes a self-contained 6-second micro-story clip script with narration text, detailed visual description, and style tokens.",
+        prompt: "Write a single 6-SECOND clip script. This clip must be a self-contained micro-story — hook, reveal, payoff in 6 seconds.",
+        userMessage: "Write a punchy 6-second clip script based on the research.",
 
         inputSchema: [
           { name: "research", type: "object", description: "The deep research output" },
@@ -954,22 +954,22 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
       },
       {
         id: "generate-clip",
-        name: "Generate Clip (5s Wan 2.1)",
+        name: "Generate Clip (6s Hailuo)",
         type: "llm",
         subtype: "video",
         description:
-          "Generates a single 5-second video clip using Wan 2.1 via Replicate. Fresh text-to-video generation — no source grounding. This is the atomic unit.",
-        prompt: "Generate a 5-second video clip from the visual description and style tokens.",
-        userMessage: "Generate the 5-second video clip via Replicate.",
+          "Generates a single 6-second video clip using minimax/video-01 (Hailuo) via Replicate. Free-tier model — 720p at 25fps. This is the atomic unit.",
+        prompt: "Generate a 6-second video clip from the visual description and style tokens.",
+        userMessage: "Generate the 6-second video clip via Replicate (Hailuo).",
 
         inputSchema: [
           { name: "visualDescription", type: "string", description: "Clip visual description" },
           { name: "styleTokens", type: "string", description: "Style tokens" },
         ],
         outputSchema: [
-          { name: "videoBase64", type: "string", description: "Base64-encoded 5s video clip (MP4)" },
+          { name: "videoBase64", type: "string", description: "Base64-encoded 6s video clip (MP4)" },
           { name: "mimeType", type: "string", description: "Video MIME type" },
-          { name: "durationSeconds", type: "number", description: "Clip duration (5s)" },
+          { name: "durationSeconds", type: "number", description: "Clip duration (6s)" },
         ],
         dependsOn: ["write-clip-script"],
       },
@@ -978,7 +978,7 @@ Rules: each search term max 8 words. Return 3-4 terms. No markdown, ONLY the JSO
         name: "Preview & Export",
         type: "display",
         description:
-          "Displays the generated 5-second clip with the script, narration, key facts, and download option.",
+          "Displays the generated 6-second clip with the script, narration, key facts, and download option.",
         inputSchema: [
           { name: "research", type: "object", description: "Original research data" },
           { name: "script", type: "object", description: "The clip script" },
