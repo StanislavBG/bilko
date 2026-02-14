@@ -1,4 +1,4 @@
-import { Activity, BookOpen, Home, Workflow, FolderOpen, Sparkles, PenLine, type LucideIcon } from "lucide-react";
+import { BookOpen, Home, Workflow, FolderOpen, Sparkles, PenLine, type LucideIcon } from "lucide-react";
 
 export interface NavItem {
   id: string;
@@ -36,13 +36,6 @@ export const navigationItems: NavItem[] = [
     title: "N8N Workflows",
     url: "/workflows",
     icon: Workflow,
-    adminOnly: true,
-  },
-  {
-    id: "memory",
-    title: "Memory Explorer",
-    url: "/memory",
-    icon: Activity,
     adminOnly: true,
   },
   {

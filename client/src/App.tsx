@@ -37,7 +37,6 @@ import { AppErrorBoundary } from "@/components/app-error-boundary";
 // Lazy-loaded pages — only fetched when their route is visited
 const Projects = lazy(() => import("@/pages/projects"));
 const N8nWorkflows = lazy(() => import("@/pages/n8n-workflows"));
-const MemoryExplorer = lazy(() => import("@/pages/memory-explorer"));
 const RulesExplorer = lazy(() => import("@/pages/rules-explorer"));
 const FlowExplorer = lazy(() => import("@/pages/flow-explorer"));
 const FlowDetail = lazy(() => import("@/pages/flow-detail"));
@@ -110,7 +109,6 @@ function AuthenticatedApp() {
                       <Route path="/projects/:projectId?" component={Projects} />
                       <Route path="/bilkos-way" component={BilkosWay} />
                       {isAuth && <Route path="/workflows" component={N8nWorkflows} />}
-                      {isAuth && <Route path="/memory" component={MemoryExplorer} />}
                       {isAuth && <Route path="/rules" component={RulesExplorer} />}
                       {isAuth && <Route path="/flows/:flowId" component={FlowDetail} />}
                       {isAuth && <Route path="/flows" component={FlowExplorer} />}

@@ -175,4 +175,3 @@ Complete communication traces enable debugging, performance analysis, and future
 
 - ARCH-003: Orchestration Layer (uses this schema)
 - DATA-004: Callback Persistence Contract (execution-trace relationship)
-- APP-MEMORY-001: Memory Explorer (UI for viewing traces)
