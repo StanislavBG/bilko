@@ -1,5 +1,5 @@
 /**
- * Weekly Football Highlight Video Flow — 20s social-media video pipeline.
+ * Weekly Football Highlight Video Flow — model-aware video pipeline.
  *
  * 7-step DAG (sequential chain):
  *
@@ -7,11 +7,11 @@
  *        │
  *   write-video-script
  *        │
- *   generate-clip-1  (8s initial Veo)
+ *   generate-clip-1  (initial clip, no chaining)
  *        │
- *   generate-clip-2  (8s grounded on clip 1)
+ *   generate-clip-2  (chained on clip 1)
  *        │
- *   generate-clip-3  (8s grounded on clip 2)
+ *   generate-clip-3  (chained on clip 2)
  *        │
  *   concatenate-clips (FFmpeg)
  *        │
@@ -19,11 +19,15 @@
  *
  * Pipeline:
  *   1. Deep research → find the biggest European football event (last 7 days)
- *   2. Write 20s script pre-planned for 8-6-6 second transition points
- *   3. Generate 3 × 8s Veo clips chained via last-2-second grounding
- *   4. Concatenate → single ~20s continuous video
+ *   2. Write script pre-planned for equal segment transition points
+ *   3. Generate 3 clips chained for visual continuity
+ *   4. Concatenate → single continuous video
  *
- * Models: Gemini 2.5 Flash (research + script) + Veo 3.1 (video gen)
+ * Model-aware clip chaining:
+ *   - minimax/video-01 (Hailuo): 6s clips, last-frame extraction → first_frame_image
+ *   - Veo (Gemini): 8s clips, source-video grounding (last 2s used as context)
+ *
+ * Models: Gemini 2.5 Flash (research + script) + configurable video model
  * Auto-starts immediately when rendered.
  *
  * UI: Newsletter-inspired step tracker shows each pipeline stage
@@ -55,9 +59,15 @@ import {
   useFlowChat,
   generateClip,
   concatenateVideos,
+  extractLastFrame,
+  createVideoRun,
+  updateVideoRun,
+  saveVideoClip,
+  saveVideoFinal,
 } from "@/lib/bilko-flow";
 import type { ConcatResult } from "@/lib/bilko-flow";
 import { bilkoSystemPrompt } from "@/lib/bilko-persona/system-prompt";
+import { VideoRunHistory } from "@/components/video-run-history";
 import { useFlowRegistration } from "@/contexts/flow-bus-context";
 import { getFlowAgent } from "@/lib/bilko-persona/flow-agents";
 
@@ -116,9 +126,9 @@ interface PipelineStep {
 
 const PIPELINE_STEPS: PipelineStep[] = [
   { id: "researching", label: "Deep Research — Top Event", shortLabel: "Research", icon: Search },
-  { id: "scripting", label: "Writing 20s Video Script", shortLabel: "Script", icon: PenLine },
-  { id: "generating-clip-1", label: "Generating Clip 1 (8s opening)", shortLabel: "Clip 1", icon: Film },
-  { id: "generating-clip-2", label: "Generating Clip 2 (grounded)", shortLabel: "Clip 2", icon: Film },
+  { id: "scripting", label: "Writing Video Script", shortLabel: "Script", icon: PenLine },
+  { id: "generating-clip-1", label: "Generating Clip 1 (opening)", shortLabel: "Clip 1", icon: Film },
+  { id: "generating-clip-2", label: "Generating Clip 2 (chained)", shortLabel: "Clip 2", icon: Film },
   { id: "generating-clip-3", label: "Generating Clip 3 (finale)", shortLabel: "Clip 3", icon: Film },
   { id: "concatenating", label: "Concatenating Clips (FFmpeg)", shortLabel: "Concat", icon: Scissors },
   { id: "done", label: "Preview", shortLabel: "Preview", icon: Eye },
@@ -164,7 +174,10 @@ Rules:
 - No markdown, ONLY the JSON object.`,
 );
 
-function writeVideoScriptPrompt(research: ResearchResult): string {
+function writeVideoScriptPrompt(research: ResearchResult, segDuration = 6, totalDuration = 18): string {
+  const seg2Start = segDuration;
+  const seg3Start = segDuration * 2;
+
   return bilkoSystemPrompt(
     `You are a social media video scriptwriter specializing in short-form sports content.
 
@@ -175,24 +188,24 @@ ${research.summary}
 Key facts:
 ${research.keyFacts.map((f, i) => `${i + 1}. ${f.fact} — ${f.number}`).join("\n")}
 
-MISSION: Write a 20-SECOND video script PRE-PLANNED for these EXACT transitions:
-- SEGMENT 1 (0-8s): Opening hook + establish the story. Must end with a STABLE visual scene (no hard cuts) because the last 2 seconds (6-8s) will be used as visual grounding for the next clip.
-- SEGMENT 2 (8-14s): Develop the story with the most shocking stat/fact. The opening must visually CONTINUE from segment 1's ending. Must end with a stable visual scene (12-14s used as grounding).
-- SEGMENT 3 (14-20s): Payoff + call to action. Opens continuing from segment 2's ending. Ends with a satisfying visual conclusion.
+MISSION: Write a ${totalDuration}-SECOND video script split into 3 EQUAL segments of ${segDuration} seconds each:
+- SEGMENT 1 (0-${segDuration}s): Opening hook + establish the story. Must end with a STABLE visual scene (the last frame will be extracted to seed the next clip for visual continuity).
+- SEGMENT 2 (${seg2Start}-${seg3Start}s): Develop the story with the most shocking stat/fact. The opening must visually CONTINUE from segment 1's ending. Must end with a stable visual scene.
+- SEGMENT 3 (${seg3Start}-${totalDuration}s): Payoff + call to action. Opens continuing from segment 2's ending. Ends with a satisfying visual conclusion.
 
 For each segment provide:
 1. narration (spoken words, timed to the segment)
 2. visualDescription (what the viewer sees — cinematic, social-media style)
-3. transitionNote (how the last 2s set up the next segment's grounding)
+3. transitionNote (how the ending frame sets up the next segment's continuity)
 4. keyStat (the key fact/stat featured)
 
 Return ONLY valid JSON:
-{"script":{"title":"...","segments":[{"segmentNumber":1,"durationSec":8,"narration":"...","visualDescription":"...","transitionNote":"...","keyStat":"..."},{"segmentNumber":2,"durationSec":6,"narration":"...","visualDescription":"...","transitionNote":"...","keyStat":"..."},{"segmentNumber":3,"durationSec":6,"narration":"...","visualDescription":"...","transitionNote":"...","keyStat":"..."}],"totalDurationSec":20,"veoStyleTokens":"..."}}
+{"script":{"title":"...","segments":[{"segmentNumber":1,"durationSec":${segDuration},"narration":"...","visualDescription":"...","transitionNote":"...","keyStat":"..."},{"segmentNumber":2,"durationSec":${segDuration},"narration":"...","visualDescription":"...","transitionNote":"...","keyStat":"..."},{"segmentNumber":3,"durationSec":${segDuration},"narration":"...","visualDescription":"...","transitionNote":"...","keyStat":"..."}],"totalDurationSec":${totalDuration},"veoStyleTokens":"..."}}
 
-Rules: title max 10 words. narration max 25 words per segment. visualDescription max 40 words. transitionNote max 20 words. veoStyleTokens: shared visual style tokens for all Veo prompts (lighting, palette, mood — max 30 words). No markdown.
+Rules: title max 10 words. narration max 25 words per segment. visualDescription max 40 words. transitionNote max 20 words. veoStyleTokens: shared visual style tokens for all video prompts (lighting, palette, mood — max 30 words). No markdown.
 
-PRIVACY COMPLIANCE (MANDATORY — Veo content policy):
-Each visualDescription and the shared veoStyleTokens go DIRECTLY to Google Veo for AI video generation. You MUST follow these rules strictly:
+PRIVACY COMPLIANCE (MANDATORY — AI video model content policy):
+Each visualDescription and the shared veoStyleTokens go DIRECTLY to an AI video model for generation. You MUST follow these rules strictly:
 1. NO REAL PEOPLE: Never name or describe any real, recognizable person (players, managers, referees, pundits). Use generic descriptions like "a midfielder", "the goalkeeper", "a celebrating crowd" instead. NEVER use real names.
 2. NO IDENTIFIABLE FACES: Do not request close-ups of faces that could resemble real people. Prefer wide shots, silhouettes, overhead stadium angles, or abstract representations of the action.
 3. NO LOGOS OR TRADEMARKS: Do not reference specific team crests, kit designs, jersey numbers tied to real players, sponsor logos, or trademarked visual elements. Use generic "football kit", "stadium", "pitch" descriptions.
@@ -212,28 +225,28 @@ const STATUS_MESSAGES: Record<string, string[]> = {
     "Finding the single biggest event with interesting stats...",
   ],
   scripting: [
-    "Writing the 20-second video script...",
-    "Planning 8-6-6 second transition points...",
+    "Writing the video script...",
+    "Planning segment transitions for continuity...",
     "Crafting social-media-worthy narration...",
   ],
   "generating-clip-1": [
-    "Generating opening 8-second clip with Veo...",
+    "Generating opening clip...",
     "Creating the hook — first impressions matter...",
     "Rendering cinematic football visuals...",
   ],
   "generating-clip-2": [
-    "Generating clip 2, grounded on clip 1...",
-    "Veo is using the last 2 seconds for visual continuity...",
+    "Generating clip 2, chained from clip 1...",
+    "Using the last frame for visual continuity...",
     "Building the story with the shocking stat...",
   ],
   "generating-clip-3": [
-    "Generating final clip, grounded on clip 2...",
+    "Generating final clip, chained from clip 2...",
     "Creating the payoff sequence...",
     "Wrapping up with a satisfying conclusion...",
   ],
   concatenating: [
     "Concatenating 3 clips with FFmpeg...",
-    "Building the final ~20-second continuous video...",
+    "Building the final continuous video...",
     "Container-level copy, no re-encoding...",
   ],
 };
@@ -438,7 +451,18 @@ function PipelineTracker({
 
 // ── Component ────────────────────────────────────────────────────────
 
-export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?: string) => void }) {
+/** Default video model: minimax/video-01 (free Replicate) or omit for Veo (Gemini) */
+const DEFAULT_VIDEO_MODEL = "minimax/video-01";
+
+/** Check if a model uses last-frame chaining (minimax) vs source-video grounding (Veo) */
+function usesFrameChaining(model?: string): boolean {
+  return !!model && model.startsWith("minimax/");
+}
+
+export function WeeklyFootballVideoFlow({ onComplete, videoModel }: { onComplete?: (summary?: string) => void; videoModel?: string }) {
+  const model = videoModel ?? DEFAULT_VIDEO_MODEL;
+  const isFrameChaining = usesFrameChaining(model);
+  const clipDuration = isFrameChaining ? 6 : 8; // minimax: 6s fixed, Veo: 8s
   // ── Flow state ──
   const [flowState, setFlowState] = useState<FlowState>("researching");
   const [failedAtStep, setFailedAtStep] = useState<FlowState | null>(null);
@@ -527,6 +551,17 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
     setFailedAtStep(null);
     setError(null);
 
+    // Generate a unique run ID for persistence
+    const runId = `vr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // Fire-and-forget persistence helper (never blocks the pipeline)
+    const persist = (fn: () => Promise<unknown>) => {
+      fn().catch((err) => console.warn("[video-run] persist failed:", err));
+    };
+
+    // Create the run record
+    persist(() => createVideoRun("weekly-football-video", runId));
+
     let currentStep: FlowState = "researching";
 
     try {
@@ -546,6 +581,7 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
 
       const researchData = researchResult.data.research;
       setResearch(researchData);
+      persist(() => updateVideoRun(runId, { research: researchData }));
       pushAgentMessage(
         `Found the story: "${researchData.headline}" (${researchData.league}). Writing the script now.`,
       );
@@ -557,77 +593,102 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       const { data: scriptResult } = await trackStep(
         "write-video-script",
         { research: researchData },
-        () =>
-          chatJSON<{ script: VideoScript }>(
+        () => {
+          const totalDur = clipDuration * 3;
+          return chatJSON<{ script: VideoScript }>(
             jsonPrompt(
-              writeVideoScriptPrompt(researchData),
-              "Write the 20-second video script with 8-6-6 transition planning based on the research.",
+              writeVideoScriptPrompt(researchData, clipDuration, totalDur),
+              `Write the ${totalDur}-second video script with 3 equal ${clipDuration}s segments based on the research.`,
             ),
-          ),
+          );
+        },
       );
 
       const scriptData = scriptResult.data.script;
       setScript(scriptData);
+      persist(() => updateVideoRun(runId, { script: scriptData }));
+      const modelLabel = isFrameChaining ? "Hailuo" : "Veo";
       pushAgentMessage(
-        `Script ready: "${scriptData.title}" — ${scriptData.totalDurationSec}s across ${scriptData.segments.length} segments. Generating video clips with Veo.`,
+        `Script ready: "${scriptData.title}" — ${scriptData.totalDurationSec}s across ${scriptData.segments.length} segments. Generating video clips with ${modelLabel}.`,
       );
 
-      // ═══ Step 3: generate-clip-1 (8s initial Veo) ═══
+      // ═══ Step 3: generate-clip-1 (text-to-video, no grounding) ═══
       currentStep = "generating-clip-1";
       setFlowState("generating-clip-1");
 
       const seg1 = scriptData.segments[0];
-      const clip1Prompt = `${seg1.visualDescription}. Style: ${scriptData.veoStyleTokens}. End with stable, continuing motion for grounding. No real people, no identifiable faces, no logos or trademarks. Abstract cinematic visuals only.`;
+      const clip1Prompt = `${seg1.visualDescription}. Style: ${scriptData.veoStyleTokens}. End with stable, continuing motion. No real people, no identifiable faces, no logos or trademarks. Abstract cinematic visuals only.`;
 
       const { data: clip1Result } = await trackStep(
         "generate-clip-1",
-        { visualDescription: seg1.visualDescription, styleTokens: scriptData.veoStyleTokens },
-        () => generateClip(clip1Prompt, { durationSeconds: 8, aspectRatio: "16:9" }),
+        { visualDescription: seg1.visualDescription, styleTokens: scriptData.veoStyleTokens, model },
+        () => generateClip(clip1Prompt, { durationSeconds: clipDuration as 5 | 6 | 7 | 8, aspectRatio: "16:9", model }),
       );
 
       const clip1Video = clip1Result.videos?.[0];
       if (!clip1Video?.videoBase64) {
-        throw new Error("Clip 1: generation returned no video data. Check server logs for Veo API response details.");
+        throw new Error("Clip 1: generation returned no video data. Check server logs.");
       }
       const clip1Data: ClipResult = {
         videoBase64: clip1Video.videoBase64,
         mimeType: clip1Video.mimeType ?? "video/mp4",
-        durationSeconds: 8,
+        durationSeconds: clipDuration,
       };
       setClip1(clip1Data);
-      pushAgentMessage("Clip 1 generated (8s opening hook). Now grounding clip 2 on the last 2 seconds.");
+      persist(() => saveVideoClip(runId, 0, clip1Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 1 })));
 
-      // ═══ Step 4: generate-clip-2 (8s, grounded on clip 1) ═══
+      // For minimax: extract last frame for chaining. For Veo: use sourceVideoBase64 directly.
+      let clip1LastFrame: string | undefined;
+      if (isFrameChaining) {
+        pushAgentMessage("Clip 1 generated. Extracting last frame for continuity chaining.");
+        clip1LastFrame = await extractLastFrame(clip1Data.videoBase64);
+      } else {
+        pushAgentMessage("Clip 1 generated. Grounding clip 2 on the last 2 seconds.");
+      }
+
+      // ═══ Step 4: generate-clip-2 (grounded/chained on clip 1) ═══
       currentStep = "generating-clip-2";
       setFlowState("generating-clip-2");
 
       const seg2 = scriptData.segments[1];
-      const clip2Prompt = `Continue from previous scene. ${seg2.visualDescription}. Style: ${scriptData.veoStyleTokens}. End with stable motion for grounding. No real people, no identifiable faces, no logos or trademarks. Abstract cinematic visuals only.`;
+      const clip2Prompt = `Continue from previous scene. ${seg2.visualDescription}. Style: ${scriptData.veoStyleTokens}. End with stable motion. No real people, no identifiable faces, no logos or trademarks. Abstract cinematic visuals only.`;
 
       const { data: clip2Result } = await trackStep(
         "generate-clip-2",
-        { visualDescription: seg2.visualDescription, styleTokens: scriptData.veoStyleTokens },
+        { visualDescription: seg2.visualDescription, styleTokens: scriptData.veoStyleTokens, model },
         () =>
           generateClip(clip2Prompt, {
-            durationSeconds: 8,
+            durationSeconds: clipDuration as 5 | 6 | 7 | 8,
             aspectRatio: "16:9",
-            sourceVideoBase64: clip1Data.videoBase64,
+            model,
+            // Minimax: last frame as first_frame_image. Veo: source video grounding.
+            ...(isFrameChaining
+              ? { referenceImageBase64: clip1LastFrame }
+              : { sourceVideoBase64: clip1Data.videoBase64 }),
           }),
       );
 
       const clip2Video = clip2Result.videos?.[0];
       if (!clip2Video?.videoBase64) {
-        throw new Error("Clip 2: source-grounded generation returned no video data. Check server logs for details.");
+        throw new Error("Clip 2: generation returned no video data. Check server logs.");
       }
       const clip2Data: ClipResult = {
         videoBase64: clip2Video.videoBase64,
         mimeType: clip2Video.mimeType ?? "video/mp4",
-        durationSeconds: 8,
+        durationSeconds: clipDuration,
       };
       setClip2(clip2Data);
-      pushAgentMessage("Clip 2 ready (grounded continuation). Generating the final payoff clip.");
+      persist(() => saveVideoClip(runId, 1, clip2Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 2 })));
 
-      // ═══ Step 5: generate-clip-3 (8s, grounded on clip 2) ═══
+      let clip2LastFrame: string | undefined;
+      if (isFrameChaining) {
+        pushAgentMessage("Clip 2 ready. Extracting last frame for the final clip.");
+        clip2LastFrame = await extractLastFrame(clip2Data.videoBase64);
+      } else {
+        pushAgentMessage("Clip 2 ready (grounded continuation). Generating the final payoff clip.");
+      }
+
+      // ═══ Step 5: generate-clip-3 (grounded/chained on clip 2) ═══
       currentStep = "generating-clip-3";
       setFlowState("generating-clip-3");
 
@@ -636,25 +697,29 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
 
       const { data: clip3Result } = await trackStep(
         "generate-clip-3",
-        { visualDescription: seg3.visualDescription, styleTokens: scriptData.veoStyleTokens },
+        { visualDescription: seg3.visualDescription, styleTokens: scriptData.veoStyleTokens, model },
         () =>
           generateClip(clip3Prompt, {
-            durationSeconds: 8,
+            durationSeconds: clipDuration as 5 | 6 | 7 | 8,
             aspectRatio: "16:9",
-            sourceVideoBase64: clip2Data.videoBase64,
+            model,
+            ...(isFrameChaining
+              ? { referenceImageBase64: clip2LastFrame }
+              : { sourceVideoBase64: clip2Data.videoBase64 }),
           }),
       );
 
       const clip3Video = clip3Result.videos?.[0];
       if (!clip3Video?.videoBase64) {
-        throw new Error("Clip 3: source-grounded generation returned no video data. Check server logs for details.");
+        throw new Error("Clip 3: generation returned no video data. Check server logs.");
       }
       const clip3Data: ClipResult = {
         videoBase64: clip3Video.videoBase64,
         mimeType: clip3Video.mimeType ?? "video/mp4",
-        durationSeconds: 8,
+        durationSeconds: clipDuration,
       };
       setClip3(clip3Data);
+      persist(() => saveVideoClip(runId, 2, clip3Data.videoBase64).then(() => updateVideoRun(runId, { clipCount: 3 })));
       pushAgentMessage("All 3 clips generated. Concatenating into one continuous video.");
 
       // ═══ Step 6: concatenate-clips (FFmpeg) ═══
@@ -674,7 +739,19 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
 
       setFinalVideo(concatResult as ConcatResult);
 
-      const exitSummary = `Produced "${scriptData.title}" — a ${(concatResult as ConcatResult).durationSeconds ?? 20}s highlight video about "${researchData.headline}" (${researchData.league}). 3 Veo clips chained via last-2s grounding + FFmpeg concat.`;
+      // Persist combined video + mark run complete
+      const finalConcat = concatResult as ConcatResult;
+      persist(() =>
+        saveVideoFinal(runId, finalConcat.videoBase64).then(() =>
+          updateVideoRun(runId, {
+            status: "completed",
+            finalDurationSeconds: finalConcat.durationSeconds ?? 20,
+          }),
+        ),
+      );
+
+      const chainingMethod = isFrameChaining ? "last-frame chaining" : "last-2s grounding";
+      const exitSummary = `Produced "${scriptData.title}" — a ${(concatResult as ConcatResult).durationSeconds ?? clipDuration * 3}s highlight video about "${researchData.headline}" (${researchData.league}). 3 ${modelLabel} clips via ${chainingMethod} + FFmpeg concat.`;
       pushAgentMessage(
         `Video ready! "${scriptData.title}" — ${(concatResult as ConcatResult).durationSeconds ?? 20} seconds of continuous highlight footage. Check the preview.`,
       );
@@ -683,9 +760,11 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
       setFlowState("done");
     } catch (err) {
       console.error("Weekly football video flow error:", err);
+      const errMsg = err instanceof Error ? err.message : "Failed to run video pipeline.";
       setFailedAtStep(currentStep);
-      setError(err instanceof Error ? err.message : "Failed to run video pipeline.");
+      setError(errMsg);
       setFlowState("error");
+      persist(() => updateVideoRun(runId, { status: "failed", error: errMsg }));
     }
   }, [trackStep, pushAgentMessage, busSend]);
 
@@ -802,7 +881,9 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  const exitSummary = `Produced "${script.title}" — a ${finalVideo?.durationSeconds ?? 20}s highlight video about "${research.headline}" (${research.league}). 3 Veo clips via grounding + FFmpeg.`;
+                  const chainingLabel = isFrameChaining ? "last-frame chaining" : "last-2s grounding";
+                  const modelLbl = isFrameChaining ? "Hailuo" : "Veo";
+                  const exitSummary = `Produced "${script.title}" — a ${finalVideo?.durationSeconds ?? clipDuration * 3}s highlight video about "${research.headline}" (${research.league}). 3 ${modelLbl} clips via ${chainingLabel} + FFmpeg.`;
                   onComplete(exitSummary);
                 }}
               >
@@ -855,7 +936,11 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
                     <div key={seg.segmentNumber} className="flex gap-3 text-sm">
                       <div className="shrink-0 w-14 text-right">
                         <span className="text-xs font-mono text-muted-foreground">
-                          {seg.segmentNumber === 1 ? "0-8s" : seg.segmentNumber === 2 ? "8-14s" : "14-20s"}
+                          {seg.segmentNumber === 1
+                            ? `0-${clipDuration}s`
+                            : seg.segmentNumber === 2
+                              ? `${clipDuration}-${clipDuration * 2}s`
+                              : `${clipDuration * 2}-${clipDuration * 3}s`}
                         </span>
                       </div>
                       <div className="flex-1 space-y-1">
@@ -935,6 +1020,9 @@ export function WeeklyFootballVideoFlow({ onComplete }: { onComplete?: (summary?
           </div>
         </div>
       )}
+
+      {/* ── Past Runs (always visible) ────────────────────────── */}
+      <VideoRunHistory flowId="weekly-football-video" />
 
     </div>
   );
