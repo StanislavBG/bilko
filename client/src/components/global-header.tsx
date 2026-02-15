@@ -32,7 +32,8 @@ function LandingHeader() {
 
   return (
     <header className="h-14 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center gap-3 px-4 fixed top-0 left-0 right-0 z-50">
-      <span className="font-bold text-lg shrink-0">
+      <span className="flex items-center gap-2 font-bold text-lg shrink-0">
+        <img src="/bilko-logo.svg" alt="" className="h-7 w-7" />
         Bilko's AI School
       </span>
       <div className="flex-1" />
@@ -72,8 +73,9 @@ function AuthenticatedHeader() {
 
   return (
     <header className="h-11 shrink-0 border-b bg-sidebar flex items-center gap-2 px-2" data-testid="global-header">
-      <Link href="/" className="font-semibold text-sm shrink-0 hover:opacity-80 transition-opacity cursor-pointer" data-testid="logo-text">
-        AI School
+      <Link href="/" className="flex items-center gap-1.5 shrink-0 hover:opacity-80 transition-opacity cursor-pointer" data-testid="logo-text">
+        <img src="/bilko-logo.svg" alt="" className="h-6 w-6" />
+        <span className="font-semibold text-sm">AI School</span>
       </Link>
       <div className="flex-1" />
       <div className="flex items-center gap-1">
