@@ -125,6 +125,7 @@ const UNDER_CONSTRUCTION_IDS = new Set([
   "ai-consultation",
   "recursive-interviewer",
   "socratic-architect",
+  "linkedin-strategist",
 ]);
 
 /** Maps flow registry IDs to the short mode IDs used by RightPanelContent */
@@ -423,15 +424,21 @@ export function LandingContent() {
     (choiceId: string) => {
       // Special tiles — handle non-flow actions
       if (choiceId === "explore") {
-        // "Explore the Site" = unhide AND expand the sidebar navigation.
+        // "Explore the Site" = toggle the sidebar navigation.
         // Works for both auth and unauth (Landing is wrapped in SidebarProvider).
         // Never redirects to login.
         if (sidebarCtx) {
           if (sidebarCtx.isMobile) {
-            sidebarCtx.setOpenMobile(true);
+            sidebarCtx.setOpenMobile(!sidebarCtx.openMobile);
           } else {
-            sidebarCtx.setHidden(false);
-            sidebarCtx.setOpen(true);
+            // Toggle: if sidebar is visible (not hidden), hide it; otherwise show it
+            const isVisible = !sidebarCtx.hidden;
+            if (isVisible) {
+              sidebarCtx.setHidden(true);
+            } else {
+              sidebarCtx.setHidden(false);
+              sidebarCtx.setOpen(true);
+            }
           }
         }
         return;
