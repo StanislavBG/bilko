@@ -23,8 +23,9 @@ router.post("/", async (req, res) => {
     await service.createRun(flowId, runId);
     res.json({ success: true, runId });
   } catch (err) {
-    log.error("Failed to create run", { error: err instanceof Error ? err.message : String(err) });
-    res.status(500).json({ error: "Failed to create run" });
+    const detail = err instanceof Error ? err.message : String(err);
+    log.error("Failed to create run", { error: detail });
+    res.status(500).json({ error: `Failed to create run: ${detail}` });
   }
 });
 
@@ -48,8 +49,9 @@ router.patch("/:runId", async (req, res) => {
     await service.updateRun(runId, update);
     res.json({ success: true });
   } catch (err) {
-    log.error("Failed to update run", { error: err instanceof Error ? err.message : String(err) });
-    res.status(500).json({ error: "Failed to update run" });
+    const detail = err instanceof Error ? err.message : String(err);
+    log.error("Failed to update run", { error: detail });
+    res.status(500).json({ error: `Failed to update run: ${detail}` });
   }
 });
 
@@ -71,8 +73,9 @@ router.post("/:runId/clips/:index", async (req, res) => {
     const filename = await service.saveClip(runId, clipIndex, videoBase64);
     res.json({ success: true, filename });
   } catch (err) {
-    log.error("Failed to save clip", { error: err instanceof Error ? err.message : String(err) });
-    res.status(500).json({ error: "Failed to save clip" });
+    const detail = err instanceof Error ? err.message : String(err);
+    log.error("Failed to save clip", { error: detail });
+    res.status(500).json({ error: `Failed to save clip: ${detail}` });
   }
 });
 
