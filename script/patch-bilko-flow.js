@@ -74,8 +74,6 @@ __exportStar(require("./engine"), exports);
 __exportStar(require("./storage"), exports);
 __exportStar(require("./planner"), exports);
 __exportStar(require("./data-plane"), exports);
-__exportStar(require("./audit"), exports);
-__exportStar(require("./notifications"), exports);
 __exportStar(require("./llm"), exports);
 `;
 
