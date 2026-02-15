@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Crossbones -->
+  <g stroke="#1a1a2e" stroke-width="10" stroke-linecap="round">
+    <line x1="25" y1="155" x2="175" y2="185"/>
+    <line x1="175" y1="155" x2="25" y2="185"/>
+    <!-- Bone ends -->
+    <circle cx="25" cy="155" r="10" fill="white" stroke="#1a1a2e" stroke-width="4"/>
+    <circle cx="175" cy="155" r="10" fill="white" stroke="#1a1a2e" stroke-width="4"/>
+    <circle cx="25" cy="185" r="10" fill="white" stroke="#1a1a2e" stroke-width="4"/>
+    <circle cx="175" cy="185" r="10" fill="white" stroke="#1a1a2e" stroke-width="4"/>
+  </g>
+  <!-- Skull -->
+  <ellipse cx="100" cy="110" rx="55" ry="50" fill="white" stroke="#1a1a2e" stroke-width="4"/>
+  <!-- Jaw -->
+  <path d="M65 125 Q100 155 135 125" fill="white" stroke="#1a1a2e" stroke-width="4"/>
+  <!-- Eyes -->
+  <circle cx="80" cy="105" r="14" fill="#1a1a2e"/>
+  <circle cx="120" cy="105" r="14" fill="#1a1a2e"/>
+  <!-- Nose -->
+  <path d="M97 118 L100 125 L103 118" fill="none" stroke="#1a1a2e" stroke-width="2.5"/>
+  <!-- Hat brim -->
+  <ellipse cx="100" cy="72" rx="70" ry="14" fill="#e8c547" stroke="#1a1a2e" stroke-width="3"/>
+  <!-- Hat dome -->
+  <path d="M40 72 Q45 20 100 15 Q155 20 160 72" fill="#e8c547" stroke="#1a1a2e" stroke-width="3"/>
+  <!-- Hat red band -->
+  <rect x="38" y="60" width="124" height="16" rx="3" fill="#d4382a" stroke="#1a1a2e" stroke-width="2.5"/>
+</svg>

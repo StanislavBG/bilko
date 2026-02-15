@@ -87,9 +87,7 @@ function AuthenticatedApp() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-md bg-primary flex items-center justify-center animate-pulse">
-            <span className="text-primary-foreground font-bold">B</span>
-          </div>
+          <img src="/bilko-logo.svg" alt="Bilko" className="h-14 w-14 animate-bounce" style={{ animationDuration: "2s" }} />
           <Skeleton className="h-4 w-32" />
         </div>
       </div>
