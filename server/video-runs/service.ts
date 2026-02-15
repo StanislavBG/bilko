@@ -49,12 +49,21 @@ function ensureRunDir(runId: string): string {
 
 export async function createRun(flowId: string, runId: string): Promise<void> {
   ensureDataDir();
-  await db.insert(videoFlowRuns).values({
-    flowId,
-    runId,
-    status: "running",
-  });
-  log.info(`Created video run ${runId} for flow ${flowId}`);
+  try {
+    await db.insert(videoFlowRuns).values({
+      flowId,
+      runId,
+      status: "running",
+    });
+    log.info(`Created video run ${runId} for flow ${flowId}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Surface whether this is a missing-table error for easier diagnosis
+    if (msg.includes("does not exist") || msg.includes("relation")) {
+      throw new Error(`Table video_flow_runs does not exist — run "npm run db:push" to create it. Original: ${msg}`);
+    }
+    throw err;
+  }
 }
 
 // ── Update metadata ────────────────────────────────────────────────────

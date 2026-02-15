@@ -194,10 +194,18 @@ router.post("/generate-clip", async (req: Request, res: Response) => {
       return;
     }
 
+    // Validate durationSeconds early — Veo accepts [4, 8]
+    if (durationSeconds !== undefined) {
+      const d = Number(durationSeconds);
+      if (!Number.isFinite(d) || d < 4 || d > 8) {
+        log.warn(`Invalid durationSeconds received: ${JSON.stringify(durationSeconds)}, will be clamped by generator`);
+      }
+    }
+
     // Dispatch to Replicate for Wan/Replicate models, otherwise Veo
     const useReplicate = model && isReplicateModel(model);
 
-    log.info(`generate-clip request — model: ${model ?? "(none)"}, useReplicate: ${!!useReplicate}, duration: ${durationSeconds ?? "default"}`);
+    log.info(`generate-clip request — model: ${model ?? "(none)"}, useReplicate: ${!!useReplicate}, duration: ${durationSeconds ?? "default"}, durationRaw: ${JSON.stringify(durationSeconds)}`);
 
     if (!model) {
       log.warn("No model specified in generate-clip request — will fall through to Veo. If this should use Replicate, the client must send model explicitly.");
@@ -243,7 +251,7 @@ router.post("/generate-video", async (req: Request, res: Response) => {
       prompts: string[];
       model?: string;
       aspectRatio?: "16:9" | "9:16";
-      initialDurationSeconds?: 5 | 6 | 7 | 8;
+      initialDurationSeconds?: 4 | 5 | 6 | 7 | 8;
     };
 
     if (!Array.isArray(prompts) || prompts.length === 0) {
