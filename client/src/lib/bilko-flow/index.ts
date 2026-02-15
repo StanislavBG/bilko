@@ -17,6 +17,9 @@
  * ║  Shared modules (from bilko-flow/react):                 ║
  * ║    Layout, step visuals, mutations, component defs       ║
  * ║                                                          ║
+ * ║  v0.3.0: SSE hook, parallel threads, FlowErrorBoundary, ║
+ * ║    FlowProgressVertical, mergeTheme, DOMAIN_STEP_TYPE_MAP║
+ * ║                                                          ║
  * ╚══════════════════════════════════════════════════════════╝
  */
 
@@ -79,29 +82,42 @@ export { computeLayout, NODE_W, NODE_H, COL_GAP, ROW_GAP, PADDING } from "bilko-
 export type { NodeLayout, EdgeLayout, DAGLayout } from "bilko-flow/react";
 
 // ── Inspector: Step Visuals (from bilko-flow/react) ─────────
-export { STEP_TYPE_CONFIG, LLM_SUBTYPE_CONFIG, getStepVisuals } from "bilko-flow/react";
+export { STEP_TYPE_CONFIG, LLM_SUBTYPE_CONFIG, getStepVisuals, mergeTheme, DEFAULT_FLOW_PROGRESS_THEME } from "bilko-flow/react";
 export type { StepTypeVisuals } from "bilko-flow/react";
 
-// ── Domain Step Type Map (local) ─────────────────────────────
-export const DOMAIN_STEP_TYPE_MAP: Record<string, string> = {
-  "ai.generate-text": "llm",
-  "ai.generate-text-local": "llm",
-  "ai.summarize": "llm",
-  "ai.summarize-local": "llm",
-  "ai.embed-local": "llm",
-  "ai.generate-image": "llm",
-  "ai.generate-video": "llm",
-  "transform.filter": "transform",
-  "transform.map": "transform",
-  "transform.reduce": "transform",
-  "http.search": "external-input",
-  "http.request": "external-input",
-  "notification.send": "display",
-  "social.post": "chat",
-  "user.text-input": "user-input",
-  "ui.display": "display",
-};
+// ── Domain Step Type Map (v0.3.0 — now from bilko-flow/react) ─
+export { DOMAIN_STEP_TYPE_MAP } from "bilko-flow/react";
 
 // ── Component Definitions (from bilko-flow/react) ───────────
 export { DEFAULT_COMPONENT_DEFINITIONS, getComponentByType } from "bilko-flow/react";
 export type { ComponentDefinition, ComponentFieldSpec, ComponentUseCase, ComponentReference } from "bilko-flow/react";
+
+// ── v0.3.0: FlowErrorBoundary ────────────────────────────────
+export { FlowErrorBoundary } from "bilko-flow/react";
+export type { FlowErrorBoundaryProps } from "bilko-flow/react";
+
+// ── v0.3.0: FlowProgressVertical ─────────────────────────────
+export { FlowProgressVertical } from "bilko-flow/react";
+export type { FlowProgressVerticalProps } from "bilko-flow/react";
+
+// ── v0.3.0: Parallel Threads ─────────────────────────────────
+export { ParallelThreadsSection, MAX_PARALLEL_THREADS } from "bilko-flow/react";
+export type { ParallelThreadsSectionProps } from "bilko-flow/react";
+
+// ── v0.3.0: SSE Hook ────────────────────────────────────────
+export { useFlowSSE } from "bilko-flow/react";
+export type { UseFlowSSEOptions, UseFlowSSEReturn, SSEConnectionState, SSEStepUpdate } from "bilko-flow/react";
+
+// ── v0.3.0: Shared Utilities ─────────────────────────────────
+export { resolveStepMeta, applyStatusMap, getStatusIcon } from "bilko-flow/react";
+export type { ResolvedStepMeta } from "bilko-flow/react";
+
+// ── v0.3.0: Additional types ─────────────────────────────────
+export type {
+  FlowProgressStep,
+  FlowProgressProps,
+  FlowProgressTheme,
+  ParallelThread,
+  ParallelConfig,
+  PipelineConfig,
+} from "bilko-flow/react";

@@ -1,5 +1,6 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createLogger } from "../logger";
+import { loadProjects, syncAllProjects, syncSingleProject } from "./github-sync";
 
 const log = createLogger("projects");
 
@@ -199,5 +200,60 @@ export function registerProjectRoutes(app: Express): void {
     cache.clear();
     log.info("Unfurl cache cleared");
     res.json({ success: true, message: "Cache cleared" });
+  });
+
+  // ── GitHub-sourced project data ─────────────────────────────
+
+  // GET /api/projects — return all projects (from disk cache)
+  app.get("/api/projects", (_req: Request, res: Response) => {
+    const projects = loadProjects();
+    res.json({ projects });
+  });
+
+  // POST /api/projects/sync-github — sync all repos (admin only)
+  app.post("/api/projects/sync-github", async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    if (!user) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    const adminId = process.env.ADMIN_USER_ID;
+    if (user.id !== adminId) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    try {
+      const projects = await syncAllProjects();
+      res.json({ success: true, count: projects.length, projects });
+    } catch (error) {
+      log.error("GitHub sync failed", { error: String(error) });
+      res.status(500).json({
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  });
+
+  // POST /api/projects/:repoName/sync — sync a single repo (admin only)
+  app.post("/api/projects/:repoName/sync", async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    if (!user) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    const adminId = process.env.ADMIN_USER_ID;
+    if (user.id !== adminId) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    try {
+      const project = await syncSingleProject(req.params.repoName as string);
+      if (!project) {
+        return res.status(404).json({ error: "Repository not found" });
+      }
+      res.json({ success: true, project });
+    } catch (error) {
+      log.error("Single project sync failed", { error: String(error) });
+      res.status(500).json({
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   });
 }

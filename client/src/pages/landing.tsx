@@ -53,6 +53,7 @@ import {
   Gamepad2,
   Construction,
   CheckCircle2,
+  Archive,
   ExternalLink,
   Clapperboard,
   Film,
@@ -127,6 +128,15 @@ const UNDER_CONSTRUCTION_IDS = new Set([
   "socratic-architect",
   "linkedin-strategist",
 ]);
+
+/** Flow IDs shelved — functional but paused due to resource/quality limits */
+const SHELF_IDS = new Set(["ai-video", "ai-clip"]);
+
+/** Notes shown for shelved flows */
+const SHELF_NOTES: Record<string, string> = {
+  "ai-video": "Works but video credits are limited and AI-generated video quality is not yet production-ready.",
+  "ai-clip": "Works but video credits are limited and AI-generated clip quality is not yet production-ready.",
+};
 
 /** Maps flow registry IDs to the short mode IDs used by RightPanelContent */
 const FLOW_TO_MODE: Record<string, LearningModeId> = {
@@ -750,25 +760,26 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
   );
   useScreenOptions(allScreenOptions);
 
-  const readyOptions = MODE_OPTIONS.filter((o) => !UNDER_CONSTRUCTION_IDS.has(o.id));
+  const readyOptions = MODE_OPTIONS.filter((o) => !UNDER_CONSTRUCTION_IDS.has(o.id) && !SHELF_IDS.has(o.id));
   const constructionOptions = MODE_OPTIONS.filter((o) => UNDER_CONSTRUCTION_IDS.has(o.id));
+  const shelfOptions = MODE_OPTIONS.filter((o) => SHELF_IDS.has(o.id));
 
   return (
-    <div className="flex-1 flex items-center justify-center p-8 overflow-auto">
-      <div className="w-full space-y-8">
+    <div className="flex-1 flex items-center justify-start p-4 sm:p-6 overflow-auto">
+      <div className="w-full space-y-6">
         {/* ── Ready for Testing ─────────────────────────── */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="h-4 w-4" />
             <span>Ready for UX</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
             {readyOptions.map((option, i) => (
               <button
                 key={option.id}
                 onClick={() => onSelect(option.id)}
-                className="group text-left rounded-xl border-2 border-border p-7 transition-all duration-300
-                  hover:border-primary/50 hover:bg-muted/50 hover:shadow-lg hover:scale-[1.03]
+                className="group text-left rounded-xl border-2 border-border p-5 transition-all duration-300
+                  hover:border-primary/50 hover:bg-muted/50 hover:shadow-lg hover:scale-[1.02]
                   animate-in fade-in slide-in-from-bottom-4 duration-500"
                 style={{ animationDelay: `${i * 60}ms` }}
               >
@@ -803,8 +814,8 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
               <button
                 key={tile.id}
                 onClick={() => onSelect(tile.id)}
-                className="group text-left rounded-xl border-2 border-dashed border-primary/40 p-7 transition-all duration-300
-                  hover:border-primary hover:bg-primary/5 hover:shadow-lg hover:scale-[1.03]
+                className="group text-left rounded-xl border-2 border-dashed border-primary/40 p-5 transition-all duration-300
+                  hover:border-primary hover:bg-primary/5 hover:shadow-lg hover:scale-[1.02]
                   animate-in fade-in slide-in-from-bottom-4 duration-500"
                 style={{ animationDelay: `${(readyOptions.length + i) * 60}ms` }}
               >
@@ -832,13 +843,13 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
               <Construction className="h-4 w-4" />
               <span>Under Construction</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
               {constructionOptions.map((option, i) => (
                 <button
                   key={option.id}
                   onClick={() => onSelect(option.id)}
-                  className="group text-left rounded-xl border-2 border-dashed border-amber-400/40 p-7 transition-all duration-300
-                    hover:border-amber-400/70 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 hover:shadow-lg hover:scale-[1.03]
+                  className="group text-left rounded-xl border-2 border-dashed border-amber-400/40 p-5 transition-all duration-300
+                    hover:border-amber-400/70 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 hover:shadow-lg hover:scale-[1.02]
                     animate-in fade-in slide-in-from-bottom-4 duration-500 opacity-80 hover:opacity-100"
                   style={{ animationDelay: `${(readyOptions.length + SPECIAL_TILES.length + i) * 60}ms` }}
                 >
@@ -853,6 +864,47 @@ function ModeSelectionGrid({ onSelect }: { onSelect: (id: string) => void }) {
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                         {option.description}
                       </p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Shelf — functional but paused ──────────────── */}
+        {shelfOptions.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
+              <Archive className="h-4 w-4" />
+              <span>Shelf</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              {shelfOptions.map((option, i) => (
+                <button
+                  key={option.id}
+                  onClick={() => onSelect(option.id)}
+                  className="group text-left rounded-xl border-2 border-dashed border-zinc-300/40 dark:border-zinc-600/40 p-7 transition-all duration-300
+                    hover:border-zinc-400/70 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20 hover:shadow-lg hover:scale-[1.03]
+                    animate-in fade-in slide-in-from-bottom-4 duration-500 opacity-60 hover:opacity-90"
+                  style={{ animationDelay: `${(readyOptions.length + SPECIAL_TILES.length + constructionOptions.length + i) * 60}ms` }}
+                >
+                  <div className="flex flex-col gap-4">
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors
+                      bg-zinc-100/50 text-zinc-500 dark:bg-zinc-800/30 dark:text-zinc-400
+                      group-hover:bg-zinc-200/60 dark:group-hover:bg-zinc-700/50">
+                      {option.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-base">{option.label}</h3>
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                        {option.description}
+                      </p>
+                      {SHELF_NOTES[option.id] && (
+                        <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2 italic">
+                          {SHELF_NOTES[option.id]}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </button>
