@@ -6,12 +6,11 @@
  *
  * App-scoped providers (inside their own page tree):
  *   - Landing: ConversationDesignProvider, FlowBusProvider, FlowChatProvider
- *   - Academy: NavigationProvider
  *
  * Every route is wrapped in an AppErrorBoundary (ARCH-007 I4).
  */
 
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ComponentType } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -44,6 +43,19 @@ const BilkosWay = lazy(() => import("@/pages/bilkos-way"));
 
 // ── App-scoped wrappers (ARCH-007 I3: context scoping) ──────────
 
+/** Wrap any page component in an error boundary so a crash never blanks the shell */
+function withErrorBoundary<P extends object>(Comp: ComponentType<P>, appName: string) {
+  function Wrapped(props: P) {
+    return (
+      <AppErrorBoundary appName={appName}>
+        <Comp {...props} />
+      </AppErrorBoundary>
+    );
+  }
+  Wrapped.displayName = `ErrorBoundary(${appName})`;
+  return Wrapped;
+}
+
 /** Landing — owns ConversationDesign, FlowBus, FlowChat */
 function MainFlow() {
   return (
@@ -59,16 +71,12 @@ function MainFlow() {
   );
 }
 
-/** Academy — owns NavigationProvider (multi-level collapse) */
-function AcademyApp() {
-  return (
-    <AppErrorBoundary appName="Academy">
-      <NavigationProvider>
-        <Academy />
-      </NavigationProvider>
-    </AppErrorBoundary>
-  );
-}
+const ProjectsPage = withErrorBoundary(Projects, "Projects");
+const BilkosWayPage = withErrorBoundary(BilkosWay, "Bilko's Way");
+const N8nWorkflowsPage = withErrorBoundary(N8nWorkflows, "N8N Workflows");
+const RulesExplorerPage = withErrorBoundary(RulesExplorer, "Rules Explorer");
+const FlowExplorerPage = withErrorBoundary(FlowExplorer, "Flow Explorer");
+const FlowDetailPage = withErrorBoundary(FlowDetail, "Flow Detail");
 
 // ── Hub shell ────────────────────────────────────────────────────
 
@@ -106,12 +114,12 @@ function AuthenticatedApp() {
                     <Switch>
                       <Route path="/s/:flowId" component={MainFlow} />
                       <Route path="/" component={MainFlow} />
-                      <Route path="/projects/:projectId?" component={Projects} />
-                      <Route path="/bilkos-way" component={BilkosWay} />
-                      {isAuth && <Route path="/workflows" component={N8nWorkflows} />}
-                      {isAuth && <Route path="/rules" component={RulesExplorer} />}
-                      {isAuth && <Route path="/flows/:flowId" component={FlowDetail} />}
-                      {isAuth && <Route path="/flows" component={FlowExplorer} />}
+                      <Route path="/projects/:projectId?" component={ProjectsPage} />
+                      <Route path="/bilkos-way" component={BilkosWayPage} />
+                      {isAuth && <Route path="/workflows" component={N8nWorkflowsPage} />}
+                      {isAuth && <Route path="/rules" component={RulesExplorerPage} />}
+                      {isAuth && <Route path="/flows/:flowId" component={FlowDetailPage} />}
+                      {isAuth && <Route path="/flows" component={FlowExplorerPage} />}
                       <Route component={NotFound} />
                     </Switch>
                   </Suspense>
